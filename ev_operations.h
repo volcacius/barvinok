@@ -26,7 +26,7 @@
 #define in_domain _new_in_domain
 
 typedef enum { polynomial, periodic, evector, fractional, relation, 
-               partition } enode_type;
+               partition, flooring } enode_type;
 
 typedef struct _evalue {
   Value d;              /* denominator */
@@ -89,5 +89,7 @@ void evalue_range_reduction(evalue *e);
 size_t evalue_size(evalue *e);
 size_t domain_size(Polyhedron *D);
 Enumeration* partition2enumeration(evalue *EP);
+void evalue_frac2floor(evalue *e);
+evalue *esum(evalue *E, int nvar);
 
 #endif

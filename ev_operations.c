@@ -3,8 +3,10 @@
 #include <stdlib.h>
 
 #include "ev_operations.h"
+#include "barvinok.h"
 #include "util.h"
 
+#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 
 void evalue_set_si(evalue *ev, int n, int d) {
@@ -117,8 +119,8 @@ static int mod_term_smaller(evalue *e1, evalue *e2)
 {
     assert(value_zero_p(e1->d));
     assert(value_zero_p(e2->d));
-    assert(e1->x.p->type == fractional);
-    assert(e2->x.p->type == fractional);
+    assert(e1->x.p->type == fractional || e1->x.p->type == flooring);
+    assert(e2->x.p->type == fractional || e2->x.p->type == flooring);
     return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
 }
 
@@ -756,15 +758,16 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     }
     fprintf(DST," ]_%s", pname[p->pos-1]);
     break;
+  case flooring:
   case fractional:
     fprintf(DST, "( ");
     for (i=p->size-1; i>=1; i--) {
       print_evalue(DST, &p->arr[i], pname);
       if (i >= 2) {
         fprintf(DST, " * ");
-	fprintf(DST, "{");
+	fprintf(DST, p->type == flooring ? "[" : "{");
         print_evalue(DST, &p->arr[0], pname);
-	fprintf(DST, "}");
+	fprintf(DST, p->type == flooring ? "]" : "}");
 	if (i>2) 
 	  fprintf(DST, "^%d + ", i-1);
 	else
@@ -797,6 +800,12 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   return;
 } /* print_enode */ 
 
+static int type_offset(enode *p)
+{
+   return p->type == fractional ? 1 : 
+	  p->type == flooring ? 1 : 0;
+}
+
 static void eadd_rev(evalue *e1, evalue *res)
 {
     evalue ev;
@@ -812,7 +821,7 @@ static void eadd_rev_cst (evalue *e1, evalue *res)
     evalue ev;
     value_init(ev.d);
     evalue_copy(&ev, e1);
-    eadd(res, &ev.x.p->arr[ev.x.p->type==fractional]);
+    eadd(res, &ev.x.p->arr[type_offset(ev.x.p)]);
     free_evalue_refs(res);	  
     *res = ev;
 }
@@ -948,6 +957,7 @@ void eadd(evalue *e1,evalue *res) {
 	  case evector:
 	      fprintf(stderr, "eadd: cannot add const with vector\n");
 	      return;
+	  case flooring:
 	  case fractional:
 	       eadd(e1, &res->x.p->arr[1]);
 	       return ;
@@ -1020,12 +1030,14 @@ void eadd(evalue *e1,evalue *res) {
 		     return;
 	         }
 	         else if (e1->x.p->pos != res->x.p->pos ||
-			    (res->x.p->type == fractional &&
+			    ((res->x.p->type == fractional ||
+			      res->x.p->type == flooring) &&
 			     !eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))) { 
 	      	 /* adding evalues of different position (i.e function of different unknowns
 		  * to case are possible  */
 			   
 			switch (res->x.p->type) {
+			case flooring:
 			case fractional:
 			    if(mod_term_smaller(res, e1))
 				eadd(e1,&res->x.p->arr[1]);
@@ -1051,6 +1063,8 @@ void eadd(evalue *e1,evalue *res) {
 			    else
 				eadd_rev(e1, res);
 			    return;
+			default:
+			    assert(0);
 			}
 	         }  
                  
@@ -1058,9 +1072,9 @@ void eadd(evalue *e1,evalue *res) {
 		 //same type , same pos  and same size
                  if (e1->x.p->size == res->x.p->size) {
 	              // add any element in e1 to the corresponding element in res 
-		      if (res->x.p->type == fractional)
+		      i = type_offset(res->x.p);
+		      if (i == 1)
 			assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
-		      i = res->x.p->type == fractional ? 1 : 0;
 	              for (; i<res->x.p->size; i++) {
                             eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
                       }
@@ -1070,6 +1084,7 @@ void eadd(evalue *e1,evalue *res) {
 		/* Sizes are different */
 		switch(res->x.p->type) {
 		case polynomial:
+		case flooring:
 		case fractional:
                     /* VIN100: if e1-size > res-size you have to copy e1 in a   */
                     /* new enode and add res to that new node. If you do not do */
@@ -1078,10 +1093,10 @@ void eadd(evalue *e1,evalue *res) {
                      if(e1->x.p->size > res->x.p->size)
 			  eadd_rev(e1, res);
                      else {
-	  	     
-		        if (res->x.p->type == fractional)
-		    	    assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
-		        i = res->x.p->type == fractional ? 1 : 0;
+		        i = type_offset(res->x.p);
+		        if (i == 1)
+			    assert(eequal(&e1->x.p->arr[0], 
+				   &res->x.p->arr[0]));
                         for (; i<e1->x.p->size ; i++) {
                              eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
                         } 
@@ -1127,6 +1142,8 @@ void eadd(evalue *e1,evalue *res) {
 		case evector:
                      fprintf(stderr, "eadd: ?cannot add vectors of different length\n");
                      return ;
+		default:
+		    assert(0);
                 }
      }
      return ;
@@ -1144,7 +1161,7 @@ static void emul_rev (evalue *e1, evalue *res)
 
 static void emul_poly (evalue *e1, evalue *res)
 {
-    int i, j, o = res->x.p->type == fractional;
+    int i, j, o = type_offset(res->x.p);
     evalue tmp;
     int size=(e1->x.p->size + res->x.p->size - o - 1); 
     value_init(tmp.d);
@@ -1292,10 +1309,13 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		 return ;
 	       }      
 	   case periodic:
+	   case flooring:
 	   case fractional:
 	        /* Product of a polynomial and a periodic or fractional */
 		emul_rev(e1, res);
 		return;
+	   default:
+		assert(0);
 	   }
        case periodic:
 	   switch(res->x.p->type) {
@@ -1359,21 +1379,25 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		       return; 
 			       
 	   }		   
+       case flooring:
        case fractional:
 	    switch(res->x.p->type) {
 	    case polynomial:
 	        for(i=0; i<res->x.p->size ; i++)
 		    emul(e1, &(res->x.p->arr[i]));    
 	        return; 
+	    default:
 	    case periodic:
 		assert(0);
+	    case flooring:
 	    case fractional:
+		assert(e1->x.p->type == res->x.p->type);
 	        if (e1->x.p->pos == res->x.p->pos &&
 			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
 		    evalue d;
 		    value_init(d.d);
 		    poly_denom(&e1->x.p->arr[0], &d.d);
-		    if (!value_two_p(d.d))
+		    if (e1->x.p->type != fractional || !value_two_p(d.d))
 			emul_poly(e1, res);
 		    else {
 			value_init(d.x.n);
@@ -1437,7 +1461,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	     else {
 	       /* Product of a rationel number and an expression (polynomial or peririodic) */ 
 	         
-		   i = res->x.p->type == fractional ? 1 : 0;
+		   i = type_offset(res->x.p);
 		   for (; i<res->x.p->size; i++) 
 	              emul(e1, &res->x.p->arr[i]);		 
 		  
@@ -1936,6 +1960,8 @@ static double compute_enode(enode *p, Value *list_args) {
 	break;
       }
   }
+  else
+    assert(0);
   value_clear(m);
   value_clear(param);
   return res;
@@ -2308,11 +2334,11 @@ void evalue_combine(evalue *e)
     }
 }
 
-/* May change coefficients to become non-standard
+/* May change coefficients to become non-standard if fiddle is set
  * => reduce p afterwards to correct
  */
 static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
-					 Matrix **R)
+					 Matrix **R, int fiddle)
 {
     Polyhedron *I, *H;
     evalue *pp;
@@ -2332,7 +2358,7 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
 	assert(value_notzero_p(pp->x.p->arr[1].d));
 	value_division(T->p[0][pp->x.p->pos-1], *d, pp->x.p->arr[1].d);
 	mpz_mul_ui(twice, pp->x.p->arr[1].x.n, 2);
-	if (value_gt(twice, pp->x.p->arr[1].d))
+	if (fiddle && value_gt(twice, pp->x.p->arr[1].d))
 	    value_substract(pp->x.p->arr[1].x.n, 
 			    pp->x.p->arr[1].x.n, pp->x.p->arr[1].d);
 	value_multiply(T->p[0][pp->x.p->pos-1], 
@@ -2371,7 +2397,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	value_init(min);
 	value_init(max);
 
-	I = polynomial_projection(p->arr[0].x.p, D, &d, &T);
+	I = polynomial_projection(p->arr[0].x.p, D, &d, &T, 1);
 	line_minmax(I, &min, &max); /* frees I */
 	equal = value_eq(min, max);
 	mpz_cdiv_q(min, min, d);
@@ -2460,7 +2486,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
     value_init(d);
     value_init(min);
     value_init(max);
-    I = polynomial_projection(p, D, &d, &T);
+    I = polynomial_projection(p, D, &d, &T, 1);
     Matrix_Free(T);
     line_minmax(I, &min, &max); /* frees I */
     mpz_fdiv_q(min, min, d);
@@ -2550,5 +2576,284 @@ Enumeration* partition2enumeration(evalue *EP)
     free(EP->x.p);
     value_clear(EP->d);
     free(EP);
+    return res;
+}
+
+static int frac2floor_in_domain(evalue *e, Polyhedron *D)
+{
+    enode *p;
+    int r = 0;
+    int i;
+    Polyhedron *I;
+    Matrix *T;
+    Value d, min;
+    evalue fl;
+
+    if (value_notzero_p(e->d))
+	return r;
+
+    p = e->x.p;
+
+    i = p->type == relation ? 1 : 
+	p->type == fractional ? 1 : 0;
+    for (; i<p->size; i++)
+	r |= frac2floor_in_domain(&p->arr[i], D);
+
+    if (p->type != fractional) {
+	if (r && p->type == polynomial) {
+	    evalue f;
+	    value_init(f.d);
+	    value_set_si(f.d, 0);
+	    f.x.p = new_enode(polynomial, 2, p->pos);
+	    evalue_set_si(&f.x.p->arr[0], 0, 1);
+	    evalue_set_si(&f.x.p->arr[1], 1, 1);
+	    reorder_terms(p, &f);
+	    value_clear(e->d);
+	    *e = p->arr[0];
+	    free(p);
+	}
+	return r;
+    }
+
+    value_init(d);
+    I = polynomial_projection(p, D, &d, &T, 0);
+
+    /*
+    Polyhedron_Print(stderr, P_VALUE_FMT, I);
+    */
+
+    assert(I->NbEq == 0); /* Should have been reduced */
+
+    /* Find minimum */
+    for (i = 0; i < I->NbConstraints; ++i)
+	if (value_pos_p(I->Constraint[i][1]))
+	    break;
+
+    assert(i < I->NbConstraints);
+    value_init(min);
+    value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
+    if (value_neg_p(min)) {
+	evalue offset;
+	mpz_fdiv_q(min, min, d);
+	value_init(offset.d);
+	value_set_si(offset.d, 1);
+	value_init(offset.x.n);
+	value_oppose(offset.x.n, min);
+	eadd(&offset, &p->arr[0]);
+	free_evalue_refs(&offset);
+    }
+
+    Polyhedron_Free(I);
+    Matrix_Free(T);
+    value_clear(min);
+    value_clear(d);
+
+    value_init(fl.d);
+    value_set_si(fl.d, 0);
+    fl.x.p = new_enode(flooring, 3, -1);
+    evalue_set_si(&fl.x.p->arr[1], 0, 1);
+    evalue_set_si(&fl.x.p->arr[2], -1, 1);
+    evalue_copy(&fl.x.p->arr[0], &p->arr[0]);
+
+    eadd(&fl, &p->arr[0]);
+    reorder_terms(p, &p->arr[0]);
+    *e = p->arr[1];
+    free(p);
+    free_evalue_refs(&fl);
+
+    return 1;
+}
+
+void evalue_frac2floor(evalue *e)
+{
+    int i;
+    if (value_notzero_p(e->d) || e->x.p->type != partition)
+	return;
+
+    for (i = 0; i < e->x.p->size/2; ++i)
+	if (frac2floor_in_domain(&e->x.p->arr[2*i+1],
+				 EVALUE_DOMAIN(e->x.p->arr[2*i])))
+	    reduce_evalue(&e->x.p->arr[2*i+1]);
+}
+
+static Matrix *esum_add_constraint(int nvar, Polyhedron *D, Matrix *C,
+				   Vector *row)
+{
+    int nr, nc;
+    int i;
+    int nparam = D->Dimension - nvar;
+
+    if (C == 0) {
+	nr = D->NbConstraints + 2;
+	nc = D->Dimension + 2 + 1;
+	C = Matrix_Alloc(nr, nc);
+	for (i = 0; i < D->NbConstraints; ++i) {
+	    Vector_Copy(D->Constraint[i], C->p[i], 1 + nvar);
+	    Vector_Copy(D->Constraint[i] + 1 + nvar, C->p[i] + 1 + nvar + 1,
+			D->Dimension + 1 - nvar);
+	}
+    } else {
+	Matrix *oldC = C;
+	nr = C->NbRows + 2;
+	nc = C->NbColumns + 1;
+	C = Matrix_Alloc(nr, nc);
+	for (i = 0; i < oldC->NbRows; ++i) {
+	    Vector_Copy(oldC->p[i], C->p[i], 1 + nvar);
+	    Vector_Copy(oldC->p[i] + 1 + nvar, C->p[i] + 1 + nvar + 1,
+			oldC->NbColumns - 1 - nvar);
+	}
+    }
+    value_set_si(C->p[nr-2][0], 1);
+    value_set_si(C->p[nr-2][1 + nvar], 1);
+    value_set_si(C->p[nr-2][nc - 1], -1);
+
+    Vector_Copy(row->p, C->p[nr-1], 1 + nvar + 1);
+    Vector_Copy(row->p + 1 + nvar + 1, C->p[nr-1] + C->NbColumns - 1 - nparam,
+		1 + nparam);
+
+    return C;
+}
+
+evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D, 
+			  Matrix *C)
+{
+    Vector *row;
+    int i;
+    evalue *res;
+    Matrix *origC;
+
+    if (EVALUE_IS_ZERO(*e))
+	return 0;
+
+    if (value_notzero_p(e->d)) {
+	evalue *t;
+	int nparam = D->Dimension - nvar;
+
+	if (C != 0) {
+	    C = Matrix_Copy(C);
+	    D = Constraints2Polyhedron(C, 0);
+	    Matrix_Free(C);
+	}
+
+	t = barvinok_enumerate_e(D, 0, nparam, 0);
+
+	if (C != 0)
+	    Polyhedron_Free(D);
+
+	if (!EVALUE_IS_ONE(*e))
+	    emul(e, t);
+
+	return t;
+    }
+
+    row = Vector_Alloc(1 + D->Dimension + 1 + 1);
+
+    switch (e->x.p->type) {
+    case flooring: {
+	evalue *pp = &e->x.p->arr[0];
+	poly_denom(pp, &row->p[1 + nvar]);
+	value_set_si(row->p[0], 1);
+	for (pp = &e->x.p->arr[0]; value_zero_p(pp->d); 
+				   pp = &pp->x.p->arr[0]) {
+	    assert(pp->x.p->type == polynomial);
+	    value_assign(row->p[pp->x.p->pos], row->p[1+nvar]);
+	    value_division(row->p[pp->x.p->pos], row->p[pp->x.p->pos],
+			   pp->x.p->arr[1].d);
+	    value_multiply(row->p[pp->x.p->pos], row->p[pp->x.p->pos],
+			   pp->x.p->arr[1].x.n);
+	}
+	value_assign(row->p[1 + D->Dimension + 1], row->p[1+nvar]);
+	value_division(row->p[1 + D->Dimension + 1],
+		       row->p[1 + D->Dimension + 1],
+		       pp->d);
+	value_multiply(row->p[1 + D->Dimension + 1],
+		       row->p[1 + D->Dimension + 1],
+		       pp->x.n);
+	value_oppose(row->p[1 + nvar], row->p[1 + nvar]);
+	break;
+    }
+    case polynomial: {
+	int pos = e->x.p->pos;
+	assert(pos <= nvar);	/* for now */
+	for (i = 0; i < D->NbRays; ++i)
+	    if (value_notzero_p(D->Ray[i][pos]))
+		break;
+	assert(i < D->NbRays);
+	assert(value_pos_p(D->Ray[i][pos]));	/* for now */
+	value_set_si(row->p[0], 1);
+	value_set_si(row->p[pos], 1);
+	value_set_si(row->p[1 + nvar], -1);
+	break;
+    }
+    default:
+	assert(0);
+    }
+
+    i = type_offset(e->x.p);
+
+    res = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
+    ++i;
+
+    origC = C;
+    for (; i < e->x.p->size; ++i) {
+	evalue *t;
+	Matrix *prevC = C;
+	C = esum_add_constraint(nvar, D, C, row);
+	if (prevC != origC)
+	    Matrix_Free(prevC);
+	/*
+	Vector_Print(stderr, P_VALUE_FMT, row);
+	Matrix_Print(stderr, P_VALUE_FMT, C);
+	*/
+	t = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
+	if (!res)
+	    res = t;
+	else if (t) {
+	    eadd(t, res);
+	    free_evalue_refs(t);
+	    free(t);
+	}
+    }
+    if (C != origC)
+	Matrix_Free(C);
+
+    Vector_Free(row);
+
+    return res;
+}
+
+evalue *esum(evalue *e, int nvar)
+{
+    int i;
+    evalue *res;
+    ALLOC(res);
+    value_init(res->d);
+
+    assert(nvar >= 0);
+    if (nvar == 0 || EVALUE_IS_ZERO(*e)) {
+	evalue_copy(res, e);
+	return res;
+    }
+
+    evalue_set_si(res, 0, 1);
+
+    assert(value_zero_p(e->d));
+    assert(e->x.p->type == partition);
+
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	char *test[] = { "A", "B", "C", "D", "E", "F", "G" };
+	evalue *t;
+	t = esum_over_domain(&e->x.p->arr[2*i+1], nvar,
+			     EVALUE_DOMAIN(e->x.p->arr[2*i]), 0);
+	Polyhedron_Print(stderr, P_VALUE_FMT, EVALUE_DOMAIN(e->x.p->arr[2*i]));
+	print_evalue(stderr, t, test);
+	eadd(t, res);
+	free_evalue_refs(t);
+	free(t);
+    }
+
+    reduce_evalue(res);
+
     return res;
 }
