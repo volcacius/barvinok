@@ -1059,6 +1059,7 @@ constant:
 	    barvinok_count(P, &res->EP.x.n, MaxRays);
 	emul(&factor, &res->EP);
 out:
+	free_evalue_refs(&factor);
 	Polyhedron_Free(P);
 	if (CT)
 	    Matrix_Free(CT);
