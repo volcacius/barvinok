@@ -44,6 +44,7 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
     r->n.power[0] = num;
     r->d.power = den;
 
+    /* Make all powers in denominator lexico-positive */
     for (int i = 0; i < r->d.power.NumRows(); ++i) {
 	int j;
 	for (j = 0; j < r->d.power.NumCols(); ++j)
@@ -56,14 +57,39 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
 	}
     }
 
+    /* Order powers in denominator */
+    for (int i = 0; i < r->d.power.NumRows(); ++i) {
+	int m = i;
+	for (int j = i+1; j < r->d.power.NumRows(); ++j)
+	    if (lex_cmp(r->d.power[j], r->d.power[m]) < 0)
+		m = j;
+	if (m != i) {
+	    vec_ZZ tmp = r->d.power[m];
+	    r->d.power[m] = r->d.power[i];
+	    r->d.power[i] = tmp;
+	}
+    }
+
     for (int i = 0; i < term.size(); ++i)
 	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {
 	    int len = term[i]->n.coeff.NumRows();
-	    int dim = term[i]->n.power.NumCols();
-	    term[i]->n.coeff.SetDims(len+1, 2);
-	    term[i]->n.power.SetDims(len+1, dim);
-	    term[i]->n.coeff[len] = r->n.coeff[0];
-	    term[i]->n.power[len] = r->n.power[0];
+	    int j;
+	    for (j = 0; j < len; ++j)
+		if (r->n.power[0] == term[i]->n.power[j])
+		    break;
+	    if (j < len) {
+		ZZ g = GCD(cd, term[i]->n.coeff[j][1]);
+		r->n.coeff[0][0] = term[i]->n.coeff[j][0] * (cd / g) +
+				   (term[i]->n.coeff[j][1] / g) * cn;
+		r->n.coeff[0][1] = term[i]->n.coeff[j][1] / g * cd;
+		term[i]->n.coeff[j] = r->n.coeff[0];
+	    } else {
+		int dim = term[i]->n.power.NumCols();
+		term[i]->n.coeff.SetDims(len+1, 2);
+		term[i]->n.power.SetDims(len+1, dim);
+		term[i]->n.coeff[len] = r->n.coeff[0];
+		term[i]->n.power[len] = r->n.power[0];
+	    }
 	    delete r;
 	    return;
 	}
