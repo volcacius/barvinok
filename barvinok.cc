@@ -1388,7 +1388,8 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Param_Vertices *V;
     int r = 0;
     unsigned nparam = C->Dimension;
-    evalue *eres = new evalue;
+    evalue *eres;
+    ALLOC(eres);
     value_init(eres->d);
     value_set_si(eres->d, 0);
 
@@ -1654,7 +1655,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     }
     free(EP->x.p);
     value_clear(EP->d);
-    delete EP;
+    free(EP);
     return res;
 }
 
