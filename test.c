@@ -6,6 +6,13 @@
 #include <polylib/polylibgmp.h>
 #include <util.h>
 #include <barvinok.h>
+#include "config.h"
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    0
+#else
+#define MAXRAYS  600
+#endif
 
 static void time_diff(struct tms *before, struct tms *after)
 {
@@ -29,7 +36,7 @@ int main()
 
     for (i = 0; i < nbPol; ++i) {
 	Matrix *M = Matrix_Read();
-	A = Constraints2Polyhedron(M, 600);
+	A = Constraints2Polyhedron(M, MAXRAYS);
 	Matrix_Free(M);
 	fgets(s, 128, stdin);
 	while ((*s=='#') || (sscanf(s, "F %d", &func)<1))
@@ -57,9 +64,9 @@ int main()
 	}
 	case 1:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = Polyhedron_Polar(A, 600);
+	    B = Polyhedron_Polar(A, MAXRAYS);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
-	    C = Polyhedron_Polar(B, 600);
+	    C = Polyhedron_Polar(B, MAXRAYS);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
 	    Polyhedron_Free(C);
 	    Polyhedron_Free(B);
@@ -136,11 +143,11 @@ int main()
 	    Enumeration *en;
 	    Matrix *M = Matrix_Read();
 	    char **param_name;
-	    C = Constraints2Polyhedron(M, 600);
+	    C = Constraints2Polyhedron(M, MAXRAYS);
 	    Matrix_Free(M);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
-	    en = barvinok_enumerate(A, C, 600);
+	    en = barvinok_enumerate(A, C, MAXRAYS);
 	    param_name = Read_ParamNames(stdin, C->Dimension);
 	    print_evalue(stdout, &en->EP, param_name);
 	    Enumeration_Free(en);

@@ -4,6 +4,7 @@
 #include "ev_operations.h"
 #include <util.h>
 #include <barvinok.h>
+#include "config.h"
 
 /* The input of this example program is the same as that of testehrhart
  * in the PolyLib distribution, i.e., a polytope in combined
@@ -11,6 +12,12 @@
  * and (optionally) the names of the parameters.
  * Both polytopes are in PolyLib notation.
  */
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    0
+#else
+#define MAXRAYS  600
+#endif
 
 #ifndef HAVE_GETOPT_H
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
@@ -45,15 +52,15 @@ int main(int argc, char **argv)
     }
 
     M = Matrix_Read();
-    A = Constraints2Polyhedron(M, 600);
+    A = Constraints2Polyhedron(M, MAXRAYS);
     Matrix_Free(M);
     M = Matrix_Read();
-    C = Constraints2Polyhedron(M, 600);
+    C = Constraints2Polyhedron(M, MAXRAYS);
     Matrix_Free(M);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
-    en = barvinok_enumerate(A, C, 600);
+    en = barvinok_enumerate(A, C, MAXRAYS);
     Enumeration_Print(stdout, en, param_name);
     if (size)
 	printf("\nSize: %d\n", Enumeration_size(en));

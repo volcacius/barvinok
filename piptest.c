@@ -2,6 +2,13 @@
 #include "piputil.h"
 #include "ev_operations.h"
 #include <barvinok.h>
+#include "config.h"
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    0
+#else
+#define MAXRAYS  600
+#endif
 
 int main(int argc, char **argv)
 {
@@ -14,7 +21,7 @@ int main(int argc, char **argv)
     evalue sum;
 
     M = Matrix_Read();
-    A = Constraints2Polyhedron(M, 600);
+    A = Constraints2Polyhedron(M, MAXRAYS);
     Matrix_Free(M);
 
     fgets(s, 128, stdin);
@@ -39,7 +46,7 @@ int main(int argc, char **argv)
 	P->next = 0;
 	evalue *EP;
 	exist = P->Dimension - nvar - nparam;
-	EP = barvinok_enumerate_e(P, exist, nparam, 600);
+	EP = barvinok_enumerate_e(P, exist, nparam, MAXRAYS);
 	print_evalue(stderr, EP, param_name);
 	eadd(EP, &sum);
     }

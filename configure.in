@@ -74,9 +74,11 @@ int main()
     P = Constraints2Polyhedron(M, 6);
     return !(P->NbRays == 8);
 }
-],,
-AC_MSG_WARN([This version of polylib does not automatically])
-AC_MSG_WARN([enlarge the chernikova table space]))
+],
+[AC_DEFINE(HAVE_GROWING_CHERNIKOVA,[],
+	  [PolyLib automatically grows the Chernikova table space])],
+AC_MSG_WARN([This version of PolyLib does not automatically])
+AC_MSG_WARN([enlarge the Chernikova table space]))
 
 AC_TRY_RUN([
 #include <polylib/polylibgmp.h>

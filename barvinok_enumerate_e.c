@@ -4,6 +4,7 @@
 #include "ev_operations.h"
 #include <util.h>
 #include <barvinok.h>
+#include "config.h"
 
 /* The input of this example program is a polytope in combined
  * data and parameter space followed by two lines indicating
@@ -13,6 +14,12 @@
  * These two lines are (optionally) followed by the names of the parameters.
  * The polytope is in PolyLib notation.
  */
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    0
+#else
+#define MAXRAYS  600
+#endif
 
 #ifndef HAVE_GETOPT_H
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
@@ -54,7 +61,7 @@ int main(int argc, char **argv)
     }
 
     M = Matrix_Read();
-    A = Constraints2Polyhedron(M, 600);
+    A = Constraints2Polyhedron(M, MAXRAYS);
     Matrix_Free(M);
 
     fgets(s, 128, stdin);
@@ -69,9 +76,9 @@ int main(int argc, char **argv)
     printf("exist: %d, nparam: %d\n", exist, nparam);
     param_name = Read_ParamNames(stdin, nparam);
     if (pip)
-	EP = barvinok_enumerate_pip(A, exist, nparam, 600);
+	EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
     else
-	EP = barvinok_enumerate_e(A, exist, nparam, 600);
+	EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
     reduce_evalue(EP);
     evalue_combine(EP);
     if (range)

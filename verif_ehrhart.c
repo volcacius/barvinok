@@ -19,7 +19,6 @@
 #include <polylib/polylibgmp.h>
 #include "ev_operations.h"
 #include <barvinok.h>
-#define MAXRAYS 1024
 
 #include "config.h"
 #ifndef HAVE_COUNT_POINTS4
@@ -27,6 +26,12 @@
 	    int cc = count_points(a,b,c);		\
 	    value_set_si(*d,cc);			\
 	}
+#endif
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    0
+#else
+#define MAXRAYS  600
 #endif
 
 /* define this to print all the results */

@@ -3,6 +3,13 @@
 #include <polylib/polylibgmp.h>
 #include <util.h>
 #include <barvinok.h>
+#include "config.h"
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    0
+#else
+#define MAXRAYS  600
+#endif
 
 static void time_diff(struct tms *before, struct tms *after)
 {
@@ -20,7 +27,7 @@ int main()
     Matrix *M;
 
     M = Matrix_Read();
-    A = Constraints2Polyhedron(M, 600);
+    A = Constraints2Polyhedron(M, MAXRAYS);
     Matrix_Free(M);
     value_init(cm);
     value_init(cb);
