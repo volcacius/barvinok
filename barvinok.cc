@@ -524,26 +524,21 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& lambda, ZZ& num)
     num = vertex * lambda;
 }
 
-static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
+static evalue *term(int param, ZZ& c, Value *den = NULL)
 {
-    evalue EP;
+    evalue *EP = new evalue();
     deque<string> params;
-    value_init(EP.d);
-    value_set_si(EP.d,0);
-    EP.x.p = new_enode(polynomial, 2, 1);
-    value_init(EP.x.p->arr[0].x.n);
-    value_init(EP.x.p->arr[1].x.n);
-    value_set_si(EP.x.p->arr[0].d, 1);
-    value_set_si(EP.x.p->arr[0].x.n, 0);
+    value_init(EP->d);
+    value_set_si(EP->d,0);
+    EP->x.p = new_enode(polynomial, 2, param + 1);
+    evalue_set_si(&EP->x.p->arr[0], 0, 1);
+    value_init(EP->x.p->arr[1].x.n);
     if (den == NULL)
-	value_set_si(EP.x.p->arr[1].d, 1);
+	value_set_si(EP->x.p->arr[1].d, 1);
     else
-	value_assign(EP.x.p->arr[1].d, *den);
-    zz2value(c, EP.x.p->arr[1].x.n);
-    params.push_back(param);
-    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);//--
-    free_evalue_refs(&EP);
-    return ret;
+	value_assign(EP->x.p->arr[1].d, *den);
+    zz2value(c, EP->x.p->arr[1].x.n);
+    return EP;
 }
 
 static void vertex_period(deque<string>& params, 
@@ -579,11 +574,10 @@ static void vertex_period(deque<string>& params,
     nump = vertex * lambda;
     if (First_Non_Zero(val->p, p) == -1) {
 	value_assign(tmp, lcm);
-	EhrhartPolynom * ET = term(params[p], nump, &tmp);
-	evalue EV1=(*ET).to_evalue(params);  
-	eadd(&EV1, E);   
+	evalue *ET = term(p, nump, &tmp);
+	eadd(ET, E);   
+	free_evalue_refs(ET); 
 	delete ET;
-	free_evalue_refs(&EV1); 
     }
 
     value_assign(tmp, lcm);
@@ -698,11 +692,10 @@ static evalue *multi_mononom(deque<string>& params, vec_ZZ& p)
     evalue_set_si(X, 0, 1);
     unsigned nparam = p.length()-1;
     for (int i = 0; i < nparam; ++i) {
-	EhrhartPolynom *T = term(params[i], p[i]);
-	evalue EV2=(*T).to_evalue(params); 
-	eadd(&EV2, X); 
+	evalue *T = term(i, p[i]);
+	eadd(T, X); 
+	free_evalue_refs(T); 
 	delete T;
-	free_evalue_refs(&EV2); 
     }
     return X;
 }
