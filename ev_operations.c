@@ -2026,9 +2026,11 @@ size_t domain_size(Polyhedron *D)
 	for (j = 0; j < D->Dimension+2; ++j)
 	    s += value_size(D->Constraint[i][j]);
 
+/*
     for (i = 0; i < D->NbRays; ++i)
 	for (j = 0; j < D->Dimension+2; ++j)
 	    s += value_size(D->Ray[i][j]);
+*/
 
     return D->next ? s+domain_size(D->next) : s;
 }
