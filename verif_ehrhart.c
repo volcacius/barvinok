@@ -127,8 +127,8 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
         value_print(stderr,VALUE_FMT,c);
         fprintf(stderr,".\n");
         {
-        	 Enumeration_Print(stderr, en, params);
         	 Enumeration *ee;
+        	 Enumeration_Print(stderr, en, params);
         	 ee = en;
         	 while (ee) {
                 if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {

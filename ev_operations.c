@@ -775,11 +775,11 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		    if (e1->x.p->pos != 2)
 			emul_poly(e1, res);
 		    else {
+			evalue tmp;
 			/* x mod 2 == (x mod 2)^2 */
 			/* a0 b0 + (a0 b1 + a1 b0 + a1 b1) (x mod 2) */
 			assert(e1->x.p->size == 3);
 			assert(res->x.p->size == 3);
-			evalue tmp;
 			value_init(tmp.d);
 			evalue_copy(&tmp, &res->x.p->arr[1]);
 			eadd(&res->x.p->arr[2], &tmp);

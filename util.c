@@ -749,10 +749,11 @@ Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar,
 Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
 				   evalue* factor)
 {
+    Polyhedron *R;
     evalue tmp;
     value_init(tmp.d);
     evalue_set_si(&tmp, 1, 1);
-    Polyhedron *R = ParamPolyhedron_Reduce_mod(P, nvar, &tmp);
+    R = ParamPolyhedron_Reduce_mod(P, nvar, &tmp);
     evalue_mod2table(&tmp, P->Dimension - nvar);
     reduce_evalue(&tmp);
     emul(&tmp, factor);
