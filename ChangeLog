@@ -1,3 +1,11 @@
+version: 0.12
+date: Sun Oct  3 20:47:11 CEST 2004
+changes:
+    - reduce memory requirements
+    - add cdd2polylib.pl
+    - add patch for NTL 5.3.2
+    - experimental support for Ehrhart series
+    - compile fix on systems that lack <getopt.h>
 version: 0.11
 date: Sat Sep 18 14:49:40 CEST 2004
 changes:
