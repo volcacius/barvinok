@@ -3350,6 +3350,9 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     vcone = new Polyhedron_p[P->NbRays];
 
     for (int j = 0; j < P->NbRays; ++j) {
+	if (!value_pos_p(P->Ray[j][dim+1]))
+	    continue;
+
 	int npos, nneg;
 	Polyhedron *C = supporting_cone(P, j);
 	decompose(C, &vcone[j], &npos, &nneg, MaxRays);
@@ -3365,6 +3368,9 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     rays.SetDims(ncone * dim, nvar);
     int r = 0;
     for (int j = 0; j < P->NbRays; ++j) {
+	if (!value_pos_p(P->Ray[j][dim+1]))
+	    continue;
+
 	for (Polyhedron *i = vcone[j]; i; i = i->next) {
 	    add_rays(rays, i, &r, nvar);
 	}
@@ -3397,6 +3403,9 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     gen_fun * gf = new gen_fun;
 
     for (int j = 0; j < P->NbRays; ++j) {
+	if (!value_pos_p(P->Ray[j][dim+1]))
+	    continue;
+
 	for (Polyhedron *i = vcone[j]; i; i = i->next, ++f) {
 	    lattice_point(P->Ray[j]+1, i, vertex);
 	    int k = 0;
