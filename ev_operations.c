@@ -1449,15 +1449,17 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    return ;
 }
 
-/* Frees mask ! */
+/* Frees mask content ! */
 void emask(evalue *mask, evalue *res) {
     int n, i, j;
     Polyhedron *d, *fd;
     struct section *s;
     evalue mone;
 
-    if (EVALUE_IS_ZERO(*res))
+    if (EVALUE_IS_ZERO(*res)) {
+	free_evalue_refs(mask); 
 	return;
+    }
 
     assert(value_zero_p(mask->d));
     assert(mask->x.p->type == partition);
