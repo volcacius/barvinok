@@ -121,6 +121,8 @@ static int mod_term_smaller(evalue *e1, evalue *e2)
     return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
 }
 
+/* Negative pos means inequality */
+/* s is negative of substitution if m is not zero */
 struct fixed_param {
     int	    pos;
     evalue  s;
@@ -144,6 +146,31 @@ static int relations_depth(evalue *e)
     return d;
 }
 
+static void Lcm3(Value i, Value j, Value *res)
+{
+    Value aux;
+
+    value_init(aux);
+    Gcd(i,j,&aux);
+    value_multiply(*res,i,j);
+    value_division(*res, *res, aux);  
+    value_clear(aux);
+}
+
+static void poly_denom(evalue *p, Value *d)
+{
+    value_set_si(*d, 1);
+
+    while (value_zero_p(p->d)) {
+	assert(p->x.p->type == polynomial);
+	assert(p->x.p->size == 2);
+	assert(value_notzero_p(p->x.p->arr[1].d));
+	Lcm3(*d, p->x.p->arr[1].d, d);
+	p = &p->x.p->arr[0];
+    }
+    Lcm3(*d, p->d, d);
+}
+
 #define EVALUE_IS_ONE(ev)	(value_pos_p((ev).d) && value_one_p((ev).x.n))
 
 static void realloc_substitution(struct subst *s, int d)
@@ -163,7 +190,6 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     evalue *p;
     evalue *f;
     evalue *m;
-    evalue mone;
 
     assert(value_zero_p(r->d) && r->x.p->type == relation);
     m = &r->x.p->arr[0];
@@ -172,15 +198,18 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     if (value_notzero_p(m->d))
 	return 0;
 
+    assert(value_zero_p(m->d) && m->x.p->type == fractional);
+    assert(m->x.p->size == 3);
+    assert(EVALUE_IS_ONE(m->x.p->arr[2]));
+
+    /* Oops.  Nested identical relations. */
+    if (!EVALUE_IS_ZERO(m->x.p->arr[1]))
+	return 0;
+
     if (s->n >= s->max) {
 	int d = relations_depth(r);
 	realloc_substitution(s, d);
     }
-
-    assert(value_zero_p(m->d) && m->x.p->type == fractional);
-    assert(m->x.p->size == 3);
-    assert(EVALUE_IS_ONE(m->x.p->arr[2]));
-    assert(EVALUE_IS_ZERO(m->x.p->arr[1]));
 
     p = &m->x.p->arr[0];
     assert(value_zero_p(p->d) && p->x.p->type == polynomial);
@@ -196,10 +225,6 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     value_assign(s->fixed[s->n].d, f->x.n);
     value_init(s->fixed[s->n].s.d);
     evalue_copy(&s->fixed[s->n].s, &p->x.p->arr[0]);
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-    emul(&mone, &s->fixed[s->n].s);
-    free_evalue_refs(&mone);
     ++s->n;
 
     return 1;
@@ -209,6 +234,7 @@ void _reduce_evalue (evalue *e, struct subst *s, int fract) {
   
     enode *p;
     int i, j, k;
+    int add;
   
     if (value_notzero_p(e->d)) {
 	if (fract)
@@ -220,9 +246,9 @@ void _reduce_evalue (evalue *e, struct subst *s, int fract) {
         return;	/* hum... an overflow probably occured */
   
     /* First reduce the components of p */
+    add = p->type == relation;
     for (i=0; i<p->size; i++) {
-	int add = p->type == relation && i == 1;
-	if (add)
+	if (add && i == 1)
 	    add = add_modulo_substitution(s, e);
 
         if (i == 0 && p->type==fractional)
@@ -230,12 +256,13 @@ void _reduce_evalue (evalue *e, struct subst *s, int fract) {
 	else
 	    _reduce_evalue(&p->arr[i], s, fract);
 
-	if (add) {
+	if (add && i == p->size-1) {
 	    --s->n;
 	    value_clear(s->fixed[s->n].m);
 	    value_clear(s->fixed[s->n].d);
 	    free_evalue_refs(&s->fixed[s->n].s); 
-	}
+	} else if (add && i == 1)
+	    s->fixed[s->n-1].pos *= -1;
     }
 
     if (p->type==periodic) {
@@ -289,7 +316,7 @@ you_lose:   	/* OK, lets not do it */
 		    value_assign(d.d, s->fixed[k].d);
 		    value_init(d.x.n);
 		    if (value_notzero_p(s->fixed[k].m))
-			value_assign(d.x.n, s->fixed[k].m);
+			value_oppose(d.x.n, s->fixed[k].m);
 		    else
 			value_set_si(d.x.n, 1);
 		}
@@ -340,8 +367,75 @@ you_lose:   	/* OK, lets not do it */
 
 	    reorder = 1;
 	} else {
+	    evalue *f, *base;
+	    evalue *pp = &p->arr[0];
+	    assert(value_zero_p(pp->d) && pp->x.p->type == polynomial);
+	    assert(pp->x.p->size == 2);
+	    f = &pp->x.p->arr[1];
+
+	    /* search for exact duplicate among the modulo inequalities */
+	    do {
+		for (k = 0; s && k < s->n; ++k) {
+		    if (-s->fixed[k].pos == pp->x.p->pos &&
+			    value_eq(s->fixed[k].d, f->x.n) &&
+			    value_eq(s->fixed[k].m, f->d) &&
+			    eequal(&s->fixed[k].s, &pp->x.p->arr[0]))
+			break;
+		}
+		if (k < s->n) {
+		    Value g;
+		    value_init(g);
+
+		    /* replace { E/m } by { (E-1)/m } + 1/m */
+		    poly_denom(pp, &g);
+		    if (reorder) {
+			evalue extra;
+			value_init(extra.d);
+			evalue_set_si(&extra, 1, 1);
+			value_assign(extra.d, g);
+			eadd(&extra, &v.x.p->arr[1]);
+			free_evalue_refs(&extra); 
+
+			/* We've been going in circles; stop now */
+			if (value_ge(v.x.p->arr[1].x.n, v.x.p->arr[1].d)) {
+			    free_evalue_refs(&v);
+			    value_init(v.d);
+			    evalue_set_si(&v, 0, 1);
+			    break;
+			}
+		    } else {
+			value_init(v.d);
+			value_set_si(v.d, 0);
+			v.x.p = new_enode(fractional, 3, -1);
+			evalue_set_si(&v.x.p->arr[1], 1, 1);
+			value_assign(v.x.p->arr[1].d, g);
+			evalue_set_si(&v.x.p->arr[2], 1, 1);
+			evalue_copy(&v.x.p->arr[0], &p->arr[0]);
+		    }
+
+		    for (f = &v.x.p->arr[0]; value_zero_p(f->d); 
+					     f = &f->x.p->arr[0])
+			;
+		    value_division(f->d, g, f->d);
+		    value_multiply(f->x.n, f->x.n, f->d);
+		    value_assign(f->d, g);
+		    value_decrement(f->x.n, f->x.n);
+		    mpz_fdiv_r(f->x.n, f->x.n, f->d);
+
+		    Gcd(f->d, f->x.n, &g);
+		    value_division(f->d, f->d, g);
+		    value_division(f->x.n, f->x.n, g);
+
+		    value_clear(g);
+		    pp = &v.x.p->arr[0];
+
+		    reorder = 1;
+		}
+	    } while (k < s->n);
+
 	    /* reduction may have made this fractional arg smaller */
-	    for (i = 1; i < p->size; ++i)
+	    i = reorder ? p->size : 1;
+	    for ( ; i < p->size; ++i)
 		if (value_zero_p(p->arr[i].d) && 
 			p->arr[i].x.p->type == fractional &&
 			!mod_term_smaller(e, &p->arr[i]))
@@ -1047,31 +1141,6 @@ void emul_partitions (evalue *e1,evalue *res)
     }
 
     free(s);
-}
-
-static void Lcm3(Value i, Value j, Value *res)
-{
-    Value aux;
-
-    value_init(aux);
-    Gcd(i,j,&aux);
-    value_multiply(*res,i,j);
-    value_division(*res, *res, aux);  
-    value_clear(aux);
-}
-
-static void poly_denom(evalue *p, Value *d)
-{
-    value_set_si(*d, 1);
-
-    while (value_zero_p(p->d)) {
-	assert(p->x.p->type == polynomial);
-	assert(p->x.p->size == 2);
-	assert(value_notzero_p(p->x.p->arr[1].d));
-	Lcm3(*d, p->x.p->arr[1].d, d);
-	p = &p->x.p->arr[0];
-    }
-    Lcm3(*d, p->d, d);
 }
 
 #define value_two_p(val)	(mpz_cmp_si(val,2) == 0)
