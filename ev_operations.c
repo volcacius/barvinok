@@ -69,6 +69,58 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
     return;
 } /* addeliminatedparams_evalue */
 
+static int mod_rational_smaller(evalue *e1, evalue *e2)
+{
+    int r;
+    Value m;
+    value_init(m);
+
+    assert(value_notzero_p(e1->d));
+    assert(value_notzero_p(e2->d));
+    value_multiply(m, e1->x.n, e2->d);
+    value_division(m, m, e1->d);
+    if (value_lt(m, e2->x.n))
+	r = 1;
+    else if (value_gt(m, e2->x.n))
+	r = 0;
+    else 
+	r = -1;
+    value_clear(m);
+
+    return r;
+}
+
+static int mod_term_smaller_r(evalue *e1, evalue *e2)
+{
+    if (value_notzero_p(e1->d)) {
+	if (value_zero_p(e2->d))
+	    return 1;
+	int r = mod_rational_smaller(e1, e2);
+	return r == -1 ? 0 : r;
+    }
+    if (value_notzero_p(e2->d))
+	return 0;
+    if (e1->x.p->pos < e2->x.p->pos)
+	return 1;
+    else if (e1->x.p->pos > e2->x.p->pos)
+	return 0;
+    else {
+	int r = mod_rational_smaller(&e1->x.p->arr[1], &e2->x.p->arr[1]);
+	return r == -1 
+		 ? mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0])
+		 : r;
+    }
+}
+
+static int mod_term_smaller(evalue *e1, evalue *e2)
+{
+    assert(value_zero_p(e1->d));
+    assert(value_zero_p(e2->d));
+    assert(e1->x.p->type == fractional);
+    assert(e2->x.p->type == fractional);
+    return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
+}
+
 struct fixed_param {
     int	    pos;
     evalue  s;
@@ -283,13 +335,36 @@ you_lose:   	/* OK, lets not do it */
         }
     }
     else if (p->type==fractional) {
+	int reorder = 0;
+	evalue v;
+
 	if (value_notzero_p(p->arr[0].d)) {
-	    evalue v;
 	    value_init(v.d);
 	    value_assign(v.d, p->arr[0].d);
 	    value_init(v.x.n);
 	    mpz_fdiv_r(v.x.n, p->arr[0].x.n,  p->arr[0].d);
 
+	    reorder = 1;
+	} else {
+	    /* reduction may have made this fractional arg smaller */
+	    for (i = 1; i < p->size; ++i)
+		if (value_zero_p(p->arr[i].d) && 
+			p->arr[i].x.p->type == fractional &&
+			!mod_term_smaller(e, &p->arr[i]))
+		    break;
+	    if (i < p->size) {
+		value_init(v.d);
+		value_set_si(v.d, 0);
+		v.x.p = new_enode(fractional, 3, -1);
+		evalue_set_si(&v.x.p->arr[1], 0, 1);
+		evalue_set_si(&v.x.p->arr[2], 1, 1);
+		evalue_copy(&v.x.p->arr[0], &p->arr[0]);
+
+		reorder = 1;
+	    }
+	}
+
+	if (reorder) {
 	    for (i=p->size-1;i>=2;i--) {
 		emul(&v, &p->arr[i]);
 		eadd(&p->arr[i], &p->arr[i-1]);
@@ -532,58 +607,6 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   }
   return;
 } /* print_enode */ 
-
-static int mod_rational_smaller(evalue *e1, evalue *e2)
-{
-    int r;
-    Value m;
-    value_init(m);
-
-    assert(value_notzero_p(e1->d));
-    assert(value_notzero_p(e2->d));
-    value_multiply(m, e1->x.n, e2->d);
-    value_division(m, m, e1->d);
-    if (value_lt(m, e2->x.n))
-	r = 1;
-    else if (value_gt(m, e2->x.n))
-	r = 0;
-    else 
-	r = -1;
-    value_clear(m);
-
-    return r;
-}
-
-static int mod_term_smaller_r(evalue *e1, evalue *e2)
-{
-    if (value_notzero_p(e1->d)) {
-	if (value_zero_p(e2->d))
-	    return 1;
-	int r = mod_rational_smaller(e1, e2);
-	return r == -1 ? 0 : r;
-    }
-    if (value_notzero_p(e2->d))
-	return 0;
-    if (e1->x.p->pos < e2->x.p->pos)
-	return 1;
-    else if (e1->x.p->pos > e2->x.p->pos)
-	return 0;
-    else {
-	int r = mod_rational_smaller(&e1->x.p->arr[1], &e2->x.p->arr[1]);
-	return r == -1 
-		 ? mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0])
-		 : r;
-    }
-}
-
-static int mod_term_smaller(evalue *e1, evalue *e2)
-{
-    assert(value_zero_p(e1->d));
-    assert(value_zero_p(e2->d));
-    assert(e1->x.p->type == fractional);
-    assert(e2->x.p->type == fractional);
-    return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
-}
 
 static void eadd_rev(evalue *e1, evalue *res)
 {
