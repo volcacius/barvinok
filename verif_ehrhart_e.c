@@ -63,19 +63,18 @@ int st;
 /* returns 1 on success                             */
 /****************************************************/
 
-int check_poly(Polyhedron *S, Polyhedron *C, Enumeration *en,
+int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
 	       int exist, int nparam, int pos, Value *z) {
   
   int k;
-  Value c,tmp,*ctmp;
+  Value c,tmp;
   
   value_init(c); value_init(tmp);
   
   if(pos == nparam) {
     
     /* Computes the ehrhart polynomial */
-    value_assign(c,*(ctmp=compute_poly(en,&z[S->Dimension-nparam+1])));
-    free(ctmp);
+    value_set_double(c, compute_evalue(EP,&z[S->Dimension-nparam+1])+.25);
     /* if c=0 we may be out of context. */
     /* scanning is useless in this case*/
     if(!in_domain(C,&z[S->Dimension-nparam+1])) {
@@ -119,18 +118,7 @@ int check_poly(Polyhedron *S, Polyhedron *C, Enumeration *en,
         fprintf(stderr,", while EP eval gives ");
         value_print(stderr,VALUE_FMT,c);
         fprintf(stderr,".\n");
-        {
-        	 Enumeration *ee;
-        	 Enumeration_Print(stderr, en, params);
-        	 ee = en;
-        	 while (ee) {
-                if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
-                	 Print_Domain(stderr, ee->ValidityDomain, params);
-                	 print_evalue(stderr, &ee->EP, params);
-                }
-                ee = ee->next;
-          }
-        }
+	print_evalue(stderr, EP, params);
 #ifndef DONT_BREAK_ON_ERROR
 	value_clear(c); value_clear(tmp);
 	return(0);
@@ -155,7 +143,7 @@ int check_poly(Polyhedron *S, Polyhedron *C, Enumeration *en,
 #endif
       
       value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if(!check_poly(S, C, en, exist, nparam, pos+1, z)) {
+      if(!check_poly(S, C, EP, exist, nparam, pos+1, z)) {
 	value_clear(c); value_clear(tmp);
 	return(0);
       }
@@ -174,7 +162,7 @@ int main(int argc,char *argv[])
   int exist, nparam;
   char s[128];
   evalue *EP;
-  Enumeration *en;
+  int res;
   
 /******* Read the input *********/
   P1 = Matrix_Read();
@@ -244,10 +232,10 @@ int main(int argc,char *argv[])
       else
 	value_set_si(C1->p[i][j],0);
   C = Polyhedron_Image(P,C1,MAXRAYS);
+  Matrix_Free(C1);
 
   /******* Compute EP *********/
   EP = barvinok_enumerate_e(P, exist, nparam, MAXRAYS);
-  en = partition2enumeration(EP);
   
   /******* Initializations for check *********/
   p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
@@ -276,12 +264,10 @@ int main(int argc,char *argv[])
 #endif
 
   /******* CHECK NOW *********/
-  if(S && !check_poly(S, C, en, exist, nparam, 0, p)) {
+  res = 0;
+  if(S && !check_poly(S, C, EP, exist, nparam, 0, p)) {
     fprintf(stderr,"Check failed !\n");
-    for(i=0;i<=(P->Dimension+1);i++) 
-      value_clear(p[i]);
-    value_clear(tmp);  
-    return(-1);
+    res = -1;
   }
     
 #ifndef PRINT_ALL_RESULTS
@@ -290,9 +276,15 @@ int main(int argc,char *argv[])
   
   for(i=0;i<=(P->Dimension+1);i++) 
     value_clear(p[i]);
+  free(p);
   value_clear(tmp);
   Free_ParamNames(params, C->Dimension);
-  return(0);
+  Polyhedron_Free(S);
+  Polyhedron_Free(C);
+  Polyhedron_Free(P);
+  free_evalue_refs(EP);
+  free(EP);
+  return res;
 } /* main */
 
 
