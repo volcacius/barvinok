@@ -33,7 +33,7 @@ else
 fi
 
 AC_ARG_WITH(polylib,
-            [  --with-polylib=DIR      DIR Location of the PolyLib],
+            [  --with-polylib=DIR      DIR Location of PolyLib],
             [ echo "Package polylib : $withval" && polylib_package=$withval],  
             [ polylib_package=yes ])
 
@@ -50,6 +50,20 @@ AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
 AC_REPLACE_FUNCS(Enumeration_Free)
+
+AC_ARG_WITH(ntl,
+            [  --with-ntl=DIR          DIR Location of NTL],
+            [ echo "Package tnl : $withval" && ntl_package=$withval],  
+            [ ntl_package=yes ])
+
+if test "$ntl_package" = "no"; then
+    AC_MSG_ERROR(Need ntl)
+fi
+
+if test "$ntl_package" != "yes"; then
+    CPPFLAGS="-I$ntl_package/include $CPPFLAGS"
+    LDFLAGS="-L$ntl_package/lib $LDFLAGS"
+fi
 
 AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
