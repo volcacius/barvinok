@@ -218,12 +218,10 @@ public:
 	value_init(tmp);
 	Polyhedron *C = poly();
 	int i;
-	for (i = 0; i < C->NbConstraints; ++i) {
-	    Inner_Product(z->p, C->Constraint[i]+1, z->Size-1, &tmp);
-	    if (value_pos_p(tmp))
+	for (i = 0; i < lambda.length(); ++i)
+	    if (lambda[i] > 0)
 		break;
-	}
-	if (i == C->NbConstraints) {
+	if (i == lambda.length()) {
 	    value_set_si(tmp, -1);
 	    Vector_Scale(z->p, z->p, tmp, z->Size-1);
 	}
