@@ -4,7 +4,7 @@
 
 int main()
 {
-    int i, nbPol, nbMat, func;
+    int i, nbPol, nbMat, func, j;
     Polyhedron *A, *B, *C;
     char s[128];
 
@@ -31,6 +31,14 @@ int main()
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
 	    Polyhedron_Free(C);
 	    Polyhedron_Free(B);
+	    break;
+	case 2:
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    for (j = 0; j < A->NbRays; ++j) {
+		B = supporting_cone(A, j, 600);
+		Polyhedron_Print(stdout, P_VALUE_FMT, B);
+		Polyhedron_Free(B);
+	    }
 	    break;
 	}
 	Polyhedron_Free(A);
