@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     printf("exist: %d, nparam: %d\n", exist, nparam);
     param_name = Read_ParamNames(stdin, nparam);
-    if (pip)
+    if (pip && exist > 0)
 	EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
     else
 	EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
