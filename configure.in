@@ -87,6 +87,31 @@ int main()
 ],,
 AC_MSG_WARN([This version of polylib leaks]))
 
+AC_TRY_RUN([
+#include <stdio.h>
+#include <polylib/polylibgmp.h>
+
+int main()
+{
+    Matrix *M;
+    Polyhedron *P, *C;
+    Param_Polyhedron *PP;
+    int i;
+    Param_Vertices *V;
+
+    freopen("$srcdir/tests/ehrhart/t12.in", "r", stdin);
+    M = Matrix_Read();
+    P = Constraints2Polyhedron(M, 1024);
+    M = Matrix_Read();
+    C = Constraints2Polyhedron(M, 1024);
+    PP = Polyhedron2Param_SimplifiedDomain(&P, C, 1024, NULL, NULL);
+    for (i = 0, V = PP->V; V; ++i, V = V->next)
+	;
+    return !(i == 10);
+}
+],,
+AC_MSG_WARN([This version of polylib produces incorrect validity domains.]))
+
 AC_MSG_CHECKING([number of arguments of Polyhedron_Enumerate])
 AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
 	       [Polyhedron_Enumerate(NULL,NULL,0,NULL)],
