@@ -18,9 +18,7 @@ LDADD = libbarvinok.la
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
 
-TESTFILES = \
-	$(filter-out $(top_srcdir)/tests/CVS,$(wildcard $(top_srcdir)/tests/*))
-EHRHART_TESTS = $(wildcard $(top_srcdir)/tests/ehrhart/*)
+TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = ChangeLog $(TESTFILES)
 
