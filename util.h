@@ -16,6 +16,7 @@ Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v);
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons);
 void check_triangulization(Polyhedron *P, Polyhedron *T);
 Polyhedron *remove_equalities(Polyhedron *P);
+Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor);
 void manual_count(Polyhedron *P, Value* result);
 Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
 Matrix * unimodular_complete(Vector *row);

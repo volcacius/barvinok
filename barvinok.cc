@@ -914,14 +914,21 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Param_Vertices *V;
     Enumeration *en, *res;
     int r = 0;
+    unsigned nparam = C->Dimension;
 
     res = NULL;
+
+    if (P->NbEq != 0) {
+	Matrix *f;
+	P = remove_equalities_p(P, P->Dimension-nparam, &f);
+	// ignore f for now
+	Matrix_Free(f);
+    }
 
     assert(C->Dimension != 0); // assume that there are parameters for now
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
     assert(isIdentity(CT)); // assume for now
 
-    unsigned nparam = C->Dimension;
     deque<string> params;
     default_params(params, nparam);
     unsigned dim = P->Dimension - nparam;

@@ -414,6 +414,57 @@ Polyhedron *remove_equalities(Polyhedron *P)
     return p;
 }
 
+/*
+ * Returns a full-dimensional polyhedron with the same number
+ * of integer points as P
+ * nvar specifies the number of variables
+ * The remaining dimensions are assumed to be parameters
+ */
+Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
+{
+    Value g;
+    Vector *v;
+    Polyhedron *p = Polyhedron_Copy(P), *q;
+    unsigned dim = p->Dimension;
+    Matrix *m1, *m2, *f;
+    int i, j;
+
+    value_init(g);
+    f = Matrix_Alloc(p->NbEq, dim-nvar+2);
+    j = 0;
+    *factor = f;
+    while (p->NbEq > 0) {
+	assert(dim > 0);
+	Vector_Gcd(p->Constraint[0]+1, dim+1, &g);
+	Vector_AntiScale(p->Constraint[0]+1, p->Constraint[0]+1, g, dim+1);
+	Vector_Gcd(p->Constraint[0]+1, nvar, &g);
+	Vector_Copy(p->Constraint[0]+1+nvar, f->p[j], dim-nvar+1);
+	value_assign(f->p[j][dim-nvar+1], g);
+	v = Vector_Alloc(dim);
+	Vector_AntiScale(p->Constraint[0]+1, v->p, g, nvar);
+	Vector_Set(v->p+nvar, 0, dim-nvar);
+	m1 = unimodular_complete(v);
+	m2 = Matrix_Alloc(dim, dim+1);
+	for (i = 0; i < dim-1 ; ++i) {
+	    Vector_Copy(m1->p[i+1], m2->p[i], dim);
+	    value_set_si(m2->p[i][dim], 0);
+	}
+	Vector_Set(m2->p[dim-1], 0, dim);
+	value_set_si(m2->p[dim-1][dim], 1);
+	q = Polyhedron_Image(p, m2, p->NbConstraints+1+p->NbRays);
+	Vector_Free(v);
+	Matrix_Free(m1);
+	Matrix_Free(m2);
+	Polyhedron_Free(p);
+	p = q;
+	--dim;
+	--nvar;
+	++j;
+    }
+    value_clear(g);
+    return p;
+}
+
 struct single {
     int	nr;
     int pos[2];
