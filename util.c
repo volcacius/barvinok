@@ -818,3 +818,16 @@ void Free_ParamNames(char **params, int m)
 	free(params[m]);
     free(params);
 }
+
+int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2)
+{
+    Polyhedron *P2;
+    for ( ; Pol1; Pol1 = Pol1->next) {
+	for (P2 = Pol2; P2; P2 = P2->next)
+	    if (!PolyhedronIncludes(Pol1, P2))
+		break;
+	if (!P2)
+	    return 1;
+    }
+    return 0;
+}
