@@ -983,7 +983,7 @@ Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays)
     return R;
 }
 
-void line_minmax(Polyhedron *I, Value *min, Value *max)
+int line_minmax(Polyhedron *I, Value *min, Value *max)
 {
     int i;
 
@@ -996,6 +996,11 @@ void line_minmax(Polyhedron *I, Value *min, Value *max)
 	    mpz_fdiv_q(*min, I->Constraint[0][2], I->Constraint[0][1]);
 	value_assign(*max, *min);
     } else for (i = 0; i < I->NbConstraints; ++i) {
+	if (value_zero_p(I->Constraint[i][1])) {
+	    Polyhedron_Free(I);
+	    return 0;
+	}
+
 	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
 	if (value_pos_p(I->Constraint[i][1]))
 	    mpz_cdiv_q(*min, I->Constraint[i][2], I->Constraint[i][1]);
@@ -1003,6 +1008,7 @@ void line_minmax(Polyhedron *I, Value *min, Value *max)
 	    mpz_fdiv_q(*max, I->Constraint[i][2], I->Constraint[i][1]);
     }
     Polyhedron_Free(I);
+    return 1;
 }
 
 /** 

@@ -2467,6 +2467,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
     int r = 0;
     Polyhedron *I;
     Matrix *T;
+    int bounded;
 
     if (value_notzero_p(e->d))
 	return r;
@@ -2480,12 +2481,12 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	value_init(max);
 
 	I = polynomial_projection(p->arr[0].x.p, D, &d, &T, 1);
-	line_minmax(I, &min, &max); /* frees I */
+	bounded = line_minmax(I, &min, &max); /* frees I */
 	equal = value_eq(min, max);
 	mpz_cdiv_q(min, min, d);
 	mpz_fdiv_q(max, max, d);
 
-	if (value_gt(min, max)) {
+	if (bounded && value_gt(min, max)) {
 	    /* Never zero */
 	    if (p->size == 3) {
 		value_clear(e->d);
@@ -2502,7 +2503,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(max);
 	    Matrix_Free(T);
 	    return r ? r : reduce_in_domain(e, D);
-	} else if (equal) {
+	} else if (bounded && equal) {
 	    /* Always zero */
 	    if (p->size == 3)
 		free_evalue_refs(&(p->arr[2]));
@@ -2515,7 +2516,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(max);
 	    Matrix_Free(T);
 	    return reduce_in_domain(e, D);
-	} else if (value_eq(min, max)) {
+	} else if (bounded && value_eq(min, max)) {
 	    /* zero for a single value */
 	    Polyhedron *E;
 	    Matrix *M = Matrix_Alloc(1, D->Dimension+2);
@@ -2570,12 +2571,12 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
     value_init(max);
     I = polynomial_projection(p, D, &d, &T, 1);
     Matrix_Free(T);
-    line_minmax(I, &min, &max); /* frees I */
+    bounded = line_minmax(I, &min, &max); /* frees I */
     mpz_fdiv_q(min, min, d);
     mpz_fdiv_q(max, max, d);
     value_substract(d, max, min);
 
-    if (value_eq(min, max)) {
+    if (bounded && value_eq(min, max)) {
 	evalue inc;
 	value_init(inc.d);
 	value_init(inc.x.n);
@@ -2588,7 +2589,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	free(p);
 	free_evalue_refs(&inc);
 	r = 1;
-    } else if (value_one_p(d) && p->size > 3) {
+    } else if (bounded && value_one_p(d) && p->size > 3) {
 	evalue rem;
 	value_init(rem.d);
 	value_set_si(rem.d, 0);
