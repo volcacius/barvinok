@@ -616,7 +616,7 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
  * old is the constraint; v points to an initialized
  * value that this procedure can use.
  * Return non-zero if something changed.
- * Result is places in new.
+ * Result is placed in new.
  */
 int ConstraintSimplify(Value *old, Value *new, int len, Value* v)
 {
