@@ -438,15 +438,13 @@ struct dpoly_r {
     }
     dpoly_r *div(dpoly& d) {
 	dpoly_r *rc = new dpoly_r(len, dim);
-	rc->denom = power(d.coeff[0], len+1);
-	ZZ cur_d = rc->denom;
+	rc->denom = power(d.coeff[0], len);
+	ZZ inv_d = rc->denom / d.coeff[0];
 	ZZ coeff;
 
 	for (int i = 0; i < len; ++i) {
-	    cur_d /= d.coeff[0];
-
 	    for (int k = 0; k < c[i].size(); ++k) {
-		coeff = c[i][k]->coeff * cur_d;
+		coeff = c[i][k]->coeff * inv_d;
 		rc->add_term(i, c[i][k]->powers, coeff);
 	    }
 
