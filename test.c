@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <polylib/polylibgmp.h>
 #include <util.h>
@@ -6,7 +7,7 @@
 int main()
 {
     int i, nbPol, nbMat, func, j;
-    Polyhedron *A, *B, *C;
+    Polyhedron *A, *B, *C, *D, *E, *F, *G;
     char s[128];
 
     nbPol = nbMat = 0;
@@ -61,6 +62,25 @@ int main()
 	    value_clear(c);
 	    break;
 	}
+	case 5:
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    B = triangularize_cone(A, 600);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
+	    for (C = B; C; C = C->next)
+		for (D = C->next; D; D = D->next) {
+		    F = C->next;
+		    G = D->next;
+		    C->next = NULL;
+		    D->next = NULL;
+		    E = DomainIntersection(C, D, 600);
+		    Polyhedron_Print(stdout, P_VALUE_FMT, E);
+		    assert(E->NbRays == 0 || E->NbEq == 1);
+		    Polyhedron_Free(E);
+		    C->next = F;
+		    D->next = G;
+		}
+	    Domain_Free(B);
+	    break;
 	}
 	Polyhedron_Free(A);
     }

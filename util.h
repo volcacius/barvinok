@@ -9,6 +9,7 @@ extern "C" {
 
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
 Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays);
+Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons);
 
 #if defined(__cplusplus)
 }

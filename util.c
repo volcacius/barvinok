@@ -78,3 +78,72 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
     Matrix_Free(M);
     return P;
 }
+
+Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
+{
+    int i, j, r;
+    Value tmp;
+    unsigned dim = P->Dimension;
+    Matrix *M = Matrix_Alloc(P->NbRays, dim+3);
+    Matrix *M2;
+    Polyhedron *L, *R, *T;
+
+    R = NULL;
+    value_init(tmp);
+    for (i = 0; i < P->NbRays; ++i) {
+	Vector_Copy(P->Ray[i], M->p[i], dim+1);
+	Inner_Product(M->p[i]+1, M->p[i]+1, dim, &tmp);
+	value_assign(M->p[i][dim+1], tmp);
+	value_set_si(M->p[i][dim+2], 1);
+    }
+
+    Matrix_Print(stdout, P_VALUE_FMT, M);
+    L = Rays2Polyhedron(M, NbMaxCons);
+    Polyhedron_Print(stdout, P_VALUE_FMT, L);
+
+    if (L->NbEq != 0) {
+	Polyhedron_Free(L);
+	value_set_si(tmp, 2);
+	Vector_Scale(M->p[0]+1, M->p[0]+1, tmp, dim);
+	Inner_Product(M->p[0]+1, M->p[0]+1, dim, &tmp);
+	value_assign(M->p[0][dim+1], tmp);
+	Matrix_Print(stdout, P_VALUE_FMT, M);
+	L = Rays2Polyhedron(M, NbMaxCons);
+	Polyhedron_Print(stdout, P_VALUE_FMT, L);
+	assert(L->NbEq == 0);
+    }
+
+    M2 = Matrix_Alloc(dim+1, dim+2);
+    Vector_Set(M2->p[0]+1, 0, dim);
+    value_set_si(M2->p[0][0], 1);
+    value_set_si(M2->p[0][dim+1], 1);
+    for (i = 0; i < L->NbConstraints; ++i) {
+	assert(value_notzero_p(L->Constraint[i][dim+1]));
+	if (value_neg_p(L->Constraint[i][dim+1]))
+	    continue;
+	if (value_notzero_p(L->Constraint[i][dim+2]))
+	    continue;
+	for (j = 0, r = 1; j < M->NbRows-1; ++j) {
+	    Inner_Product(M->p[j]+1, L->Constraint[i]+1, dim+1, &tmp);
+	    if (value_notzero_p(tmp))
+		continue;
+	    Vector_Copy(M->p[j]+1, M2->p[r]+1, dim);
+	    value_set_si(M2->p[r][0], 1);
+	    value_set_si(M2->p[r][dim+1], 0);
+	    ++r;
+	}
+	assert(r == dim+1);
+	Matrix_Print(stdout, P_VALUE_FMT, M2);
+	T = Rays2Polyhedron(M2, P->NbConstraints);
+	Polyhedron_Print(stdout, P_VALUE_FMT, T);
+	T->next = R;
+	R = T;
+    }
+    Matrix_Free(M2);
+
+    Polyhedron_Free(L);
+    value_clear(tmp);
+    Matrix_Free(M);
+
+    return R;
+}
