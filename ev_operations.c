@@ -482,6 +482,15 @@ you_lose:   	/* OK, lets not do it */
         }
     }
     else if (p->type == relation) {
+	if (p->size == 3 && eequal(&p->arr[1], &p->arr[2])) {
+	    free_evalue_refs(&(p->arr[2]));
+	    free_evalue_refs(&(p->arr[0]));
+	    p->size = 2;
+	    value_clear(e->d);
+	    *e = p->arr[1];
+	    free(p);
+	    return;
+	}
 	if (p->size == 3 && EVALUE_IS_ZERO(p->arr[2])) {
 	    free_evalue_refs(&(p->arr[2]));
 	    p->size = 2;
