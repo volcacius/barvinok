@@ -1618,6 +1618,7 @@ INDEPENDENT = 1 << 2,
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
+    //Polyhedron_Print(stderr, P_VALUE_FMT, P);
     if (exist == 0) {
 	Polyhedron *U = Universe_Polyhedron(nparam);
 	evalue *EP = barvinok_enumerate_ev(P, U, MaxRays);
@@ -1739,10 +1740,18 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			    break;
 		    if (j == exist) {
 			/* recalculate constant */
+			/* We actually recalculate the whole row for
+			 * now, because it may have already been scaled
+			 */
 			value_oppose(f, P->Constraint[u][nvar+i+1]);
+			Vector_Combine(P->Constraint[l]+1, P->Constraint[u]+1, 
+			       row->p+1,
+			       f, P->Constraint[l][nvar+i+1], len-1);
+			/*
 			Vector_Combine(P->Constraint[l]+len-1, 
 				       P->Constraint[u]+len-1, row->p+len-1,
 				       f, P->Constraint[l][nvar+i+1], 1);
+			*/
 			value_multiply(f, f, P->Constraint[l][nvar+i+1]);
 			value_substract(row->p[len-1], row->p[len-1], f);
 			value_set_si(f, -1);
