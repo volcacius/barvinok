@@ -1528,7 +1528,7 @@ out:
     Polyhedron ** vcone = new Polyhedron_p[PP->nbV];
     int * npos = new int[PP->nbV];
     int * nneg = new int[PP->nbV];
-    vec_ZZ sign;
+    ZZ sign;
 
     int i;
     for (i = 0, V = PP->V; V; ++i, V = V->next) {
@@ -1555,14 +1555,8 @@ out:
 	pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
 
 	int ncone = 0;
-	sign.SetLength(ncone);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    ncone += npos[_i] + nneg[_i];
-	    sign.SetLength(ncone);
-	    for (int k = 0; k < npos[_i]; ++k)
-		sign[ncone-nneg[_i]-k-1] = 1;
-	    for (int k = 0; k < nneg[_i]; ++k)
-		sign[ncone-k-1] = -1;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
 	mat_ZZ rays;
@@ -1577,57 +1571,47 @@ out:
 	vec_ZZ lambda;
 	nonorthog(rays, lambda);
 
-	mat_ZZ den;
-	den.SetDims(ncone,dim);
-	term_info *num = new term_info[ncone];
+	vec_ZZ den;
+	den.SetLength(dim);
+	term_info num;
           
-	int f = 0;
-	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
-	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
-		lattice_point(V, i, lambda, &num[f], pVD);
-		normalize(i, lambda, sign[f], num[f].constant, den[f]);
-		++f;
-	    }
-	END_FORALL_PVertex_in_ParamPolyhedron;
-	ZZ min = num[0].constant;
-	for (int j = 1; j < ncone; ++j)
-	    if (num[j].constant < min)
-		min = num[j].constant;
-	for (int j = 0; j < ncone; ++j)
-	    num[j].constant -= min;
-	f = 0;
 	value_init(s[nd].E.d);
 	evalue_set_si(&s[nd].E, 0, 1);
 	mpq_t count;
 	mpq_init(count);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
+	    int f = 0;
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
-		dpoly n(dim, den[f][0], 1);
+		sign = f < npos[_i] ? 1 : -1;
+		lattice_point(V, i, lambda, &num, pVD);
+		normalize(i, lambda, sign, num.constant, den);
+
+		dpoly n(dim, den[0], 1);
 		for (int k = 1; k < dim; ++k) {
-		    dpoly fact(dim, den[f][k], 1);
+		    dpoly fact(dim, den[k], 1);
 		    n *= fact;
 		}
-		if (num[f].E != NULL) {
+		if (num.E != NULL) {
 		    ZZ one(INIT_VAL, 1);
-		    dpoly_n d(dim, num[f].constant, one);
-		    d.div(n, c, sign[f]);
+		    dpoly_n d(dim, num.constant, one);
+		    d.div(n, c, sign);
 		    evalue EV; 
-		    multi_polynom(c, num[f].E, &EV);
+		    multi_polynom(c, num.E, &EV);
 		    eadd(&EV , &s[nd].E);
 		    free_evalue_refs(&EV);
-		    free_evalue_refs(num[f].E);
-		    delete num[f].E; 
-		} else if (num[f].pos != -1) {
-		    dpoly_n d(dim, num[f].constant, num[f].coeff);
-		    d.div(n, c, sign[f]);
+		    free_evalue_refs(num.E);
+		    delete num.E; 
+		} else if (num.pos != -1) {
+		    dpoly_n d(dim, num.constant, num.coeff);
+		    d.div(n, c, sign);
 		    evalue EV;
-		    uni_polynom(num[f].pos, c, &EV);
+		    uni_polynom(num.pos, c, &EV);
 		    eadd(&EV , &s[nd].E);
 		    free_evalue_refs(&EV);
 		} else {
 		    mpq_set_si(count, 0, 1);
-		    dpoly d(dim, num[f].constant);
-		    d.div(n, count, sign[f]);
+		    dpoly d(dim, num.constant);
+		    d.div(n, count, sign);
 		    evalue EV;
 		    value_init(EV.d);
 		    evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
@@ -1639,7 +1623,6 @@ out:
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
 	mpq_clear(count);
-	delete [] num;
 
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
