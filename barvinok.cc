@@ -564,6 +564,7 @@ static void vertex_period(deque<string>& params,
 	value2zz(lcm, l);
 	num *= l;
 	num += offset;
+	value_init(ev->x.n);
 	zz2value(num, ev->x.n);
 	value_assign(ev->d, lcm);
 	Vector_Free(values);
@@ -599,7 +600,7 @@ static void vertex_period(deque<string>& params,
 	    vertex_period(params, i, lambda, T, lcm, p+1, val, E, 
 			  &ev->x.p->arr[VALUE_TO_INT(tmp)], new_offset);
 	} while (value_pos_p(tmp));
-    } else 
+    } else
 	vertex_period(params, i, lambda, T, lcm, p+1, val, E, ev, offset);
     value_clear(tmp);
 }
@@ -657,6 +658,7 @@ void lattice_point(deque<string>& params,
 	Vector *val = Vector_Alloc(nparam+1);
 	value_set_si(val->p[nparam], 1);
 	ZZ offset(INIT_VAL, 0);
+	value_init(ev.d);
 	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev, offset);
 	Vector_Free(val);
 
