@@ -234,8 +234,7 @@ static int mod_term_smaller(evalue *e1, evalue *e2)
     else if (e1->x.p->pos > e2->x.p->pos)
 	return 0;
     else
-	return mod_term_smaller(&e1->x.p->arr[e1->x.p->type==modulo],
-				&e2->x.p->arr[e2->x.p->type==modulo]);
+	return mod_term_smaller(&e1->x.p->arr[0], &e2->x.p->arr[0]);
 }
 
 static void eadd_rev(evalue *e1, evalue *res)
