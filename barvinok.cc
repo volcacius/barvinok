@@ -16,15 +16,15 @@ using std::endl;
 #define SIZE(p) (((long *) (p))[1])
 #define DATA(p) ((mp_limb_t *) (((long *) (p)) + 2))
 
-static void value2zz(Value *v, ZZ& z)
+static void value2zz(Value v, ZZ& z)
 {
-    int sa = (*v)[0]._mp_size;
+    int sa = v[0]._mp_size;
     int abs_sa = sa < 0 ? -sa : sa;
 
     _ntl_gsetlength(&z.rep, abs_sa);
     mp_limb_t * adata = DATA(z.rep);
     for (int i = 0; i < abs_sa; ++i)
-	adata[i] = (*v)[0]._mp_d[i];
+	adata[i] = v[0]._mp_d[i];
     SIZE(z.rep) = sa;
 }
 
@@ -40,7 +40,7 @@ static void matrix2zz(Matrix *M, mat_ZZ& m)
     for (int i = 0; i < M->NbRows-1; ++i) {
 //	assert(value_one_p(M->p[i][M->NbColumns - 1]));
 	for (int j = 0; j < M->NbColumns - 1; ++j) {
-	    value2zz(&M->p[i][j], m[i][j]);
+	    value2zz(M->p[i][j], m[i][j]);
 	}
     }
 }
@@ -56,7 +56,7 @@ static void rays(mat_ZZ& r, Polyhedron *C)
     for (i = 0, c = 0; i < dim; ++i)
 	if (value_zero_p(C->Ray[i][dim+1])) {
 	    for (int j = 0; j < dim; ++j) {
-		value2zz(&C->Ray[i][j+1], tmp);
+		value2zz(C->Ray[i][j+1], tmp);
 		r[j][c] = tmp;
 	    }
 	    ++c;
