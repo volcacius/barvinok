@@ -1,6 +1,8 @@
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
-		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e
+		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
+		  @bv_extra_programs@
+EXTRA_PROGRAMS = piptest
 pkginclude_HEADERS = barvinok.h util.h ev_operations.h
 
 libbarvinok_la_SOURCES = \
@@ -10,6 +12,8 @@ libbarvinok_la_SOURCES = \
     util.h \
     barvinok.cc \
     barvinok.h
+EXTRA_libbarvinok_la_SOURCES = \
+    piputil.h
 libbarvinok_la_LIBADD = @LTLIBOBJS@ -lstdc++
 libbarvinok_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbarvinok.la

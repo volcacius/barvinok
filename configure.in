@@ -128,6 +128,29 @@ AC_TRY_COMPILE([#include <polylib/polylibgmp.h>],
 			  [count_points takes four arguments])],
 	       [AC_MSG_RESULT(3)])
 
+AC_ARG_WITH(piplib,
+            [  --with-piplib=DIR       DIR Location of PolyLib],
+            [ echo "Package piplib : $withval" && piplib_package=$withval],  
+            [ piplib_package=yes ])
+
+AC_SUBST(bv_extra_programs)
+if test "$piplib_package" != "no"; then
+    if test "$piplib_package" != "yes"; then
+	CPPFLAGS="-I$piplib_package/include $CPPFLAGS"
+	LDFLAGS="-L$piplib_package/lib $LDFLAGS"
+    fi
+
+    AC_CHECK_LIB(piplibMP, pip_solve,[
+	AC_DEFINE(HAVE_PIPLIB,[],[use piplib])
+	LIBS="-lpiplibMP $LIBS"
+	AC_LIBOBJ(piputil)
+	bv_extra_programs="piptest $bv_extra_programs"
+    ],[
+	AC_MSG_WARN([Piplib not found])
+    ])
+fi
+
+
 AC_MSG_CHECKING(if --enable-fractional option specified)
 AC_ARG_ENABLE(fractional,
             [  --enable-fractional     Use fractional representation],
