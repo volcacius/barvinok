@@ -28,6 +28,19 @@
 #define MAXRAYS  1024
 #endif
 
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
+struct option options[] = {
+    { "min",   no_argument,  0,  'm' },
+    { "max",   no_argument,  0,  'M' },
+    { "range",   no_argument,  0,  'r' },
+    { "pip",   no_argument,  0,  'p' },
+    { 0, 0, 0, 0 }
+};
+#endif
+
 /* define this to print all the results */
 /* else, only a progress bar is printed */
 /* #define PRINT_ALL_RESULTS	 
@@ -169,7 +182,9 @@ int main(int argc,char *argv[])
   char s[128];
   evalue *EP;
   int res;
-  
+  int c, ind = 0;
+  int pip = 0;
+
 /******* Read the input *********/
   P1 = Matrix_Read();
 
@@ -193,31 +208,25 @@ int main(int argc,char *argv[])
   else
     M = RANGE;
   m = -M;
-  if(argc != 1 ) {
-    for(i=1;i<argc;i++) {
-      if(!strncmp(argv[i],"-m",2)) {
-	
-	/* min specified */
-	m = atoi(&argv[i][2]);
-      }
-      else if(!strncmp(argv[i],"-M",2)) {
-	
-	/* max specified */
-	M = atoi(&argv[i][2]);
-      }
-      else if(!strncmp(argv[i], "-r", 2)) {
-	
-	/* range specified */
-	M = atoi(&argv[i][2]);
-	m = -M;
-      }
-      else {
-	fprintf(stderr,"Unknown option: %s\n",argv[i]);
-	fprintf(stderr,"Usage: %s [-m<>][-M<>][-r<>]\n",argv[0]);
-	return(-1);
-      }
+
+    while ((c = getopt_long(argc, argv, "pm:M:r:", options, &ind)) != -1) {
+	switch (c) {
+	case 'p':
+	    pip = 1;
+	    break;
+	case 'm':
+	    m = atoi(optarg);
+	    break;
+	case 'M':
+	    M = atoi(optarg);
+	    break;
+	case 'r':
+	    M = atoi(optarg);
+	    m = -M;
+	    break;
+	}
     }
-  }
+  
   if(m > M) {
     fprintf(stderr,"Nothing to do: min > max !\n");
     return(0);
@@ -241,7 +250,10 @@ int main(int argc,char *argv[])
   Matrix_Free(C1);
 
   /******* Compute EP *********/
-  EP = barvinok_enumerate_e(P, exist, nparam, MAXRAYS);
+  if (pip)
+    EP = barvinok_enumerate_pip(P, exist, nparam, MAXRAYS);
+  else
+    EP = barvinok_enumerate_e(P, exist, nparam, MAXRAYS);
   
   /******* Initializations for check *********/
   p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
