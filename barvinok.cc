@@ -1563,12 +1563,34 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 	return EP;
     }
 
-    assert(P->NbEq == 0); // for now
-
     int nvar = P->Dimension - exist - nparam;
     int len = P->Dimension + 2;
 
     //printf("%d %d %d\n", nvar, exist, nparam);
+
+    int r;
+    for (r = 0; r < P->NbEq; ++r)
+	if (First_Non_Zero(P->Constraint[r]+1+nvar, exist) != -1)
+	    break;
+    if (r < P->NbEq) {
+	Vector *row = Vector_Alloc(exist);
+	Vector_Copy(P->Constraint[r]+1+nvar, row->p, exist);
+	Matrix *M = unimodular_complete(row);
+	Matrix *M2 = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
+	for (r = 0; r < nvar; ++r)
+	    value_set_si(M2->p[r][r], 1);
+	for ( ; r < nvar+exist; ++r)
+	    Vector_Copy(M->p[r-nvar], M2->p[r]+nvar, exist);
+	for ( ; r < P->Dimension+1; ++r)
+	    value_set_si(M2->p[r][r], 1);
+	Polyhedron *T = Polyhedron_Image(P, M2, MaxRays);
+	evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+	Polyhedron_Free(T);
+	Matrix_Free(M2);
+	Matrix_Free(M);
+	Vector_Free(row);
+	return EP;
+    }
 
     Vector *row = Vector_Alloc(len);
     value_set_si(row->p[0], 1);
@@ -1579,10 +1601,10 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
     enum constraint info[exist];
     for (int i = 0; i < exist; ++i) {
 	info[i] = ALL_POS;
-	for (int l = 0; l < P->NbConstraints; ++l) {
+	for (int l = P->NbEq; l < P->NbConstraints; ++l) {
 	    if (value_negz_p(P->Constraint[l][nvar+i+1]))
 		continue;
-	    for (int u = 0; u < P->NbConstraints; ++u) {
+	    for (int u = P->NbEq; u < P->NbConstraints; ++u) {
 		if (value_posz_p(P->Constraint[u][nvar+i+1]))
 		    continue;
 		value_oppose(f, P->Constraint[u][nvar+i+1]);
@@ -1696,10 +1718,10 @@ next:
 	if (info[i] & INDEPENDENT) {
 	    /* Find constraint again and split off negative part */
 
-	    for (int l = 0; l < P->NbConstraints; ++l) {
+	    for (int l = P->NbEq; l < P->NbConstraints; ++l) {
 		if (value_negz_p(P->Constraint[l][nvar+i+1]))
 		    continue;
-		for (int u = 0; u < P->NbConstraints; ++u) {
+		for (int u = P->NbEq; u < P->NbConstraints; ++u) {
 		    if (value_posz_p(P->Constraint[u][nvar+i+1]))
 			continue;
 		    value_oppose(f, P->Constraint[u][nvar+i+1]);
