@@ -1684,23 +1684,23 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
 	mat_ZZ pden;
 	pden.SetDims(only_param, d);
 
+	for (k = 0, l = 0; k < len; ++k)
+	    if (den_s[k] == 0)
+		pden[l++] = den[k];
+
+	for (k = 0; k < len; ++k)
+	    if (den_p[k] == 0)
+		break;
+
+	dpoly n(no_param, num_s);
+	dpoly D(no_param, den_s[k], 1);
+	for ( ; ++k < len; )
+	    if (den_p[k] == 0) {
+		dpoly fact(no_param, den_s[k], 1);
+		D *= fact;
+	    }
+
 	if (no_param + only_param == len) {
-	    for (k = 0, l = 0; k < len; ++k)
-		if (den_p[k] != 0)
-		    pden[l++] = den[k];
-
-	    for (k = 0; k < len; ++k)
-		if (den_s[k] != 0)
-		    break;
-
-	    dpoly n(no_param, num_s);
-	    dpoly D(no_param, den_s[k], 1);
-	    for ( ; ++k < len; )
-		if (den_s[k] != 0) {
-		    dpoly fact(no_param, den_s[k], 1);
-		    D *= fact;
-		}
-
 	    mpq_set_si(tcount, 0, 1);
 	    n.div(D, tcount, one);
 
@@ -1715,22 +1715,6 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
 		recurse(qn, qd, num_p, pden);
 	} else {
 	    dpoly_r * r = 0;
-
-	    for (k = 0, l = 0; k < len; ++k)
-		if (den_s[k] == 0)
-		    pden[l++] = den[k];
-
-	    for (k = 0; k < len; ++k)
-		if (den_p[k] == 0)
-		    break;
-
-	    dpoly n(no_param, num_s);
-	    dpoly D(no_param, den_s[k], 1);
-	    for ( ; ++k < len; )
-		if (den_p[k] == 0) {
-		    dpoly fact(no_param, den_s[k], 1);
-		    D *= fact;
-		}
 
 	    for (k = 0; k < len; ++k) {
 		if (den_s[k] == 0 || den_p[k] == 0)
