@@ -325,7 +325,7 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 		}
 	    }
 	}
-	if (prev != -2)
+	if (prev >= 0)
 	    singles[prev].pos[singles[prev].nr++] = i;
     }
     for (j = 0; j < dim; ++j) {
