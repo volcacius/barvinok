@@ -1,4 +1,13 @@
 ---
+version: 0.04
+date: Thu Nov  6 01:36:25 CET 2003
+changes:
+    - |-
+      allow specification of max #constraints 
+      for those without automatically growing chernikova tables
+    - fix a few small bugs
+    - some minor optimizations
+---
 version: 0.03
 date: Mon Nov  3 16:35:57 CET 2003
 changes:
