@@ -277,12 +277,12 @@ void count(Polyhedron *P)
 	Polyhedron_Print(stdout, P_VALUE_FMT, polneg);
 
 	Polyhedron *pos = NULL, *neg = NULL;
-	for (Polyhedron *i = polpos; polpos; polpos = polpos->next) {
+	for (Polyhedron *i = polpos; i; i = i->next) {
 	    Polyhedron *A = Polyhedron_Polar(i, 600);
 	    A->next = pos;
 	    pos = A;
 	}
-	for (Polyhedron *i = polneg; polneg; polneg = polneg->next) {
+	for (Polyhedron *i = polneg; i; i = i->next) {
 	    Polyhedron *A = Polyhedron_Polar(i, 600);
 	    A->next = neg;
 	    neg = A;
