@@ -1,6 +1,5 @@
 
 #include "ev_operations.h"
-#include <polylib/polylibgmp.h>
 
 void evalue_set_si(evalue *ev, int n, int d) {
     value_set_si(ev->d, d);
@@ -59,6 +58,71 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
     free( ref );
     return;
 } /* addeliminatedparams_evalue */
+
+void reduce_evalue (evalue *e) {
+  
+    enode *p;
+    int i, j, k;
+  
+    if (value_notzero_p(e->d))
+        return;	/* a rational number, its already reduced */
+    if(!(p = e->x.p))
+        return;	/* hum... an overflow probably occured */
+  
+    /* First reduce the components of p */
+    for (i=0; i<p->size; i++)
+        reduce_evalue(&p->arr[i]);
+
+    if (p->type==periodic) {
+    
+        /* Try to reduce the period */
+        for (i=1; i<=(p->size)/2; i++) {
+            if ((p->size % i)==0) {
+	
+                /* Can we reduce the size to i ? */
+                for (j=0; j<i; j++)
+                    for (k=j+i; k<e->x.p->size; k+=i)
+                        if (!eequal(&p->arr[j], &p->arr[k])) goto you_lose;
+
+                /* OK, lets do it */
+                for (j=i; j<p->size; j++) free_evalue_refs(&p->arr[j]);
+                p->size = i;
+                break;
+
+you_lose:   	/* OK, lets not do it */
+                continue;
+            }
+        }
+
+        /* Try to reduce its strength */
+        if (p->size == 1) {
+	    value_clear(e->d);
+            memcpy(e,&p->arr[0],sizeof(evalue));
+            free(p);
+        }
+    }
+    else if (p->type==polynomial) {
+	  
+        /* Try to reduce the degree */
+        for (i=p->size-1;i>=0;i--) {
+            if (value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n))
+	
+                /* Zero coefficient */
+                continue;
+            else
+                break;
+        }
+        if (i==-1) p->size = 1;
+        else if (i+1<p->size) p->size = i+1;
+
+        /* Try to reduce its strength */
+        if (p->size == 1) {
+	    value_clear(e->d);
+            memcpy(e,&p->arr[0],sizeof(evalue));
+            free(p);
+        }
+    }
+} /* reduce_evalue */
 
 void eadd(evalue *e1,evalue *res) {
 
@@ -450,4 +514,93 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    return ;
 }
 
+enode *new_enode(enode_type type,int size,int pos) {
+  
+  enode *res;
+  int i;
+  
+  if(size == 0) {
+    fprintf(stderr, "Allocating enode of size 0 !\n" );
+    return NULL;
+  }
+  res = (enode *) malloc(sizeof(enode) + (size-1)*sizeof(evalue));
+  res->type = type;
+  res->size = size;
+  res->pos = pos;
+  for(i=0; i<size; i++) {
+    value_init(res->arr[i].d);
+    value_set_si(res->arr[i].d,0);
+    res->arr[i].x.p = 0;
+  }
+  return res;
+} /* new_enode */
+
+enode *ecopy(enode *e) {
+  
+  enode *res;
+  int i;
+  
+  res = new_enode(e->type,e->size,e->pos);
+  for(i=0;i<e->size;++i) {
+    value_assign(res->arr[i].d,e->arr[i].d);
+    if(value_zero_p(res->arr[i].d))
+      res->arr[i].x.p = ecopy(e->arr[i].x.p);
+    else {
+      value_init(res->arr[i].x.n);
+      value_assign(res->arr[i].x.n,e->arr[i].x.n);
+    }
+  }
+  return(res);
+} /* ecopy */
+
+int eequal(evalue *e1,evalue *e2) { 
+ 
+    int i;
+    enode *p1, *p2;
+  
+    if (value_ne(e1->d,e2->d))
+        return 0;
+  
+    /* e1->d == e2->d */
+    if (value_notzero_p(e1->d)) {    
+        if (value_ne(e1->x.n,e2->x.n))
+            return 0;
+    
+        /* e1->d == e2->d != 0  AND e1->n == e2->n */
+        return 1;
+    }
+  
+    /* e1->d == e2->d == 0 */
+    p1 = e1->x.p;
+    p2 = e2->x.p;
+    if (p1->type != p2->type) return 0;
+    if (p1->size != p2->size) return 0;
+    if (p1->pos  != p2->pos) return 0;
+    for (i=0; i<p1->size; i++)
+        if (!eequal(&p1->arr[i], &p2->arr[i]) ) 
+            return 0;
+    return 1;
+} /* eequal */
+
+void free_evalue_refs(evalue *e) {
+  
+  enode *p;
+  int i;
+  
+  if (value_notzero_p(e->d)) {
+    
+    /* 'e' stores a constant */
+    value_clear(e->d);
+    value_clear(e->x.n);
+    return; 
+  }  
+  value_clear(e->d);
+  p = e->x.p;
+  if (!p) return;	/* null pointer */
+  for (i=0; i<p->size; i++) {
+    free_evalue_refs(&(p->arr[i]));
+  }
+  free(p);
+  return;
+} /* free_evalue_refs */
 
