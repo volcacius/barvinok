@@ -29,7 +29,8 @@ void aep_evalue(evalue *e, int *ref) {
         aep_evalue(&p->arr[i],ref);
   
     /* Then p itself */
-    p->pos = ref[p->pos-1]+1;
+    if (p->type != modulo)
+	p->pos = ref[p->pos-1]+1;
     return;
 } /* aep_evalue */
 
