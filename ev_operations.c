@@ -163,7 +163,7 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     evalue *p;
     evalue *f;
     evalue *m;
-    int neg;
+    evalue mone;
 
     assert(value_zero_p(r->d) && r->x.p->type == relation);
     m = &r->x.p->arr[0];
@@ -187,25 +187,19 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     assert(p->x.p->size == 2);
     f = &p->x.p->arr[1];
 
-    neg = value_neg_p(f->x.n);
+    assert(value_pos_p(f->x.n));
 
     value_init(s->fixed[s->n].m);
     value_assign(s->fixed[s->n].m, f->d);
     s->fixed[s->n].pos = p->x.p->pos;
     value_init(s->fixed[s->n].d);
-    if (neg)
-	value_oppose(s->fixed[s->n].d, f->x.n);
-    else
-	value_assign(s->fixed[s->n].d, f->x.n);
+    value_assign(s->fixed[s->n].d, f->x.n);
     value_init(s->fixed[s->n].s.d);
     evalue_copy(&s->fixed[s->n].s, &p->x.p->arr[0]);
-    if (!neg) {
-	evalue mone;
-	value_init(mone.d);
-	evalue_set_si(&mone, -1, 1);
-	emul(&mone, &s->fixed[s->n].s);
-	free_evalue_refs(&mone);
-    }
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+    emul(&mone, &s->fixed[s->n].s);
+    free_evalue_refs(&mone);
     ++s->n;
 
     return 1;
