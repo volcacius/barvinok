@@ -583,6 +583,7 @@ static void vertex_period(deque<string>& params,
     value_assign(tmp, lcm);
     if (First_Non_Zero(T->p[p], dim) != -1)
 	Vector_Gcd(T->p[p], dim, &tmp);
+    Gcd(tmp, lcm, &tmp);
     if (value_lt(tmp, lcm)) {
 	ZZ count;
 
