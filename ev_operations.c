@@ -10,8 +10,13 @@
 #define value_pmodulus(ref,val1,val2)  (mpz_fdiv_r((ref),(val1),(val2)))
 #endif
 
+#ifdef __GNUC__
 #define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
+#else
+#define ALLOC(p) p = (void *)malloc(sizeof(*p))
+#define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
+#endif
 
 void evalue_set_si(evalue *ev, int n, int d) {
     value_set_si(ev->d, d);
