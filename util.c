@@ -891,3 +891,62 @@ int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2)
     }
     return 0;
 }
+
+static Polyhedron *p_simplify_constraints(Polyhedron *P, Vector *row,
+					  Value *g, unsigned MaxRays)
+{
+    Polyhedron *T, *R = P;
+    int len = P->Dimension+2;
+    int r;
+
+    /* Also look at equalities.
+     * If an equality can be "simplified" then there
+     * are no integer solutions anyway and the following loop
+     * will add a conflicting constraint
+     */
+    for (r = 0; r < R->NbConstraints; ++r) {
+	if (ConstraintSimplify(R->Constraint[r], row->p, len, g)) {
+	    T = R;
+	    R = AddConstraints(row->p, 1, R, MaxRays);
+	    if (T != P)
+		Polyhedron_Free(T);
+	    r = -1;
+	}
+    }
+    if (R != P)
+	Polyhedron_Free(P);
+    return R;
+}
+
+/*
+ * Replaces constraint a x >= c by x >= ceil(c/a)
+ * where "a" is a common factor in the coefficients
+ * Destroys P and returns a newly allocated Polyhedron
+ * or just returns P in case no changes were made
+ */
+Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays)
+{
+    Polyhedron **prev;
+    int len = P->Dimension+2;
+    Vector *row = Vector_Alloc(len);
+    value_set_si(row->p[0], 1);
+    Value g;
+    value_init(g);
+    Polyhedron *R = P;
+
+    for (prev = &R; P; P = P->next) {
+	Polyhedron *T, *N;
+	N = P->next;
+	T = p_simplify_constraints(P, row, &g, MaxRays);
+	if (T != P) {
+	    T->next = N;
+	    *prev = T;
+	}
+	prev = &T->next;
+	P = T;
+    }
+
+    value_clear(g);
+    Vector_Free(row);
+    return R;
+}

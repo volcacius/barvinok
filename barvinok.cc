@@ -1331,64 +1331,6 @@ static void multi_polynom(Vector *c, evalue* X, evalue *EP)
     free_evalue_refs(&EC);
 }
 
-static Polyhedron *p_simplify_constraints(Polyhedron *P, Vector *row,
-					  Value *g, unsigned MaxRays)
-{
-    Polyhedron *T, *R = P;
-    int len = P->Dimension+2;
-
-    /* Also look at equalities.
-     * If an equality can be "simplified" then there
-     * are no integer solutions anyway and the following loop
-     * will add a conflicting constraint
-     */
-    for (int r = 0; r < R->NbConstraints; ++r) {
-	if (ConstraintSimplify(R->Constraint[r], row->p, len, g)) {
-	    T = R;
-	    R = AddConstraints(row->p, 1, R, MaxRays);
-	    if (T != P)
-		Polyhedron_Free(T);
-	    r = -1;
-	}
-    }
-    if (R != P)
-	Polyhedron_Free(P);
-    return R;
-}
-
-/*
- * Replaces constraint a x >= c by x >= ceil(c/a)
- * where "a" is a common factor in the coefficients
- * Destroys P and returns a newly allocated Polyhedron
- * or just returns P in case no changes were made
- */
-static Polyhedron *simplify_constraints(Polyhedron *P, unsigned MaxRays)
-{
-    Polyhedron **prev;
-    int len = P->Dimension+2;
-    Vector *row = Vector_Alloc(len);
-    value_set_si(row->p[0], 1);
-    Value g;
-    value_init(g);
-    Polyhedron *R = P;
-
-    for (prev = &R; P; P = P->next) {
-	Polyhedron *T, *N;
-	N = P->next;
-	T = p_simplify_constraints(P, row, &g, MaxRays);
-	if (T != P) {
-	    T->next = N;
-	    *prev = T;
-	}
-	prev = &T->next;
-	P = T;
-    }
-
-    value_clear(g);
-    Vector_Free(row);
-    return R;
-}
-
 Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 {
     int len = P->Dimension+2;
@@ -1400,7 +1342,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     Vector *row = Vector_Alloc(len);
     value_set_si(row->p[0], 1);
 
-    R = simplify_constraints(Polyhedron_Copy(P), MaxRays);
+    R = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
 
     Matrix *M = Matrix_Alloc(2, len-1);
     value_set_si(M->p[1][len-2], 1);
@@ -1462,7 +1404,7 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 constant:
 	eres->x.p = new_enode(partition, 2, -1);
 	EVALUE_SET_DOMAIN(eres->x.p->arr[0], 
-	    simplify_constraints(CEq ? CEq : Polyhedron_Copy(C), MaxRays));
+	    DomainConstraintSimplify(CEq ? CEq : Polyhedron_Copy(C), MaxRays));
 	value_set_si(eres->x.p->arr[1].d, 1);
 	value_init(eres->x.p->arr[1].x.n);
 	if (emptyQ(P))
@@ -1551,7 +1493,7 @@ out:
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
-	D->Domain = simplify_constraints(D->Domain, MaxRays);
+	D->Domain = DomainConstraintSimplify(D->Domain, MaxRays);
 	if (!CEq) {
 	    pVD = rVD = D->Domain;    
 	    D->Domain = NULL;
@@ -1559,7 +1501,7 @@ out:
 	  Polyhedron *Dt;
 	  Dt = CT ? DomainPreimage(D->Domain,CT,MaxRays) : D->Domain;
 	  rVD = DomainIntersection(Dt,CEq,MaxRays);
-	  rVD = simplify_constraints(rVD, MaxRays);
+	  rVD = DomainConstraintSimplify(rVD, MaxRays);
 	  
 	  /* if rVD is empty or too small in geometric dimension */
 	  if(!rVD || emptyQ(rVD) ||
@@ -1576,7 +1518,7 @@ out:
 	    for (Param_Domain *D2 = D->next; D2; D2=D2->next) {
 		Polyhedron *T = D2->Domain;
 		D2->Domain = DomainDifference(D2->Domain, D->Domain, MaxRays);
-		//D2->Domain = simplify_constraints(D2->Domain, MaxRays);
+		//D2->Domain = DomainConstraintSimplify(D2->Domain, MaxRays);
 		Domain_Free(T);
 	    }
 	}

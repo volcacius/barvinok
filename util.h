@@ -27,6 +27,7 @@ void Enumeration_mod2table(Enumeration *en, unsigned nparam);
 void Free_ParamNames(char **params, int m);
 int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2);
 int ConstraintSimplify(Value *old, Value *n, int len, Value* v);
+Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays);
 
 #include "ev_operations.h"
 
