@@ -220,8 +220,8 @@ public:
     dpoly(int d, ZZ& degree, int offset = 0) {
 	coeff.SetLength(d+1);
 
-	int min = d;
-	if (degree < ZZ(INIT_VAL, d))
+	int min = d + offset;
+	if (degree < ZZ(INIT_VAL, min))
 	    min = to_int(degree);
 
 	ZZ c = ZZ(INIT_VAL, 1);
