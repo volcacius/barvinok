@@ -469,10 +469,6 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 	--nvar;
 	++j;
     }
-    if (nvar == 0) {
-	Polyhedron_Free(p);
-	p = Universe_Polyhedron(0);
-    }
     value_clear(g);
     return p;
 }

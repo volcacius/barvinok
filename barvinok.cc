@@ -1039,8 +1039,11 @@ constant:
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
 	mask(allparams, f,  &factor);
 	Matrix_Free(f);
-	if (P->Dimension == 0)
+	if (P->Dimension == nparam) {
+	    CEq = P;
+	    P = Universe_Polyhedron(0);
 	    goto constant;
+	}
     }
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
 
