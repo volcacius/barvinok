@@ -159,7 +159,7 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     return 1;
 }
 
-int _reduce_evalue (evalue *e, struct subst *s, int fract) {
+void _reduce_evalue (evalue *e, struct subst *s, int fract) {
   
     enode *p;
     int i, j, k;
@@ -179,26 +179,9 @@ int _reduce_evalue (evalue *e, struct subst *s, int fract) {
 	if (add)
 	    add = add_modulo_substitution(s, e);
 
-        if (i == 0 && p->type==fractional) {
-	    int factor;
-	    while ((factor = _reduce_evalue(&p->arr[i], s, 1)) != 0) {
-		int j;
-		evalue f;
-		p->pos *= factor;
-		value_init(f.d);
-		evalue_set_si(&f, factor, 1);
-		emul(&f, &p->arr[0]);
-		value_assign(f.d, f.x.n);
-		value_set_si(f.x.n, 1);
-		assert(p->size >= 3);
-		emul(&f, &p->arr[2]);
-		for (j = 3; j < p->size; ++j) {
-		    mpz_mul_si(f.d, f.d, factor);
-		    emul(&f, &p->arr[j]);
-		}
-		free_evalue_refs(&f);
-	    }
-	} else
+        if (i == 0 && p->type==fractional)
+	    _reduce_evalue(&p->arr[i], s, 1);
+	else
 	    _reduce_evalue(&p->arr[i], s, fract);
 
 	if (add) {
@@ -363,7 +346,7 @@ you_lose:   	/* OK, lets not do it */
 	    free(p);
 	}
     }
-    return 0;
+    return;
 } /* reduce_evalue */
 
 static void add_substitution(struct subst *s, Value *row, unsigned dim)
