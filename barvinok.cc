@@ -1260,47 +1260,36 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     vec_ZZ lambda;
     nonorthog(rays, lambda);
 
-    vec_ZZ num;
-    mat_ZZ den;
-    num.SetLength(ncone);
-    den.SetDims(ncone,dim);
+    ZZ num;
+    vec_ZZ den;
+    den.SetLength(dim);
 
     int f = 0;
-    for (int j = 0; j < P->NbRays; ++j) {
-	for (Polyhedron *i = vcone[j]; i; i = i->next) {
-	    lattice_point(P->Ray[j]+1, i, lambda, num[f]);
-	    normalize(i, lambda, sign[f], num[f], den[f]);
-	    ++f;
-	}
-    }
-    ZZ min = num[0];
-    for (int j = 1; j < num.length(); ++j)
-	if (num[j] < min)
-	    min = num[j];
-    for (int j = 0; j < num.length(); ++j)
-	num[j] -= min;
-
-    f = 0;
+    vec_ZZ vertex;
     mpq_t count;
     mpq_init(count);
     for (int j = 0; j < P->NbRays; ++j) {
 	for (Polyhedron *i = vcone[j]; i; i = i->next) {
-	    dpoly d(dim, num[f]);
-	    dpoly n(dim, den[f][0], 1);
+	    lattice_point(P->Ray[j]+1, i, vertex);
+	    num = vertex * lambda;
+	    normalize(i, lambda, sign[f], num, den);
+
+	    dpoly d(dim, num);
+	    dpoly n(dim, den[0], 1);
 	    for (int k = 1; k < dim; ++k) {
-		dpoly fact(dim, den[f][k], 1);
+		dpoly fact(dim, den[k], 1);
 		n *= fact;
 	    }
 	    d.div(n, count, sign[f]);
+
 	    ++f;
 	}
+	Domain_Free(vcone[j]);
     }
+
     assert(value_one_p(&count[0]._mp_den));
     value_multiply(*result, &count[0]._mp_num, factor);
     mpq_clear(count);
-
-    for (int j = 0; j < P->NbRays; ++j)
-	Domain_Free(vcone[j]);
 
     delete [] vcone;
 
