@@ -2055,7 +2055,7 @@ static double compute_enode(enode *p, Value *list_args) {
   }
   else if (p->type == partition) {
     int dim = EVALUE_DOMAIN(p->arr[0])->Dimension;
-    Value *vals;
+    Value *vals = list_args;
     if (p->pos < dim) {
 	NALLOC(vals, dim);
 	for (i = 0; i < dim; ++i) {
