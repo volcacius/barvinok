@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "ev_operations.h"
+#include "util.h"
 
 void evalue_set_si(evalue *ev, int n, int d) {
     value_set_si(ev->d, d);
@@ -222,6 +223,12 @@ void reduce_evalue (evalue *e) {
 	for (i = 0; i < e->x.p->size/2; ++i) {
 	    n = 0;
 	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	    /* This shouldn't really happen; 
+	     * Empty domains should not be added.
+	     */
+	    if (emptyQ(D))
+		goto discard;
+
 	    dim = D->Dimension;
 	    if (!D->next && D->NbEq) {
 		int j, k;
@@ -257,6 +264,7 @@ void reduce_evalue (evalue *e) {
 	    }
 	    _reduce_evalue(&e->x.p->arr[2*i+1], n, fixed);
 	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
+discard:
 		free_evalue_refs(&e->x.p->arr[2*i+1]);
 		Domain_Free(EVALUE_DOMAIN(e->x.p->arr[2*i]));
 		value_clear(e->x.p->arr[2*i].d);
