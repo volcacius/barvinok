@@ -1,3 +1,13 @@
+---
+version: 0.15
+date: Sun Dec 12 23:00:40 CET 2004
+changes:
+    - export Polyhedron_Project
+    - allow verification of step-functions computed from Ehrhart series
+    - optionally compute step-functions incrementally
+    - disable possibly incorrect optimization
+    - minor optimizations in Ehrhart series computations
+---
 version: 0.14
 date: Wed Nov 17 19:22:23 CET 2004
 changes:
