@@ -268,7 +268,7 @@ public:
 	coeff.SetLength(d+1);
 
 	int min = d + offset;
-	if (degree < ZZ(INIT_VAL, min))
+	if (degree >= 0 && degree < ZZ(INIT_VAL, min))
 	    min = to_int(degree);
 
 	ZZ c = ZZ(INIT_VAL, 1);
