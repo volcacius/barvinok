@@ -1377,21 +1377,26 @@ out:
 	    D->Domain = NULL;
 	} else {
 	  Polyhedron *Dt;
-	  Dt = CT ? Polyhedron_Preimage(D->Domain,CT,MaxRays) : D->Domain;
+	  Dt = CT ? DomainPreimage(D->Domain,CT,MaxRays) : D->Domain;
 	  rVD = DomainIntersection(Dt,CEq,MaxRays);
 	  
 	  /* if rVD is empty or too small in geometric dimension */
 	  if(!rVD || emptyQ(rVD) ||
 	     (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
 	    if(rVD)
-	      Polyhedron_Free(rVD);
+	      Domain_Free(rVD);
 	    if (CT)
-		Polyhedron_Free(Dt);
+		Domain_Free(Dt);
 	    continue;		/* empty validity domain */
 	  }
 	  if (CT)
-	      Polyhedron_Free(Dt);
-	  pVD = CT ? Polyhedron_Image(rVD,CT,MaxRays) : rVD;
+	      Domain_Free(Dt);
+	  pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
+	    for (Param_Domain *D2 = D->next; D2; D2=D2->next) {
+		Polyhedron *T = D2->Domain;
+		D2->Domain = DomainDifference(D2->Domain, D->Domain, MaxRays);
+		Domain_Free(T);
+	    }
 	}
 	int ncone = 0;
 	sign.SetLength(ncone);
@@ -1487,7 +1492,7 @@ out:
 	s[nd].D = rVD;
 	++nd;
 	if (rVD != pVD)
-	    Polyhedron_Free(pVD);
+	    Domain_Free(pVD);
     }
 
     eres->x.p = new_enode(partition, 2*nd, -1);

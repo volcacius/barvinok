@@ -879,7 +879,7 @@ void free_evalue_refs(evalue *e) {
 /********************************************************/
 /* function in domain                                   */
 /*    check if the parameters in list_args              */
-/*    verifies the constraints of Polyhedron P          */
+/*    verifies the constraints of Domain P          	*/
 /********************************************************/
 int in_domain(Polyhedron *P, Value *list_args) {
   
@@ -902,19 +902,17 @@ int in_domain(Polyhedron *P, Value *list_args) {
 	
       /*if v is not >=0 then this constraint is not respected */
       if (value_neg_p(v)) {
+next:
 	value_clear(v);
 	value_clear(tmp);
-	return 0;
+	return P->next ? in_domain(P->next, list_args) : 0;
       }	
     }
     else {
       
       /*if v is not = 0 then this constraint is not respected */
-      if (value_notzero_p(v)) {
-	value_clear(v);
-	value_clear(tmp);
-	return 0;
-      }
+      if (value_notzero_p(v))
+	goto next;
     }
   }
   
