@@ -541,7 +541,7 @@ static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
 	value_assign(EP.x.p->arr[1].d, *den);
     zz2value(c, EP.x.p->arr[1].x.n);
     params.push_back(param);
-    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);
+    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);//--
     free_evalue_refs(&EP);
     return ret;
 }
@@ -580,8 +580,13 @@ static void vertex_period(deque<string>& params,
     if (First_Non_Zero(val->p, p) == -1) {
 	value_assign(tmp, lcm);
 	EhrhartPolynom * ET = term(params[p], nump, &tmp);
-	*E += *ET;
+	evalue EV1=(*ET).to_evalue(params);  
+	evalue EV2=(*E).to_evalue(params);  
+	eadd(&EV1,&EV2);   
 	delete ET;
+	*E=EhrhartPolynom(&EV2,params);
+	free_evalue_refs(&EV1); 
+	free_evalue_refs(&EV2);  
     }
 
     value_assign(tmp, lcm);
@@ -647,8 +652,8 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
 /*
  * 
  */
-static void mask(deque<string>& params, Matrix *f, EhrhartPolynom *factor)
-{
+ static void mask(deque<string>& params, Matrix *f, EhrhartPolynom *factor)
+{   
     int nr = f->NbRows, nc = f->NbColumns;
     int n;
     bool found = false;
@@ -685,19 +690,27 @@ static void mask(deque<string>& params, Matrix *f, EhrhartPolynom *factor)
     value_clear(tmp);
     Vector_Free(val);
     Vector_Free(lcm);
-    *factor *= EhrhartPolynom(&EP, params);
+    evalue EV=(*factor).to_evalue(params); 
+    emul(&EP,&EV); 
+    *factor = EhrhartPolynom(&EV, params); 
+    free_evalue_refs(&EV); 
     free_evalue_refs(&EP);
 }
 
 static EhrhartPolynom *multi_mononom(deque<string>& params, vec_ZZ& p)
 {
     EhrhartPolynom *X = new EhrhartPolynom();
+    evalue EV1=(*X).to_evalue(params);  
     unsigned nparam = p.length()-1;
     for (int i = 0; i < nparam; ++i) {
 	EhrhartPolynom *T = term(params[i], p[i]);
-	*X += *T;
+	evalue EV2=(*T).to_evalue(params); 
+	eadd(&EV2,&EV1); 
 	delete T;
+	free_evalue_refs(&EV2); 
     }
+    *X=EhrhartPolynom(&EV1,params) ;  
+    free_evalue_refs(&EV1); 
     return X;
 }
 
@@ -738,6 +751,7 @@ void lattice_point(deque<string>& params,
 	Matrix *T = Transpose(mv);
 
 	EhrhartPolynom * EP = new EhrhartPolynom();
+	 
 	evalue ev;
 	Vector *val = Vector_Alloc(nparam+1);
 	value_set_si(val->p[nparam], 1);
@@ -745,9 +759,11 @@ void lattice_point(deque<string>& params,
 	value_init(ev.d);
 	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev, offset);
 	Vector_Free(val);
-
-	*EP += EhrhartPolynom(&ev, params);
-	free_evalue_refs(&ev);
+        evalue  EV=(*EP).to_evalue(params); 
+        eadd(&ev,&EV);
+	*EP=EhrhartPolynom(&EV,params);  
+	   free_evalue_refs(&ev);   
+	   free_evalue_refs(&EV)  ;   
 
 	term->E = EP;
 	term->constant = 0;
@@ -949,7 +965,7 @@ static void default_params(deque<string>& params, int n)
 }
 
 static EhrhartPolynom *uni_polynom(string param, Vector *c)
-{
+{ 
     evalue EP;
     deque<string> params;
     unsigned dim = c->Size-2;
@@ -969,21 +985,28 @@ static EhrhartPolynom *uni_polynom(string param, Vector *c)
 
 static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPolynom& X)
 {
+ 	
     unsigned dim = c->Size-2;
     evalue EC;
     value_init(EC.d);
     value_init(EC.x.n);
     value_assign(EC.d, c->p[dim+1]);
-
-    EhrhartPolynom *res = new EhrhartPolynom();
+        
+    EhrhartPolynom *res = new EhrhartPolynom(); 
     value_assign(EC.x.n, c->p[dim]);
-    *res += EhrhartPolynom(&EC, params);
+
+    evalue  EV1=(*res).to_evalue(params); 
+    eadd(&EC,&EV1);   
+    evalue EV2=X.to_evalue(params);  
     for (int i = dim-1; i >= 0; --i) {
-	*res *= X;
+	emul(&EV2,&EV1);       
 	value_assign(EC.x.n, c->p[i]);
-	*res += EhrhartPolynom(&EC, params);
+	eadd(&EC,&EV1);
     }
+    *res = EhrhartPolynom(&EV1, params);
     free_evalue_refs(&EC);
+    free_evalue_refs(&EV2);
+    free_evalue_refs(&EV1);
     return res;
 }
 
@@ -1000,6 +1023,7 @@ static EhrhartPolynom *constant(mpq_t c)
     return ret;
 }
 
+
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Polyhedron *CEq = NULL, *rVD, *CA;
@@ -1011,7 +1035,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     int r = 0;
     unsigned nparam = C->Dimension;
     EhrhartPolynom factor(1);
-
+    
     res = NULL;
 
     CA = align_context(C, P->Dimension, MaxRays);
@@ -1035,7 +1059,8 @@ constant:
 	else
 	    barvinok_count(P, &en->EP.x.n, MaxRays);
 	Polyhedron_Free(P);
-	if (factor != 1) {
+   	if (factor != 1) {
+		
 	    evalue EP = en->EP;
 	    EhrhartPolynom E(&EP, allparams);
 	    en->EP = (factor * E).to_evalue(allparams);
@@ -1154,7 +1179,7 @@ constant:
 	mat_ZZ den;
 	den.SetDims(ncone,dim);
 	term_info *num = new term_info[ncone];
-
+          
 	int f = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
@@ -1189,10 +1214,11 @@ constant:
 		    dpoly_n d(dim, num[f].constant, one);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *ET = multi_polynom(params, c, *num[f].E);
-		    evalue EV = ET->to_evalue(allparams);
+		    evalue EV = ET->to_evalue(allparams); 
 		    eadd(&EV , &EP);
 		    delete ET;
-		    delete num[f].E;
+		    free_evalue_refs(&EV);
+		    delete num[f].E; 
 		} else if (num[f].pos != -1) {
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
 		    d.div(n, c, sign[f]);
@@ -1200,6 +1226,7 @@ constant:
 		    evalue EV = E->to_evalue(allparams);
 		    eadd(&EV , &EP);
 		    delete E;
+		    free_evalue_refs(&EV);
 		} else {
 		    mpq_set_si(count, 0, 1);
 		    dpoly d(dim, num[f].constant);
@@ -1208,6 +1235,8 @@ constant:
 		    evalue EV = E->to_evalue(allparams);
 		    eadd(&EV , &EP);
 		    delete E;
+		    free_evalue_refs(&EV);
+		    
 		} 
 		++f;
 	    }
@@ -1220,9 +1249,10 @@ constant:
 	en->next = res;
 	res = en;
 	res->ValidityDomain = rVD;
-	evalue EV = factor.to_evalue(allparams);
-	emul(&EV, &EP);
+   	evalue EV = factor.to_evalue(allparams);
+   	emul(&EV, &EP); 
 	res->EP = EP;
+	free_evalue_refs(&EV);
 	reduce_evalue(&res->EP);
     }
 
@@ -1238,6 +1268,7 @@ constant:
     Polyhedron_Free(P);
     if (CT)
 	Matrix_Free(CT);
+       
     if (CEq)
 	Polyhedron_Free(CEq);
 
