@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include <gmp.h>
@@ -62,6 +63,15 @@ static void matrix2zz(Matrix *M, mat_ZZ& m)
 	for (int j = 0; j < M->NbColumns - 1; ++j) {
 	    value2zz(M->p[i][j], m[i][j]);
 	}
+    }
+}
+
+static void vector2zz(Vector *V, vec_ZZ& v)
+{
+    v.SetLength(V->Size);
+
+    for (int i = 0; i < V->Size; ++i) {
+	value2zz(V->p[i], v[i]);
     }
 }
 
@@ -259,12 +269,47 @@ void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     }
 }
 
+static int rand(int max) {
+    return (int) (((double)(max))*rand()/(RAND_MAX+1.0));
+}
+
+const int MAX_TRY=10;
+/*
+ * Searches for a vector that is not othogonal to any
+ * of the rays in rays.
+ */
+static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
+{
+    int dim = rays.NumCols();
+    bool found = false;
+    lambda.SetLength(dim);
+    for (int i = 2; !found && i <= 2*dim; i+=2) {
+	for (int j = 0; j < MAX_TRY; ++j) {
+	    for (int k = 0; k < dim; ++k) {
+		int r = rand(i)+2;
+		int v = (2*(r%2)-1) * (r >> 1);
+		lambda[k] = v;
+	    }
+	    int k = 0;
+	    for (; k < rays.NumRows(); ++k)
+		if (lambda * rays[k] == 0)
+		    break;
+	    if (k == rays.NumRows()) {
+		found = true;
+		break;
+	    }
+	}
+    }
+    assert(found);
+}
+
 void count(Polyhedron *P)
 {
     Polyhedron ** vpos = new (Polyhedron *)[P->NbRays];
     Polyhedron ** vneg = new (Polyhedron *)[P->NbRays];
 
     int nrays = 0;
+    unsigned dim = P->Dimension;
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j, 600);
@@ -311,6 +356,26 @@ void count(Polyhedron *P)
     }
 
     cout << nrays << endl;
+
+    mat_ZZ rays;
+    rays.SetDims(nrays, dim);
+    int r = 0;
+    for (int j = 0; j < P->NbRays; ++j) {
+	for (Polyhedron *i = vpos[j]; i; i = i->next) {
+	    for (int k = 0; k < vpos[j]->NbRays; ++k) {
+		if (!value_zero_p(vpos[j]->Ray[k][dim+1]))
+		    continue;
+		Vector *shortv = Vector_Alloc(dim);
+		Vector_Copy(vpos[j]->Ray[k]+1, shortv->p, dim);
+		vector2zz(shortv, rays[r++]);
+		Vector_Free(shortv);
+	    }
+	}
+    }
+    cout << rays;
+    vec_ZZ lambda;
+    nonorthog(rays, lambda);
+    cout << lambda;
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Domain_Free(vpos[j]);
