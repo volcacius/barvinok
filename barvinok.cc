@@ -1416,7 +1416,8 @@ static void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
  *	den_p: for each factor
  *		0: independent of remaining vars
  *		1: power corresponds to corresponding row in f
- *	       -1: power is inverse of corresponding row in f
+ *
+ * all inputs are subject to change
  */
 static void normalize(ZZ& sign,
 		      ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
