@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ev_operations.h"
 #include "barvinok.h"
