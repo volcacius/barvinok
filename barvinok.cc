@@ -1976,6 +1976,51 @@ static evalue* enumerate_sum(Polyhedron *P,
     return EP;
 }
 
+static evalue* split_sure(Polyhedron *P, Polyhedron *S,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    int nvar = P->Dimension - exist - nparam;
+
+    Matrix *M = Matrix_Alloc(exist, S->Dimension+2);
+    for (int i = 0; i < exist; ++i)
+	value_set_si(M->p[i][nvar+i+1], 1);
+    Polyhedron *O = S;
+    S = DomainAddRays(S, M, MaxRays);
+    Polyhedron_Free(O);
+    Polyhedron *F = DomainAddRays(P, M, MaxRays);
+    Polyhedron *D = DomainDifference(F, S, MaxRays);
+    O = D;
+    D = Disjoint_Domain(D, 0, MaxRays);
+    Polyhedron_Free(F);
+    Domain_Free(O);
+    Matrix_Free(M);
+
+    M = Matrix_Alloc(P->Dimension+1-exist, P->Dimension+1);
+    for (int j = 0; j < nvar; ++j)
+	value_set_si(M->p[j][j], 1);
+    for (int j = 0; j < nparam+1; ++j)
+	value_set_si(M->p[nvar+j][nvar+exist+j], 1);
+    Polyhedron *T = Polyhedron_Image(S, M, MaxRays);
+    evalue *EP = barvinok_enumerate_e(T, 0, nparam, MaxRays);
+    Polyhedron_Free(S);
+    Polyhedron_Free(T);
+    Matrix_Free(M);
+
+    for (Polyhedron *Q = D; Q; Q = Q->next) {
+	Polyhedron *N = Q->next;
+	Q->next = 0;
+	T = DomainIntersection(P, Q, MaxRays);
+	evalue *E = barvinok_enumerate_e(T, exist, nparam, MaxRays);
+	eadd(E, EP);
+	free_evalue_refs(E); 
+	free(E);
+	Polyhedron_Free(T);
+	Q->next = N;
+    }
+    Domain_Free(D);
+    return EP;
+}
+
 static evalue* enumerate_sure(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
@@ -2010,48 +2055,45 @@ static evalue* enumerate_sure(Polyhedron *P,
 	}
     }
 
-    Matrix *M = Matrix_Alloc(exist, S->Dimension+2);
-    for (i = 0; i < exist; ++i)
-	value_set_si(M->p[i][nvar+i+1], 1);
-    Polyhedron *O = S;
-    S = DomainAddRays(S, M, MaxRays);
-    Polyhedron_Free(O);
-    Polyhedron *F = DomainAddRays(P, M, MaxRays);
-    Polyhedron *D = DomainDifference(F, S, MaxRays);
-    O = D;
-    D = Disjoint_Domain(D, 0, MaxRays);
-    Polyhedron_Free(F);
-    Domain_Free(O);
-    Matrix_Free(M);
-
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: Sure\n");
 #endif /* DEBUG_ER */
 
-    M = Matrix_Alloc(P->Dimension+1-exist, P->Dimension+1);
-    for (int j = 0; j < nvar; ++j)
-	value_set_si(M->p[j][j], 1);
-    for (int j = 0; j < nparam+1; ++j)
-	value_set_si(M->p[nvar+j][nvar+exist+j], 1);
-    Polyhedron *T = Polyhedron_Image(S, M, MaxRays);
-    evalue *EP = barvinok_enumerate_e(T, 0, nparam, MaxRays);
-    Polyhedron_Free(S);
-    Polyhedron_Free(T);
+    return split_sure(P, S, exist, nparam, MaxRays);
+}
+
+static evalue* enumerate_sure2(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    int nvar = P->Dimension - exist - nparam;
+    int r;
+    for (r = 0; r < P->NbRays; ++r)
+	if (value_one_p(P->Ray[r][0]) &&
+		value_one_p(P->Ray[r][P->Dimension+1]))
+	    break;
+
+    if (r >= P->NbRays)
+	return 0;
+
+    Matrix *M = Matrix_Alloc(nvar + 1 + nparam, P->Dimension+2);
+    for (int i = 0; i < nvar; ++i)
+	value_set_si(M->p[i][1+i], 1);
+    for (int i = 0; i < nparam; ++i)
+	value_set_si(M->p[i+nvar][1+nvar+exist+i], 1);
+    Vector_Copy(P->Ray[r]+1+nvar, M->p[nvar+nparam]+1+nvar, exist);
+    value_set_si(M->p[nvar+nparam][0], 1);
+    value_set_si(M->p[nvar+nparam][P->Dimension+1], 1);
+    Polyhedron * F = Rays2Polyhedron(M, MaxRays);
     Matrix_Free(M);
 
-    for (Polyhedron *Q = D; Q; Q = Q->next) {
-	Polyhedron *N = Q->next;
-	Q->next = 0;
-	T = DomainIntersection(P, Q, MaxRays);
-	evalue *E = barvinok_enumerate_e(T, exist, nparam, MaxRays);
-	eadd(E, EP);
-	free_evalue_refs(E); 
-	free(E);
-	Polyhedron_Free(T);
-	Q->next = N;
-    }
-    Domain_Free(D);
-    return EP;
+    Polyhedron *I = DomainIntersection(F, P, MaxRays);
+    Polyhedron_Free(F);
+
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: Sure2\n");
+#endif /* DEBUG_ER */
+
+    return split_sure(P, I, exist, nparam, MaxRays);
 }
 
 static evalue* new_zero_ep()
@@ -2596,6 +2638,10 @@ next:
 
     evalue *EP;
     EP = enumerate_sure(P, exist, nparam, MaxRays);
+    if (EP)
+	return EP;
+
+    EP = enumerate_sure2(P, exist, nparam, MaxRays);
     if (EP)
 	return EP;
 
