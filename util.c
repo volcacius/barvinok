@@ -134,7 +134,7 @@ Polyhedron* triangularize_cone(Polyhedron *P)
 	Vector_Copy(P->Ray[i], M->p[r], dim+1);
 	Inner_Product(M->p[r]+1, M->p[r]+1, dim, &tmp);
 	value_assign(M->p[r][dim+1], tmp);
-	value_set_si(M->p[r][dim+2], 1);
+	value_set_si(M->p[r][dim+2], 0);
 	++r;
     }
 
@@ -154,7 +154,7 @@ Polyhedron* triangularize_cone(Polyhedron *P)
     value_set_si(M2->p[0][0], 1);
     value_set_si(M2->p[0][dim+1], 1);
     for (i = 0; i < L->NbConstraints; ++i) {
-	if (value_negz_p(L->Constraint[i][dim+1]))
+	if (value_posz_p(L->Constraint[i][dim+1]))
 	    continue;
 	if (value_notzero_p(L->Constraint[i][dim+2]))
 	    continue;
