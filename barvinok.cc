@@ -622,6 +622,39 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
     assert(found);
 }
 
+static void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
+{
+    Value tmp;
+    int max = 10;
+    unsigned int dim = P->Dimension;
+    value_init(tmp);
+
+    for (int i = 0; i < P->NbRays; ++i) {
+	for (int j = 1; j <= dim; ++j) {
+	    value_absolute(tmp, P->Ray[i][j]);
+	    int t = VALUE_TO_LONG(tmp);
+	    if (t > max)
+		max = t;
+	}
+    }
+    for (int i = 0; i < P->NbConstraints; ++i) {
+	for (int j = 1; j <= dim; ++j) {
+	    value_absolute(tmp, P->Constraint[i][j]);
+	    int t = VALUE_TO_LONG(tmp);
+	    if (t > max)
+		max = t;
+	}
+    }
+    value_clear(tmp);
+
+    lambda.SetLength(nvar);
+    for (int k = 0; k < nvar; ++k) {
+	int r = random_int(8*max*dim)+2;
+	int v = (2*(r%2)-1) * (4*max*dim + (r >> 1));
+	lambda[k] = v;
+    }
+}
+
 static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r, int nvar = -1, 
 		     bool all = false)
 {
@@ -1359,6 +1392,23 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     dim = P->Dimension;
     vcone = new Polyhedron_p[P->NbRays];
 
+    vec_ZZ lambda;
+    //nonorthog(rays, lambda);
+    randomvector(P, lambda, dim);
+    //cout << "lambda: " << lambda << endl;
+
+    mat_ZZ rays;
+    rays.SetDims(dim, dim);
+
+    ZZ num;
+    vec_ZZ den;
+    den.SetLength(dim);
+
+    int f = 0;
+    vec_ZZ vertex;
+    mpq_t count;
+    mpq_init(count);
+
     for (int j = 0; j < P->NbRays; ++j) {
 	int npos, nneg;
 	Polyhedron *C = supporting_cone(P, j);
@@ -1369,30 +1419,14 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	    sign[ncone-nneg-k-1] = 1;
 	for (int k = 0; k < nneg; ++k)
 	    sign[ncone-k-1] = -1;
-    }
-
-    mat_ZZ rays;
-    rays.SetDims(ncone * dim, dim);
-    r = 0;
-    for (int j = 0; j < P->NbRays; ++j) {
 	for (Polyhedron *i = vcone[j]; i; i = i->next) {
+	    r = 0;
 	    assert(i->NbRays-1 == dim);
 	    add_rays(rays, i, &r);
-	}
-    }
-    vec_ZZ lambda;
-    nonorthog(rays, lambda);
+	    for (int k = 0; k < dim; ++k) {
+		assert(lambda * rays[k] != 0);
+	    }
 
-    ZZ num;
-    vec_ZZ den;
-    den.SetLength(dim);
-
-    int f = 0;
-    vec_ZZ vertex;
-    mpq_t count;
-    mpq_init(count);
-    for (int j = 0; j < P->NbRays; ++j) {
-	for (Polyhedron *i = vcone[j]; i; i = i->next) {
 	    lattice_point(P->Ray[j]+1, i, vertex);
 	    num = vertex * lambda;
 	    normalize(i, lambda, sign[f], num, den);
@@ -3395,6 +3429,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     rays.SetDims(r, nvar);
     vec_ZZ lambda;
     nonorthog(rays, lambda);
+    //randomvector(P, lambda, nvar);
 
     /*
     cout << "rays: " << rays;
