@@ -663,13 +663,14 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	Polyhedron *C, *T;
 	int i, j, p, n;
 	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
-	Value tmp;
+	Value tmp, g;
 	evalue mone;
 	value_init(mone.d);
 	evalue_set_si(&mone, -1, 1);
 	C = Polyhedron_Project(P, dim-nvar);
 
 	value_init(tmp);
+	value_init(g);
 
 	for (i = 0, j = 0; i < dim; ++i) {
 	    if (i >= nvar || singles[i][0] < 2)
@@ -713,7 +714,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 				       P->Constraint[singles[i][1+k]][i+1],
 				       dim-nvar+1);
 			ConstraintSimplify(M->p[q], M->p[q], 
-					   dim-nvar+2, &tmp);
+					   dim-nvar+2, &g);
 			if (k2 > k)
 			    value_decrement(M->p[q][dim-nvar+1],
 					    M->p[q][dim-nvar+1]);
@@ -732,7 +733,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 					   P->Constraint[singles[i][1+l2]][i+1],
 					   dim-nvar+1);
 			    ConstraintSimplify(M->p[q], M->p[q], 
-					       dim-nvar+2, &tmp);
+					       dim-nvar+2, &g);
 			    if (l2 > l)
 				value_decrement(M->p[q][dim-nvar+1],
 						M->p[q][dim-nvar+1]);
@@ -782,6 +783,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	Matrix_Free(m);
 	free_singles(singles, nvar);
 
+	value_clear(g);
 	value_clear(tmp);
 
 	free_evalue_refs(&mone); 
