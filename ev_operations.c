@@ -2144,4 +2144,17 @@ void evalue_combine(evalue *e)
     free(e->x.p);
     p->size = 2*k;
     e->x.p = p;
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	Polyhedron *H, *E;
+	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	if (!D->next)
+	    continue;
+	H = DomainConvex(D, 0);
+	E = DomainDifference(H, D, 0);
+	Domain_Free(D);
+	D = DomainDifference(H, E, 0);
+	Domain_Free(H);
+	Domain_Free(E);
+	EVALUE_SET_DOMAIN(p->arr[2*i], D);
+    }
 }
