@@ -1525,6 +1525,8 @@ void emask(evalue *mask, evalue *res) {
 	if (!emptyQ(fd)) {
 	    /* Just ignore; this may have been previously masked off */
 	}
+	if (fd != EVALUE_DOMAIN(mask->x.p->arr[2*i]))
+	    Domain_Free(fd);
     }
 
     free_evalue_refs(&mone);
