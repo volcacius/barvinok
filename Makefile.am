@@ -1,6 +1,7 @@
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart barvinok_enumerate_e
+pkginclude_HEADERS = barvinok.h util.h ev_operations.h
 
 libbarvinok_la_SOURCES = \
     ev_operations.c \
