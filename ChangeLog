@@ -1,4 +1,14 @@
 ---
+version: 0.05
+date: Thu Nov 27 13:35:59 CET 2003
+changes:
+    - |-
+      include code from Kristof Beyls for manipulating Ehrhart
+      polynomials
+    - |-
+      implement barvinok_enumerate for constructing Ehrhart
+      polynomials using barvinok's algorithm
+---
 version: 0.04
 date: Thu Nov  6 01:36:25 CET 2003
 changes:
