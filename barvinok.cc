@@ -483,6 +483,9 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
     int dim = rays.NumCols();
     bool found = false;
     lambda.SetLength(dim);
+    if (dim == 0)
+	return;
+
     for (int i = 2; !found && i <= 50*dim; i+=4) {
 	for (int j = 0; j < MAX_TRY; ++j) {
 	    for (int k = 0; k < dim; ++k) {
