@@ -566,11 +566,12 @@ static void add_substitution(struct subst *s, Value *row, unsigned dim)
 }
 
 void reduce_evalue (evalue *e) {
+    struct subst s = { NULL, 0, 0 };
+
     if (value_notzero_p(e->d))
         return;	/* a rational number, its already reduced */
 
     if (e->x.p->type == partition) {
-	struct subst s = { NULL, 0, 0 };
 	int i;
 	unsigned dim = -1;
 	for (i = 0; i < e->x.p->size/2; ++i) {
@@ -623,7 +624,7 @@ discard:
 	if (s.max != 0)
 	    free(s.fixed);
     } else
-	_reduce_evalue(e, 0, 0);
+	_reduce_evalue(e, &s, 0);
 }
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
