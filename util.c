@@ -254,6 +254,7 @@ Polyhedron *remove_equalities(Polyhedron *P)
 
     value_init(g);
     while (p->NbEq > 0) {
+	assert(dim > 0);
 	v = Vector_Alloc(dim);
 	Vector_Gcd(p->Constraint[0]+1, dim, &g);
 	Vector_AntiScale(p->Constraint[0]+1, v->p, g, dim);
