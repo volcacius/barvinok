@@ -31,7 +31,8 @@ static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
     return alen-blen;
 }
 
-void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
+void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
+		  const mat_ZZ& den)
 {
     if (cn == 0)
 	return;

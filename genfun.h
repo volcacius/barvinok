@@ -29,7 +29,8 @@ struct gen_fun {
     std::vector< short_rat * > term;
     Polyhedron *context;
 
-    void add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den);
+    void add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
+	     const mat_ZZ& den);
     void print(unsigned int nparam, char **param_name);
     operator evalue *();
 
