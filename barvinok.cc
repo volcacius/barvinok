@@ -2115,7 +2115,13 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	if (O != *PA)
 	    Polyhedron_Free(O);
 	Polyhedron_Free(CA);
+	if (emptyQ(P))
+	    EP = new_zero_ep();
     }
+
+    /* We don't handle this yet */
+    if (!EP && P->Dimension != (*PA)->Dimension)
+	assert(0);
 
     if (nd > 1) {
 #ifdef DEBUG_ER
