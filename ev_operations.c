@@ -2192,12 +2192,16 @@ void evalue_combine(evalue *e)
     p = new_enode(partition, e->x.p->size, -1);
     for (i = 0, k = 0; i < e->x.p->size/2; ++i) {
 	if (k == 0 || ecmp(&p->arr[2*k-1], evs[i]) != 0) {
+	    value_clear(p->arr[2*k].d);
+	    value_clear(p->arr[2*k+1].d);
 	    p->arr[2*k] = *(evs[i]-1);
 	    p->arr[2*k+1] = *(evs[i]);
 	    ++k;
 	} else {
 	    Polyhedron *D = EVALUE_DOMAIN(*(evs[i]-1));
 	    Polyhedron *L = D;
+
+	    value_clear((evs[i]-1)->d);
 
 	    while (L->next)
 		L = L->next;
@@ -2206,6 +2210,10 @@ void evalue_combine(evalue *e)
 	    free_evalue_refs(evs[i]);
 	}
     }
+
+    for (i = 2*k ; i < p->size; ++i)
+	value_clear(p->arr[i].d);
+
     free(evs);
     free(e->x.p);
     p->size = 2*k;
@@ -2257,6 +2265,7 @@ void evalue_combine(evalue *e)
 	Polyhedron *H, *E;
 	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
 	if (!D) {
+	    value_clear(e->x.p->arr[2*i].d);
 	    free_evalue_refs(&e->x.p->arr[2*i+1]);
 	    e->x.p->size -= 2;
 	    if (2*i < e->x.p->size) {
