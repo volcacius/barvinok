@@ -314,7 +314,7 @@ void eadd(evalue *e1,evalue *res) {
  }/* eadd  */ 
  
 
-/* Computes the product of tow evalues "e1" and "res" and puts the result in "res". you must
+/* Computes the product of two evalues "e1" and "res" and puts the result in "res". you must
  * do a copy of "res" befor calling this function if you nead it after. The vector type of 
  * evalues is not treated here */
 
@@ -329,7 +329,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    if(value_zero_p(e1->d)&& value_zero_p(res->d)) {
 	   if(e1->x.p->type==polynomial && res->x.p->type==polynomial) {
 	       if(e1->x.p->pos == res->x.p->pos) {
-	       /* Product of tow polynomials of the same variable */
+	       /* Product of two polynomials of the same variable */
 		 
 		    evalue *tmp;
 	            int size=(((e1->x.p->size)-1) + ((res->x.p->size)-1) +1); 
@@ -378,7 +378,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		return;
 	       }
 	       else {
-		  /* Product of tow polynomials of different variables */     
+		  /* Product of two polynomials of different variables */     
 	          
 		 for( i=0; i<res->x.p->size ; i++) 
 		            emul(e1, &res->x.p->arr[i]);
@@ -389,7 +389,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	   else{
               if(e1->x.p->type==periodic && res->x.p->type==periodic) {   
 		if(e1->x.p->pos==res->x.p->pos && e1->x.p->size==res->x.p->size) {
-		 /* Product of tow periodics of the same parameter and period */	
+		 /* Product of two periodics of the same parameter and period */	
                    
 		     for(i=0; i<res->x.p->size;i++) 
 		           emul(&(e1->x.p->arr[i]), &(res->x.p->arr[i]));
@@ -398,7 +398,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		}
 		else{
                   if(e1->x.p->pos==res->x.p->pos && e1->x.p->size!=res->x.p->size) {  
-	           /* Product of tow periodics of the same parameter and different periods */		  
+	           /* Product of two periodics of the same parameter and different periods */		  
 		    evalue *newp;
 	            Value x,y,z;
 		    int ix,iy,lcm;
@@ -433,7 +433,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 			  return ;	 
 		  }
 		  else {
-	             /* Product of tow periodics of different parameters */
+	             /* Product of two periodics of different parameters */
 			  
 		        for(i=0; i<res->x.p->size; i++)
          	            emul(e1, &(res->x.p->arr[i]));
