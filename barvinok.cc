@@ -1693,6 +1693,111 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
 
 typedef evalue * evalue_p;
 
+struct enumerator : public polar_decomposer {
+    vec_ZZ lambda;
+    unsigned dim, nbV;
+    evalue ** vE;
+    int _i;
+    mat_ZZ rays;
+    vec_ZZ den;
+    ZZ sign;
+    Polyhedron *P;
+    Param_Vertices *V;
+    term_info num;
+    Vector *c;
+    mpq_t count;
+
+    enumerator(Polyhedron *P, unsigned dim, unsigned nbV) {
+	this->P = P;
+	this->dim = dim;
+	this->nbV = nbV;
+	randomvector(P, lambda, dim);
+	rays.SetDims(dim, dim);
+	den.SetLength(dim);
+	c = Vector_Alloc(dim+2);
+
+	vE = new evalue_p[nbV];
+	for (int j = 0; j < nbV; ++j)
+	    vE[j] = 0;
+
+	mpq_init(count);
+    }
+
+    void decompose_at(Param_Vertices *V, int _i, unsigned MaxRays) {
+	Polyhedron *C = supporting_cone_p(P, V);
+	this->_i = _i;
+	this->V = V;
+
+	vE[_i] = new evalue;
+	value_init(vE[_i]->d);
+	evalue_set_si(vE[_i], 0, 1);
+
+	decompose(C, MaxRays);
+    }
+
+    ~enumerator() {
+	mpq_clear(count);
+	Vector_Free(c);
+
+	for (int j = 0; j < nbV; ++j)
+	    if (vE[j]) {
+		free_evalue_refs(vE[j]);
+		delete vE[j];
+	    }
+	delete [] vE;
+    }
+
+    virtual void handle_polar(Polyhedron *P, int sign);
+};
+
+void enumerator::handle_polar(Polyhedron *C, int s)
+{
+    int r = 0;
+    assert(C->NbRays-1 == dim);
+    add_rays(rays, C, &r);
+    for (int k = 0; k < dim; ++k) {
+	assert(lambda * rays[k] != 0);
+    }
+
+    sign = s;
+
+    lattice_point(V, C, lambda, &num, 0);
+    normalize(C, lambda, sign, num.constant, den);
+
+    dpoly n(dim, den[0], 1);
+    for (int k = 1; k < dim; ++k) {
+	dpoly fact(dim, den[k], 1);
+	n *= fact;
+    }
+    if (num.E != NULL) {
+	ZZ one(INIT_VAL, 1);
+	dpoly_n d(dim, num.constant, one);
+	d.div(n, c, sign);
+	evalue EV; 
+	multi_polynom(c, num.E, &EV);
+	eadd(&EV , vE[_i]);
+	free_evalue_refs(&EV);
+	free_evalue_refs(num.E);
+	delete num.E; 
+    } else if (num.pos != -1) {
+	dpoly_n d(dim, num.constant, num.coeff);
+	d.div(n, c, sign);
+	evalue EV;
+	uni_polynom(num.pos, c, &EV);
+	eadd(&EV , vE[_i]);
+	free_evalue_refs(&EV);
+    } else {
+	mpq_set_si(count, 0, 1);
+	dpoly d(dim, num.constant);
+	d.div(n, count, sign);
+	evalue EV;
+	value_init(EV.d);
+	evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
+	eadd(&EV , vE[_i]);
+	free_evalue_refs(&EV);
+    } 
+}
+
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     //P = unfringe(P, MaxRays);
@@ -1780,16 +1885,8 @@ out:
     }
 
     unsigned dim = P->Dimension - nparam;
-    evalue ** vE = new evalue_p[PP->nbV];
-    for (int j = 0; j < PP->nbV; ++j)
-	vE[j] = 0;
-    ZZ sign;
 
-    vec_ZZ lambda;
-    //nonorthog(rays, lambda);
-    randomvector(P, lambda, dim);
-
-    Vector *c = Vector_Alloc(dim+2);
+    enumerator et(P, dim, PP->nbV);
 
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
@@ -1797,16 +1894,6 @@ out:
     section *s = new section[nd];
     Polyhedron **fVD = new Polyhedron_p[nd];
 
-    vec_ZZ den;
-    den.SetLength(dim);
-    term_info num;
-
-    mat_ZZ rays;
-    rays.SetDims(dim, dim);
-
-    mpq_t count;
-    mpq_init(count);
-          
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
 
@@ -1821,68 +1908,9 @@ out:
 	evalue_set_si(&s[nd].E, 0, 1);
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
-	    int f = 0;
-	    if (!vE[_i]) {
-		Polyhedron *C = supporting_cone_p(P, V);
-		Polyhedron *vcone;
-		int npos;
-		int nneg;
-		decompose(C, &vcone, &npos, &nneg, MaxRays);
-
-		vE[_i] = new evalue;
-		value_init(vE[_i]->d);
-		evalue_set_si(vE[_i], 0, 1);
-
-	    for (Polyhedron *i = vcone; i; i = i->next) {
-		r = 0;
-		assert(i->NbRays-1 == dim);
-		add_rays(rays, i, &r);
-		for (int k = 0; k < dim; ++k) {
-		    assert(lambda * rays[k] != 0);
-		}
-
-		sign = f < npos ? 1 : -1;
-		lattice_point(V, i, lambda, &num, 0);
-		normalize(i, lambda, sign, num.constant, den);
-
-		dpoly n(dim, den[0], 1);
-		for (int k = 1; k < dim; ++k) {
-		    dpoly fact(dim, den[k], 1);
-		    n *= fact;
-		}
-		if (num.E != NULL) {
-		    ZZ one(INIT_VAL, 1);
-		    dpoly_n d(dim, num.constant, one);
-		    d.div(n, c, sign);
-		    evalue EV; 
-		    multi_polynom(c, num.E, &EV);
-		    eadd(&EV , vE[_i]);
-		    free_evalue_refs(&EV);
-		    free_evalue_refs(num.E);
-		    delete num.E; 
-		} else if (num.pos != -1) {
-		    dpoly_n d(dim, num.constant, num.coeff);
-		    d.div(n, c, sign);
-		    evalue EV;
-		    uni_polynom(num.pos, c, &EV);
-		    eadd(&EV , vE[_i]);
-		    free_evalue_refs(&EV);
-		} else {
-		    mpq_set_si(count, 0, 1);
-		    dpoly d(dim, num.constant);
-		    d.div(n, count, sign);
-		    evalue EV;
-		    value_init(EV.d);
-		    evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
-		    eadd(&EV , vE[_i]);
-		    free_evalue_refs(&EV);
-		} 
-		++f;
-	    }
-
-		Domain_Free(vcone);
-	    }
-	    eadd(vE[_i] , &s[nd].E);
+	    if (!et.vE[_i])
+		et.decompose_at(V, _i, MaxRays);
+	    eadd(et.vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
 	reduce_in_domain(&s[nd].E, pVD);
 
@@ -1893,8 +1921,6 @@ out:
 	if (rVD != pVD)
 	    Domain_Free(pVD);
     }
-
-    mpq_clear(count);
 
     if (nd == 0)
 	evalue_set_si(eres, 0, 1);
@@ -1910,15 +1936,6 @@ out:
     delete [] s;
     delete [] fVD;
 
-    Vector_Free(c);
-
-    for (int j = 0; j < PP->nbV; ++j) {
-	if (vE[j]) {
-	    free_evalue_refs(vE[j]);
-	    delete vE[j];
-	}
-    }
-    delete [] vE;
 
     if (CEq)
 	Polyhedron_Free(CEq);
