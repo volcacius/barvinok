@@ -619,6 +619,13 @@ you_lose:   	/* OK, lets not do it */
 		    value_decrement(pp->x.n, pp->x.n);
 		    mpz_fdiv_r(pp->x.n, pp->x.n, pp->d);
 
+		    /* Maybe we should do this during reduction of 
+		     * the constant.
+		     */
+		    Gcd(pp->d, pp->x.n, &twice);
+		    value_division(pp->d, pp->d, twice);
+		    value_division(pp->x.n, pp->x.n, twice);
+
 		    reorder = 1;
 		}
 
