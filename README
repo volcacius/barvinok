@@ -1,0 +1,12 @@
+This is a (partial) reimplementation of latte
+(http://www.math.ucdavis.edu/~latte/)
+using polylib.
+
+Next to polylib, it uses NTL (http://shoup.net/ntl/)
+
+Both NTL and polylib need to have been compiled with gmp
+support.
+For NTL this means you have to specify
+    NTL_GMP_LIP=on
+
+Sven Verdoolaege
