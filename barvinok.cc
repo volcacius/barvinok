@@ -364,7 +364,7 @@ public:
  */
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 {
-    Polyhedron *pos = 0, *neg = 0;
+    Polyhedron *pos = *ppos, *neg = *pneg;
     vector<cone *> nonuni;
     cone * c = new cone(C);
     ZZ det = c->det;
@@ -373,7 +373,9 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     if (abs(det) > 1) {
 	nonuni.push_back(c);
     } else {
-	pos = Polyhedron_Copy(c->Cone);
+	Polyhedron *p = Polyhedron_Copy(c->Cone);
+	p->next = pos;
+	pos = p;
 	delete c;
     }
     vec_ZZ lambda;
@@ -410,6 +412,42 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     }
     *ppos = pos;
     *pneg = neg;
+}
+
+/*
+ *  Returns a single list of npos "positive" cones followed by nneg
+ *  "negative" cones.
+ *  The input cone is freed
+ */
+void decompose(Polyhedron *cone, Polyhedron **parts, int *npos, int *nneg, unsigned MaxRays)
+{
+    Polyhedron_Polarize(cone);
+    if (cone->NbRays - 1 != cone->Dimension) {
+	Polyhedron *tmp = cone;
+	cone = triangularize_cone(cone, MaxRays);
+	Polyhedron_Free(tmp);
+    }
+    Polyhedron *polpos = NULL, *polneg = NULL;
+    *npos = 0; *nneg = 0;
+    for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
+	barvinok_decompose(Polar, &polpos, &polneg);
+
+    Polyhedron *last;
+    for (Polyhedron *i = polpos; i; i = i->next) {
+	Polyhedron_Polarize(i);
+	++*npos;
+	last = i;
+    }
+    for (Polyhedron *i = polneg; i; i = i->next) {
+	Polyhedron_Polarize(i);
+	++*nneg;
+    }
+    if (last) {
+	last->next = polneg;
+	*parts = polpos;
+    } else
+	*parts = polneg;
+    Domain_Free(cone);
 }
 
 const int MAX_TRY=10;
@@ -714,51 +752,25 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     vcone = new (Polyhedron *)[P->NbRays];
 
     for (int j = 0; j < P->NbRays; ++j) {
+	int npos, nneg;
 	Polyhedron *C = supporting_cone(P, j);
-	Polyhedron_Polarize(C);
-	Polyhedron *Polar = C;
-
-	Polyhedron *Polars;
-	if (Polar->NbRays - 1 == Polar->Dimension)
-	    Polars = Polar;
-	else {
-	    Polars = triangularize_cone(Polar, NbMaxCons);
-	    // check_triangulization(Polar, Polars);
-	    Polyhedron_Free(Polar);
-	}
-
-	Polyhedron ** conep = &vcone[j];
-	*conep = NULL;
-	for (Polar = Polars; Polar; Polar = Polar->next) {
-	    Polyhedron *polpos, *polneg;
-	    barvinok_decompose(Polar, &polpos, &polneg);
-
-	    for (Polyhedron *i = polpos; i; i = i->next) {
-		Polyhedron_Polarize(i);
-		*conep = i;
-		conep = &i->next;
-		assert(i->NbRays-1 == dim);
-		sign.SetLength(++ncone);
-		sign[ncone-1] = 1;
-	    }
-	    for (Polyhedron *i = polneg; i; i = i->next) {
-		Polyhedron_Polarize(i);
-		*conep = i;
-		conep = &i->next;
-		assert(i->NbRays-1 == dim);
-		sign.SetLength(++ncone);
-		sign[ncone-1] = -1;
-	    }
-	}
-	Domain_Free(Polars);
+	decompose(C, &vcone[j], &npos, &nneg, NbMaxCons);
+	ncone += npos + nneg;
+	sign.SetLength(ncone);
+	for (int k = 0; k < npos; ++k)
+	    sign[ncone-nneg-k-1] = 1;
+	for (int k = 0; k < nneg; ++k)
+	    sign[ncone-k-1] = -1;
     }
 
     mat_ZZ rays;
     rays.SetDims(ncone * dim, dim);
     r = 0;
     for (int j = 0; j < P->NbRays; ++j) {
-	for (Polyhedron *i = vcone[j]; i; i = i->next)
+	for (Polyhedron *i = vcone[j]; i; i = i->next) {
+	    assert(i->NbRays-1 == dim);
 	    add_rays(rays, i, &r);
+	}
     }
     vec_ZZ lambda;
     nonorthog(rays, lambda);
@@ -895,47 +907,25 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     for(D=PP->D;D;D=D->next) {
 	int n = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
-	    Polyhedron *Polar;
-	    Polyhedron *Polars = supporting_cone_p(P, V);
-	    Polyhedron_Polarize(Polars);
-	    if (Polars->NbRays - 1 != Polars->Dimension) {
-		Polyhedron *tmp = Polars;
-		Polars = triangularize_cone(Polars, MaxRays);
-		Polyhedron_Free(tmp);
-	    }
-
-	    Polyhedron ** conep = &vcone[n++];
-	    *conep = NULL;
-	    for (Polar = Polars; Polar; Polar = Polar->next) {
-		Polyhedron *polpos, *polneg;
-		barvinok_decompose(Polar, &polpos, &polneg);
-
-		for (Polyhedron *i = polpos; i; i = i->next) {
-		    Polyhedron_Polarize(i);
-		    *conep = i;
-		    conep = &i->next;
-		    assert(i->NbRays-1 == dim);
-		    sign.SetLength(++ncone);
-		    sign[ncone-1] = 1;
-		}
-		for (Polyhedron *i = polneg; i; i = i->next) {
-		    Polyhedron_Polarize(i);
-		    *conep = i;
-		    conep = &i->next;
-		    assert(i->NbRays-1 == dim);
-		    sign.SetLength(++ncone);
-		    sign[ncone-1] = -1;
-		}
-	    }
-	    Domain_Free(Polars);
+	    int npos, nneg;
+	    Polyhedron *C = supporting_cone_p(P, V);
+	    decompose(C, &vcone[n++], &npos, &nneg, MaxRays);
+	    ncone += npos + nneg;
+	    sign.SetLength(ncone);
+	    for (int k = 0; k < npos; ++k)
+		sign[ncone-nneg-k-1] = 1;
+	    for (int k = 0; k < nneg; ++k)
+		sign[ncone-k-1] = -1;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
 	mat_ZZ rays;
 	rays.SetDims(ncone * dim, dim);
 	r = 0;
 	for (int j = 0; j < n; ++j) {
-	    for (Polyhedron *i = vcone[j]; i; i = i->next)
+	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
+		assert(i->NbRays-1 == dim);
 		add_rays(rays, i, &r);
+	    }
 	}
 	vec_ZZ lambda;
 	nonorthog(rays, lambda);
