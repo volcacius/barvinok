@@ -490,36 +490,6 @@ struct dpoly_r {
 	}
 	return rc;
     }
-    void div(dpoly& d, ZZ& sign, gen_fun *gf, mat_ZZ& pden, mat_ZZ& den,
-		vec_ZZ& num_p) {
-	dpoly_r * rc = div(d);
-	//rc.dump();
-	int common = pden.NumRows();
-
-	vector< dpoly_r_term * >& final = rc->c[len-1];
-	int rows;
-	for (int j = 0; j < final.size(); ++j) {
-	    rows = common;
-	    pden.SetDims(rows, pden.NumCols());
-	    for (int k = 0; k < dim; ++k) {
-		int n = final[j]->powers[k];
-		if (n == 0)
-		    continue;
-		int abs_n = n < 0 ? -n : n;
-		pden.SetDims(rows+abs_n, pden.NumCols());
-		for (int l = 0; l < abs_n; ++l) {
-		    if (n > 0)
-			pden[rows+l] = den[k];
-		    else
-			pden[rows+l] = -den[k];
-		}
-		rows += abs_n;
-	    }
-	    final[j]->coeff *= sign;
-	    gf->add(final[j]->coeff, rc->denom, num_p, pden);
-	}
-	delete rc;
-    }
     void dump(void) {
 	for (int i = 0; i < len; ++i) {
 	    cout << endl;
@@ -660,42 +630,6 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     }
     *ppos = pos;
     *pneg = neg;
-}
-
-/*
- *  Returns a single list of npos "positive" cones followed by nneg
- *  "negative" cones.
- *  The input cone is freed
- */
-void decompose(Polyhedron *cone, Polyhedron **parts, int *npos, int *nneg, unsigned MaxRays)
-{
-    Polyhedron_Polarize(cone);
-    if (cone->NbRays - 1 != cone->Dimension) {
-	Polyhedron *tmp = cone;
-	cone = triangularize_cone(cone, MaxRays);
-	Polyhedron_Free(tmp);
-    }
-    Polyhedron *polpos = NULL, *polneg = NULL;
-    *npos = 0; *nneg = 0;
-    for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	barvinok_decompose(Polar, &polpos, &polneg);
-
-    Polyhedron *last;
-    for (Polyhedron *i = polpos; i; i = i->next) {
-	Polyhedron_Polarize(i);
-	++*npos;
-	last = i;
-    }
-    for (Polyhedron *i = polneg; i; i = i->next) {
-	Polyhedron_Polarize(i);
-	++*nneg;
-    }
-    if (last) {
-	last->next = polneg;
-	*parts = polpos;
-    } else
-	*parts = polneg;
-    Domain_Free(cone);
 }
 
 const int MAX_TRY=10;
