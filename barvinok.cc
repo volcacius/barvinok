@@ -937,6 +937,7 @@ evalue* ceil3(Value *coef, int len, Value d)
     delete EP;
 
     free_evalue_refs(&tmp); 
+    Vector_Free(val);
 
     return E;
 }
