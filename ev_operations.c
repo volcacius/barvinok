@@ -930,8 +930,8 @@ void free_evalue_refs(evalue *e) {
   return;
 } /* free_evalue_refs */
 
-static void mod2table_r(evalue *e, Vector *periods, int p, Vector * val, 
-			evalue *res)
+static void mod2table_r(evalue *e, Vector *periods, Value m, int p, 
+			Vector * val, evalue *res)
 {
     unsigned nparam = periods->Size;
 
@@ -944,10 +944,11 @@ static void mod2table_r(evalue *e, Vector *periods, int p, Vector * val,
 	value_set_si(res->d, 1);
 	value_init(res->x.n);
 	value_set_double(res->x.n, d);
+	mpz_fdiv_r(res->x.n, res->x.n, m);
 	return;
     }
     if (value_one_p(periods->p[p]))
-	mod2table_r(e, periods, p+1, val, res);
+	mod2table_r(e, periods, m, p+1, val, res);
     else {
 	Value tmp;
 	value_init(tmp);
@@ -958,7 +959,7 @@ static void mod2table_r(evalue *e, Vector *periods, int p, Vector * val,
 	do {
 	    value_decrement(tmp, tmp);
 	    value_assign(val->p[p], tmp);
-	    mod2table_r(e, periods, p+1, val, 
+	    mod2table_r(e, periods, m, p+1, val, 
 			&res->x.p->arr[VALUE_TO_INT(tmp)]);
 	} while (value_pos_p(tmp));
 
@@ -997,8 +998,9 @@ void evalue_mod2table(evalue *e, int nparam)
       Gcd(tmp, p->arr[1].x.n, &periods->p[p->pos-1]);
       value_division(periods->p[p->pos-1], tmp, periods->p[p->pos-1]);
     }
+    value_set_si(tmp, p->pos);
     value_init(EP.d);
-    mod2table_r(&p->arr[0], periods, 0, val, &EP);
+    mod2table_r(&p->arr[0], periods, tmp, 0, val, &EP);
 
     value_init(res.d);
     evalue_set_si(&res, 0, 1);
