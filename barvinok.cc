@@ -703,7 +703,15 @@ static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
     Value min, max;
     value_init(min);
     value_init(max);
-    for (i = 0; i < I->NbConstraints; ++i) {
+    if (I->NbEq >= 1) {
+	value_oppose(I->Constraint[0][2], I->Constraint[0][2]);
+	/* There should never be a remainder here */
+	if (value_pos_p(I->Constraint[0][1]))
+	    mpz_fdiv_q(min, I->Constraint[0][2], I->Constraint[0][1]);
+	else
+	    mpz_fdiv_q(min, I->Constraint[0][2], I->Constraint[0][1]);
+	value_assign(max, min);
+    } else for (i = 0; i < I->NbConstraints; ++i) {
 	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
 	if (value_pos_p(I->Constraint[i][1]))
 	    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
