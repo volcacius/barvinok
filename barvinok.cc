@@ -1930,6 +1930,15 @@ static evalue* enumerate_or(Polyhedron *pos, Polyhedron *neg,
     return EP;
 }
 
+static evalue* new_zero_ep()
+{
+    evalue *EP;
+    ALLOC(EP);
+    value_init(EP->d);
+    evalue_set_si(EP, 0, 1);
+    return EP;
+}
+
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 
@@ -1976,6 +1985,9 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 
     int nvar = P->Dimension - exist - nparam;
     int len = P->Dimension + 2;
+
+    if (emptyQ(P))
+	return new_zero_ep();
 
     if (nvar == 0 && nparam == 0) {
 	evalue *EP;
