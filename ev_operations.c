@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "ev_operations.h"
 #include "util.h"
@@ -1527,6 +1528,53 @@ enode *ecopy(enode *e) {
   return(res);
 } /* ecopy */
 
+int ecmp(const evalue *e1, const evalue *e2)
+{
+    enode *p1, *p2;
+    int i;
+    int r;
+
+    if (value_notzero_p(e1->d) && value_notzero_p(e2->d)) {
+	Value m, m2;
+	value_init(m);
+	value_init(m2);
+	value_multiply(m, e1->x.n, e2->d);
+	value_multiply(m2, e2->x.n, e1->d);
+
+	if (value_lt(m, m2))
+	    r = -1;
+	else if (value_gt(m, m2))
+	    r = 1;
+	else 
+	    r = 0;
+
+	value_clear(m);
+	value_clear(m2);
+
+	return r;
+    }
+    if (value_notzero_p(e1->d))
+	return -1;
+    if (value_notzero_p(e2->d))
+	return 1;
+
+    p1 = e1->x.p;
+    p2 = e2->x.p;
+
+    if (p1->type != p2->type)
+	return p1->type - p2->type;
+    if (p1->pos != p2->pos)
+	return p1->pos - p2->pos;
+    if (p1->size != p2->size)
+	return p1->size - p2->size;
+
+    for (i = p1->size-1; i >= 0; --i)
+	if ((r = ecmp(&p1->arr[i], &p2->arr[i])) != 0)
+	    return r;
+
+    return 0;
+}
+
 int eequal(evalue *e1,evalue *e2) { 
  
     int i;
@@ -2054,4 +2102,46 @@ void evalue_mod2relation(evalue *e) {
 
 	free_evalue_refs(&split);	  
     }
+}
+
+static int evalue_comp(const void * a, const void * b)
+{
+    const evalue *e1 = *(const evalue **)a;
+    const evalue *e2 = *(const evalue **)b;
+    return ecmp(e1, e2);
+}
+
+void evalue_combine(evalue *e)
+{
+    evalue **evs;
+    int i, k;
+    enode *p;
+
+    if (value_notzero_p(e->d) || e->x.p->type != partition)
+	return;
+
+    NALLOC(evs, e->x.p->size/2);
+    for (i = 0; i < e->x.p->size/2; ++i)
+	evs[i] = &e->x.p->arr[2*i+1];
+    qsort(evs, e->x.p->size/2, sizeof(evs[0]), evalue_comp);
+    p = new_enode(partition, e->x.p->size, -1);
+    for (i = 0, k = 0; i < p->size/2; ++i) {
+	if (k == 0 || ecmp(&p->arr[2*k-1], evs[i]) != 0) {
+	    p->arr[2*k] = *(evs[i]-1);
+	    p->arr[2*k+1] = *(evs[i]);
+	    ++k;
+	} else {
+	    Polyhedron *D = EVALUE_DOMAIN(*(evs[i]-1));
+	    Polyhedron *L = D;
+
+	    while (L->next)
+		L = L->next;
+	    L->next = EVALUE_DOMAIN(p->arr[2*k-2]);
+	    EVALUE_SET_DOMAIN(p->arr[2*k-2], D);
+	    free_evalue_refs(evs[i]);
+	}
+    }
+    free(e->x.p);
+    p->size = 2*k;
+    e->x.p = p;
 }
