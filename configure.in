@@ -2,4 +2,22 @@ AC_INIT
 AM_INIT_AUTOMAKE(barvinok, 0.01)
 AC_PROG_LIBTOOL
 
+AC_ARG_WITH(polylib,
+            [  --with-polylib=DIR      DIR Location of the PolyLib],
+            [ echo "Package polylib : $withval" && polylib_package=$withval],  
+            [ polylib_package=yes ])
+
+if test "$polylib_package" = "no"; then
+    AC_MSG_ERROR(Need polylib)
+fi
+
+if test "$polylib_package" != "yes"; then
+    CPPFLAGS="-I$polylib_package/include $CPPFLAGS"
+    LDFLAGS="-L$polylib_package/lib $LDFLAGS"
+fi
+
+AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
+    AC_MSG_ERROR(Need polylib)
+])
+
 AC_OUTPUT(Makefile)
