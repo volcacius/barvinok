@@ -140,6 +140,7 @@ you_lose:   	/* OK, lets not do it */
 		    free_evalue_refs(&(p->arr[i]));
 		}
 		p->size = 1;
+		_reduce_evalue(&p->arr[0], s, m);
 		break;
 	    }
 	}
@@ -177,6 +178,7 @@ you_lose:   	/* OK, lets not do it */
 	    }
 	    p->size = 2;
 	    free_evalue_refs(&v);
+	    _reduce_evalue(&p->arr[1], s, m);
 	}
 
         /* Try to reduce the degree */
