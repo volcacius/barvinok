@@ -1925,6 +1925,7 @@ void evalue_mod2table(evalue *e, int nparam)
       value_assign(periods->p[p->pos-1], p->arr[1].d);
       value_lcm(tmp, p->arr[1].d, &tmp);
     }
+    value_lcm(tmp, ev->d, &tmp);
     value_init(EP.d);
     mod2table_r(&p->arr[0], periods, tmp, 0, val, &EP);
 
