@@ -354,6 +354,21 @@ void eadd_partitions (evalue *e1,evalue *res)
     free(s);
 }
 
+static void explicit_complement(evalue *res)
+{
+    enode *rel = new_enode(relation, 3, 0);
+    assert(rel);
+    value_clear(rel->arr[0].d);
+    rel->arr[0] = res->x.p->arr[0];
+    value_clear(rel->arr[1].d);
+    rel->arr[1] = res->x.p->arr[1];
+    value_set_si(rel->arr[2].d, 1);
+    value_init(rel->arr[2].x.n);
+    value_set_si(rel->arr[2].x.n, 0);
+    free(res->x.p);
+    res->x.p = rel;
+}
+
 void eadd(evalue *e1,evalue *res) {
 
  int i; 
@@ -399,19 +414,8 @@ void eadd(evalue *e1,evalue *res) {
 		break;				/* Do nothing */
 	  case relation:
 		/* Create (zero) complement if needed */
-		if (res->x.p->size < 3 && !EVALUE_IS_ZERO(*e1)) {
-		    enode *rel = new_enode(relation, 3, 0);
-		    assert(rel);
-		    value_clear(rel->arr[0].d);
-		    rel->arr[0] = res->x.p->arr[0];
-		    value_clear(rel->arr[1].d);
-		    rel->arr[1] = res->x.p->arr[1];
-		    value_set_si(rel->arr[2].d, 1);
-		    value_init(rel->arr[2].x.n);
-		    value_set_si(rel->arr[2].x.n, 0);
-		    free(res->x.p);
-		    res->x.p = rel;
-		}
+		if (res->x.p->size < 3 && !EVALUE_IS_ZERO(*e1))
+		    explicit_complement(res);
 		for (i = 1; i < res->x.p->size; ++i)
 		    eadd(e1, &res->x.p->arr[i]);
 		break;
@@ -438,6 +442,8 @@ void eadd(evalue *e1,evalue *res) {
 	    return;
 	}
 	if (res->x.p->type == relation) {
+	    if (res->x.p->size < 3)
+		explicit_complement(res);
 	    for (i = 1; i < res->x.p->size; ++i)
 		eadd(e1, &res->x.p->arr[i]);
 	    return;
