@@ -234,14 +234,24 @@ void reduce_evalue (evalue *e) {
 		for (j = 0; j < D->NbEq; ++j) {
 		    for (k = 0; k < D->Dimension; ++k)
 			if (value_notzero_p(D->Constraint[j][k+1])) {
+			    int l;
+			    for (l = k+1; l < D->Dimension; ++l)
+				if (value_notzero_p(D->Constraint[j][l+1]))
+				    break;
+			    if (l < D->Dimension)
+				break;
 			    fixed[n].pos = k+1;
 			    if (value_one_p(D->Constraint[j][k+1]))
 				value_oppose(fixed[n].v, D->Constraint[j][dim+1]);
 			    else if (value_mone_p(D->Constraint[j][k+1]))
 				value_assign(fixed[n].v, D->Constraint[j][dim+1]);
-			    else
+			    else {
+				fprintf(stderr, "%d %d\n", j, k);
+				Polyhedron_Print(stderr, P_VALUE_FMT, D);
 				assert(0);
+			    }
 			    ++n;
+			    break;
 			}
 		}
 	    }
