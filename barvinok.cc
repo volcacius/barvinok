@@ -323,9 +323,11 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 	    Matrix* M = Matrix_Copy(c->Rays);
 	    Vector_Copy(v->p, M->p[i], v->Size);
 	    cone * pc = new cone(M);
-	    if (abs(pc->det) > 1)
+	    assert(pc->det != 0);
+	    if (abs(pc->det) > 1) {
+		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
-	    else {
+	    } else {
 		Polyhedron *p = Polyhedron_Copy(pc->poly());
 		if (pc->det > 0) {
 		    p->next = pos;
@@ -500,6 +502,7 @@ void barvinok_count(Polyhedron *P, Value* result)
 	    Polars = Polar;
 	else {
 	    Polars = triangularize_cone(Polar, 600);
+	    // check_triangulization(Polar, Polars);
 	    Polyhedron_Free(Polar);
 	}
 
@@ -568,8 +571,8 @@ void barvinok_count(Polyhedron *P, Value* result)
 	    dpoly d(dim, num[f]);
 	    dpoly n(dim, den[f][0], 1);
 	    for (int k = 1; k < dim; ++k) {
-		dpoly f(dim, den[f][k], 1);
-		n *= f;
+		dpoly fact(dim, den[f][k], 1);
+		n *= fact;
 	    }
 	    d.div(n, count, sign[f]);
 	    ++f;
