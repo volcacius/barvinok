@@ -90,11 +90,19 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 
     R = NULL;
     value_init(tmp);
-    for (i = 0; i < P->NbRays; ++i) {
-	Vector_Copy(P->Ray[i], M->p[i], dim+1);
-	Inner_Product(M->p[i]+1, M->p[i]+1, dim, &tmp);
-	value_assign(M->p[i][dim+1], tmp);
-	value_set_si(M->p[i][dim+2], 1);
+
+    Vector_Set(M->p[0]+1, 0, dim+1);
+    value_set_si(M->p[0][0], 1);
+    value_set_si(M->p[0][dim+2], 1);
+
+    for (i = 0, r = 1; i < P->NbRays; ++i) {
+	if (value_notzero_p(P->Ray[i][dim+1]))
+	    continue;
+	Vector_Copy(P->Ray[i], M->p[r], dim+1);
+	Inner_Product(M->p[r]+1, M->p[r]+1, dim, &tmp);
+	value_assign(M->p[r][dim+1], tmp);
+	value_set_si(M->p[r][dim+2], 1);
+	++r;
     }
 
     Matrix_Print(stdout, P_VALUE_FMT, M);
@@ -104,9 +112,9 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
     if (L->NbEq != 0) {
 	Polyhedron_Free(L);
 	value_set_si(tmp, 2);
-	Vector_Scale(M->p[0]+1, M->p[0]+1, tmp, dim);
-	Inner_Product(M->p[0]+1, M->p[0]+1, dim, &tmp);
-	value_assign(M->p[0][dim+1], tmp);
+	Vector_Scale(M->p[1]+1, M->p[1]+1, tmp, dim);
+	Inner_Product(M->p[1]+1, M->p[1]+1, dim, &tmp);
+	value_assign(M->p[1][dim+1], tmp);
 	Matrix_Print(stdout, P_VALUE_FMT, M);
 	L = Rays2Polyhedron(M, NbMaxCons);
 	Polyhedron_Print(stdout, P_VALUE_FMT, L);
@@ -123,7 +131,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	    continue;
 	if (value_notzero_p(L->Constraint[i][dim+2]))
 	    continue;
-	for (j = 0, r = 1; j < M->NbRows-1; ++j) {
+	for (j = 1, r = 1; j < M->NbRows; ++j) {
 	    Inner_Product(M->p[j]+1, L->Constraint[i]+1, dim+1, &tmp);
 	    if (value_notzero_p(tmp))
 		continue;
