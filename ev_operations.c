@@ -176,6 +176,25 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     }
     fprintf(DST," ]_%s", pname[p->pos-1]);
   }
+  else if (p->type == modulo) {
+    fprintf(DST, "( ");
+    for (i=p->size-1; i>=1; i--) {
+      print_evalue(DST, &p->arr[i], pname);
+      if (i >= 2) {
+        fprintf(DST, " * ");
+	if (i > 2)
+	  fprintf(DST, "(");
+	fprintf(DST, "(");
+        print_evalue(DST, &p->arr[0], pname);
+	fprintf(DST, ") mod %d", p->pos);
+	if (i>2) 
+	  fprintf(DST, ")^%d + ", i-1);
+	else
+	  fprintf(DST, " + ", i-1);
+      }
+    }
+    fprintf(DST, " )\n");
+  }
   return;
 } /* print_enode */ 
 
