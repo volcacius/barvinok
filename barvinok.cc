@@ -1750,6 +1750,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 	    for ( ; r < P->Dimension+1; ++r)
 		value_set_si(M2->p[r][r], 1);
 	    Polyhedron *T = Polyhedron_Image(P, M2, MaxRays);
+	    fprintf(stderr, "\nER: Equality\n");
 	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
 	    Polyhedron_Free(T);
 	    Matrix_Free(M2);
@@ -1757,6 +1758,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 	    Vector_Free(row);
 	    return EP;
 	} else {
+	    fprintf(stderr, "\nER: Fixed\n");
 	    if (first == 0)
 		return barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
 	    else {
@@ -1883,6 +1885,7 @@ next:
     */
     for (int i = 0; i < exist; ++i)
 	if (info[i] & ALL_POS) {
+	    fprintf(stderr, "\nER: Positive\n");
 	    // Eliminate
 	    // Maybe we should chew off some of the fat here
 	    Matrix *M = Matrix_Alloc(P->Dimension, P->Dimension+1);
@@ -1898,6 +1901,7 @@ next:
 	}
     for (int i = 0; i < exist; ++i)
 	if (info[i] & ONE_NEG) {
+	    fprintf(stderr, "\nER: Negative\n");
 	    Vector_Free(row);
 	    value_clear(f);
 	    if (i == 0)
@@ -1953,6 +1957,7 @@ next:
 			Polyhedron_Free(neg);
 			continue;
 		    }
+		    fprintf(stderr, "\nER: Split\n");
 
 		    value_set_si(f, -1);
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
