@@ -3,8 +3,6 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart
 
 libbarvinok_la_SOURCES = \
-    debug.cpp \
-    debug.h \
     ev_operations.c \
     ev_operations.h \
     util.c \
