@@ -32,17 +32,24 @@ TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl NTL_5_3_2.patch
 
+check-series:
+	@for i in $(top_srcdir)/tests/ehrhart/*; do \
+	    if test -f $$i; then \
+		echo $$i; \
+		./verif_ehrhart --series < $$i; \
+	    fi \
+	done
 check:
+	@for i in $(top_srcdir)/tests/ehrhart/*; do \
+	    if test -f $$i; then \
+		echo $$i; \
+		./verif_ehrhart < $$i; \
+	    fi \
+	done
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		echo -n $$i; \
 		./test < $$i || echo -n " NOT"; \
 		echo " ok"; \
-	    fi \
-	done
-	@for i in $(top_srcdir)/tests/ehrhart/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./verif_ehrhart < $$i; \
 	    fi \
 	done
