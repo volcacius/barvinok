@@ -141,9 +141,10 @@ static int mod_rational_smaller(evalue *e1, evalue *e2)
 static int mod_term_smaller_r(evalue *e1, evalue *e2)
 {
     if (value_notzero_p(e1->d)) {
+	int r;
 	if (value_zero_p(e2->d))
 	    return 1;
-	int r = mod_rational_smaller(e1, e2);
+	r = mod_rational_smaller(e1, e2);
 	return r == -1 ? 0 : r;
     }
     if (value_notzero_p(e2->d))
@@ -707,8 +708,8 @@ void reduce_evalue (evalue *e) {
 	int i;
 	unsigned dim = -1;
 	for (i = 0; i < e->x.p->size/2; ++i) {
-	    s.n = 0;
 	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	    s.n = 0;
 	    /* This shouldn't really happen; 
 	     * Empty domains should not be added.
 	     */
@@ -1487,9 +1488,9 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		    if (e1->x.p->type != fractional || !value_two_p(d.d))
 			emul_poly(e1, res);
 		    else {
+			evalue tmp;
 			value_init(d.x.n);
 			value_set_si(d.x.n, 1);
-			evalue tmp;
 			/* { x }^2 == { x }/2 */
 			/* a0 b0 + (a0 b1 + a1 b0 + a1 b1/2) { x } */
 			assert(e1->x.p->size == 3);
@@ -2627,6 +2628,10 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	r = 1;
     } else if (bounded && value_one_p(d) && p->size > 3) {
 	evalue rem;
+	evalue inc;
+	evalue t;
+	evalue f;
+	evalue factor;
 	value_init(rem.d);
 	value_set_si(rem.d, 0);
 	rem.x.p = new_enode(fractional, 3, -1);
@@ -2637,18 +2642,15 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    p->arr[i-2] = p->arr[i];
 	p->size -= 2;
 
-	evalue inc;
 	value_init(inc.d);
 	value_init(inc.x.n);
 	value_set_si(inc.d, 1);
 	value_oppose(inc.x.n, min);
 
-	evalue t;
 	value_init(t.d);
 	evalue_copy(&t, &p->arr[0]);
 	eadd(&inc, &t);
 
-	evalue f;
 	value_init(f.d);
 	value_set_si(f.d, 0);
 	f.x.p = new_enode(fractional, 3, -1);
@@ -2656,7 +2658,6 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	evalue_set_si(&f.x.p->arr[1], 1, 1);
 	evalue_set_si(&f.x.p->arr[2], 2, 1);
 
-	evalue factor;
 	value_init(factor.d);
 	evalue_set_si(&factor, -1, 1);
 	emul(&t, &factor);

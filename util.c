@@ -637,14 +637,16 @@ static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
 {
     int i;
     int remove = P->Dimension - dim;
+    Matrix *T;
+    Polyhedron *I;
 
     if (P->Dimension == dim)
 	return Polyhedron_Copy(P);
 
-    Matrix *T = Matrix_Alloc(dim+1, P->Dimension+1);
+    T = Matrix_Alloc(dim+1, P->Dimension+1);
     for (i = 0; i < dim+1; ++i)
 	value_set_si(T->p[i][i+remove], 1);
-    Polyhedron *I = Polyhedron_Image(P, T, P->NbConstraints);
+    I = Polyhedron_Image(P, T, P->NbConstraints);
     Matrix_Free(T);
     return I;
 }
@@ -945,10 +947,10 @@ Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays)
     Polyhedron **prev;
     int len = P->Dimension+2;
     Vector *row = Vector_Alloc(len);
-    value_set_si(row->p[0], 1);
     Value g;
-    value_init(g);
     Polyhedron *R = P, *N;
+    value_set_si(row->p[0], 1);
+    value_init(g);
 
     for (prev = &R; P; P = N) {
 	Polyhedron *T;
