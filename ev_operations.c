@@ -2287,6 +2287,9 @@ void evalue_combine(evalue *e)
     }
 }
 
+/* May change coefficients to become non-standard
+ * => reduce p afterwards to correct
+ */
 static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
 					 Matrix **R)
 {
@@ -2294,6 +2297,8 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     evalue *pp;
     unsigned dim = D->Dimension;
     Matrix *T = Matrix_Alloc(2, dim+1);
+    Value twice;
+    value_init(twice);
     assert(T);
 
     assert(p->type == fractional);
@@ -2305,6 +2310,10 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
 	assert(pp->x.p->size == 2);
 	assert(value_notzero_p(pp->x.p->arr[1].d));
 	value_division(T->p[0][pp->x.p->pos-1], *d, pp->x.p->arr[1].d);
+	mpz_mul_ui(twice, pp->x.p->arr[1].x.n, 2);
+	if (value_gt(twice, pp->x.p->arr[1].d))
+	    value_substract(pp->x.p->arr[1].x.n, 
+			    pp->x.p->arr[1].x.n, pp->x.p->arr[1].d);
 	value_multiply(T->p[0][pp->x.p->pos-1], 
 		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
 	pp = &pp->x.p->arr[0];
@@ -2315,6 +2324,8 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     H = DomainConvex(I, 0);
     Domain_Free(I);
     *R = T;
+
+    value_clear(twice);
 
     return H;
 }
@@ -2392,6 +2403,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    if (p->size == 3)
 		r |= reduce_in_domain(&p->arr[2], D);
 	    Domain_Free(E);
+	    _reduce_evalue(&p->arr[0].x.p->arr[0], 0, 1);
 	    return r;
 	}
 
@@ -2399,6 +2411,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	value_clear(min);
 	value_clear(max);
 	Matrix_Free(T);
+	_reduce_evalue(&p->arr[0].x.p->arr[0], 0, 1);
     }
 
     i = p->type == relation ? 1 : 
@@ -2443,18 +2456,21 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	free(p);
 	free_evalue_refs(&inc);
 	r = 1;
-    } else if (r == 1) {
-	evalue f;
-	value_init(f.d);
-	value_set_si(f.d, 0);
-	f.x.p = new_enode(fractional, 3, -1);
-	value_clear(f.x.p->arr[0].d);
-	f.x.p->arr[0] = p->arr[0];
-	evalue_set_si(&f.x.p->arr[1], 0, 1);
-	evalue_set_si(&f.x.p->arr[2], 1, 1);
-	reorder_terms(p, &f);
-	*e = p->arr[1];
-	free(p);
+    } else {
+	_reduce_evalue(&p->arr[0], 0, 1);
+	if (r == 1) {
+	    evalue f;
+	    value_init(f.d);
+	    value_set_si(f.d, 0);
+	    f.x.p = new_enode(fractional, 3, -1);
+	    value_clear(f.x.p->arr[0].d);
+	    f.x.p->arr[0] = p->arr[0];
+	    evalue_set_si(&f.x.p->arr[1], 0, 1);
+	    evalue_set_si(&f.x.p->arr[2], 1, 1);
+	    reorder_terms(p, &f);
+	    *e = p->arr[1];
+	    free(p);
+	}
     }
 
     value_clear(d);
