@@ -703,7 +703,14 @@ static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
     Value min, max;
     value_init(min);
     value_init(max);
-    line_minmax(I, &min, &max, d, zero);
+    line_minmax(I, &min, &max);
+
+    if (zero)
+	mpz_cdiv_q(min, min, d);
+    else
+	mpz_fdiv_q(min, min, d);
+    mpz_fdiv_q(max, max, d);
+
     if (value_eq(min, max)) {
 	ALLOC(ret);
 	value_init(*ret);

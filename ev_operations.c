@@ -2287,23 +2287,93 @@ void evalue_combine(evalue *e)
     }
 }
 
+static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
+					 Matrix **R)
+{
+    Polyhedron *I, *H;
+    evalue *pp;
+    unsigned dim = D->Dimension;
+    Matrix *T = Matrix_Alloc(2, dim+1);
+    assert(T);
+
+    assert(p->type == fractional);
+    pp = &p->arr[0];
+    value_set_si(T->p[1][dim], 1);
+    poly_denom(pp, d);
+    while (value_zero_p(pp->d)) {
+	assert(pp->x.p->type == polynomial);
+	assert(pp->x.p->size == 2);
+	assert(value_notzero_p(pp->x.p->arr[1].d));
+	value_division(T->p[0][pp->x.p->pos-1], *d, pp->x.p->arr[1].d);
+	value_multiply(T->p[0][pp->x.p->pos-1], 
+		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
+	pp = &pp->x.p->arr[0];
+    }
+    value_division(T->p[0][dim], *d, pp->d);
+    value_multiply(T->p[0][dim], T->p[0][dim], pp->x.n);
+    I = DomainImage(D, T, 0);
+    H = DomainConvex(I, 0);
+    Domain_Free(I);
+    *R = T;
+
+    return H;
+}
+
 static int reduce_in_domain(evalue *e, Polyhedron *D)
 {
     int i;
     enode *p;
-    Matrix *T;
-    Polyhedron *I, *H;
-    unsigned dim;
-    evalue *pp;
     Value d, min, max;
     int r = 0;
+    Polyhedron *I;
+    Matrix *T;
 
     if (value_notzero_p(e->d))
 	return r;
 
     p = e->x.p;
 
-    /* skip condition of relation for now */
+    if (p->type == relation) {
+	int equal;
+	value_init(d);
+	value_init(min);
+	value_init(max);
+
+	I = polynomial_projection(p->arr[0].x.p, D, &d, &T);
+	Matrix_Free(T);
+	line_minmax(I, &min, &max); /* frees I */
+	equal = value_eq(min, max);
+	mpz_cdiv_q(min, min, d);
+	mpz_fdiv_q(max, max, d);
+
+	if (value_gt(min, max)) {
+	    /* Never zero */
+	    if (p->size == 3) {
+		value_clear(e->d);
+		*e = p->arr[2];
+	    } else {
+		evalue_set_si(e, 0, 1);
+		r = 1;
+	    }
+	    free_evalue_refs(&(p->arr[1]));
+	    free_evalue_refs(&(p->arr[0]));
+	    free(p);
+	    return r ? r : reduce_in_domain(e, D);
+	} else if (equal) {
+	    /* Always zero */
+	    if (p->size == 3)
+		free_evalue_refs(&(p->arr[2]));
+	    *e = p->arr[1];
+	    free_evalue_refs(&(p->arr[0]));
+	    free(p);
+	    return reduce_in_domain(e, D);
+	}
+
+	value_clear(d);
+	value_clear(min);
+	value_clear(max);
+    }
+
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
@@ -2324,31 +2394,14 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	return r;
     }
 
-    dim = D->Dimension;
-    T = Matrix_Alloc(2, dim+1);
-    assert(T);
-
     value_init(d);
     value_init(min);
     value_init(max);
-    pp = &p->arr[0];
-    value_set_si(T->p[1][dim], 1);
-    poly_denom(pp, &d);
-    while (value_zero_p(pp->d)) {
-	assert(pp->x.p->type == polynomial);
-	assert(pp->x.p->size == 2);
-	assert(value_notzero_p(pp->x.p->arr[1].d));
-	value_division(T->p[0][pp->x.p->pos-1], d, pp->x.p->arr[1].d);
-	value_multiply(T->p[0][pp->x.p->pos-1], 
-		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
-	pp = &pp->x.p->arr[0];
-    }
-    value_division(T->p[0][dim], d, pp->d);
-    value_multiply(T->p[0][dim], T->p[0][dim], pp->x.n);
-    I = DomainImage(D, T, 0);
-    H = DomainConvex(I, 0);
-    line_minmax(H, &min, &max, d, 0); /* frees H */
-    Domain_Free(I);
+    I = polynomial_projection(p, D, &d, &T);
+    Matrix_Free(T);
+    line_minmax(I, &min, &max); /* frees I */
+    mpz_fdiv_q(min, min, d);
+    mpz_fdiv_q(max, max, d);
 
     if (value_eq(min, max)) {
 	evalue inc;
@@ -2377,7 +2430,6 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	free(p);
     }
 
-    Matrix_Free(T);
     value_clear(d);
     value_clear(min);
     value_clear(max);
@@ -2393,6 +2445,17 @@ void evalue_range_reduction(evalue *e)
 
     for (i = 0; i < e->x.p->size/2; ++i)
 	if (reduce_in_domain(&e->x.p->arr[2*i+1],
-			     EVALUE_DOMAIN(e->x.p->arr[2*i])))
+			     EVALUE_DOMAIN(e->x.p->arr[2*i]))) {
 	    reduce_evalue(&e->x.p->arr[2*i+1]);
+
+	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
+		free_evalue_refs(&e->x.p->arr[2*i+1]);
+		Domain_Free(EVALUE_DOMAIN(e->x.p->arr[2*i]));
+		value_clear(e->x.p->arr[2*i].d);
+		e->x.p->size -= 2;
+		e->x.p->arr[2*i] = e->x.p->arr[e->x.p->size];
+		e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
+		--i;
+	    }
+	}
 }
