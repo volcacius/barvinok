@@ -4,7 +4,7 @@
 #include <omega/AST.h>
 #include <basic/Dynamic_Array.h>
 #include <code_gen/mmap-codegen.h>
-#include "y.tab.h"
+#include "y.tab.hh"
 #include <omega/calc_debug.h>
 #ifdef WIN32
 #include <io.h>
@@ -196,6 +196,7 @@ void includeFile(char *s) {
 "restrictRange" 	{ BUFFER;  return RESTRICT_RANGE; }
 "assertUnsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "assert_unsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
+"count"		{ BUFFER;  return COUNT; }
 "/"		{ BUFFER;  return RESTRICT_RANGE; }
 "&"		{ BUFFER;  return AND; }
 "|"		{ BUFFER;  return OR; }
