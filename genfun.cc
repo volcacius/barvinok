@@ -13,6 +13,18 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
     r->n.power[0] = num;
     r->d.power = den;
 
+    for (int i = 0; i < r->d.power.NumRows(); ++i) {
+	int j;
+	for (j = 0; j < r->d.power.NumCols(); ++j)
+	    if (r->d.power[i][j] != 0)
+		break;
+	if (r->d.power[i][j] < 0) {
+	    r->d.power[i] = -r->d.power[i];
+	    r->n.coeff[0][0] = -r->n.coeff[0][0];
+	    r->n.power[0] += r->d.power[i];
+	}
+    }
+
     term.push_back(r);
 }
 
