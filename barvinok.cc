@@ -1408,10 +1408,10 @@ static void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
  *      den_s: for each factor, the power of  (s+1)
  *	sign
  *	num_s: powers in the numerator corresponding to the summed vars
- *	num_p: powers in the numerator corresponidng to the remaining vars
+ *	num_p: powers in the numerator corresponding to the remaining vars
  * number of rays in cone: "dim" = "k"
  * length of each ray: "dim" = "d"
- * for now, it is assume: k == d
+ * for now, it is assumed: k == d
  * output:
  *	den_p: for each factor
  *		0: independent of remaining vars
