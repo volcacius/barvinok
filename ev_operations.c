@@ -76,19 +76,22 @@ static int mod_rational_smaller(evalue *e1, evalue *e2)
 {
     int r;
     Value m;
+    Value m2;
     value_init(m);
+    value_init(m2);
 
     assert(value_notzero_p(e1->d));
     assert(value_notzero_p(e2->d));
     value_multiply(m, e1->x.n, e2->d);
-    value_division(m, m, e1->d);
-    if (value_lt(m, e2->x.n))
+    value_multiply(m2, e2->x.n, e1->d);
+    if (value_lt(m, m2))
 	r = 1;
-    else if (value_gt(m, e2->x.n))
+    else if (value_gt(m, m2))
 	r = 0;
     else 
 	r = -1;
     value_clear(m);
+    value_clear(m2);
 
     return r;
 }
