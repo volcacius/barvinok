@@ -12,8 +12,8 @@ extern "C" {
 #include <polylib/polylibgmp.h>
 #include "ev_operations.h"
 }
-#include <barvinok.h>
 #include "config.h"
+#include <barvinok.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -57,6 +57,9 @@ static void zz2value(ZZ& z, Value& v)
 	v[0]._mp_d[i] = adata[i];
     v[0]._mp_size = sa;
 }
+
+#undef ALLOC
+#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 
 /*
  * We just ignore the last column and row
@@ -769,6 +772,122 @@ struct term_info {
 };
 
 #ifdef USE_MODULO
+void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP)
+{
+    Value gcd;
+    value_init(gcd);
+    Value mone;
+    value_init(mone);
+    value_set_si(mone, -1);
+
+    vec_ZZ num;
+
+    Vector_Gcd(coef, len, &gcd);
+    Gcd(gcd, d, &gcd);
+    Vector_AntiScale(coef, coef, gcd, len);
+    Vector_Scale(coef, coef, mone, len);
+    values2zz(coef, num, len);
+
+    value_division(gcd, d, gcd);
+    ZZ g;
+    value2zz(gcd, g);
+    if (value_one_p(gcd))
+	goto out;
+
+    int j;
+    for (j = 0; j < len; ++j)
+	num[j] = num[j] % g;
+    for (j = 0; j < len; ++j)
+	if (num[j] != 0)
+	    break;
+    if (j == len)
+	goto out;
+
+    evalue tmp;
+    value_init(tmp.d);
+    evalue_set_si(&tmp, 0, 1);
+
+    if (j < len-1 && num[j] > g/2) {
+	for (int k = j; k < len-1; ++k)
+	    if (num[k] != 0)
+		num[k] = g - num[k];
+	num[len-1] = g - 1 - num[len-1];
+	value_assign(tmp.d, gcd);
+	ZZ t = f*(g-1);
+	zz2value(t, tmp.x.n);
+	eadd(&tmp, EP);
+	f = -f;
+    }
+
+    if (j >= len-1) {
+	ZZ t = num[len-1] * f;
+	zz2value(t, tmp.x.n);
+	value_assign(tmp.d, gcd);
+	eadd(&tmp, EP);
+    } else {
+	evalue *E = multi_monom(num);
+
+	evalue EV;
+	value_init(EV.d);
+	value_set_si(EV.d, 0);
+	EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(gcd));
+	evalue_copy(&EV.x.p->arr[0], E);
+	evalue_set_si(&EV.x.p->arr[1], 0, 1);
+	value_init(EV.x.p->arr[2].x.n);
+	zz2value(f, EV.x.p->arr[2].x.n);
+	value_assign(EV.x.p->arr[2].d, gcd);
+
+	eadd(&EV, EP);
+	free_evalue_refs(&EV); 
+	free_evalue_refs(E); 
+	delete E;
+    }
+
+    free_evalue_refs(&tmp); 
+
+out:
+    value_clear(gcd);
+    value_clear(mone);
+}
+
+evalue* ceil3(Value *coef, int len, Value d)
+{
+    Vector *val = Vector_Alloc(len);
+
+    Value mone;
+    value_init(mone);
+    value_set_si(mone, -1);
+    value_absolute(d, d);
+    Vector_Scale(coef, val->p, mone, len);
+    value_clear(mone);
+
+    vec_ZZ num;
+    values2zz(val->p, num, len);
+    evalue *EP = multi_monom(num);
+
+    evalue tmp;
+    value_init(tmp.d);
+    value_init(tmp.x.n);
+    value_set_si(tmp.x.n, 1);
+    value_assign(tmp.d, d);
+
+    emul(&tmp, EP);
+
+    ZZ one;
+    one = 1;
+    ceil_mod(val->p, len, d, one, EP);
+
+    /* copy EP to malloc'ed evalue */
+    evalue *E;
+    ALLOC(E);
+    *E = *EP;
+    delete EP;
+
+    free_evalue_refs(&tmp); 
+
+    return E;
+}
+
 evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
 {
     unsigned nparam = W->NbColumns - 1;
@@ -806,74 +925,11 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
 
     vec_ZZ p = lambda * RT;
 
-    Value gcd;
-    value_init(gcd);
-    Value mone;
-    value_init(mone);
-    value_set_si(mone, -1);
     for (int i = 0; i < L->NbRows; ++i) {
-	Vector_Gcd(L->p[i], nparam+1, &gcd);
-	Gcd(gcd, lcm, &gcd);
-	Vector_AntiScale(L->p[i], L->p[i], gcd, nparam+1);
-	Vector_Scale(L->p[i], L->p[i], mone, nparam+1);
-	values2zz(L->p[i], num, nparam+1);
-
-	value_division(gcd, lcm, gcd);
-	if (value_one_p(gcd))
-	    continue;
-
-	ZZ g;
-	value2zz(gcd, g);
-
-	int j;
-	for (j = 0; j < nparam+1; ++j)
-	    num[j] = num[j] % g;
-	for (j = 0; j < nparam+1; ++j)
-	    if (num[j] != 0)
-		break;
-	if (j == nparam+1)
-	    continue;
-
-	if (j < nparam && num[j] > g/2) {
-	    for (int k = j; k < nparam; ++k)
-		if (num[k] != 0)
-		    num[k] = g - num[k];
-	    num[nparam] = g - 1 - num[nparam];
-	    value_assign(tmp.d, gcd);
-	    ZZ t = p[i]*(g-1);
-	    zz2value(t, tmp.x.n);
-	    eadd(&tmp, EP);
-	    p[i] = -p[i];
-	}
-
-	if (j >= nparam) {
-	    ZZ t = num[nparam] * p[i];
-	    zz2value(t, tmp.x.n);
-	    value_assign(tmp.d, gcd);
-	    eadd(&tmp, EP);
-	} else {
-	    evalue *E = multi_monom(num);
-
-	    evalue EV;
-	    value_init(EV.d);
-	    value_set_si(EV.d, 0);
-	    EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(gcd));
-	    evalue_copy(&EV.x.p->arr[0], E);
-	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
-	    value_init(EV.x.p->arr[2].x.n);
-	    zz2value(p[i], EV.x.p->arr[2].x.n);
-	    value_assign(EV.x.p->arr[2].d, gcd);
-
-	    eadd(&EV, EP);
-	    free_evalue_refs(&EV); 
-	    free_evalue_refs(E); 
-	    delete E;
-	}
+	ceil_mod(L->p[i], nparam+1, lcm, p[i], EP);
     }
 
     Matrix_Free(L);
-    value_clear(gcd);
-    value_clear(mone);
 
     Matrix_Free(inv);
     free_evalue_refs(&tmp); 
@@ -1200,6 +1256,19 @@ out:
 	    goto constant;
 	}
     }
+
+#ifdef USE_MODULO
+    Polyhedron *Q = ParamPolyhedron_Reduce(P, P->Dimension-nparam, &factor);
+    if (Q) {
+	if (Q->Dimension == nparam) {
+	    CEq = Q;
+	    P = Universe_Polyhedron(0);
+	    goto constant;
+	}
+	Polyhedron_Free(P);
+	P = Q;
+    }
+#endif
     Polyhedron *oldP = P;
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
     if (P != oldP)

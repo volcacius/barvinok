@@ -13,6 +13,10 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons);
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 
+#ifdef USE_MODULO
+evalue* ceil3(Value *coef, int len, Value d);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

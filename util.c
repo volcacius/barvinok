@@ -21,6 +21,7 @@ void manual_count(Polyhedron *P, Value* result)
 
 #include "ev_operations.h"
 #include <util.h>
+#include <barvinok.h>
 
 /* Return random value between 0 and max-1 inclusive
  */
@@ -501,30 +502,24 @@ struct single {
     int pos[2];
 };
 
-/*
- * The number of points in P is equal to factor time
- * the number of points in the polyhedron returned.
- * The return value is zero if no reduction can be found.
- */
-Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
+static void free_singles(int **singles, int dim)
 {
-    int i, j, prev, nsingle, k, p;
-    unsigned dim = P->Dimension;
-    struct single *singles;
-    Value tmp, pos, neg;
-
-    value_init(tmp);
-    value_init(pos);
-    value_init(neg);
-
-    value_set_si(*factor, 1);
-
-    singles = (struct single *)malloc(dim * sizeof(struct single));
-    assert(singles);
+    int i;
     for (i = 0; i < dim; ++i)
-	singles[i].nr = 0;
+	free(singles[i]);
+    free(singles);
+}
 
-    assert (P->NbEq == 0);
+static int **find_singles(Polyhedron *P, int dim, int max, int *nsingle)
+{
+    int i, j, prev;
+    int **singles = (int **) malloc(dim * sizeof(int *));
+    assert(singles);
+
+    for (i = 0; i < dim; ++i) {
+	singles[i] = (int *) malloc((max + 1) *sizeof(int));
+	singles[i][0] = 0;
+    }
 
     for (i = 0; i < P->NbConstraints; ++i) {
 	for (j = 0, prev = -1; j < dim; ++j) {
@@ -533,27 +528,60 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 		    prev = j;
 		else {
 		    if (prev != -2)
-			singles[prev].nr = -1;
-		    singles[j].nr = -1;
+			singles[prev][0] = -1;
+		    singles[j][0] = -1;
 		    prev = -2;
 		}
 	    }
 	}
-	if (prev >= 0 && singles[prev].nr >= 0)
-	    singles[prev].pos[singles[prev].nr++] = i;
+	if (prev >= 0 && singles[prev][0] >= 0)
+	    singles[prev][++singles[prev][0]] = i;
     }
-    nsingle = 0;
+    *nsingle = 0;
     for (j = 0; j < dim; ++j)
-	if (singles[j].nr == 2)
-	    ++nsingle;
-    if (nsingle) {
+	if (singles[j][0] == 2)
+	    ++*nsingle;
+    if (!nsingle) {
+	free_singles(singles, dim);
+	singles = 0;
+    }
+    return singles;
+}
+
+/*
+ * The number of points in P is equal to factor time
+ * the number of points in the polyhedron returned.
+ * The return value is zero if no reduction can be found.
+ */
+Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
+{
+    int i, j, nsingle, k, p;
+    unsigned dim = P->Dimension;
+    int **singles;
+
+    value_set_si(*factor, 1);
+
+    assert (P->NbEq == 0);
+
+    singles = find_singles(P, dim, 2, &nsingle);
+
+    if (nsingle == 0)
+	return 0;
+
+    {
+	Value tmp, pos, neg;
 	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
+
+	value_init(tmp);
+	value_init(pos);
+	value_init(neg);
+
 	for (i = 0, j = 0; i < dim; ++i) {
-	    if (singles[i].nr != 2)
+	    if (singles[i][0] != 2)
 		value_set_si(m->p[j++][i], 1);
 	    else {
 		for (k = 0; k <= 1; ++k) {
-		    p = singles[i].pos[k];
+		    p = singles[i][1+k];
 		    value_oppose(tmp, P->Constraint[p][dim+1]);
 		    if (value_pos_p(P->Constraint[p][i+1]))
 			mpz_cdiv_q(pos, tmp, P->Constraint[p][i+1]);
@@ -568,16 +596,95 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 	value_set_si(m->p[dim-nsingle][dim], 1);
 	P = Polyhedron_Image(P, m, P->NbConstraints);
 	Matrix_Free(m);
-    } else
-	P = NULL;
-    free(singles);
+	free_singles(singles, dim);
 
-    value_clear(tmp);
-    value_clear(pos);
-    value_clear(neg);
+	value_clear(tmp);
+	value_clear(pos);
+	value_clear(neg);
+    }
 
     return P;
 }
+
+#ifdef USE_MODULO
+Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
+				   evalue* factor)
+{
+    int nsingle;
+    int **singles;
+    unsigned dim = P->Dimension;
+
+    singles = find_singles(P, nvar, P->NbConstraints, &nsingle);
+
+    if (nsingle == 0)
+	return 0;
+
+    {
+	int i, j, p, n;
+	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
+	Value tmp;
+	evalue mone;
+	value_init(mone.d);
+	evalue_set_si(&mone, -1, 1);
+
+	value_init(tmp);
+
+	for (i = 0, j = 0; i < dim; ++i) {
+	    if (i >= nvar || singles[i][0] < 2)
+		value_set_si(m->p[j++][i], 1);
+	    else {
+		evalue *L, *U;
+		/* put those with positive coefficients first; number: p */
+		for (p = 0, n = singles[i][0]-1; p <= n; ) {
+		    while (value_pos_p(P->Constraint[singles[i][1+p]][i+1]))
+			++p;
+		    while (value_neg_p(P->Constraint[singles[i][1+n]][i+1]))
+			--n;
+		    if (p < n) {
+			int t = singles[i][1+p];
+			singles[i][1+p] = singles[i][1+n];
+			singles[i][1+n] = t;
+			++p;
+			--n;
+		    }
+		}
+		assert (p == 1 && singles[i][0] == 2); // for now
+		L = ceil3(P->Constraint[singles[i][1+0]]+1+nvar, dim-nvar+1,
+			 P->Constraint[singles[i][1+0]][i+1]);
+		U = ceil3(P->Constraint[singles[i][1+1]]+1+nvar, dim-nvar+1,
+			 P->Constraint[singles[i][1+1]][i+1]);
+		/*
+		char * test[] = { "P", "Q", "R" };
+		print_evalue(stdout, L,test);
+		puts("");
+		print_evalue(stdout, U,test);
+		puts("");
+		*/
+		eadd(L, U);
+		eadd(&mone, U);
+		emul(&mone, U);
+		emul(U, factor);
+		free_evalue_refs(L); 
+		free_evalue_refs(U); 
+		free(L);
+		free(U);
+	    }
+	}
+	value_set_si(m->p[dim-nsingle][dim], 1);
+	P = Polyhedron_Image(P, m, P->NbConstraints);
+	Matrix_Free(m);
+	free_singles(singles, nvar);
+
+	value_clear(tmp);
+
+	free_evalue_refs(&mone); 
+    }
+
+    reduce_evalue(factor);
+
+    return P;
+}
+#endif
 
 Bool isIdentity(Matrix *M)
 {
