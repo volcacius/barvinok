@@ -286,18 +286,8 @@ void eadd(evalue *e1,evalue *res) {
       * you have to exchange e1 and res, before doing addition */
      
      else if (value_zero_p(e1->d) && value_notzero_p(res->d)) {
-              
-	      evalue ev;
-	      value_init(ev.d);
-	      value_assign(ev.d,res->d);
-	      value_init(ev.x.n);
-	      value_assign(ev.x.n,res->x.n);
-	      value_set_si( res->d, 0 );
-	      res->x.p=ecopy(e1->x.p);
-	          eadd(&ev,res);
-	      free_evalue_refs(&ev);
-	     
-              return ;
+	  eadd_rev(e1, res); 
+	  return;
      }
      else {   // ((e1->d==0) && (res->d==0)) 
                  if ((e1->x.p->type != res->x.p->type) ) {
