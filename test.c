@@ -103,19 +103,7 @@ int main()
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    B = triangularize_cone(A, 600);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
-	    for (C = B; C; C = C->next)
-		for (D = C->next; D; D = D->next) {
-		    F = C->next;
-		    G = D->next;
-		    C->next = NULL;
-		    D->next = NULL;
-		    E = DomainIntersection(C, D, 600);
-		    Polyhedron_Print(stdout, P_VALUE_FMT, E);
-		    assert(E->NbRays == 0 || E->NbEq == 1);
-		    Polyhedron_Free(E);
-		    C->next = F;
-		    D->next = G;
-		}
+	    check_triangulization(A, B);
 	    Domain_Free(B);
 	    break;
 	case 6:

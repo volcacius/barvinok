@@ -150,6 +150,35 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
     return R;
 }
 
+void check_triangulization(Polyhedron *P, Polyhedron *T)
+{
+    Polyhedron *C, *D, *E, *F, *G, *U;
+	    puts("whole");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, P);
+	    puts("parts");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, T);
+    for (C = T; C; C = C->next) {
+	if (C == T)
+	    U = C;
+	else 
+	    U = DomainConvex(DomainUnion(U, C, 100), 100);
+	for (D = C->next; D; D = D->next) {
+	    F = C->next;
+	    G = D->next;
+	    C->next = NULL;
+	    D->next = NULL;
+	    E = DomainIntersection(C, D, 600);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, E);
+	    assert(E->NbRays == 0 || E->NbEq == 1);
+	    Polyhedron_Free(E);
+	    C->next = F;
+	    D->next = G;
+	}
+    }
+    assert(PolyhedronIncludes(U, P));
+    assert(PolyhedronIncludes(P, U));
+}
+
 void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 {
     Value c, d, e, f, tmp;
