@@ -1,6 +1,7 @@
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
+		  barvinok_series \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest
 pkginclude_HEADERS = barvinok.h util.h ev_operations.h
@@ -9,10 +10,13 @@ LINK = $(CXXLINK)
 libbarvinok_la_SOURCES = \
     ev_operations.c \
     ev_operations.h \
+    genfun.cc \
+    genfun.h \
     util.c \
     util.h \
     barvinok.cc \
-    barvinok.h
+    barvinok.h \
+    barvinok2.h
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
 libbarvinok_la_LIBADD = @LTLIBOBJS@
@@ -21,6 +25,7 @@ LDADD = libbarvinok.la
 
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
+barvinok_series_SOURCES = barvinok_series.cc
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 

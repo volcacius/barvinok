@@ -15,6 +15,7 @@ extern "C" {
 }
 #include "config.h"
 #include <barvinok.h>
+#include <genfun.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -380,6 +381,121 @@ public:
     }
 };
 
+struct dpoly_r_term {
+    int	    *powers;
+    ZZ	    coeff;
+};
+
+struct dpoly_r {
+    vector< dpoly_r_term * >	*c;
+    int len;
+    int dim;
+
+    void add_term(int i, int * powers, ZZ& coeff) {
+	for (int k = 0; k < c[i].size(); ++k) {
+	    if (memcmp(c[i][k]->powers, powers, dim * sizeof(int)) == 0) {
+		c[i][k]->coeff += coeff;
+		return;
+	    }
+	}
+	dpoly_r_term *t = new dpoly_r_term;
+	t->powers = new int[dim];
+	memcpy(t->powers, powers, dim * sizeof(int));
+	t->coeff = coeff;
+	c[i].push_back(t);
+    }
+    dpoly_r(int len, int dim) {
+	this->len = len;
+	this->dim = dim;
+	c = new vector< dpoly_r_term * > [len];
+    }
+    dpoly_r(dpoly& num, dpoly& den, int pos, int sign, int dim) {
+	len = num.coeff.length();
+	c = new vector< dpoly_r_term * > [len];
+	this->dim = dim;
+	int powers[dim];
+
+	for (int i = 0; i < len; ++i) {
+	    ZZ coeff = num.coeff[i];
+	    memset(powers, 0, dim * sizeof(int));
+	    powers[pos] = sign;
+
+	    add_term(i, powers, coeff);
+
+	    for (int j = 1; j <= i; ++j) {
+		for (int k = 0; k < c[i-j].size(); ++k) {
+		    memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
+		    powers[pos] += sign;
+		    coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
+		    add_term(i, powers, coeff);
+		}
+	    }
+	}
+	//dump();
+    }
+    void div(dpoly& d, ZZ& sign, gen_fun *gf, mat_ZZ& pden, mat_ZZ& den,
+		vec_ZZ& num_p) {
+	dpoly_r rc(len, dim);
+	ZZ max_d = power(d.coeff[0], len+1);
+	ZZ cur_d = max_d;
+	ZZ coeff;
+
+	for (int i = 0; i < len; ++i) {
+	    cur_d /= d.coeff[0];
+
+	    for (int k = 0; k < c[i].size(); ++k) {
+		coeff = c[i][k]->coeff * cur_d;
+		rc.add_term(i, c[i][k]->powers, coeff);
+	    }
+
+	    for (int j = 1; j <= i; ++j) {
+		for (int k = 0; k < rc.c[i-j].size(); ++k) {
+		    coeff = - d.coeff[j] * rc.c[i-j][k]->coeff / d.coeff[0];
+		    rc.add_term(i, rc.c[i-j][k]->powers, coeff);
+		}
+	    }
+	}
+	//rc.dump();
+	int common = pden.NumRows();
+
+	vector< dpoly_r_term * >& final = rc.c[len-1];
+	int rows;
+	for (int j = 0; j < final.size(); ++j) {
+	    rows = common;
+	    pden.SetDims(rows, pden.NumCols());
+	    for (int k = 0; k < dim; ++k) {
+		int n = final[j]->powers[k];
+		if (n == 0)
+		    continue;
+		int abs_n = n < 0 ? -n : n;
+		pden.SetDims(rows+abs_n, pden.NumCols());
+		for (int l = 0; l < abs_n; ++l) {
+		    if (n > 0)
+			pden[rows+l] = den[k];
+		    else
+			pden[rows+l] = -den[k];
+		}
+		rows += abs_n;
+	    }
+	    gf->add(final[j]->coeff, max_d, num_p, pden);
+	}
+    }
+    void dump(void) {
+	for (int i = 0; i < len; ++i) {
+	    cout << endl;
+	    cout << i << endl;
+	    cout << c[i].size() << endl;
+	    for (int j = 0; j < c[i].size(); ++j) {
+		for (int k = 0; k < dim; ++k) {
+		    cout << c[i][j]->powers[k] << " ";
+		}
+		cout << ": " << c[i][j]->coeff << endl;
+	    }
+	    cout << endl;
+	}
+    }
+};
+
 /*
  * Barvinok's Decomposition of a simplicial cone
  *
@@ -506,13 +622,18 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
     assert(found);
 }
 
-static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r)
+static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r, int nvar = -1, 
+		     bool all = false)
 {
     unsigned dim = i->Dimension;
+    if (nvar == -1)
+	nvar = dim;
     for (int k = 0; k < i->NbRays; ++k) {
 	if (!value_zero_p(i->Ray[k][dim+1]))
 	    continue;
-	values2zz(i->Ray[k]+1, rays[(*r)++], dim);
+	if (!all && nvar != dim && First_Non_Zero(i->Ray[k]+1, nvar) == -1)
+	    continue;
+	values2zz(i->Ray[k]+1, rays[(*r)++], nvar);
     }
 }
 
@@ -3162,4 +3283,227 @@ out:
     value_clear(f);
     Vector_Free(row);
     return EP;
+}
+
+static void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign,
+		      ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
+		      mat_ZZ& f)
+{
+    unsigned dim = i->Dimension;
+    unsigned nparam = num_p.length();
+    unsigned nvar = dim - nparam;
+
+    int r = 0;
+    mat_ZZ rays;
+    rays.SetDims(dim, nvar);
+    add_rays(rays, i, &r, nvar, true);
+    den_s = rays * lambda;
+    int change = 0;
+
+
+    for (int j = 0; j < den_s.length(); ++j) {
+	values2zz(i->Ray[j]+1+nvar, f[j], nparam);
+	if (den_s[j] == 0) {
+	    den_p[j] = 1;
+	    continue;
+	}
+	if (First_Non_Zero(i->Ray[j]+1+nvar, nparam) != -1) {
+	    if (den_s[j] > 0) {
+		den_p[j] = -1;
+		num_p -= f[j];
+	    } else
+		den_p[j] = 1;
+	} else
+	    den_p[j] = 0;
+	if (den_s[j] > 0)
+	    change ^= 1;
+	else {
+	    den_s[j] = abs(den_s[j]);
+	    num_s += den_s[j];
+	}
+    }
+
+    if (change)
+	sign = -sign;
+}
+
+gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+{
+    Polyhedron ** vcone;
+    Polyhedron *CA;
+    unsigned nparam = C->Dimension;
+    unsigned dim, nvar;
+    vec_ZZ sign;
+    int ncone = 0;
+    sign.SetLength(ncone);
+
+    CA = align_context(C, P->Dimension, MaxRays);
+    P = DomainIntersection(P, CA, MaxRays);
+    Polyhedron_Free(CA);
+
+    assert(!Polyhedron_is_infinite(P, nparam));
+    assert(P->NbBid == 0);
+    assert(P->NbEq == 0);
+
+    dim = P->Dimension;
+    nvar = dim - nparam;
+    vcone = new Polyhedron_p[P->NbRays];
+
+    for (int j = 0; j < P->NbRays; ++j) {
+	int npos, nneg;
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, &vcone[j], &npos, &nneg, MaxRays);
+	ncone += npos + nneg;
+	sign.SetLength(ncone);
+	for (int k = 0; k < npos; ++k)
+	    sign[ncone-nneg-k-1] = 1;
+	for (int k = 0; k < nneg; ++k)
+	    sign[ncone-k-1] = -1;
+    }
+
+    mat_ZZ rays;
+    rays.SetDims(ncone * dim, nvar);
+    int r = 0;
+    for (int j = 0; j < P->NbRays; ++j) {
+	for (Polyhedron *i = vcone[j]; i; i = i->next) {
+	    add_rays(rays, i, &r, nvar);
+	}
+    }
+    rays.SetDims(r, nvar);
+    vec_ZZ lambda;
+    nonorthog(rays, lambda);
+
+    /*
+    cout << "rays: " << rays;
+    cout << "lambda: " << lambda;
+    */
+
+    int f = 0;
+    ZZ num_s;
+    vec_ZZ num_p;
+    num_p.SetLength(nparam);
+    vec_ZZ vertex;
+    vec_ZZ den_s;
+    den_s.SetLength(dim);
+    vec_ZZ den_p;
+    den_p.SetLength(dim);
+    mat_ZZ den;
+    den.SetDims(dim, nparam);
+    ZZ one;
+    one = 1;
+    mpq_t count;
+    mpq_init(count);
+
+    gen_fun * gf = new gen_fun;
+
+    for (int j = 0; j < P->NbRays; ++j) {
+	for (Polyhedron *i = vcone[j]; i; i = i->next, ++f) {
+	    lattice_point(P->Ray[j]+1, i, vertex);
+	    int k = 0;
+	    num_s = 0;
+	    for ( ; k < nvar; ++k)
+		num_s += vertex[k] * lambda[k];
+	    for ( ; k < dim; ++k)
+		num_p[k-nvar] = vertex[k];
+	    normalize(i, lambda, sign[f], num_s, num_p, 
+		      den_s, den_p, den);
+
+	    int only_param = 0;
+	    int no_param = 0;
+	    for (int k = 0; k < dim; ++k) {
+		if (den_p[k] == 0)
+		    ++no_param;
+		else if (den_s[k] == 0)
+		    ++only_param;
+	    }
+	    if (no_param == 0) {
+		for (int k = 0; k < dim; ++k)
+		    if (den_p[k] == -1)
+			den[k] = -den[k];
+		gf->add(sign[f], one, num_p, den);
+	    } else if (no_param + only_param == dim) {
+		int k, l;
+		mat_ZZ pden;
+		pden.SetDims(only_param, nparam);
+
+		for (k = 0, l = 0; k < dim; ++k)
+		    if (den_p[k] != 0)
+			pden[l++] = den[k];
+
+		for (k = 0; k < dim; ++k)
+		    if (den_s[k] != 0)
+			break;
+
+		dpoly n(no_param, num_s);
+		dpoly d(no_param, den_s[k], 1);
+		for ( ; k < dim; ++k)
+		    if (den_s[k] != 0) {
+			dpoly fact(no_param, den_s[k], 1);
+			d *= fact;
+		    }
+
+		mpq_set_si(count, 0, 1);
+		n.div(d, count, sign[f]);
+
+		ZZ qn, qd;
+		value2zz(mpq_numref(count), qn);
+		value2zz(mpq_denref(count), qd);
+
+		gf->add(qn, qd, num_p, pden);
+	    } else {
+		int k, l;
+		dpoly_r * r = 0;
+		mat_ZZ pden;
+		pden.SetDims(only_param, nparam);
+
+		for (k = 0, l = 0; k < dim; ++k)
+		    if (den_s[k] == 0)
+			pden[l++] = den[k];
+
+		for (k = 0; k < dim; ++k)
+		    if (den_p[k] == 0)
+			break;
+
+		dpoly n(no_param, num_s);
+		dpoly d(no_param, den_s[k], 1);
+		for ( ; k < dim; ++k)
+		    if (den_p[k] == 0) {
+			dpoly fact(no_param, den_s[k], 1);
+			d *= fact;
+		    }
+
+		for (k = 0; k < dim; ++k) {
+		    if (den_s[k] == 0 || den_p[k] == 0)
+			continue;
+
+		    dpoly pd(no_param-1, den_s[k], 1);
+		    int s = den_p[k] < 0 ? -1 : 1;
+
+		    if (r == 0)
+			r = new dpoly_r(n, pd, k, s, dim);
+		    else
+			assert(0);  // for now
+		}
+
+		r->div(d, sign[f], gf, pden, den, num_p);
+	    }
+
+    /*
+    cout << "sign: " << sign[f];
+    cout << "num_s: " << num_s;
+    cout << "num_p: " << num_p;
+    cout << "den_s: " << den_s;
+    cout << "den_p: " << den_p;
+    cout << "den: " << den;
+    cout << "only_param: " << only_param;
+    cout << "no_param: " << no_param;
+    cout << endl;
+    */
+
+	}
+    }
+
+    mpq_clear(count);
+
+    return gf;
 }
