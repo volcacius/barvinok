@@ -90,6 +90,18 @@ static int relations_depth(evalue *e)
 
 #define EVALUE_IS_ONE(ev)	(value_pos_p((ev).d) && value_one_p((ev).x.n))
 
+static void realloc_substitution(struct subst *s, int d)
+{
+    struct fixed_param *n;
+    int i;
+    NALLOC(n, s->max+d);
+    for (i = 0; i < s->n; ++i)
+	n[i] = s->fixed[i];
+    free(s->fixed);
+    s->fixed = n;
+    s->max += d;
+}
+
 static void add_modulo_substitution(struct subst *s, evalue *r)
 {
     evalue *p;
@@ -105,15 +117,8 @@ static void add_modulo_substitution(struct subst *s, evalue *r)
 	return;
 
     if (s->n >= s->max) {
-	struct fixed_param *n;
 	int d = relations_depth(r);
-	int i;
-	NALLOC(n, s->max+d);
-	for (i = 0; i < s->max; ++i)
-	    n[i] = s->fixed[i];
-	free(s->fixed);
-	s->fixed = n;
-	s->max += d;
+	realloc_substitution(s, d);
     }
 
     assert(value_zero_p(m->d) && m->x.p->type == modulo);
@@ -405,10 +410,14 @@ void reduce_evalue (evalue *e) {
 	    dim = D->Dimension;
 	    if (!D->next && D->NbEq) {
 		int j, k;
-		if (s.max == 0) {
-		    int d = relations_depth(&e->x.p->arr[2*i+1]);
-		    s.max = dim+d;
-		    NALLOC(s.fixed, s.max);
+		if (s.max < dim) {
+		    if (s.max != 0)
+			realloc_substitution(&s, dim);
+		    else {
+			int d = relations_depth(&e->x.p->arr[2*i+1]);
+			s.max = dim+d;
+			NALLOC(s.fixed, s.max);
+		    }
 		}
 		for (j = 0; j < D->NbEq; ++j)
 		    add_substitution(&s, D->Constraint[j], dim);
