@@ -1385,7 +1385,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     //P = unfringe(P, MaxRays);
-    Polyhedron *CEq = NULL, *rVD, *pVD, *CA;
+    Polyhedron *CEq = NULL, *rVD, *pVD, *fVD, *CA;
     Matrix *CT = NULL;
     Param_Polyhedron *PP = NULL;
     Param_Domain *D, *next;
@@ -1494,12 +1494,13 @@ out:
 
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
-    struct section { Polyhedron * D; evalue E; };
+    struct section { Polyhedron *D; Polyhedron *full; evalue E; };
     section *s = new section[nd];
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
 	if (!CEq) {
+	    fVD = Domain_Copy(D->Domain);
 	    D->Domain = DomainConstraintSimplify(D->Domain, MaxRays);
 	    pVD = rVD = D->Domain;    
 	    D->Domain = NULL;
@@ -1521,10 +1522,21 @@ out:
 	    if (CT)
 	        Domain_Free(Dt);
 
+	    fVD = Domain_Copy(rVD);
 	    for (int i = 0 ; i < nd; ++i) {
-		Polyhedron *T = rVD;
-		rVD = DomainDifference(rVD, s[i].D, MaxRays);
-		Domain_Free(T);
+		Polyhedron *I = DomainIntersection(fVD, s[i].full, MaxRays);
+		if (emptyQ(I)) {
+		    Domain_Free(I);
+		    continue;
+		}
+		Polyhedron *F = DomainSimplify(I, fVD, MaxRays);
+		if (F->NbEq == 1) {
+		    Polyhedron *T = rVD;
+		    rVD = DomainDifference(rVD, F, MaxRays);
+		    Domain_Free(T);
+		}
+		Domain_Free(F);
+		Domain_Free(I);
 	    }
 	    rVD = DomainConstraintSimplify(rVD, MaxRays);
 	    if (emptyQ(rVD)) {
@@ -1623,6 +1635,7 @@ out:
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
 	s[nd].D = rVD;
+	s[nd].full = fVD;
 	++nd;
 	if (rVD != pVD)
 	    Domain_Free(pVD);
@@ -1633,6 +1646,7 @@ out:
 	EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
 	value_clear(eres->x.p->arr[2*j+1].d);
 	eres->x.p->arr[2*j+1] = s[j].E;
+	Domain_Free(s[j].full);
     }
     delete [] s;
 
