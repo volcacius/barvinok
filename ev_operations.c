@@ -62,7 +62,12 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
     return;
 } /* addeliminatedparams_evalue */
 
-void reduce_evalue (evalue *e) {
+struct fixed_param {
+    int	    pos;
+    Value   v;
+};
+
+void _reduce_evalue (evalue *e, int n, struct fixed_param *fixed) {
   
     enode *p;
     int i, j, k;
@@ -74,7 +79,7 @@ void reduce_evalue (evalue *e) {
   
     /* First reduce the components of p */
     for (i=0; i<p->size; i++)
-        reduce_evalue(&p->arr[i]);
+        _reduce_evalue(&p->arr[i], n, fixed);
 
     if (p->type==periodic) {
     
@@ -105,7 +110,22 @@ you_lose:   	/* OK, lets not do it */
         }
     }
     else if (p->type==polynomial) {
-	  
+	for (k = 0; k < n; ++k) {
+	    if (fixed[k].pos == p->pos) {
+		evalue v;
+		value_init(v.d);
+		value_set_si(v.d, 1);
+		value_init(v.x.n);
+		value_assign(v.x.n, fixed[k].v);
+		for (i=p->size-1;i>=1;i--) {
+		    emul(&v, &p->arr[i]);
+		    eadd(&p->arr[i], &p->arr[i-1]);
+		    free_evalue_refs(&(p->arr[i]));
+		}
+		p->size = 1;
+	    }
+	}
+
         /* Try to reduce the degree */
         for (i=p->size-1;i>=1;i--) {
             if (!(value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n)))
@@ -155,6 +175,53 @@ you_lose:   	/* OK, lets not do it */
 	}
     }
 } /* reduce_evalue */
+
+void reduce_evalue (evalue *e) {
+    if (value_notzero_p(e->d))
+        return;	/* a rational number, its already reduced */
+
+    if (e->x.p->type == partition) {
+	int i;
+	int n;
+	struct fixed_param *fixed = 0;
+	unsigned dim = -1;
+	for (i = 0; i < e->x.p->size/2; ++i) {
+	    n = 0;
+	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	    dim = D->Dimension;
+	    if (!D->next && D->NbEq) {
+		int j, k;
+		if (!fixed) {
+		    fixed = (struct fixed_param*) 
+				malloc(D->Dimension * sizeof(*fixed));
+		    for (j = 0; j < dim; ++j)
+			value_init(fixed[j].v);
+		}
+		for (j = 0; j < D->NbEq; ++j) {
+		    for (k = 0; k < D->Dimension; ++k)
+			if (value_notzero_p(D->Constraint[j][k+1])) {
+			    fixed[n].pos = k+1;
+			    if (value_one_p(D->Constraint[j][k+1]))
+				value_oppose(fixed[n].v, D->Constraint[j][dim+1]);
+			    else if (value_mone_p(D->Constraint[j][k+1]))
+				value_assign(fixed[n].v, D->Constraint[j][dim+1]);
+			    else
+				assert(0);
+			    ++n;
+			}
+		}
+	    }
+	    _reduce_evalue(&e->x.p->arr[2*i+1], n, fixed);
+	}
+	if (fixed) {
+	    int j;
+	    for (j = 0; j < dim; ++j)
+		value_clear(fixed[j].v);
+	    free(fixed);
+	}
+    } else
+	_reduce_evalue(e, 0, 0);
+}
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
   
