@@ -750,3 +750,118 @@ void free_evalue_refs(evalue *e) {
   return;
 } /* free_evalue_refs */
 
+/****************************************************/
+/* function compute enode                           */
+/*     compute the value of enode p with parameters */
+/*     list "list_args                              */
+/*     compute the polynomial or the periodic       */
+/****************************************************/
+
+static double compute_enode(enode *p, Value *list_args) {
+  
+  int i;
+  Value m, param;
+  double res=0.0;
+    
+  if (!p)
+    return(0.);
+
+  value_init(m);
+  value_init(param);
+
+  if (p->type == polynomial) {
+    if (p->size > 1)
+	value_assign(param,list_args[p->pos-1]);
+    
+    /* Compute the polynomial using Horner's rule */
+    for (i=p->size-1;i>0;i--) {
+      res +=compute_evalue(&p->arr[i],list_args);
+      res *=VALUE_TO_DOUBLE(param);
+    }
+    res +=compute_evalue(&p->arr[0],list_args);
+  }
+  else if (p->type == periodic) {
+    value_assign(param,list_args[p->pos-1]);
+    
+    /* Choose the right element of the periodic */
+    value_absolute(m,param);
+    value_set_si(param,p->size);
+    value_modulus(m,m,param);
+    res = compute_evalue(&p->arr[VALUE_TO_INT(m)],list_args);
+  }
+  value_clear(m);
+  value_clear(param);
+  return res;
+} /* compute_enode */
+
+/*************************************************/
+/* return the value of Ehrhart Polynomial        */
+/* It returns a double, because since it is      */
+/* a recursive function, some intermediate value */
+/* might not be integral                         */
+/*************************************************/
+
+double compute_evalue(evalue *e,Value *list_args) {
+  
+  double res;
+  
+  if (value_notzero_p(e->d)) {
+    if (value_notone_p(e->d)) 
+      res = VALUE_TO_DOUBLE(e->x.n) / VALUE_TO_DOUBLE(e->d);
+    else 
+      res = VALUE_TO_DOUBLE(e->x.n);
+  }
+  else 
+    res = compute_enode(e->x.p,list_args);
+  return res;
+} /* compute_evalue */
+
+
+/****************************************************/
+/* function compute_poly :                          */
+/* Check for the good validity domain               */
+/* return the number of point in the Polyhedron     */
+/* in allocated memory                              */
+/* Using the Ehrhart pseudo-polynomial              */
+/****************************************************/
+Value *compute_poly(Enumeration *en,Value *list_args) {
+
+  Value *tmp;
+  /*	double d; int i; */
+
+  tmp = (Value *) malloc (sizeof(Value));
+  assert(tmp != NULL);
+  value_init(*tmp);
+  value_set_si(*tmp,0);
+  
+  if(!en)
+    return(tmp);	/* no ehrhart polynomial */
+  if(en->ValidityDomain) {
+    if(!en->ValidityDomain->Dimension) { /* no parameters */
+      value_set_double(*tmp,compute_evalue(&en->EP,list_args)+.25);
+      return(tmp);
+    }
+  }  
+  else 
+    return(tmp);  /* no Validity Domain */    
+  while(en) {
+    if(in_domain(en->ValidityDomain,list_args)) {
+      
+#ifdef EVAL_EHRHART_DEBUG
+      Print_Domain(stdout,en->ValidityDomain);
+      print_evalue(stdout,&en->EP);
+#endif
+      
+      /*			d = compute_evalue(&en->EP,list_args);
+				i = d;
+				printf("(double)%lf = %d\n", d, i ); */
+      value_set_double(*tmp,compute_evalue(&en->EP,list_args)+.25);
+      return(tmp);
+    }
+    else
+      en=en->next;
+  }
+  value_set_si(*tmp,0);
+  return(tmp); /* no compatible domain with the arguments */
+} /* compute_poly */ 
+

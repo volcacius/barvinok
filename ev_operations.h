@@ -21,6 +21,8 @@
 #define print_evalue _new_print_evalue
 #define print_enode _new_print_enode
 #define reduce_evalue _new_reduce
+#define compute_evalue _new_compute_evalue
+#define compute_poly _new_compute_poly
 
 typedef enum { polynomial, periodic, evector, modulo } enode_type;
 
@@ -63,4 +65,6 @@ void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void eadd(evalue *e1,evalue *res);
 void emul (evalue *e1, evalue *res );
+double compute_evalue(evalue *e,Value *list_args);
+Value *compute_poly(Enumeration *en,Value *list_args);
 #endif
