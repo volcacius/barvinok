@@ -8,5 +8,6 @@ extern "C" {
 #include <genfun.h>
 
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
+void zz2value(ZZ& z, Value& v);
 
 #endif

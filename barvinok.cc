@@ -43,7 +43,7 @@ static void value2zz(Value v, ZZ& z)
     SIZE(z.rep) = sa;
 }
 
-static void zz2value(ZZ& z, Value& v)
+void zz2value(ZZ& z, Value& v)
 {
     if (!z.rep) {
 	value_set_si(v, 0);
