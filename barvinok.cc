@@ -3699,7 +3699,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
 		dpoly n(no_param, num_s);
 		dpoly d(no_param, den_s[k], 1);
-		for ( ; k < dim; ++k)
+		for ( ; ++k < dim; k)
 		    if (den_s[k] != 0) {
 			dpoly fact(no_param, den_s[k], 1);
 			d *= fact;
@@ -3729,7 +3729,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
 		dpoly n(no_param, num_s);
 		dpoly d(no_param, den_s[k], 1);
-		for ( ; k < dim; ++k)
+		for ( ; ++k < dim; )
 		    if (den_p[k] == 0) {
 			dpoly fact(no_param, den_s[k], 1);
 			d *= fact;
