@@ -1353,8 +1353,11 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		  else {
 	             /* Product of two periodics of different parameters */
 			  
-		        for(i=0; i<res->x.p->size; i++)
-         	            emul(e1, &(res->x.p->arr[i]));
+			if(res->x.p->pos < e1->x.p->pos)
+			    for(i=0; i<res->x.p->size; i++)
+				emul(e1, &(res->x.p->arr[i]));
+			else
+			    emul_rev(e1, res);
 			
 			return;
 		  }
