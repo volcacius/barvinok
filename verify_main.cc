@@ -23,6 +23,7 @@ extern "C" {
 #include <getopt.h>
 struct option options[] = {
     { "series",  no_argument,  0,  's' },
+    { "verbose",  no_argument,  0,  'v' },
     { 0, 0, 0, 0 }
 };
 #endif
@@ -53,6 +54,7 @@ int main(int argc,char *argv[]) {
   int m,M;
     int c, ind = 0;
     int series = 0;
+    int verbose = 0;
 
 /******* Read the input *********/
   P1 = Matrix_Read();
@@ -82,6 +84,9 @@ int main(int argc,char *argv[]) {
 	switch (c) {
 	case 's':
 	    series = 1;
+	    break;
+	case 'v':
+	    verbose = 1;
 	    break;
 	case 'm':
 	    m = atoi(optarg);
@@ -129,7 +134,10 @@ int main(int argc,char *argv[]) {
 	evalue *EP;
 	gen_fun *gf;
 	gf = barvinok_series(P, C, MAXRAYS);
-	gf->print(C->Dimension, params);
+	if (verbose) {
+	    gf->print(C->Dimension, params);
+	    puts("");
+	}
 	EP = *gf;
 	en =  partition2enumeration(EP);
     }
