@@ -482,6 +482,7 @@ struct dpoly_r {
 		}
 		rows += abs_n;
 	    }
+	    final[j]->coeff *= sign;
 	    gf->add(final[j]->coeff, rc->denom, num_p, pden);
 	}
 	delete rc;
