@@ -216,6 +216,7 @@ Matrix * unimodular_complete(Vector *row)
 	    else
 		value_set_si(m->p[i][j], 0);
 	}
+	value_assign(g, row->p[i]);
     }
     for (; i < row->Size; ++i) {
 	value_assign(old, g);
