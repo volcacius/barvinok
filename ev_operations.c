@@ -780,6 +780,18 @@ static double compute_enode(enode *p, Value *list_args) {
     }
     res +=compute_evalue(&p->arr[0],list_args);
   }
+  else if (p->type == modulo) {
+    value_set_double(param, compute_evalue(&p->arr[0], list_args));
+    value_set_si(m, p->pos);
+    value_modulus(param, param, m);
+    
+    /* Compute the polynomial using Horner's rule */
+    for (i=p->size-1;i>1;i--) {
+      res +=compute_evalue(&p->arr[i],list_args);
+      res *=VALUE_TO_DOUBLE(param);
+    }
+    res +=compute_evalue(&p->arr[1],list_args);
+  }
   else if (p->type == periodic) {
     value_assign(param,list_args[p->pos-1]);
     
