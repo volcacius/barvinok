@@ -511,7 +511,6 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     int i, j, prev, nsingle, k, p;
     unsigned dim = P->Dimension;
     struct single *singles;
-    int *bad;
     Value tmp, pos, neg;
 
     value_init(tmp);
@@ -524,12 +523,9 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     assert(singles);
     for (i = 0; i < dim; ++i)
 	singles[i].nr = 0;
-    bad = (int *)calloc(dim, sizeof(int));
-    assert(bad);
 
     assert (P->NbEq == 0);
 
-    nsingle = 0;
     for (i = 0; i < P->NbConstraints; ++i) {
 	for (j = 0, prev = -1; j < dim; ++j) {
 	    if (value_notzero_p(P->Constraint[i][j+1])) {
@@ -537,21 +533,19 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 		    prev = j;
 		else {
 		    if (prev != -2)
-			bad[prev] = 1;
-		    bad[j] = 1;
+			singles[prev].nr = -1;
+		    singles[j].nr = -1;
 		    prev = -2;
 		}
 	    }
 	}
-	if (prev >= 0)
+	if (prev >= 0 && singles[prev].nr >= 0)
 	    singles[prev].pos[singles[prev].nr++] = i;
     }
-    for (j = 0; j < dim; ++j) {
-	if (bad[j])
-	    singles[j].nr = 0;
-	else if (singles[j].nr == 2)
+    nsingle = 0;
+    for (j = 0; j < dim; ++j)
+	if (singles[j].nr == 2)
 	    ++nsingle;
-    }
     if (nsingle) {
 	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
 	for (i = 0, j = 0; i < dim; ++i) {
@@ -577,7 +571,6 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     } else
 	P = NULL;
     free(singles);
-    free(bad);
 
     value_clear(tmp);
     value_clear(pos);
