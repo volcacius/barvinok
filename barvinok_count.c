@@ -21,6 +21,7 @@ int main()
 
     M = Matrix_Read();
     A = Constraints2Polyhedron(M, 600);
+    Matrix_Free(M);
     value_init(cm);
     value_init(cb);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
