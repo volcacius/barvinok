@@ -1835,6 +1835,62 @@ static bool SplitOnVar(Polyhedron *P, int i,
     return false;
 }
 
+static bool double_bound_pair(Polyhedron *P, int nvar, int exist,
+			 int i, int l1, int l2,
+			 Polyhedron **pos, Polyhedron **neg)
+{
+    Value f;
+    value_init(f);
+    Vector *row = Vector_Alloc(P->Dimension+2);
+    value_set_si(row->p[0], 1);
+    value_oppose(f, P->Constraint[l1][nvar+i+1]);
+    Vector_Combine(P->Constraint[l1]+1, P->Constraint[l2]+1,
+		   row->p+1,
+		   P->Constraint[l2][nvar+i+1], f,
+		   P->Dimension+1);
+    ConstraintSimplify(row->p, row->p, P->Dimension+2, &f);
+    *pos = AddConstraints(row->p, 1, P, 0);
+    value_set_si(f, -1);
+    Vector_Scale(row->p+1, row->p+1, f, P->Dimension+1);
+    value_decrement(row->p[P->Dimension+1], row->p[P->Dimension+1]);
+    *neg = AddConstraints(row->p, 1, P, 0);
+    Vector_Free(row);
+    value_clear(f);
+
+    return !emptyQ((*pos)) && !emptyQ((*neg));
+}
+
+static bool double_bound(Polyhedron *P, int nvar, int exist,
+			 Polyhedron **pos, Polyhedron **neg)
+{
+    for (int i = 0; i < exist; ++i) {
+	int l1, l2;
+	for (l1 = P->NbEq; l1 < P->NbConstraints; ++l1) {
+	    if (value_negz_p(P->Constraint[l1][nvar+i+1]))
+		continue;
+	    for (l2 = l1 + 1; l2 < P->NbConstraints; ++l2) {
+		if (value_negz_p(P->Constraint[l2][nvar+i+1]))
+		    continue;
+		if (double_bound_pair(P, nvar, exist, i, l1, l2, pos, neg))
+		    return true;
+	    }
+	}
+	for (l1 = P->NbEq; l1 < P->NbConstraints; ++l1) {
+	    if (value_posz_p(P->Constraint[l1][nvar+i+1]))
+		continue;
+	    if (l1 < P->NbConstraints)
+		for (l2 = l1 + 1; l2 < P->NbConstraints; ++l2) {
+		    if (value_posz_p(P->Constraint[l2][nvar+i+1]))
+			continue;
+		if (double_bound_pair(P, nvar, exist, i, l1, l2, pos, neg))
+		    return true;
+	    }
+	}
+	return false;
+    }
+    return false;
+}
+
 enum constraint { 
 ALL_POS = 1 << 0,
 ONE_NEG = 1 << 1,
