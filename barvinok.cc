@@ -1825,6 +1825,7 @@ out:
 	evalue_set_si(&s[nd].E, 0, 1);
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
+	    int f = 0;
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
 		r = 0;
 		assert(i->NbRays-1 == dim);
@@ -1832,9 +1833,7 @@ out:
 		for (int k = 0; k < dim; ++k) {
 		    assert(lambda * rays[k] != 0);
 		}
-	    }
-	    int f = 0;
-	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
+
 		sign = f < npos[_i] ? 1 : -1;
 		lattice_point(V, i, lambda, &num, pVD);
 		normalize(i, lambda, sign, num.constant, den);
