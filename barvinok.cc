@@ -13,6 +13,7 @@ extern "C" {
 #include "ev_operations.h"
 }
 #include <barvinok.h>
+#include "config.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -27,8 +28,6 @@ using std::ostringstream;
 #define ALLOC(p) (((long *) (p))[0])
 #define SIZE(p) (((long *) (p))[1])
 #define DATA(p) ((mp_limb_t *) (((long *) (p)) + 2))
-
-#define USE_MODULO
 
 static void value2zz(Value v, ZZ& z)
 {
@@ -861,7 +860,6 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
     Matrix_Free(T);
 
     reduce_evalue(EP);
-    print_evalue(stdout, EP, pn);
 
     return EP;
 }
