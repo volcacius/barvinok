@@ -5,8 +5,36 @@ AC_PROG_CXX
 AM_PROG_LEX
 AC_PROG_YACC
 
+AC_MSG_CHECKING(for mona)
+AC_ARG_WITH(mona,
+        [  --with-mona=DIR	  mona *source* directory ], [], [
+	AC_MSG_RESULT(not specified)
+	])
+
+if test "x$with_mona" != "x"; then
+	AC_SUBST(MONAPATH)
+	AC_SUBST(MONA_OBJ)
+	MONAPATH=$with_mona
+	MONA_OBJ="$MONAPATH/DFA/libdfa.a $MONAPATH/BDD/libbdd.a \
+		  $MONAPATH/Mem/libmem.a"
+	for i in $MONA_OBJ; do
+		if test ! -f $i; then
+			with_mona=""
+		fi
+	done
+fi
+
+if test "x$with_mona" = "x"; then
+	AC_MSG_RESULT(not found)
+	AC_MSG_WARN(http://www.brics.dk/mona/download)
+	AC_MSG_ERROR(mona required)
+else
+	AC_MSG_RESULT($MONAPATH)
+fi
+
 AC_ARG_WITH(omega,
         [  --with-omega=DIR   ])
+
 
 AC_LANG(C++)
 

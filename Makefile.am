@@ -1,3 +1,6 @@
+MONAPATH = @MONAPATH@
+MONA_OBJ = @MONA_OBJ@
+
 noinst_PROGRAMS = occ
 occ_SOURCES = \
 	Exit.cc \
@@ -6,7 +9,7 @@ occ_SOURCES = \
 	construction.c \
 	count_paths.c \
 	count_solutions.cc
-LDADD = -lcode_gen -lomega $(DFA_OBJ) $(BDD_OBJ) $(MEM_OBJ)
+LDADD = -lcode_gen -lomega $(MONA_OBJ)
 
 YACC_FLAGS = -d
 
@@ -16,14 +19,7 @@ y.tab.hh y.tab.cc: parser.y
 lex.yy.cc: parser.l y.tab.hh
 	$(LEX) -olex.yy.cc -i $<
 
-MONAPATH = /home/skimo/src/mona-1.4
-
-CC = gcc
 CFLAGS = -O3 -DNDEBUG
-
-MEM_OBJ = $(MONAPATH)/Mem/libmem.a
-BDD_OBJ = $(MONAPATH)/BDD/libbdd.a
-DFA_OBJ = $(MONAPATH)/DFA/libdfa.a
 
 INCLUDES = -I$(MONAPATH)/Mem -I$(MONAPATH)/DFA -I$(MONAPATH)/BDD 
 
