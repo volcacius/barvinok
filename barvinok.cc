@@ -2171,6 +2171,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	addeliminatedparams_enum(EP, CT, CEq, MaxRays);
 	Polyhedron_Free(I);
     }
+    if (PR != *PA)
+	Polyhedron_Free(PR);
     PR = 0;
 
     if (!EP && nd > 1) {
