@@ -6,3 +6,4 @@ test_SOURCES = \
     barvinok.cc \
     barvinok.h \
     test.c
+test_LDADD = @LTLIBOBJS@

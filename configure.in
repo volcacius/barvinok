@@ -3,6 +3,37 @@ AM_INIT_AUTOMAKE(barvinok, 0.01)
 AC_PROG_LIBTOOL
 AC_PROG_CXX
 
+dnl Check for GMP library
+AC_MSG_CHECKING(whether to use GMP)
+AC_ARG_WITH(libgmp, 
+        [  --with-libgmp           DIR Location of the GMP Distribution], 
+	gmp_package=$withval, gmp_package=no)
+if test "x$gmp_package" = "xno"; then
+	AC_MSG_RESULT(no)
+else
+	AC_MSG_RESULT(yes)
+	if test "x$gmp_package" != "xyes"; then
+	    GMP_DIR=$gmp_package
+	    if test ! -d "$GMP_DIR"; then
+	    	AC_ERROR(Directory given for GMP Distribution is not a directory)
+	    fi
+	    CPPFLAGS="-I$GMP_DIR/include $CPPFLAGS"
+	    LDFLAGS="-L$GMP_DIR/lib $LDFLAGS"
+	fi
+	AC_CHECK_HEADER(gmp.h,
+		[AC_CHECK_LIB(gmp,main,
+		    [poly_cv_gmpfatal="no"],
+		    [poly_cv_gmpfatal="yes"])],
+		[poly_cv_gmpfatal="yes"])
+	if test "$poly_cv_gmpfatal" = "yes"; then
+		AC_MSG_ERROR([GMP not found])
+	fi
+
+	AC_CHECK_LIB(gmp, main,[],[
+	    AC_MSG_ERROR(Need gmp)
+	])
+fi
+
 AC_ARG_WITH(polylib,
             [  --with-polylib=DIR      DIR Location of the PolyLib],
             [ echo "Package polylib : $withval" && polylib_package=$withval],  
