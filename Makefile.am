@@ -28,6 +28,3 @@ DFA_OBJ = $(MONAPATH)/DFA/libdfa.a
 INCLUDES = -I$(MONAPATH)/Mem -I$(MONAPATH)/DFA -I$(MONAPATH)/BDD 
 
 AM_CPPFLAGS = $(INCLUDES)
-
-count: count_solutions.o Exit.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o count Exit.o count_solutions.o construction.c count_paths.c $(DFA_OBJ) $(BDD_OBJ) $(MEM_OBJ) -lm -lomega -lstdc++
