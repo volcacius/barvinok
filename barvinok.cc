@@ -1351,7 +1351,7 @@ constant:
 	    value_set_si(eres->x.p->arr[1].x.n, 0);
 	else
 	    barvinok_count(P, &eres->x.p->arr[1].x.n, MaxRays);
-	emul(&factor, &eres->x.p->arr[1]);
+	emul(&factor, eres);
 out:
 	free_evalue_refs(&factor);
 	Polyhedron_Free(P);
