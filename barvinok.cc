@@ -1208,7 +1208,7 @@ out:
 		    dpoly_n d(dim, num[f].constant, one);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *ET = multi_polynom(params, c, *num[f].E);
-		    evalue EV = ET->to_evalue(allparams); 
+		    evalue EV = ET->to_evalue(params); 
 		    eadd(&EV , &EP);
 		    delete ET;
 		    free_evalue_refs(&EV);
@@ -1217,7 +1217,7 @@ out:
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *E = uni_polynom(params[num[f].pos], c);
-		    evalue EV = E->to_evalue(allparams);
+		    evalue EV = E->to_evalue(params);
 		    eadd(&EV , &EP);
 		    delete E;
 		    free_evalue_refs(&EV);
@@ -1226,7 +1226,7 @@ out:
 		    dpoly d(dim, num[f].constant);
 		    d.div(n, count, sign[f]);
 		    EhrhartPolynom *E = constant(count);
-		    evalue EV = E->to_evalue(allparams);
+		    evalue EV = E->to_evalue(params);
 		    eadd(&EV , &EP);
 		    delete E;
 		    free_evalue_refs(&EV);
@@ -1243,6 +1243,8 @@ out:
 	en->next = res;
 	res = en;
 	res->ValidityDomain = rVD;
+	if (CT)
+	    addeliminatedparams_evalue(&EP, CT);
    	emul(&factor, &EP); 
 	res->EP = EP;
 	reduce_evalue(&res->EP);
