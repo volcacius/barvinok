@@ -168,7 +168,8 @@ void eadd(evalue *e1,evalue *res) {
 	               for(i=0;i<p;i++)  {
 		              value_assign(ne->x.p->arr[i].d, res->x.p->arr[i%y].d);
 		              if (value_notzero_p(ne->x.p->arr[i].d))   {
-			    value_assign(ne->x.p->arr[i].x.n, res->x.p->arr[i%y].x.n);
+				value_init(ne->x.p->arr[i].x.n);
+				value_assign(ne->x.p->arr[i].x.n, res->x.p->arr[i%y].x.n);
 		              }
 		              else { 
 			          ne->x.p->arr[i].x.p =ecopy(res->x.p->arr[i%y].x.p);
