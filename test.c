@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <polylib/polylibgmp.h>
-#include <barvinok.h>
+#include <util.h>
 
 int main()
 {

@@ -1,3 +1,3 @@
 noinst_PROGRAMS = test
 
-test_SOURCES = test.c barvinok.c
+test_SOURCES = test.c util.c
