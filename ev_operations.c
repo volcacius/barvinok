@@ -2381,6 +2381,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    /* Always zero */
 	    if (p->size == 3)
 		free_evalue_refs(&(p->arr[2]));
+	    value_clear(e->d);
 	    *e = p->arr[1];
 	    free_evalue_refs(&(p->arr[0]));
 	    free(p);
@@ -2432,6 +2433,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    evalue_set_si(&f.x.p->arr[0], 0, 1);
 	    evalue_set_si(&f.x.p->arr[1], 1, 1);
 	    reorder_terms(p, &f);
+	    value_clear(e->d);
 	    *e = p->arr[0];
 	    free(p);
 	}
@@ -2472,6 +2474,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    evalue_set_si(&f.x.p->arr[1], 0, 1);
 	    evalue_set_si(&f.x.p->arr[2], 1, 1);
 	    reorder_terms(p, &f);
+	    value_clear(e->d);
 	    *e = p->arr[1];
 	    free(p);
 	}
