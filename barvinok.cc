@@ -1930,6 +1930,57 @@ static evalue* enumerate_or(Polyhedron *pos, Polyhedron *neg,
     return EP;
 }
 
+static evalue* enumerate_sum(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    int nvar = P->Dimension - exist - nparam;
+    int toswap = nvar < exist ? nvar : exist;
+    for (int i = 0; i < toswap; ++i)
+	SwapColumns(P, 1 + i, nvar+exist - i);
+    nparam += nvar;
+
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: Sum\n");
+#endif /* DEBUG_ER */
+
+    evalue *EP = barvinok_enumerate_e(P, exist, nparam, MaxRays);
+
+    for (int i = 0; i < /* nvar */ nparam; ++i) {
+	Matrix *C = Matrix_Alloc(1, 1 + nparam + 1);
+	value_set_si(C->p[0][0], 1);
+	evalue split;
+	value_init(split.d);
+	value_set_si(split.d, 0);
+	split.x.p = new_enode(partition, 4, -1);
+	value_set_si(C->p[0][1+i], 1);
+	Matrix *C2 = Matrix_Copy(C);
+	EVALUE_SET_DOMAIN(split.x.p->arr[0],
+	    Constraints2Polyhedron(C2, MaxRays));
+	Matrix_Free(C2);
+	evalue_set_si(&split.x.p->arr[1], 1, 1);
+	value_set_si(C->p[0][1+i], -1);
+	value_set_si(C->p[0][1+nparam], -1);
+	EVALUE_SET_DOMAIN(split.x.p->arr[2],
+	    Constraints2Polyhedron(C, MaxRays));
+	evalue_set_si(&split.x.p->arr[3], 1, 1);
+	emul(&split, EP);
+	free_evalue_refs(&split);
+	Matrix_Free(C);
+    }
+    reduce_evalue(EP);
+    evalue_range_reduction(EP);
+
+    evalue_frac2floor(EP);
+
+    evalue *sum = esum(EP, nvar);
+
+    free_evalue_refs(EP); 
+    free(EP);
+    EP = sum;
+
+    return EP;
+}
+
 static evalue* new_zero_ep()
 {
     evalue *EP;
@@ -2221,6 +2272,9 @@ next:
 		return EP;
 	    }
 	}
+
+    if (nvar != 0)
+	return enumerate_sum(P, exist, nparam, MaxRays);
 
     assert(nvar == 0);
 
