@@ -1567,6 +1567,22 @@ static bool Polyhedron_is_infinite(Polyhedron *P, unsigned nparam)
     return r <  P->NbRays;
 }
 
+/* Check whether all rays point in the positive directions
+ * for the parameters
+ */
+static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
+{
+    int r;
+    for (r = 0; r < P->NbRays; ++r)
+	if (value_zero_p(P->Ray[r][P->Dimension+1])) {
+	    int i;
+	    for (i = P->Dimension - nparam; i < P->Dimension; ++i)
+		if (value_neg_p(P->Ray[r][i+1]))
+		    return false;
+	}
+    return true;
+}
+
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     //P = unfringe(P, MaxRays);
@@ -3343,6 +3359,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     assert(!Polyhedron_is_infinite(P, nparam));
     assert(P->NbBid == 0);
+    assert(Polyhedron_has_positive_rays(P, nparam));
     assert(P->NbEq == 0);
 
     dim = P->Dimension;
