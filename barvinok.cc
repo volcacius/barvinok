@@ -1201,39 +1201,38 @@ static void multi_polynom(Vector *c, evalue* X, evalue *EP)
 }
 
 
-Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Polyhedron *CEq = NULL, *rVD, *CA;
     Matrix *CT = NULL;
     Param_Polyhedron *PP = NULL;
     Param_Domain *D, *next;
     Param_Vertices *V;
-    Enumeration *en, *res;
     int r = 0;
     unsigned nparam = C->Dimension;
+    evalue *eres = new evalue;
+    value_init(eres->d);
+    value_set_si(eres->d, 0);
+
     evalue factor;
     value_init(factor.d);
     evalue_set_si(&factor, 1, 1);
     
-    res = NULL;
-
     CA = align_context(C, P->Dimension, MaxRays);
     P = DomainIntersection(P, CA, MaxRays);
     Polyhedron_Free(CA);
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
-	res = (Enumeration *)malloc(sizeof(Enumeration));
-	res->ValidityDomain = CEq ? CEq : Polyhedron_Copy(C);
-	res->next = NULL;
-	value_init(res->EP.d);
-	value_set_si(res->EP.d, 1);
-	value_init(res->EP.x.n);
+	eres->x.p = new_enode(partition, 2, -1);
+	EVALUE_SET_DOMAIN(eres->x.p->arr[0], CEq ? CEq : Polyhedron_Copy(C));
+	value_set_si(eres->x.p->arr[1].d, 1);
+	value_init(eres->x.p->arr[1].x.n);
 	if (emptyQ(P))
-	    value_set_si(res->EP.x.n, 0);
+	    value_set_si(eres->x.p->arr[1].x.n, 0);
 	else
-	    barvinok_count(P, &res->EP.x.n, MaxRays);
-	emul(&factor, &res->EP);
+	    barvinok_count(P, &eres->x.p->arr[1].x.n, MaxRays);
+	emul(&factor, &eres->x.p->arr[1]);
 out:
 	free_evalue_refs(&factor);
 	Polyhedron_Free(P);
@@ -1242,7 +1241,7 @@ out:
 	if (PP)
 	    Param_Polyhedron_Free(PP);
 	   
-	return res;
+	return eres;
     }
 
     if (P->NbEq != 0) {
@@ -1298,7 +1297,12 @@ out:
 
     Vector *c = Vector_Alloc(dim+2);
 
-    for(D=PP->D; D; D=next) {
+    int nd;
+    for (nd = 0, D=PP->D; D; ++nd, D=D->next);
+    struct section { Polyhedron * D; evalue E; };
+    section *s = new section[nd];
+
+    for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
 	if (!CEq) {
 	    rVD = D->Domain;    
@@ -1362,9 +1366,8 @@ out:
 	for (int j = 0; j < ncone; ++j)
 	    num[j].constant -= min;
 	f = 0;
-	evalue EP;
-	value_init(EP.d);
-	evalue_set_si(&EP, 0, 1);
+	value_init(s[nd].E.d);
+	evalue_set_si(&s[nd].E, 0, 1);
 	mpq_t count;
 	mpq_init(count);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
@@ -1380,7 +1383,7 @@ out:
 		    d.div(n, c, sign[f]);
 		    evalue EV; 
 		    multi_polynom(c, num[f].E, &EV);
-		    eadd(&EV , &EP);
+		    eadd(&EV , &s[nd].E);
 		    free_evalue_refs(&EV);
 		    free_evalue_refs(num[f].E);
 		    delete num[f].E; 
@@ -1389,7 +1392,7 @@ out:
 		    d.div(n, c, sign[f]);
 		    evalue EV;
 		    uni_polynom(num[f].pos, c, &EV);
-		    eadd(&EV , &EP);
+		    eadd(&EV , &s[nd].E);
 		    free_evalue_refs(&EV);
 		} else {
 		    mpq_set_si(count, 0, 1);
@@ -1398,7 +1401,7 @@ out:
 		    evalue EV;
 		    value_init(EV.d);
 		    evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
-		    eadd(&EV , &EP);
+		    eadd(&EV , &s[nd].E);
 		    free_evalue_refs(&EV);
 		} 
 		++f;
@@ -1408,16 +1411,20 @@ out:
 	mpq_clear(count);
 	delete [] num;
 
-	en = (Enumeration *)malloc(sizeof(Enumeration));
-	en->next = res;
-	res = en;
-	res->ValidityDomain = rVD;
 	if (CT)
-	    addeliminatedparams_evalue(&EP, CT);
-   	emul(&factor, &EP); 
-	res->EP = EP;
-	reduce_evalue(&res->EP);
+	    addeliminatedparams_evalue(&s[nd].E, CT);
+   	emul(&factor, &s[nd].E); 
+	reduce_evalue(&s[nd].E);
+	s[nd].D = rVD;
+	++nd;
     }
+
+    eres->x.p = new_enode(partition, 2*nd, -1);
+    for (int j = 0; j < nd; ++j) {
+	EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
+	eres->x.p->arr[2*j+1] = s[j].E;
+    }
+    delete [] s;
 
     Vector_Free(c);
 
@@ -1431,4 +1438,21 @@ out:
 	Polyhedron_Free(CEq);
 
     goto out;
+}
+
+Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+{
+    Enumeration *en, *res = NULL;
+    evalue *EP = barvinok_enumerate_ev(P, C, MaxRays);
+    for (int i = 0; i < EP->x.p->size/2; ++i) {
+	en = (Enumeration *)malloc(sizeof(Enumeration));
+	en->next = res;
+	res = en;
+	res->ValidityDomain = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	res->EP = EP->x.p->arr[2*i+1];
+    }
+    free(EP->x.p);
+    value_clear(EP->d);
+    delete EP;
+    return res;
 }
