@@ -1930,11 +1930,11 @@ static evalue* enumerate_or(Polyhedron *pos, Polyhedron *neg,
     return EP;
 }
 
-#ifdef DEBUG_ER
-static int er_level = 0;
-
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
+
+#ifdef DEBUG_ER
+static int er_level = 0;
 
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
@@ -1945,16 +1945,25 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 
     Polyhedron_Print(stderr, P_VALUE_FMT, P);
     ++er_level;
+    P = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
     evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, MaxRays);
+    Polyhedron_Free(P);
     --er_level;
     return EP;
 }
-static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
 #else
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    P = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
+    evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, MaxRays);
+    Polyhedron_Free(P);
+    return EP;
+}
 #endif
+
+static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
     if (exist == 0) {
 	Polyhedron *U = Universe_Polyhedron(nparam);
