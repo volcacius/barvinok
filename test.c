@@ -26,6 +26,9 @@ int main()
 	case 1:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    B = Polyhedron_Polar(A, 600);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
+	    C = Polyhedron_Polar(B, 600);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
 	    break;
 	}
     }
