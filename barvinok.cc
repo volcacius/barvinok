@@ -971,7 +971,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Polyhedron *CEq = NULL, *rVD, *CA;
     Matrix *CT = NULL;
-    Param_Polyhedron *PP;
+    Param_Polyhedron *PP = NULL;
     Param_Domain *D, *next;
     Param_Vertices *V;
     Enumeration *en, *res;
@@ -1005,6 +1005,8 @@ out:
 	Polyhedron_Free(P);
 	if (CT)
 	    Matrix_Free(CT);
+	if (PP)
+	    Param_Polyhedron_Free(PP);
 	   
 	return res;
     }
@@ -1030,11 +1032,8 @@ out:
 	CT = NULL;
     } else {
 	assert(CT->NbRows != CT->NbColumns);
-	if (CT->NbRows == 1) {		// no more parameters
-	    assert(PP->D->next == NULL);
-	    Param_Polyhedron_Free(PP);
+	if (CT->NbRows == 1) 		// no more parameters
 	    goto constant;
-	}
 	nparam = CT->NbRows - 1;
     }
 
@@ -1118,9 +1117,7 @@ out:
 	f = 0;
 	evalue EP;
 	value_init(EP.d);
-	value_init(EP.x.n);
-	value_set_si(EP.d, 1);
-	value_set_si(EP.x.n, 0);
+	evalue_set_si(&EP, 0, 1);
 	mpq_t count;
 	mpq_init(count);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
@@ -1183,7 +1180,6 @@ out:
     delete [] npos;
     delete [] nneg;
 
-    Param_Polyhedron_Free(PP);
     if (CEq)
 	Polyhedron_Free(CEq);
 
