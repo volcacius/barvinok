@@ -511,7 +511,7 @@ you_lose:   	/* OK, lets not do it */
 		reduced = 1;
 
 	    if (reduced || value_notzero_p(p->arr[0].d)) {
-		if (value_zero_p(p->arr[0].x.n)) {
+		if (!reduced && value_zero_p(p->arr[0].x.n)) {
 		    value_clear(e->d);
 		    memcpy(e,&p->arr[1],sizeof(evalue));
 		    if (p->size == 3)
@@ -620,6 +620,10 @@ discard:
 		    free_evalue_refs(&s.fixed[j].s); 
 		}
 	    }
+	}
+	if (e->x.p->size == 0) {
+	    free(e->x.p);
+	    evalue_set_si(e, 0, 1);
 	}
 	if (s.max != 0)
 	    free(s.fixed);
@@ -2116,6 +2120,7 @@ void evalue_combine(evalue *e)
     evalue **evs;
     int i, k;
     enode *p;
+    evalue tmp;
 
     if (value_notzero_p(e->d) || e->x.p->type != partition)
 	return;
@@ -2144,9 +2149,62 @@ void evalue_combine(evalue *e)
     free(e->x.p);
     p->size = 2*k;
     e->x.p = p;
+
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	Polyhedron *H;
+	if (value_notzero_p(e->x.p->arr[2*i+1].d))
+	    continue;
+	H = DomainConvex(EVALUE_DOMAIN(e->x.p->arr[2*i]), 0);
+	if (H == NULL)
+	    continue;
+	for (k = 0; k < e->x.p->size/2; ++k) {
+	    Polyhedron *D, *N, **P;
+	    if (i == k)
+		continue;
+	    P = &EVALUE_DOMAIN(e->x.p->arr[2*k]);
+	    D = *P;
+	    if (D == NULL)
+		continue;
+	    for (; D; D = N) {
+		*P = D;
+		N = D->next;
+		if (D->NbEq <= H->NbEq) {
+		    P = &D->next;
+		    continue;
+		}
+
+		value_init(tmp.d);
+		tmp.x.p = new_enode(partition, 2, -1);
+		EVALUE_SET_DOMAIN(tmp.x.p->arr[0], Polyhedron_Copy(D));
+		evalue_copy(&tmp.x.p->arr[1], &e->x.p->arr[2*i+1]);
+		reduce_evalue(&tmp);
+		if (value_notzero_p(tmp.d) ||
+			ecmp(&tmp.x.p->arr[1], &e->x.p->arr[2*k+1]) != 0)
+		    P = &D->next;
+		else {
+		    fprintf(stderr, "Bingo\n");
+		    D->next = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+		    EVALUE_DOMAIN(e->x.p->arr[2*i]) = D;
+		    *P = NULL;
+		}
+		free_evalue_refs(&tmp);
+	    }
+	}
+    }
+
     for (i = 0; i < e->x.p->size/2; ++i) {
 	Polyhedron *H, *E;
 	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	if (!D) {
+	    free_evalue_refs(&e->x.p->arr[2*i+1]);
+	    e->x.p->size -= 2;
+	    if (2*i < e->x.p->size) {
+		e->x.p->arr[2*i] = e->x.p->arr[e->x.p->size];
+		e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
+	    }
+	    --i;
+	    continue;
+	}
 	if (!D->next)
 	    continue;
 	H = DomainConvex(D, 0);
