@@ -2688,40 +2688,37 @@ next:
 	    }
 	}
 
+    Polyhedron *O = P;
+    Polyhedron *F;
+
     evalue *EP;
     EP = enumerate_sure(P, exist, nparam, MaxRays);
     if (EP)
-	return EP;
+	goto out;
 
     EP = enumerate_sure2(P, exist, nparam, MaxRays);
     if (EP)
-	return EP;
+	goto out;
 
-    Polyhedron *F = unfringe(P, MaxRays);
+    F = unfringe(P, MaxRays);
     if (!PolyhedronIncludes(F, P)) {
 #ifdef DEBUG_ER
 	fprintf(stderr, "\nER: Fringed\n");
 #endif /* DEBUG_ER */
 	EP = barvinok_enumerate_e(F, exist, nparam, MaxRays);
 	Polyhedron_Free(F);
-	return EP;
+	goto out;
     }
     Polyhedron_Free(F);
 
-    Polyhedron *O = P;
     if (nparam)
 	EP = enumerate_vd(&P, exist, nparam, MaxRays);
-    if (EP) {
-	if (O != P)
-	    Polyhedron_Free(P);
-	return EP;
-    }
+    if (EP)
+	goto out2;
 
     if (nvar != 0) {
 	EP = enumerate_sum(P, exist, nparam, MaxRays);
-	if (O != P)
-	    Polyhedron_Free(P);
-	return EP;
+	goto out2;
     }
 
     assert(nvar == 0);
@@ -2736,11 +2733,13 @@ next:
     assert (i < exist);
 
     EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
-    value_clear(f);
-    Vector_Free(row);
 
+out2:
     if (O != P)
 	Polyhedron_Free(P);
 
+out:
+    value_clear(f);
+    Vector_Free(row);
     return EP;
 }
