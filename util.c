@@ -175,12 +175,12 @@ void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
     }
     value_assign(*g, c);
     if (value_zero_p(a))
-	value_assign(*x, 0);
+	value_set_si(*x, 0);
     else if (value_pos_p(a))
 	value_assign(*x, e);
     else value_oppose(*x, e);
     if (value_zero_p(b))
-	value_assign(*y, 0);
+	value_set_si(*y, 0);
     else {
 	value_multiply(tmp, a, e);
 	value_substract(tmp, c, tmp);
