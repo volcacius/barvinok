@@ -1035,7 +1035,7 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
     if (lower_upper_bounds(pos,P,context,&LB,&UB) !=0) {
         /* Problem if UB or LB is INFINITY */
         value_clear(LB); value_clear(UB); value_clear(k);
-	if (pos >= P->Dimension - nparam - exist)
+	if (pos > P->Dimension - nparam - exist)
 	    value_set_si(*res, 1);
 	else 
 	    value_set_si(*res, -1);
@@ -1096,7 +1096,7 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 	    value_set_si(*res, -1);
 	    break;
         }
-	if (pos >= P->Dimension - nparam - exist &&
+	if (pos > P->Dimension - nparam - exist &&
 		value_pos_p(*res))
 	    break;
     }
