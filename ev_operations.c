@@ -8,6 +8,52 @@ void evalue_set_si(evalue *ev, int n, int d) {
     value_set_si(ev->x.n, n);
 }
 
+void aep_evalue(evalue *e, int *ref) {
+  
+    enode *p;
+    int i;
+  
+    if (value_notzero_p(e->d))
+        return;	        /* a rational number, its already reduced */
+    if(!(p = e->x.p))
+        return;	        /* hum... an overflow probably occured */
+  
+    /* First check the components of p */
+    for (i=0;i<p->size;i++)
+        aep_evalue(&p->arr[i],ref);
+  
+    /* Then p itself */
+    p->pos = ref[p->pos-1]+1;
+    return;
+} /* aep_evalue */
+
+/** Comments */
+void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
+	
+    enode *p;
+    int i, j;
+    int *ref;
+
+    if (value_notzero_p(e->d))
+        return;	         /* a rational number, its already reduced */
+    if(!(p = e->x.p))
+        return;	         /* hum... an overflow probably occured */
+  
+    /* Compute ref */
+    ref = (int *)malloc(sizeof(int)*(CT->NbRows-1));
+    for(i=0;i<CT->NbRows-1;i++)
+        for(j=0;j<CT->NbColumns;j++)
+            if(value_notzero_p(CT->p[i][j])) {
+                ref[i] = j;
+                break;
+            }
+  
+    /* Transform the references in e, using ref */
+    aep_evalue(e,ref);
+    free( ref );
+    return;
+} /* addeliminatedparams_evalue */
+
 void eadd(evalue *e1,evalue *res) {
 
  int i; 
