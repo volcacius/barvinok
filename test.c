@@ -54,7 +54,7 @@ int main()
 	    break;
 	case 3:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    decompose(A,&B,&C);
+	    barvinok_decompose(A,&B,&C);
 	    puts("Pos:");
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    puts("Neg:");
@@ -71,7 +71,7 @@ int main()
 	    times(&tms_before);
 	    manual_count(A, &cm);
 	    times(&tms_between);
-	    count(A, &cb);
+	    barvinok_count(A, &cb);
 	    times(&tms_after);
 	    printf("manual: ");
 	    value_print(stdout, P_VALUE_FMT, cm);
@@ -114,7 +114,7 @@ int main()
 	    Value f;
 	    value_init(f);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = reduce(A, &f);
+	    B = Polyhedron_Reduce(A, &f);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    Polyhedron_Free(B);
 	    printf("factor: ");

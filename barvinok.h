@@ -9,8 +9,8 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
-void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
-void count(Polyhedron *P, Value* result);
+void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
+void barvinok_count(Polyhedron *P, Value* result);
 
 #if defined(__cplusplus)
 }

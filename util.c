@@ -287,7 +287,7 @@ struct single {
  * the number of points in the polyhedron returned.
  * The return value is zero if no reduction can be found.
  */
-Polyhedron* reduce(Polyhedron *P, Value* factor)
+Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 {
     int i, j, prev, nsingle, k, p;
     unsigned dim = P->Dimension;

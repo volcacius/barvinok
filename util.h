@@ -12,7 +12,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays);
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons);
 Polyhedron *remove_equalities(Polyhedron *P);
 void manual_count(Polyhedron *P, Value* result);
-Polyhedron* reduce(Polyhedron *P, Value* factor);
+Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
 
 #if defined(__cplusplus)
 }

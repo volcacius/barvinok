@@ -7,6 +7,7 @@ libbarvinok_la_SOURCES = \
     barvinok.cc \
     barvinok.h
 libbarvinok_la_LIBADD = @LTLIBOBJS@ -lstdc++
+libbarvinok_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbarvinok.la
 
 test_SOURCES = test.c

@@ -300,7 +300,7 @@ public:
  *
  * Returns two lists of polyhedra
  */
-void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
+void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 {
     Polyhedron *pos = 0, *neg = 0;
     vector<cone *> nonuni;
@@ -442,7 +442,7 @@ void normalize(Value* values, Polyhedron *i, vec_ZZ& lambda,
 	sign = -sign;
 }
 
-void count(Polyhedron *P, Value* result)
+void barvinok_count(Polyhedron *P, Value* result)
 {
     Polyhedron ** vcone;
     vec_ZZ sign;
@@ -459,7 +459,7 @@ void count(Polyhedron *P, Value* result)
     }
     value_init(factor);
     value_set_si(factor, 1);
-    Q = reduce(P, &factor);
+    Q = Polyhedron_Reduce(P, &factor);
     if (Q) {
 	if (allocated)
 	    Polyhedron_Free(P);
@@ -494,7 +494,7 @@ void count(Polyhedron *P, Value* result)
 	*conep = NULL;
 	for (Polar = Polars; Polar; Polar = Polar->next) {
 	    Polyhedron *polpos, *polneg;
-	    decompose(Polar, &polpos, &polneg);
+	    barvinok_decompose(Polar, &polpos, &polneg);
 
 	    for (Polyhedron *i = polpos; i; i = i->next) {
 		Polyhedron *A = Polyhedron_Polar(i, 600);
