@@ -1445,11 +1445,11 @@ out:
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
 	mask(f, &factor);
 	Matrix_Free(f);
-	if (P->Dimension == nparam) {
-	    CEq = P;
-	    P = Universe_Polyhedron(0);
-	    goto constant;
-	}
+    }
+    if (P->Dimension == nparam) {
+	CEq = P;
+	P = Universe_Polyhedron(0);
+	goto constant;
     }
 
     Polyhedron *Q = ParamPolyhedron_Reduce(P, P->Dimension-nparam, &factor);
