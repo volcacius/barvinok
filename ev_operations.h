@@ -25,7 +25,7 @@
 #define compute_poly _new_compute_poly
 #define in_domain _new_in_domain
 
-typedef enum { polynomial, periodic, evector, modulo, relation, 
+typedef enum { polynomial, periodic, evector, fractional, relation, 
                partition } enode_type;
 
 typedef struct _evalue {

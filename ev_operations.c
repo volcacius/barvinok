@@ -33,8 +33,12 @@ void aep_evalue(evalue *e, int *ref) {
         aep_evalue(&p->arr[i],ref);
   
     /* Then p itself */
-    if (p->type != modulo)
+    switch (p->type) {
+    case polynomial:
+    case periodic:
+    case evector:
 	p->pos = ref[p->pos-1]+1;
+    }
     return;
 } /* aep_evalue */
 
@@ -69,7 +73,7 @@ struct fixed_param {
     int	    pos;
     evalue  s;
     Value   d;
-    int	    m;
+    Value   m;
 };
 
 struct subst {
@@ -121,7 +125,7 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
 	realloc_substitution(s, d);
     }
 
-    assert(value_zero_p(m->d) && m->x.p->type == modulo);
+    assert(value_zero_p(m->d) && m->x.p->type == fractional);
     assert(m->x.p->size == 3);
     assert(EVALUE_IS_ONE(m->x.p->arr[2]));
     assert(EVALUE_IS_ZERO(m->x.p->arr[1]));
@@ -131,10 +135,10 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     assert(p->x.p->size == 2);
     f = &p->x.p->arr[1];
 
-    assert(value_one_p(f->d));
     neg = value_neg_p(f->x.n);
 
-    s->fixed[s->n].m = m->x.p->pos;
+    value_init(s->fixed[s->n].m);
+    value_assign(s->fixed[s->n].m, f->d);
     s->fixed[s->n].pos = p->x.p->pos;
     value_init(s->fixed[s->n].d);
     if (neg)
@@ -155,18 +159,14 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     return 1;
 }
 
-int _reduce_evalue (evalue *e, struct subst *s, int m) {
+int _reduce_evalue (evalue *e, struct subst *s, int fract) {
   
     enode *p;
     int i, j, k;
   
     if (value_notzero_p(e->d)) {
-	if (m) {
-	    assert(value_one_p(e->d));
-	    value_set_si(e->d, m);
+	if (fract)
 	    mpz_fdiv_r(e->x.n, e->x.n, e->d);
-	    value_set_si(e->d, 1);
-	}
         return;	/* a rational number, its already reduced */
     }
 
@@ -179,9 +179,9 @@ int _reduce_evalue (evalue *e, struct subst *s, int m) {
 	if (add)
 	    add = add_modulo_substitution(s, e);
 
-        if (i == 0 && p->type==modulo) {
+        if (i == 0 && p->type==fractional) {
 	    int factor;
-	    while ((factor = _reduce_evalue(&p->arr[i], s, p->pos)) != 0) {
+	    while ((factor = _reduce_evalue(&p->arr[i], s, 1)) != 0) {
 		int j;
 		evalue f;
 		p->pos *= factor;
@@ -199,10 +199,11 @@ int _reduce_evalue (evalue *e, struct subst *s, int m) {
 		free_evalue_refs(&f);
 	    }
 	} else
-	    _reduce_evalue(&p->arr[i], s, m);
+	    _reduce_evalue(&p->arr[i], s, fract);
 
 	if (add) {
 	    --s->n;
+	    value_clear(s->fixed[s->n].m);
 	    value_clear(s->fixed[s->n].d);
 	    free_evalue_refs(&s->fixed[s->n].s); 
 	}
@@ -242,20 +243,26 @@ you_lose:   	/* OK, lets not do it */
 		int divide = value_notone_p(s->fixed[k].d);
 		evalue d;
 
-		if (s->fixed[k].m != 0 && s->fixed[k].m != m) {
-		    if (!divide && m != 0 && (s->fixed[k].m % m == 0))
-			return s->fixed[k].m / m;
+		if (divide && fract)
 		    continue;
-		}
 
-		if (divide && m != 0)
-		    continue;
+		if (value_notzero_p(s->fixed[k].m)) {
+		    if (!fract)
+			continue;
+		    assert(p->size == 2);
+		    if (!mpz_divisible_p(s->fixed[k].m, p->arr[1].d))
+			continue;
+		    divide = 1;
+		}
 
 		if (divide) {
 		    value_init(d.d);
 		    value_assign(d.d, s->fixed[k].d);
 		    value_init(d.x.n);
-		    value_set_si(d.x.n, 1);
+		    if (value_notzero_p(s->fixed[k].m))
+			value_assign(d.x.n, s->fixed[k].m);
+		    else
+			value_set_si(d.x.n, 1);
 		}
 
 		for (i=p->size-1;i>=1;i--) {
@@ -266,7 +273,7 @@ you_lose:   	/* OK, lets not do it */
 		    free_evalue_refs(&(p->arr[i]));
 		}
 		p->size = 1;
-		_reduce_evalue(&p->arr[0], s, m);
+		_reduce_evalue(&p->arr[0], s, fract);
 
 		if (divide)
 		    free_evalue_refs(&d);
@@ -292,13 +299,12 @@ you_lose:   	/* OK, lets not do it */
             free(p);
         }
     }
-    else if (p->type==modulo) {
+    else if (p->type==fractional) {
 	if (value_notzero_p(p->arr[0].d)) {
 	    evalue v;
 	    value_init(v.d);
-	    value_set_si(v.d, 1);
+	    value_assign(v.d, p->arr[0].d);
 	    value_init(v.x.n);
-	    value_set_si(p->arr[0].d, p->pos);
 	    mpz_fdiv_r(v.x.n, p->arr[0].x.n,  p->arr[0].d);
 
 	    for (i=p->size-1;i>=2;i--) {
@@ -308,7 +314,7 @@ you_lose:   	/* OK, lets not do it */
 	    }
 	    p->size = 2;
 	    free_evalue_refs(&v);
-	    _reduce_evalue(&p->arr[1], s, m);
+	    _reduce_evalue(&p->arr[1], s, fract);
 	}
 
         /* Try to reduce the degree */
@@ -372,9 +378,10 @@ static void add_substitution(struct subst *s, Value *row, unsigned dim)
     Vector_Normalize_Positive(row+1, dim+1, k);
     assert(s->n < s->max);
     value_init(s->fixed[s->n].d);
+    value_init(s->fixed[s->n].m);
     value_assign(s->fixed[s->n].d, row[k+1]);
     s->fixed[s->n].pos = k+1;
-    s->fixed[s->n].m = 0;
+    value_set_si(s->fixed[s->n].m, 0);
     r = &s->fixed[s->n].s;
     value_init(r->d);
     for (l = k+1; l < dim; ++l)
@@ -502,21 +509,19 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     }
     fprintf(DST," ]_%s", pname[p->pos-1]);
     break;
-  case modulo:
+  case fractional:
     fprintf(DST, "( ");
     for (i=p->size-1; i>=1; i--) {
       print_evalue(DST, &p->arr[i], pname);
       if (i >= 2) {
         fprintf(DST, " * ");
-	if (i > 2)
-	  fprintf(DST, "(");
-	fprintf(DST, "(");
+	fprintf(DST, "{");
         print_evalue(DST, &p->arr[0], pname);
-	fprintf(DST, ") mod %d", p->pos);
+	fprintf(DST, "}");
 	if (i>2) 
-	  fprintf(DST, ")^%d + ", i-1);
+	  fprintf(DST, "^%d + ", i-1);
 	else
-	  fprintf(DST, " + ", i-1);
+	  fprintf(DST, " + ");
       }
     }
     fprintf(DST, " )\n");
@@ -545,12 +550,34 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   return;
 } /* print_enode */ 
 
-static int mod_term_smaller(evalue *e1, evalue *e2)
+static int mod_rational_smaller(evalue *e1, evalue *e2)
+{
+    int r;
+    Value m;
+    value_init(m);
+
+    assert(value_notzero_p(e1->d));
+    assert(value_notzero_p(e2->d));
+    value_multiply(m, e1->x.n, e2->d);
+    value_division(m, m, e1->d);
+    if (value_lt(m, e2->x.n))
+	r = 1;
+    else if (value_gt(m, e2->x.n))
+	r = 0;
+    else 
+	r = -1;
+    value_clear(m);
+
+    return r;
+}
+
+static int mod_term_smaller_r(evalue *e1, evalue *e2)
 {
     if (value_notzero_p(e1->d)) {
 	if (value_zero_p(e2->d))
 	    return 1;
-	return value_lt(e1->x.n, e2->x.n);
+	int r = mod_rational_smaller(e1, e2);
+	return r == -1 ? 0 : r;
     }
     if (value_notzero_p(e2->d))
 	return 0;
@@ -558,8 +585,21 @@ static int mod_term_smaller(evalue *e1, evalue *e2)
 	return 1;
     else if (e1->x.p->pos > e2->x.p->pos)
 	return 0;
-    else
-	return mod_term_smaller(&e1->x.p->arr[0], &e2->x.p->arr[0]);
+    else {
+	int r = mod_rational_smaller(&e1->x.p->arr[1], &e2->x.p->arr[1]);
+	return r == -1 
+		 ? mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0])
+		 : r;
+    }
+}
+
+static int mod_term_smaller(evalue *e1, evalue *e2)
+{
+    assert(value_zero_p(e1->d));
+    assert(value_zero_p(e2->d));
+    assert(e1->x.p->type == fractional);
+    assert(e2->x.p->type == fractional);
+    return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
 }
 
 static void eadd_rev(evalue *e1, evalue *res)
@@ -577,7 +617,7 @@ static void eadd_rev_cst (evalue *e1, evalue *res)
     evalue ev;
     value_init(ev.d);
     evalue_copy(&ev, e1);
-    eadd(res, &ev.x.p->arr[ev.x.p->type==modulo]);
+    eadd(res, &ev.x.p->arr[ev.x.p->type==fractional]);
     free_evalue_refs(res);	  
     *res = ev;
 }
@@ -713,7 +753,7 @@ void eadd(evalue *e1,evalue *res) {
 	  case evector:
 	      fprintf(stderr, "eadd: cannot add const with vector\n");
 	      return;
-	  case modulo:
+	  case fractional:
 	       eadd(e1, &res->x.p->arr[1]);
 	       return ;
 	  case partition:
@@ -785,13 +825,13 @@ void eadd(evalue *e1,evalue *res) {
 		     return;
 	         }
 	         else if (e1->x.p->pos != res->x.p->pos ||
-			    (res->x.p->type == modulo &&
+			    (res->x.p->type == fractional &&
 			     !eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))) { 
 	      	 /* adding evalues of different position (i.e function of different unknowns
 		  * to case are possible  */
 			   
 			switch (res->x.p->type) {
-			case modulo:
+			case fractional:
 			    if(mod_term_smaller(res, e1))
 				eadd(e1,&res->x.p->arr[1]);
 			    else
@@ -823,9 +863,9 @@ void eadd(evalue *e1,evalue *res) {
 		 //same type , same pos  and same size
                  if (e1->x.p->size == res->x.p->size) {
 	              // add any element in e1 to the corresponding element in res 
-		      if (res->x.p->type == modulo)
+		      if (res->x.p->type == fractional)
 			assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
-		      i = res->x.p->type == modulo ? 1 : 0;
+		      i = res->x.p->type == fractional ? 1 : 0;
 	              for (; i<res->x.p->size; i++) {
                             eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
                       }
@@ -835,7 +875,7 @@ void eadd(evalue *e1,evalue *res) {
 		/* Sizes are different */
 		switch(res->x.p->type) {
 		case polynomial:
-		case modulo:
+		case fractional:
                     /* VIN100: if e1-size > res-size you have to copy e1 in a   */
                     /* new enode and add res to that new node. If you do not do */
                     /* that, you lose the the upper weight part of e1 !         */
@@ -844,9 +884,9 @@ void eadd(evalue *e1,evalue *res) {
 			  eadd_rev(e1, res);
                      else {
 	  	     
-		        if (res->x.p->type == modulo)
+		        if (res->x.p->type == fractional)
 		    	    assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
-		        i = res->x.p->type == modulo ? 1 : 0;
+		        i = res->x.p->type == fractional ? 1 : 0;
                         for (; i<e1->x.p->size ; i++) {
                              eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
                         } 
@@ -916,7 +956,7 @@ static void emul_rev (evalue *e1, evalue *res)
 
 static void emul_poly (evalue *e1, evalue *res)
 {
-    int i, j, o = res->x.p->type == modulo;
+    int i, j, o = res->x.p->type == fractional;
     evalue tmp;
     int size=(e1->x.p->size + res->x.p->size - o - 1); 
     value_init(tmp.d);
@@ -1005,6 +1045,33 @@ void emul_partitions (evalue *e1,evalue *res)
     free(s);
 }
 
+static void Lcm3(Value i, Value j, Value *res)
+{
+    Value aux;
+
+    value_init(aux);
+    Gcd(i,j,&aux);
+    value_multiply(*res,i,j);
+    value_division(*res, *res, aux);  
+    value_clear(aux);
+}
+
+static void poly_denom(evalue *p, Value *d)
+{
+    value_set_si(*d, 1);
+
+    while (value_zero_p(p->d)) {
+	assert(p->x.p->type == polynomial);
+	assert(p->x.p->size == 2);
+	assert(value_notzero_p(p->x.p->arr[1].d));
+	Lcm3(*d, p->x.p->arr[1].d, d);
+	p = &p->x.p->arr[0];
+    }
+    Lcm3(*d, p->d, d);
+}
+
+#define value_two_p(val)	(mpz_cmp_si(val,2) == 0)
+
 /* Computes the product of two evalues "e1" and "res" and puts the result in "res". you must
  * do a copy of "res" befor calling this function if you nead it after. The vector type of 
  * evalues is not treated here */
@@ -1062,8 +1129,8 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		 return ;
 	       }      
 	   case periodic:
-	   case modulo:
-	        /* Product of a polynomial and a periodic or modulo */
+	   case fractional:
+	        /* Product of a polynomial and a periodic or fractional */
 		emul_rev(e1, res);
 		return;
 	   }
@@ -1132,7 +1199,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		       return; 
 			       
 	   }		   
-       case modulo:
+       case fractional:
 	    switch(res->x.p->type) {
 	    case polynomial:
 	        for(i=0; i<res->x.p->size ; i++)
@@ -1140,25 +1207,33 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	        return; 
 	    case periodic:
 		assert(0);
-	    case modulo:
+	    case fractional:
 	        if (e1->x.p->pos == res->x.p->pos &&
 			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
-		    if (e1->x.p->pos != 2)
+		    evalue d;
+		    value_init(d.d);
+		    poly_denom(&e1->x.p->arr[0], &d.d);
+		    if (!value_two_p(d.d))
 			emul_poly(e1, res);
 		    else {
+			value_init(d.x.n);
+			value_set_si(d.x.n, 1);
 			evalue tmp;
-			/* x mod 2 == (x mod 2)^2 */
-			/* a0 b0 + (a0 b1 + a1 b0 + a1 b1) (x mod 2) */
+			/* { x }^2 == { x }/2 */
+			/* a0 b0 + (a0 b1 + a1 b0 + a1 b1/2) { x } */
 			assert(e1->x.p->size == 3);
 			assert(res->x.p->size == 3);
 			value_init(tmp.d);
-			evalue_copy(&tmp, &res->x.p->arr[1]);
-			eadd(&res->x.p->arr[2], &tmp);
+			evalue_copy(&tmp, &res->x.p->arr[2]);
+			emul(&d, &tmp);
+			eadd(&res->x.p->arr[1], &tmp);
 			emul(&e1->x.p->arr[2], &tmp);
 			emul(&e1->x.p->arr[1], res);
 			eadd(&tmp, &res->x.p->arr[2]);
 			free_evalue_refs(&tmp);	  
+			value_clear(d.x.n);
 		    }
+		    value_clear(d.d);
 		} else {
 		    if(mod_term_smaller(res, e1))
 			for(i=1; i<res->x.p->size ; i++)
@@ -1202,7 +1277,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	     else {
 	       /* Product of a rationel number and an expression (polynomial or peririodic) */ 
 	         
-		   i = res->x.p->type == modulo ? 1 : 0;
+		   i = res->x.p->type == fractional ? 1 : 0;
 		   for (; i<res->x.p->size; i++) 
 	              emul(e1, &res->x.p->arr[i]);		 
 		  
@@ -1422,11 +1497,12 @@ static void mod2table_r(evalue *e, Vector *periods, Value m, int p,
 
     if (p == nparam) {
 	double d = compute_evalue(e, val->p);
+	d *= VALUE_TO_DOUBLE(m);
 	if (d > 0)
 	    d += .25;
 	else
 	    d -= .25;
-	value_set_si(res->d, 1);
+	value_assign(res->d, m);
 	value_init(res->x.n);
 	value_set_double(res->x.n, d);
 	mpz_fdiv_r(res->x.n, res->x.n, m);
@@ -1463,7 +1539,7 @@ void evalue_mod2table(evalue *e, int nparam)
   for (i=0; i<p->size; i++) {
     evalue_mod2table(&(p->arr[i]), nparam);
   }
-  if (p->type == modulo) {
+  if (p->type == fractional) {
     Vector *periods = Vector_Alloc(nparam);
     Vector *val = Vector_Alloc(nparam);
     Value tmp;
@@ -1471,7 +1547,7 @@ void evalue_mod2table(evalue *e, int nparam)
     evalue EP, res;
 
     value_init(tmp);
-    value_set_si(tmp, p->pos);
+    value_set_si(tmp, 1);
     Vector_Set(periods->p, 1, nparam);
     Vector_Set(val->p, 0, nparam);
     for (ev = &p->arr[0]; value_zero_p(ev->d); ev = &ev->x.p->arr[0]) {
@@ -1479,11 +1555,9 @@ void evalue_mod2table(evalue *e, int nparam)
 
       assert(p->type == polynomial);
       assert(p->size == 2);
-      assert(value_one_p(p->arr[1].d));
-      Gcd(tmp, p->arr[1].x.n, &periods->p[p->pos-1]);
-      value_division(periods->p[p->pos-1], tmp, periods->p[p->pos-1]);
+      value_assign(periods->p[p->pos-1], p->arr[1].d);
+      Lcm3(tmp, p->arr[1].d, &tmp);
     }
-    value_set_si(tmp, p->pos);
     value_init(EP.d);
     mod2table_r(&p->arr[0], periods, tmp, 0, val, &EP);
 
@@ -1583,20 +1657,14 @@ static double compute_enode(enode *p, Value *list_args) {
     }
     res +=compute_evalue(&p->arr[0],list_args);
   }
-  else if (p->type == modulo) {
+  else if (p->type == fractional) {
     double d = compute_evalue(&p->arr[0], list_args);
-    if (d > 0)
-	d += .25;
-    else 
-	d -= .25;
-    value_set_double(param, d);
-    value_set_si(m, p->pos);
-    mpz_fdiv_r(param, param, m);
+    d -= floor(d+1e-10);
     
     /* Compute the polynomial using Horner's rule */
     for (i=p->size-1;i>1;i--) {
       res +=compute_evalue(&p->arr[i],list_args);
-      res *=VALUE_TO_DOUBLE(param);
+      res *=d;
     }
     res +=compute_evalue(&p->arr[1],list_args);
   }
@@ -1610,7 +1678,7 @@ static double compute_enode(enode *p, Value *list_args) {
     res = compute_evalue(&p->arr[VALUE_TO_INT(m)],list_args);
   }
   else if (p->type == relation) {
-    if (fabs(compute_evalue(&p->arr[0], list_args)) < 0.5)
+    if (fabs(compute_evalue(&p->arr[0], list_args)) < 1e-10)
       res = compute_evalue(&p->arr[1], list_args);
     else if (p->size > 2)
       res = compute_evalue(&p->arr[2], list_args);

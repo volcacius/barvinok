@@ -784,6 +784,11 @@ static void mask(Matrix *f, evalue *factor)
     Value m;
     value_init(m);
 
+    evalue EV;
+    value_init(EV.d);
+    value_init(EV.x.n);
+    value_set_si(EV.x.n, 1);
+
     for (n = 0; n < nr; ++n) {
 	value_assign(m, f->p[n][nc-1]);
 	if (value_one_p(m) || value_mone_p(m))
@@ -813,10 +818,12 @@ static void mask(Matrix *f, evalue *factor)
 	EP.x.p->arr[1] = *factor;
 	evalue *ev = &EP.x.p->arr[0];
 	value_set_si(ev->d, 0);
-	ev->x.p = new_enode(modulo, 3, VALUE_TO_INT(m));
+	ev->x.p = new_enode(fractional, 3, -1);
 	evalue_set_si(&ev->x.p->arr[1], 0, 1);
 	evalue_set_si(&ev->x.p->arr[2], 1, 1);
 	evalue *E = multi_monom(row);
+	value_assign(EV.d, m);
+	emul(&EV, E);
 	value_clear(ev->x.p->arr[0].d);
 	ev->x.p->arr[0] = *E;
 	delete E;
@@ -824,6 +831,7 @@ static void mask(Matrix *f, evalue *factor)
     }
 
     value_clear(m);
+    free_evalue_refs(&EV); 
 }
 #else
 /*
@@ -958,13 +966,18 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
 	    emul(&EV, E);
 	    eadd(E, EP);
 	} else {
+	    value_init(EV.x.n);
+	    value_set_si(EV.x.n, 1);
+	    value_assign(EV.d, m);
+	    emul(&EV, E);
+	    value_clear(EV.x.n);
 	    value_set_si(EV.d, 0);
-	    EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(m));
+	    EV.x.p = new_enode(fractional, 3, -1);
 	    evalue_copy(&EV.x.p->arr[0], E);
 	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
 	    value_init(EV.x.p->arr[2].x.n);
 	    zz2value(f, EV.x.p->arr[2].x.n);
-	    value_assign(EV.x.p->arr[2].d, m);
+	    value_set_si(EV.x.p->arr[2].d, 1);
 
 	    eadd(&EV, EP);
 	}
