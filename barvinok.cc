@@ -530,6 +530,8 @@ static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
     value_init(EP.d);
     value_set_si(EP.d,0);
     EP.x.p = new_enode(polynomial, 2, 1);
+    value_init(EP.x.p->arr[0].x.n);
+    value_init(EP.x.p->arr[1].x.n);
     value_set_si(EP.x.p->arr[0].d, 1);
     value_set_si(EP.x.p->arr[0].x.n, 0);
     if (den == NULL)
@@ -552,7 +554,6 @@ static void vertex_period(deque<string>& params,
     unsigned nparam = T->NbRows - 1;
     unsigned dim = i->Dimension;
     Value tmp;
-    value_init(tmp);
     ZZ nump;
 
     if (p == nparam) {
@@ -571,6 +572,7 @@ static void vertex_period(deque<string>& params,
 	return;
     }
 
+    value_init(tmp);
     vec_ZZ vertex;
     values2zz(T->p[p], vertex, dim);
     nump = vertex * lambda;
@@ -744,10 +746,17 @@ void lattice_point(deque<string>& params,
 	Vector_Free(val);
 
 	*EP += EhrhartPolynom(&ev, params);
+	free_evalue_refs(&ev);
 
 	term->E = EP;
 	term->constant = 0;
 
+	Matrix_Free(inv);
+	Matrix_Free(Rays);
+	Matrix_Free(T);
+	Matrix_Free(mv);
+	value_clear(lcm);
+	value_clear(tmp);
 	return;
     }
     for (int i = 0; i < V->Vertex->NbRows; ++i) {
@@ -948,6 +957,7 @@ static EhrhartPolynom *uni_polynom(string param, Vector *c)
     EP.x.p = new_enode(polynomial, dim+1, 1);
     for (int j = 0; j <= dim; ++j) {
 	value_assign(EP.x.p->arr[j].d, c->p[dim+1]);
+	value_init(EP.x.p->arr[j].x.n);
 	value_assign(EP.x.p->arr[j].x.n, c->p[j]);
     }
     params.push_back(param);
@@ -992,9 +1002,9 @@ static EhrhartPolynom *constant(mpq_t c)
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Polyhedron *CEq = NULL, *rVD, *CA;
-    Matrix *CT;
+    Matrix *CT = NULL;
     Param_Polyhedron *PP;
-    Param_Domain *D;
+    Param_Domain *D, *next;
     Param_Vertices *V;
     Enumeration *en, *res;
     int r = 0;
@@ -1031,6 +1041,8 @@ constant:
 	    reduce_evalue(&en->EP);
 	    free_evalue_refs(&EP);
 	}
+	if (CT)
+	    Matrix_Free(CT);
 	return en;
     }
 
@@ -1045,16 +1057,21 @@ constant:
 	    goto constant;
 	}
     }
+    Polyhedron *oldP = P;
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
+    if (P != oldP)
+	Polyhedron_Free(oldP);
 
     if (isIdentity(CT)) {
-	free(CT);
-	free(CEq);
+	Matrix_Free(CT);
+	Polyhedron_Free(CEq);
 	CT = NULL;
+	CEq = NULL;
     } else {
 	assert(CT->NbRows != CT->NbColumns);
 	if (CT->NbRows == 1) {		// no more parameters
 	    assert(PP->D->next == NULL);
+	    Param_Polyhedron_Free(PP);
 	    goto constant;
 	}
 	deque<string>::iterator i;
@@ -1090,10 +1107,12 @@ constant:
 
     Vector *c = Vector_Alloc(dim+2);
 
-    for(D=PP->D;D;D=D->next) {
-	if (!CT)
+    for(D=PP->D; D; D=next) {
+	next = D->next;
+	if (!CT) {
 	    rVD = D->Domain;    
-	else {
+	    D->Domain = NULL;
+	} else {
 	  Polyhedron *Dt;
 	  Dt = Polyhedron_Preimage(D->Domain,CT,MaxRays);
 	  rVD = DomainIntersection(Dt,CEq,MaxRays);
@@ -1204,6 +1223,13 @@ constant:
     delete [] vcone;
     delete [] npos;
     delete [] nneg;
+
+    Param_Polyhedron_Free(PP);
+    Polyhedron_Free(P);
+    if (CT)
+	Matrix_Free(CT);
+    if (CEq)
+	Polyhedron_Free(CEq);
 
     return res;
 }

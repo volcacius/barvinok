@@ -419,12 +419,13 @@ Polyhedron *remove_equalities(Polyhedron *P)
  * of integer points as P
  * nvar specifies the number of variables
  * The remaining dimensions are assumed to be parameters
+ * Destroys P
  */
 Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 {
     Value g;
     Vector *v;
-    Polyhedron *p = Polyhedron_Copy(P), *q;
+    Polyhedron *p = P, *q;
     unsigned dim = p->Dimension;
     Matrix *m1, *m2, *f;
     int i, j, skip;

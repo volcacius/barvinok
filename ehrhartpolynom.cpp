@@ -636,6 +636,7 @@ static void   pn_to_evalue(const PeriodicNumber& pn,
       map<string,int> new_bound_vars=bound_vars;
       assert(new_bound_vars.find(name)==new_bound_vars.end());
       new_bound_vars[name]=i;
+      value_init(ev.x.p->arr[i].x.n);
       pn_to_evalue(pn, new_bound_vars, new_free_vars,
                    ep_parameter_names, ev.x.p->arr[i]);
     }
@@ -1055,14 +1056,13 @@ static EhrhartPolynom convert_evalue(const ::evalue e,
 	  PeriodicNumber pn(param_name_set, period_map);
 	  map<string,int> index;
 	  index[name]=i;
-	  Value one1, one2;
-	  value_init(one1);
-	  value_init(one2);
-	  value_set_si(one1, 1);
-	  value_set_si(one2, 1);
-	  value_assign(pn[index],one1);
-	  EhrhartPolynom ep(exponent, EhrhartPolynom::periodic_rational(pn, one2));
+	  Value one;
+	  value_init(one);
+	  value_set_si(one, 1);
+	  value_set_si(pn[index], 1);
+	  EhrhartPolynom ep(exponent, EhrhartPolynom::periodic_rational(pn, one));
 	  result += ep * convert_evalue(en->arr[i], parameter_names);
+	  value_clear(one);
 	}
       }
       break;
@@ -1534,6 +1534,7 @@ EhrhartPolynom::translate_one_term
     for(int i=0;i<exp+1;i++) {
       set<map<string,int> > new_terms = 
 	find_terms_with_var_exp(terms, var_name, i);
+      value_clear(result->arr[i].d);
       result->arr[i] = translate_one_term(parameter_names,
 					  left_over_var_names,
 					  new_terms);
