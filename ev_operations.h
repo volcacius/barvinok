@@ -23,6 +23,7 @@
 #define reduce_evalue _new_reduce
 #define compute_evalue _new_compute_evalue
 #define compute_poly _new_compute_poly
+#define in_domain _new_in_domain
 
 typedef enum { polynomial, periodic, evector, modulo, relation, 
                partition } enode_type;
@@ -77,6 +78,7 @@ void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void eadd(evalue *e1,evalue *res);
 void emul (evalue *e1, evalue *res );
+int in_domain(Polyhedron *P, Value *list_args);
 double compute_evalue(evalue *e,Value *list_args);
 Value *compute_poly(Enumeration *en,Value *list_args);
 #endif

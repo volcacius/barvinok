@@ -876,6 +876,55 @@ void free_evalue_refs(evalue *e) {
   return;
 } /* free_evalue_refs */
 
+/********************************************************/
+/* function in domain                                   */
+/*    check if the parameters in list_args              */
+/*    verifies the constraints of Polyhedron P          */
+/********************************************************/
+int in_domain(Polyhedron *P, Value *list_args) {
+  
+  int col,row;
+  Value v; /* value of the constraint of a row when
+	       parameters are instanciated*/
+  Value tmp;
+
+  value_init(v); 
+  value_init(tmp);
+  
+  /*P->Constraint constraint matrice of polyhedron P*/  
+  for(row=0;row<P->NbConstraints;row++) {
+    value_assign(v,P->Constraint[row][P->Dimension+1]); /*constant part*/
+    for(col=1;col<P->Dimension+1;col++) {
+      value_multiply(tmp,P->Constraint[row][col],list_args[col-1]);
+      value_addto(v,v,tmp);
+    }  
+    if (value_notzero_p(P->Constraint[row][0])) {
+	
+      /*if v is not >=0 then this constraint is not respected */
+      if (value_neg_p(v)) {
+	value_clear(v);
+	value_clear(tmp);
+	return 0;
+      }	
+    }
+    else {
+      
+      /*if v is not = 0 then this constraint is not respected */
+      if (value_notzero_p(v)) {
+	value_clear(v);
+	value_clear(tmp);
+	return 0;
+      }
+    }
+  }
+  
+  /*if not return before this point => all 
+    the constraints are respected */
+  value_clear(v);
+  value_clear(tmp);
+  return 1;
+} /* in_domain */
+
 /****************************************************/
 /* function compute enode                           */
 /*     compute the value of enode p with parameters */
