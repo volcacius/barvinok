@@ -16,6 +16,7 @@
  */
 
 struct option options[] = {
+    { "convert",   no_argument,  0,  'c' },
     { "range",	no_argument,	0,  'r' },
     { 0, 0, 0, 0 }
 };
@@ -30,9 +31,13 @@ int main(int argc, char **argv)
     evalue *EP;
     int c, ind = 0;
     int range = 0;
+    int convert = 0;
 
-    while ((c = getopt_long(argc, argv, "r", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "cr", options, &ind)) != -1) {
 	switch (c) {
+	case 'c':
+	    convert = 1;
+	    break;
 	case 'r':
 	    range = 1;
 	    break;
@@ -55,9 +60,14 @@ int main(int argc, char **argv)
     printf("exist: %d, nparam: %d\n", exist, nparam);
     param_name = Read_ParamNames(stdin, nparam);
     EP = barvinok_enumerate_e(A, exist, nparam, 600);
+    reduce_evalue(EP);
     if (range)
 	evalue_range_reduction(EP);
     print_evalue(stdout, EP, param_name);
+    if (convert) {
+	evalue_mod2table(EP, nparam);
+	print_evalue(stdout, EP, param_name);
+    }
     free_evalue_refs(EP);
     free(EP);
     Free_ParamNames(param_name, nparam);
