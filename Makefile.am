@@ -1,15 +1,18 @@
 MONAPATH = @MONAPATH@
 MONA_OBJ = @MONA_OBJ@
 
+lib_LTLIBRARIES = libparker.la
+libparker_la_SOURCES = \
+	construction.c \
+	count_paths.c \
+	count_solutions.cc
+
 noinst_PROGRAMS = occ
 occ_SOURCES = \
 	Exit.cc \
 	lex.yy.cc \
-	y.tab.cc \
-	construction.c \
-	count_paths.c \
-	count_solutions.cc
-LDADD = -lcode_gen -lomega $(MONA_OBJ)
+	y.tab.cc
+LDADD = -lcode_gen -lomega $(MONA_OBJ) libparker.la
 
 YACC_FLAGS = -d
 
