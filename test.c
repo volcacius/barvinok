@@ -29,8 +29,11 @@ int main()
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    C = Polyhedron_Polar(B, 600);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
+	    Polyhedron_Free(C);
+	    Polyhedron_Free(B);
 	    break;
 	}
+	Polyhedron_Free(A);
     }
 
     return 0;
