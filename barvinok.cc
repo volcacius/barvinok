@@ -2002,6 +2002,22 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
     }
 
     int r;
+    for (r = 0; r < P->NbRays; ++r)
+	if (value_zero_p(P->Ray[r][0]) ||
+		value_zero_p(P->Ray[r][P->Dimension+1])) {
+	    int i;
+	    for (i = nvar; i < nvar + exist; ++i)
+		if (value_notzero_p(P->Ray[r][i+1]))
+		    break;
+	    if (i >= nvar + exist)
+		break;
+	}
+    if (r <  P->NbRays) {
+	evalue *EP = new_zero_ep();
+	value_set_si(EP->x.n, -1);
+	return EP;
+    }
+
     int first;
     for (r = 0; r < P->NbEq; ++r)
 	if ((first = First_Non_Zero(P->Constraint[r]+1+nvar, exist)) != -1)
