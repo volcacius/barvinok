@@ -656,6 +656,65 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
     value_clear(tmp);
 }
 
+static evalue *multi_monom(vec_ZZ& p)
+{
+    evalue *X = new evalue();
+    value_init(X->d);
+    value_init(X->x.n);
+    unsigned nparam = p.length()-1;
+    zz2value(p[nparam], X->x.n);
+    value_set_si(X->d, 1);
+    for (int i = 0; i < nparam; ++i) {
+	if (p[i] == 0)
+	    continue;
+	evalue *T = term(i, p[i]);
+	eadd(T, X); 
+	free_evalue_refs(T); 
+	delete T;
+    }
+    return X;
+}
+
+#ifdef USE_MODULO
+static void mask(Matrix *f, evalue *factor)
+{
+    int nr = f->NbRows, nc = f->NbColumns;
+    int n;
+    bool found = false;
+    for (n = 0; n < nr && value_notzero_p(f->p[n][nc-1]); ++n)
+	if (value_notone_p(f->p[n][nc-1]) &&
+	    value_notmone_p(f->p[n][nc-1]))
+		found = true;
+    if (!found)
+	return;
+
+    evalue EP;
+    nr = n;
+
+    for (n = 0; n < nr; ++n) {
+	if (value_one_p(f->p[n][nc-1]) ||
+	    value_mone_p(f->p[n][nc-1]))
+	    continue;
+	value_init(EP.d);
+	value_set_si(EP.d, 0);
+	EP.x.p = new_enode(indicator, 2, 0);
+	value_clear(EP.x.p->arr[1].d);
+	EP.x.p->arr[1] = *factor;
+	evalue *ev = &EP.x.p->arr[0];
+	value_set_si(ev->d, 0);
+	ev->x.p = new_enode(modulo, 3, VALUE_TO_INT(f->p[n][nc-1]));
+	evalue_set_si(&ev->x.p->arr[1], 0, 1);
+	evalue_set_si(&ev->x.p->arr[2], 1, 1);
+	vec_ZZ row;
+	values2zz(f->p[n], row, nc-1);
+	evalue *E = multi_monom(row);
+	value_clear(ev->x.p->arr[0].d);
+	ev->x.p->arr[0] = *E;
+	delete E;
+	*factor = EP;
+    }
+}
+#else
 /*
  * 
  */
@@ -700,25 +759,7 @@ static void mask(Matrix *f, evalue *factor)
     emul(&EP,factor); 
     free_evalue_refs(&EP);
 }
-
-static evalue *multi_monom(vec_ZZ& p)
-{
-    evalue *X = new evalue();
-    value_init(X->d);
-    value_init(X->x.n);
-    unsigned nparam = p.length()-1;
-    zz2value(p[nparam], X->x.n);
-    value_set_si(X->d, 1);
-    for (int i = 0; i < nparam; ++i) {
-	if (p[i] == 0)
-	    continue;
-	evalue *T = term(i, p[i]);
-	eadd(T, X); 
-	free_evalue_refs(T); 
-	delete T;
-    }
-    return X;
-}
+#endif
 
 struct term_info {
     evalue	   *E;
