@@ -2188,6 +2188,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 #endif /* DEBUG_ER */
 	nparam -= CT->NbColumns - CT->NbRows;
 	EP = barvinok_enumerate_e(I, exist, nparam, MaxRays);
+	nparam += CT->NbColumns - CT->NbRows;
 	addeliminatedparams_enum(EP, CT, CEq, MaxRays, nparam);
 	Polyhedron_Free(I);
     }
