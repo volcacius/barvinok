@@ -690,6 +690,8 @@ static evalue *multi_mononom(vec_ZZ& p)
     evalue_set_si(X, 0, 1);
     unsigned nparam = p.length()-1;
     for (int i = 0; i < nparam; ++i) {
+	if (p[i] == 0)
+	    continue;
 	evalue *T = term(i, p[i]);
 	eadd(T, X); 
 	free_evalue_refs(T); 
