@@ -84,5 +84,6 @@ double compute_evalue(evalue *e,Value *list_args);
 Value *compute_poly(Enumeration *en,Value *list_args);
 void evalue_mod2table(evalue *ev, int nparam);
 size_t evalue_size(evalue *e);
+size_t domain_size(Polyhedron *D);
 
 #endif
