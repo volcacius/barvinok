@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/times.h>
 #include <polylib/polylibgmp.h>
 #include <util.h>
 #include <barvinok.h>
@@ -14,6 +16,14 @@ void manual_count(Polyhedron *P, Value* result)
     free(v);
     Enumeration_Free(en);
     Polyhedron_Free(U);
+}
+
+static void time_diff(struct tms *before, struct tms *after)
+{
+    long ticks = sysconf(_SC_CLK_TCK);
+    printf("User: %g; Sys: %g\n", 
+	    (0.0 + after->tms_utime - before->tms_utime) / ticks,
+	    (0.0 + after->tms_stime - before->tms_stime) / ticks);
 }
 
 int main()
@@ -65,18 +75,26 @@ int main()
 	    Domain_Free(C);
 	    break;
 	case 4: {
-	    Value c;
-	    value_init(c);
-	    printf("manual: ");
-	    manual_count(A, &c);
-	    value_print(stdout, P_VALUE_FMT, c);
-	    puts("");
+	    Value cm, cb;
+	    struct tms tms_before, tms_between, tms_after;
+	    value_init(cm);
+	    value_init(cb);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    count(A, &c);
-	    printf("Barvinok: ");
-	    value_print(stdout, P_VALUE_FMT, c);
+	    times(&tms_before);
+	    manual_count(A, &cm);
+	    times(&tms_between);
+	    count(A, &cb);
+	    times(&tms_after);
+	    printf("manual: ");
+	    value_print(stdout, P_VALUE_FMT, cm);
 	    puts("");
-	    value_clear(c);
+	    time_diff(&tms_before, &tms_between);
+	    printf("Barvinok: ");
+	    value_print(stdout, P_VALUE_FMT, cb);
+	    puts("");
+	    time_diff(&tms_between, &tms_after);
+	    value_clear(cm);
+	    value_clear(cb);
 	    break;
 	}
 	case 5:
