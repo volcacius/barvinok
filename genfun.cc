@@ -82,8 +82,25 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
 		ZZ n = term[i]->n.coeff[j][0] * (r->n.coeff[0][1] / g) +
 			   (term[i]->n.coeff[j][1] / g) * r->n.coeff[0][0];
 		ZZ d = term[i]->n.coeff[j][1] / g * r->n.coeff[0][1];
-		term[i]->n.coeff[j][0] = n;
-		term[i]->n.coeff[j][1] = d;
+		if (n != 0) {
+		    term[i]->n.coeff[j][0] = n;
+		    term[i]->n.coeff[j][1] = d;
+		} else {
+		    if (len > 1) {
+			if (j < len-1) {
+			    term[i]->n.power[j] = term[i]->n.power[len-1];
+			    term[i]->n.coeff[j] = term[i]->n.coeff[len-1];
+			}
+			int dim = term[i]->n.power.NumCols();
+			term[i]->n.coeff.SetDims(len-1, 2);
+			term[i]->n.power.SetDims(len-1, dim);
+		    } else {
+			delete term[i];
+			if (i != term.size()-1)
+			    term[i] = term[term.size()-1];
+			term.pop_back();
+		    }
+		}
 	    } else {
 		int dim = term[i]->n.power.NumCols();
 		term[i]->n.coeff.SetDims(len+1, 2);
