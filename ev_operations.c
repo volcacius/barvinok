@@ -2756,6 +2756,72 @@ static Matrix *esum_add_constraint(int nvar, Polyhedron *D, Matrix *C,
     return C;
 }
 
+static void floor2frac_r(evalue *e, int nvar)
+{
+    enode *p;
+    int i;
+    evalue f;
+    evalue *pp;
+
+    if (value_notzero_p(e->d))
+	return;
+
+    p = e->x.p;
+
+    assert(p->type == flooring);
+    for (i = 1; i < p->size; i++)
+	floor2frac_r(&p->arr[i], nvar);
+
+    for (pp = &p->arr[0]; value_zero_p(pp->d); pp = &pp->x.p->arr[0]) {
+	assert(pp->x.p->type == polynomial);
+	pp->x.p->pos -= nvar;
+    }
+
+    value_init(f.d);
+    value_set_si(f.d, 0);
+    f.x.p = new_enode(fractional, 3, -1);
+    evalue_set_si(&f.x.p->arr[1], 0, 1);
+    evalue_set_si(&f.x.p->arr[2], -1, 1);
+    evalue_copy(&f.x.p->arr[0], &p->arr[0]);
+
+    eadd(&f, &p->arr[0]);
+    reorder_terms(p, &p->arr[0]);
+    *e = p->arr[1];
+    free(p);
+    free_evalue_refs(&f);
+}
+
+/* Convert flooring back to fractional and shift position
+ * of the parameters by nvar
+ */
+static void floor2frac(evalue *e, int nvar)
+{
+    floor2frac_r(e, nvar);
+    reduce_evalue(e);
+}
+
+evalue *esum_over_domain_cst(int nvar, Polyhedron *D, Matrix *C)
+{
+    evalue *t;
+    int nparam = D->Dimension - nvar;
+
+    if (C != 0) {
+	C = Matrix_Copy(C);
+	D = Constraints2Polyhedron(C, 0);
+	Matrix_Free(C);
+    }
+
+    t = barvinok_enumerate_e(D, 0, nparam, 0);
+
+    /* Double check that D was not unbounded. */
+    assert(!(value_pos_p(t->d) && value_neg_p(t->x.n)));
+
+    if (C != 0)
+	Polyhedron_Free(D);
+
+    return t;
+}
+
 evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D, 
 			  Matrix *C)
 {
@@ -2802,21 +2868,8 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 
     if (value_notzero_p(e->d)) {
 	evalue *t;
-	int nparam = D->Dimension - nvar;
 
-	if (C != 0) {
-	    C = Matrix_Copy(C);
-	    D = Constraints2Polyhedron(C, 0);
-	    Matrix_Free(C);
-	}
-
-	t = barvinok_enumerate_e(D, 0, nparam, 0);
-
-	/* Double check that D was not unbounded. */
-	assert(!(value_pos_p(t->d) && value_neg_p(t->x.n)));
-
-	if (C != 0)
-	    Polyhedron_Free(D);
+	t = esum_over_domain_cst(nvar, D, C);
 
 	if (!EVALUE_IS_ONE(*e))
 	    emul(e, t);
@@ -2827,6 +2880,25 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     switch (e->x.p->type) {
     case flooring: {
 	evalue *pp = &e->x.p->arr[0];
+
+	if (pp->x.p->pos > nvar) {
+	    /* remainder is independent of the summated vars */
+	    evalue f;
+	    evalue *t;
+
+	    value_init(f.d);
+	    evalue_copy(&f, e);
+	    floor2frac(&f, nvar);
+
+	    t = esum_over_domain_cst(nvar, D, C);
+
+	    emul(&f, t);
+
+	    free_evalue_refs(&f);
+
+	    return t;
+	}
+
 	row = Vector_Alloc(1 + D->Dimension + 1 + 1);
 	poly_denom(pp, &row->p[1 + nvar]);
 	value_set_si(row->p[0], 1);
