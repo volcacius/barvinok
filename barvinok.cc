@@ -389,10 +389,40 @@ static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r)
     }
 }
 
-void normalize(vec_ZZ& vertex, Polyhedron *i, vec_ZZ& lambda, 
+void normalize(Value* values, Polyhedron *i, vec_ZZ& lambda, 
 	       ZZ& sign, ZZ& num, vec_ZZ& den)
 {
     unsigned dim = i->Dimension;
+
+    vec_ZZ vertex;
+    if(!value_one_p(values[dim])) {
+	Matrix* Rays = rays(i);
+	Matrix_Print(stdout, P_VALUE_FMT, Rays);
+	for (int j = 0; j < dim+1; ++j)
+	    value_print(stdout, P_VALUE_FMT, values[j]);
+	puts("");
+	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
+	int ok = Matrix_Inverse(Rays, inv);
+	assert(ok);
+	Matrix_Free(Rays);
+	Rays = rays(i);
+	Matrix_Print(stdout, P_VALUE_FMT, inv);
+	Vector *lambda = Vector_Alloc(dim+1);
+	Vector_Matrix_Product(values, inv, lambda->p);
+	Vector_Print(stdout, P_VALUE_FMT, lambda);
+	Matrix_Free(inv);
+	for (int j = 0; j < dim; ++j)
+	    mpz_cdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
+	value_set_si(lambda->p[dim], 1);
+	Vector_Print(stdout, P_VALUE_FMT, lambda);
+	Vector *A = Vector_Alloc(dim+1);
+	Vector_Matrix_Product(lambda->p, Rays, A->p);
+	Vector_Print(stdout, P_VALUE_FMT, A);
+	Matrix_Free(Rays);
+	values2zz(A->p, vertex, dim);
+    } else
+	values2zz(values, vertex, dim);
+
     int r = 0;
     mat_ZZ rays;
     rays.SetDims(dim, dim);
@@ -498,10 +528,8 @@ void count(Polyhedron *P, Value* result)
 
     int f = 0;
     for (int j = 0; j < P->NbRays; ++j) {
-	vec_ZZ vertex;
-	values2zz(P->Ray[j]+1, vertex, dim);
 	for (Polyhedron *i = vcone[j]; i; i = i->next) {
-	    normalize(vertex, i, lambda, sign[f], num[f], den[f]);
+	    normalize(P->Ray[j]+1, i, lambda, sign[f], num[f], den[f]);
 	    ++f;
 	}
     }
