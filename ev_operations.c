@@ -1962,7 +1962,7 @@ size_t domain_size(Polyhedron *D)
 	for (j = 0; j < D->Dimension+2; ++j)
 	    s += value_size(D->Ray[i][j]);
 
-    return s;
+    return D->next ? s+domain_size(D->next) : s;
 }
 
 size_t enode_size(enode *p) {
@@ -2125,7 +2125,7 @@ void evalue_combine(evalue *e)
 	evs[i] = &e->x.p->arr[2*i+1];
     qsort(evs, e->x.p->size/2, sizeof(evs[0]), evalue_comp);
     p = new_enode(partition, e->x.p->size, -1);
-    for (i = 0, k = 0; i < p->size/2; ++i) {
+    for (i = 0, k = 0; i < e->x.p->size/2; ++i) {
 	if (k == 0 || ecmp(&p->arr[2*k-1], evs[i]) != 0) {
 	    p->arr[2*k] = *(evs[i]-1);
 	    p->arr[2*k+1] = *(evs[i]);
