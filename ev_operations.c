@@ -2551,7 +2551,7 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     return H;
 }
 
-static int reduce_in_domain(evalue *e, Polyhedron *D)
+int reduce_in_domain(evalue *e, Polyhedron *D)
 {
     int i;
     enode *p;

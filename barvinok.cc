@@ -1691,6 +1691,8 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
     return true;
 }
 
+typedef evalue * evalue_p;
+
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     //P = unfringe(P, MaxRays);
@@ -1779,6 +1781,9 @@ out:
 
     unsigned dim = P->Dimension - nparam;
     Polyhedron ** vcone = new Polyhedron_p[PP->nbV];
+    evalue ** vE = new evalue_p[PP->nbV];
+    for (int j = 0; j < PP->nbV; ++j)
+	vE[j] = 0;
     int * npos = new int[PP->nbV];
     int * nneg = new int[PP->nbV];
     ZZ sign;
@@ -1826,6 +1831,11 @@ out:
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    int f = 0;
+	    if (!vE[_i]) {
+		vE[_i] = new evalue;
+		value_init(vE[_i]->d);
+		evalue_set_si(vE[_i], 0, 1);
+
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
 		r = 0;
 		assert(i->NbRays-1 == dim);
@@ -1835,7 +1845,7 @@ out:
 		}
 
 		sign = f < npos[_i] ? 1 : -1;
-		lattice_point(V, i, lambda, &num, pVD);
+		lattice_point(V, i, lambda, &num, 0);
 		normalize(i, lambda, sign, num.constant, den);
 
 		dpoly n(dim, den[0], 1);
@@ -1849,7 +1859,7 @@ out:
 		    d.div(n, c, sign);
 		    evalue EV; 
 		    multi_polynom(c, num.E, &EV);
-		    eadd(&EV , &s[nd].E);
+		    eadd(&EV , vE[_i]);
 		    free_evalue_refs(&EV);
 		    free_evalue_refs(num.E);
 		    delete num.E; 
@@ -1858,7 +1868,7 @@ out:
 		    d.div(n, c, sign);
 		    evalue EV;
 		    uni_polynom(num.pos, c, &EV);
-		    eadd(&EV , &s[nd].E);
+		    eadd(&EV , vE[_i]);
 		    free_evalue_refs(&EV);
 		} else {
 		    mpq_set_si(count, 0, 1);
@@ -1867,12 +1877,16 @@ out:
 		    evalue EV;
 		    value_init(EV.d);
 		    evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
-		    eadd(&EV , &s[nd].E);
+		    eadd(&EV , vE[_i]);
 		    free_evalue_refs(&EV);
 		} 
 		++f;
 	    }
+
+	    }
+	    eadd(vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
+	reduce_in_domain(&s[nd].E, pVD);
 
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
@@ -1900,8 +1914,14 @@ out:
 
     Vector_Free(c);
 
-    for (int j = 0; j < PP->nbV; ++j)
+    for (int j = 0; j < PP->nbV; ++j) {
+	if (vE[j]) {
+	    free_evalue_refs(vE[j]);
+	    delete vE[j];
+	}
 	Domain_Free(vcone[j]);
+    }
+    delete [] vE;
     delete [] vcone;
     delete [] npos;
     delete [] nneg;
