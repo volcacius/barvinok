@@ -1264,6 +1264,9 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
     return;
 }
      
+    if (EVALUE_IS_ZERO(*res))
+	return;
+
     if (value_zero_p(e1->d) && e1->x.p->type == partition) {
         if (value_zero_p(res->d) && res->x.p->type == partition)
 	    emul_partitions(e1, res);
@@ -2718,7 +2721,7 @@ static Matrix *esum_add_constraint(int nvar, Polyhedron *D, Matrix *C,
 evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D, 
 			  Matrix *C)
 {
-    Vector *row;
+    Vector *row = NULL;
     int i;
     evalue *res;
     Matrix *origC;
@@ -2749,21 +2752,22 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	return t;
     }
 
-    row = Vector_Alloc(1 + D->Dimension + 1 + 1);
-
     switch (e->x.p->type) {
     case flooring: {
 	evalue *pp = &e->x.p->arr[0];
+	row = Vector_Alloc(1 + D->Dimension + 1 + 1);
 	poly_denom(pp, &row->p[1 + nvar]);
 	value_set_si(row->p[0], 1);
 	for (pp = &e->x.p->arr[0]; value_zero_p(pp->d); 
 				   pp = &pp->x.p->arr[0]) {
+	    int pos;
 	    assert(pp->x.p->type == polynomial);
-	    value_assign(row->p[pp->x.p->pos], row->p[1+nvar]);
-	    value_division(row->p[pp->x.p->pos], row->p[pp->x.p->pos],
-			   pp->x.p->arr[1].d);
-	    value_multiply(row->p[pp->x.p->pos], row->p[pp->x.p->pos],
-			   pp->x.p->arr[1].x.n);
+	    pos = pp->x.p->pos;
+	    if (pos >= 1 + nvar)
+		++pos;
+	    value_assign(row->p[pos], row->p[1+nvar]);
+	    value_division(row->p[pos], row->p[pos], pp->x.p->arr[1].d);
+	    value_multiply(row->p[pos], row->p[pos], pp->x.p->arr[1].x.n);
 	}
 	value_assign(row->p[1 + D->Dimension + 1], row->p[1+nvar]);
 	value_division(row->p[1 + D->Dimension + 1],
@@ -2777,7 +2781,18 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     }
     case polynomial: {
 	int pos = e->x.p->pos;
-	assert(pos <= nvar);	/* for now */
+
+	if (pos > nvar) {
+	    ALLOC(factor);
+	    value_init(factor->d);
+	    value_set_si(factor->d, 0);
+	    factor->x.p = new_enode(polynomial, 2, pos - nvar);
+	    evalue_set_si(&factor->x.p->arr[0], 0, 1);
+	    evalue_set_si(&factor->x.p->arr[1], 1, 1);
+	    break;
+	}
+
+	row = Vector_Alloc(1 + D->Dimension + 1 + 1);
 	for (i = 0; i < D->NbRays; ++i)
 	    if (value_notzero_p(D->Ray[i][pos]))
 		break;
@@ -2809,18 +2824,22 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     origC = C;
     for (; i < e->x.p->size; ++i) {
 	evalue *t;
-	Matrix *prevC = C;
-	C = esum_add_constraint(nvar, D, C, row);
-	if (prevC != origC)
-	    Matrix_Free(prevC);
+	if (row) {
+	    Matrix *prevC = C;
+	    C = esum_add_constraint(nvar, D, C, row);
+	    if (prevC != origC)
+		Matrix_Free(prevC);
+	}
 	/*
-	Vector_Print(stderr, P_VALUE_FMT, row);
-	Matrix_Print(stderr, P_VALUE_FMT, C);
+	if (row)
+	    Vector_Print(stderr, P_VALUE_FMT, row);
+	if (C)
+	    Matrix_Print(stderr, P_VALUE_FMT, C);
 	*/
 	t = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
 
 	if (t && factor)
-	    emul(factor, t);
+	    emul(&cum, t);
 
 	if (!res)
 	    res = t;
@@ -2841,7 +2860,8 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	free(factor);
     }
 
-    Vector_Free(row);
+    if (row)
+	Vector_Free(row);
 
     return res;
 }
