@@ -94,6 +94,13 @@ AC_TRY_COMPILE([#include <polylib/polylibgmp.h>],
 			  [Polyhedron_Enumerate takes four arguments])],
 	       [AC_MSG_RESULT(3)])
 
+AC_MSG_CHECKING([number of arguments of count_points])
+AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
+	       [count_points(0,NULL,NULL,NULL)],
+	       [AC_MSG_RESULT(4)
+		AC_DEFINE(HAVE_COUNT_POINTS4,[],
+			  [count_points takes four arguments])],
+	       [AC_MSG_RESULT(3)])
 
 AC_ARG_WITH(ntl,
             [  --with-ntl=DIR          DIR Location of NTL],

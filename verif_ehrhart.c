@@ -20,6 +20,14 @@
 #include <barvinok.h>
 #define MAXRAYS 1024
 
+#include "config.h"
+#ifndef HAVE_COUNT_POINTS4
+#define count_points(a,b,c,d) {				\
+	    int cc = count_points(a,b,c);		\
+	    value_set_si(*d,cc);			\
+	}
+#endif
+
 /* define this to print all the results */
 /* else, only a progress bar is printed */
 /* #define PRINT_ALL_RESULTS	 */
@@ -64,7 +72,7 @@ int st;
 int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
 	       int nparam,int pos,Value *z) {
   
-  int cc,k;
+  int k;
   Value c,tmp,*ctmp;
   
   value_init(c); value_init(tmp);
@@ -94,16 +102,13 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
       printf(" ");
 #endif
 
-      /* Count manually the number of points */
-#ifndef INT_COUNT_POINTS
+      /* Manually count the number of points */
       count_points(1,S,z,&tmp);
-#else
-		cc = count_points(1,S,z);
 #ifdef PRINT_ALL_RESULTS
-	printf(", count = %d. ",cc);
+	printf(", count = ");
+	value_print(stdout, P_VALUE_FMT, tmp);
+	printf(". ");
 #endif
-      value_set_si(tmp,cc);
-#endif /* INT_COUNT_POINTS */
 
       if(value_ne(tmp,c)) {
         printf("\n"); 
