@@ -9,4 +9,4 @@ support.
 For NTL this means you have to specify
     NTL_GMP_LIP=on
 
-Sven Verdoolaege
+Sven Verdoolaege <skimo@kotnet.org>
