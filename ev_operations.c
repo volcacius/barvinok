@@ -201,7 +201,21 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
 
     assert(value_zero_p(m->d) && m->x.p->type == fractional);
     assert(m->x.p->size == 3);
-    assert(EVALUE_IS_ONE(m->x.p->arr[2]));
+
+    /* fractional was inverted during reduction
+     * invert it back and move constant in
+     */
+    if (!EVALUE_IS_ONE(m->x.p->arr[2])) {
+	assert(value_pos_p(m->x.p->arr[2].d));
+	assert(value_mone_p(m->x.p->arr[2].x.n));
+	value_set_si(m->x.p->arr[2].x.n, 1);
+	value_increment(m->x.p->arr[1].x.n, m->x.p->arr[1].x.n);
+	assert(value_eq(m->x.p->arr[1].x.n, m->x.p->arr[1].d));
+	value_set_si(m->x.p->arr[1].x.n, 1);
+	eadd(&m->x.p->arr[1], &m->x.p->arr[0]);
+	value_set_si(m->x.p->arr[1].x.n, 0);
+	value_set_si(m->x.p->arr[1].d, 1);
+    }
 
     /* Oops.  Nested identical relations. */
     if (!EVALUE_IS_ZERO(m->x.p->arr[1]))
@@ -450,6 +464,54 @@ you_lose:   	/* OK, lets not do it */
 
 		reorder = 1;
 	    }
+
+	    if (!reorder) {
+		int invert = 0;
+		Value twice;
+		value_init(twice);
+
+		for (pp = &p->arr[0]; value_zero_p(pp->d); 
+				      pp = &pp->x.p->arr[0]) {
+		    f = &pp->x.p->arr[1];
+		    assert(value_pos_p(f->d));
+		    mpz_mul_ui(twice, f->x.n, 2);
+		    if (value_lt(twice, f->d))
+			break;
+		    if (value_eq(twice, f->d))
+			continue;
+		    invert = 1;
+		    break;
+		}
+
+		if (invert) {
+		    value_init(v.d);
+		    value_set_si(v.d, 0);
+		    v.x.p = new_enode(fractional, 3, -1);
+		    evalue_set_si(&v.x.p->arr[1], 0, 1);
+		    poly_denom(&p->arr[0], &twice);
+		    value_assign(v.x.p->arr[1].d, twice);
+		    value_decrement(v.x.p->arr[1].x.n, twice);
+		    evalue_set_si(&v.x.p->arr[2], -1, 1);
+		    evalue_copy(&v.x.p->arr[0], &p->arr[0]);
+
+		    for (pp = &v.x.p->arr[0]; value_zero_p(pp->d); 
+					      pp = &pp->x.p->arr[0]) {
+			f = &pp->x.p->arr[1];
+			value_oppose(f->x.n, f->x.n);
+			mpz_fdiv_r(f->x.n, f->x.n,  f->d);
+		    }
+		    value_division(pp->d, twice, pp->d);
+		    value_multiply(pp->x.n, pp->x.n, pp->d);
+		    value_assign(pp->d, twice);
+		    value_oppose(pp->x.n, pp->x.n);
+		    value_decrement(pp->x.n, pp->x.n);
+		    mpz_fdiv_r(pp->x.n, pp->x.n, pp->d);
+
+		    reorder = 1;
+		}
+
+		value_clear(twice);
+	    }
 	}
 
 	if (reorder) {
@@ -504,6 +566,7 @@ you_lose:   	/* OK, lets not do it */
 	    int reduced = 0;
 	    evalue *m;
 	    m = &p->arr[0];
+
 	    /* Relation was reduced by means of an identical 
 	     * inequality => remove 
 	     */
