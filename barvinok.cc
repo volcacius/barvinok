@@ -605,6 +605,87 @@ static void vertex_period(deque<string>& params,
     value_clear(tmp);
 }
 
+static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *ev)
+{
+    unsigned nparam = lcm->Size;
+
+    if (p == nparam) {
+	Vector * prod = Vector_Alloc(f->NbRows);
+	Matrix_Vector_Product(f, val->p, prod->p);
+	int isint = 1;
+	for (int i = 0; i < nr; ++i) {
+	    value_modulus(prod->p[i], prod->p[i], f->p[i][nparam+1]);
+	    isint &= value_zero_p(prod->p[i]);
+	}
+	value_set_si(ev->d, 1);
+	value_init(ev->x.n);
+	value_set_si(ev->x.n, isint);
+	Vector_Free(prod);
+	return;
+    }
+
+    Value tmp;
+    value_init(tmp);
+    if (value_one_p(lcm->p[p]))
+	mask_r(f, nr, lcm, p+1, val, ev);
+    else { 
+	value_assign(tmp, lcm->p[p]);
+	value_set_si(ev->d, 0);
+	ev->x.p = new_enode(periodic, VALUE_TO_INT(tmp), p+1);
+	do {
+	    value_decrement(tmp, tmp);
+	    value_assign(val->p[p], tmp);
+	    mask_r(f, nr, lcm, p+1, val, &ev->x.p->arr[VALUE_TO_INT(tmp)]);
+	} while (value_pos_p(tmp));
+    }
+    value_clear(tmp);
+}
+
+/*
+ * 
+ */
+static void mask(deque<string>& params, Matrix *f, EhrhartPolynom *factor)
+{
+    int nr = f->NbRows, nc = f->NbColumns;
+    int n;
+    bool found = false;
+    for (n = 0; n < nr && value_notzero_p(f->p[n][nc-1]); ++n)
+	if (value_notone_p(f->p[n][nc-1]) &&
+	    value_notmone_p(f->p[n][nc-1]))
+		found = true;
+    if (!found)
+	return;
+
+    Value tmp;
+    value_init(tmp);
+    nr = n;
+    unsigned np = nc - 2;
+    Vector *lcm = Vector_Alloc(np);
+    Vector *val = Vector_Alloc(nc);
+    Vector_Set(val->p, 0, nc);
+    value_set_si(val->p[np], 1);
+    Vector_Set(lcm->p, 1, np);
+    for (n = 0; n < nr; ++n) {
+	if (value_one_p(f->p[n][nc-1]) ||
+	    value_mone_p(f->p[n][nc-1]))
+	    continue;
+	for (int j = 0; j < np; ++j)
+	    if (value_notzero_p(f->p[n][j])) {
+		Gcd(f->p[n][j], f->p[n][nc-1], &tmp);
+		value_division(tmp, f->p[n][nc-1], tmp);
+		value_lcm(tmp, lcm->p[j], &lcm->p[j]);
+	    }
+    }
+    evalue EP;
+    mask_r(f, nr, lcm, 0, val, &EP);
+    value_init(EP.d);
+    value_clear(tmp);
+    Vector_Free(val);
+    Vector_Free(lcm);
+    *factor *= EhrhartPolynom(&EP, params);
+    free_evalue_refs(&EP);
+}
+
 static EhrhartPolynom *multi_mononom(deque<string>& params, vec_ZZ& p)
 {
     EhrhartPolynom *X = new EhrhartPolynom();
@@ -910,7 +991,7 @@ static EhrhartPolynom *constant(mpq_t c)
 
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
-    Polyhedron *CEq, *rVD, *CA;
+    Polyhedron *CEq = NULL, *rVD, *CA;
     Matrix *CT;
     Param_Polyhedron *PP;
     Param_Domain *D;
@@ -918,6 +999,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Enumeration *en, *res;
     int r = 0;
     unsigned nparam = C->Dimension;
+    EhrhartPolynom factor(1);
 
     res = NULL;
 
@@ -925,10 +1007,14 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     P = DomainIntersection(P, CA, MaxRays);
     Polyhedron_Free(CA);
 
+    deque<string> params, allparams;
+    default_params(params, nparam);
+    allparams = params;
+
     if (C->Dimension == 0 || emptyQ(P)) {
-contant:
+constant:
 	en = (Enumeration *)malloc(sizeof(Enumeration));
-	en->ValidityDomain = Polyhedron_Copy(C);
+	en->ValidityDomain = CEq ? CEq : Polyhedron_Copy(C);
 	en->next = NULL;
 	value_init(en->EP.d);
 	value_set_si(en->EP.d, 1);
@@ -938,22 +1024,25 @@ contant:
 	else
 	    barvinok_count(P, &en->EP.x.n, MaxRays);
 	Polyhedron_Free(P);
+	if (factor != 1) {
+	    evalue EP = en->EP;
+	    EhrhartPolynom E(&EP, allparams);
+	    en->EP = (factor * E).to_evalue(allparams);
+	    reduce_evalue(&en->EP);
+	    free_evalue_refs(&EP);
+	}
 	return en;
     }
 
     if (P->NbEq != 0) {
 	Matrix *f;
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
-	// ignore f for now
+	mask(allparams, f,  &factor);
 	Matrix_Free(f);
 	if (P->Dimension == 0)
-	    goto contant;
+	    goto constant;
     }
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
-
-    deque<string> params, allparams;
-    default_params(params, nparam);
-    allparams = params;
 
     if (isIdentity(CT)) {
 	free(CT);
@@ -963,14 +1052,7 @@ contant:
 	assert(CT->NbRows != CT->NbColumns);
 	if (CT->NbRows == 1) {		// no more parameters
 	    assert(PP->D->next == NULL);
-	    en = (Enumeration *)malloc(sizeof(Enumeration));
-	    en->ValidityDomain = CEq;
-	    en->next = NULL;
-	    value_init(en->EP.d);
-	    value_set_si(en->EP.d, 1);
-	    value_init(en->EP.x.n);
-	    barvinok_count(P, &en->EP.x.n, MaxRays);
-	    return en;
+	    goto constant;
 	}
 	deque<string>::iterator i;
 	params.erase(params.begin(), params.end());
@@ -1108,7 +1190,7 @@ contant:
 	en->next = res;
 	res = en;
 	res->ValidityDomain = rVD;
-	res->EP = EP.to_evalue(allparams);
+	res->EP = (factor * EP).to_evalue(allparams);
 	reduce_evalue(&res->EP);
     }
 
