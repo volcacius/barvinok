@@ -916,6 +916,7 @@ void eadd_partitions (evalue *e1,evalue *res)
     }
 
     free(res->x.p);
+    assert(n > 0);
     res->x.p = new_enode(partition, 2*n, -1);
     for (j = 0; j < n; ++j) {
 	s[j].D = DomainConstraintSimplify(s[j].D, 0);
@@ -1261,12 +1262,16 @@ void emul_partitions (evalue *e1,evalue *res)
     }
 
     free(res->x.p);
-    res->x.p = new_enode(partition, 2*n, -1);
-    for (j = 0; j < n; ++j) {
-	s[j].D = DomainConstraintSimplify(s[j].D, 0);
-	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
-	value_clear(res->x.p->arr[2*j+1].d);
-	res->x.p->arr[2*j+1] = s[j].E;
+    if (n == 0)
+	evalue_set_si(res, 0, 1);
+    else {
+	res->x.p = new_enode(partition, 2*n, -1);
+	for (j = 0; j < n; ++j) {
+	    s[j].D = DomainConstraintSimplify(s[j].D, 0);
+	    EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	    value_clear(res->x.p->arr[2*j+1].d);
+	    res->x.p->arr[2*j+1] = s[j].E;
+	}
     }
 
     free(s);
