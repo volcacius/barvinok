@@ -497,8 +497,8 @@ void barvinok_count(Polyhedron *P, Value* result)
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j, 600);
-	Polyhedron *Polar = Polyhedron_Polar(C, 600);
-	Polyhedron_Free(C);
+	Polyhedron_Polarize(C);
+	Polyhedron *Polar = C;
 
 	Polyhedron *Polars;
 	if (Polar->NbRays - 1 == Polar->Dimension)
@@ -516,23 +516,21 @@ void barvinok_count(Polyhedron *P, Value* result)
 	    barvinok_decompose(Polar, &polpos, &polneg);
 
 	    for (Polyhedron *i = polpos; i; i = i->next) {
-		Polyhedron *A = Polyhedron_Polar(i, 600);
-		*conep = A;
-		conep = &A->next;
-		assert(A->NbRays-1 == dim);
+		Polyhedron_Polarize(i);
+		*conep = i;
+		conep = &i->next;
+		assert(i->NbRays-1 == dim);
 		sign.SetLength(++ncone);
 		sign[ncone-1] = 1;
 	    }
 	    for (Polyhedron *i = polneg; i; i = i->next) {
-		Polyhedron *A = Polyhedron_Polar(i, 600);
-		*conep = A;
-		conep = &A->next;
-		assert(A->NbRays-1 == dim);
+		Polyhedron_Polarize(i);
+		*conep = i;
+		conep = &i->next;
+		assert(i->NbRays-1 == dim);
 		sign.SetLength(++ncone);
 		sign[ncone-1] = -1;
 	    }
-	    Domain_Free(polpos);
-	    Domain_Free(polneg);
 	}
 	Domain_Free(Polars);
     }

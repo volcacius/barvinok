@@ -8,6 +8,27 @@ int random_int(int max) {
     return (int) (((double)(max))*rand()/(RAND_MAX+1.0));
 }
 
+/* Inplace polarization
+ */
+void Polyhedron_Polarize(Polyhedron *P)
+{
+    unsigned NbRows = P->NbConstraints + P->NbRays;
+    int i;
+    Value **q;
+
+    q = (Value **)malloc(NbRows * sizeof(Value *));
+    assert(q);
+    for (i = 0; i < P->NbRays; ++i)
+	q[i] = P->Ray[i];
+    for (; i < NbRows; ++i)
+	q[i] = P->Constraint[i-P->NbRays];
+    P->NbConstraints = NbRows - P->NbConstraints;
+    P->NbRays = NbRows - P->NbRays;
+    free(P->Constraint);
+    P->Constraint = q;
+    P->Ray = q + P->NbConstraints;
+}
+
 /*
  * Rather general polar
  * We can optimize it significantly if we assume that

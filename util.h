@@ -9,6 +9,7 @@ extern "C" {
 
 int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
+void Polyhedron_Polarize(Polyhedron *P);
 Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays);
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons);
 void check_triangulization(Polyhedron *P, Polyhedron *T);
