@@ -1682,6 +1682,61 @@ static void SwapColumns(Polyhedron *P, int i, int j)
     SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
+static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
+			      int nvar, int len, int exist, int MaxRays,
+			      Vector *row, Value& f, bool independent,
+			      Polyhedron **pos, Polyhedron **neg)
+{
+    value_oppose(f, P->Constraint[u][nvar+i+1]);
+    Vector_Combine(P->Constraint[l]+1, P->Constraint[u]+1, 
+		   row->p+1,
+		   f, P->Constraint[l][nvar+i+1], len-1);
+
+    if (independent) {
+	int j;
+	for (j = 0; j < exist; ++j)
+	    if (j != i && value_notzero_p(row->p[nvar+j+1]))
+		break;
+	if (j != exist)
+	    return false;
+    }
+
+    //printf("l: %d, u: %d\n", l, u);
+    value_multiply(f, f, P->Constraint[l][nvar+i+1]);
+    value_substract(row->p[len-1], row->p[len-1], f);
+    value_set_si(f, -1);
+    Vector_Scale(row->p+1, row->p+1, f, len-1);
+    value_decrement(row->p[len-1], row->p[len-1]);
+    Vector_Gcd(row->p+1, len - 2, &f);
+    if (value_notone_p(f)) {
+	Vector_AntiScale(row->p+1, row->p+1, f, len-2);
+	mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
+    }
+    *neg = AddConstraints(row->p, 1, P, MaxRays);
+
+    /* We found an independent, but useless constraint
+     * Maybe we should detect this earlier and not
+     * mark the variable as INDEPENDENT
+     */
+    if (emptyQ((*neg))) {
+	Polyhedron_Free(*neg);
+	return false;
+    }
+
+    value_set_si(f, -1);
+    Vector_Scale(row->p+1, row->p+1, f, len-1);
+    value_decrement(row->p[len-1], row->p[len-1]);
+    *pos = AddConstraints(row->p, 1, P, MaxRays);
+
+    if (emptyQ((*pos))) {
+	Polyhedron_Free(*neg);
+	Polyhedron_Free(*pos);
+	return false;
+    }
+
+    return true;
+}
+
 enum constraint { 
 ALL_POS = 1 << 0,
 ONE_NEG = 1 << 1,
@@ -1931,47 +1986,18 @@ next:
 		for (int u = P->NbEq; u < P->NbConstraints; ++u) {
 		    if (value_posz_p(P->Constraint[u][nvar+i+1]))
 			continue;
-		    value_oppose(f, P->Constraint[u][nvar+i+1]);
-		    Vector_Combine(P->Constraint[l]+1, P->Constraint[u]+1, 
-				   row->p+1,
-				   f, P->Constraint[l][nvar+i+1], len-1);
+		    
+		    Polyhedron *pos, *neg;
 
-		    int j;
-		    for (j = 0; j < exist; ++j)
-			if (j != i && value_notzero_p(row->p[nvar+j+1]))
-			    break;
-		    if (j != exist)
+		    if (!SplitOnConstraint(P, i, l, u, 
+					   nvar, len, exist, MaxRays,
+					   row, f, true,
+				           &pos, &neg))
 			continue;
 
-		    //printf("l: %d, u: %d\n", l, u);
-		    value_multiply(f, f, P->Constraint[l][nvar+i+1]);
-		    value_substract(row->p[len-1], row->p[len-1], f);
-		    value_set_si(f, -1);
-		    Vector_Scale(row->p+1, row->p+1, f, len-1);
-		    value_decrement(row->p[len-1], row->p[len-1]);
-		    Vector_Gcd(row->p+1, len - 2, &f);
-		    if (value_notone_p(f)) {
-			Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
-		    }
-		    Polyhedron *neg = AddConstraints(row->p, 1, P, MaxRays);
-
-		    /* We found an independent, but useless constraint
-		     * Maybe we should detect this earlier and not
-		     * mark the variable as INDEPENDENT
-		     */
-		    if (emptyQ(neg)) {
-			Polyhedron_Free(neg);
-			continue;
-		    }
 #ifdef DEBUG_ER
 		    fprintf(stderr, "\nER: Split\n");
 #endif /* DEBUG_ER */
-
-		    value_set_si(f, -1);
-		    Vector_Scale(row->p+1, row->p+1, f, len-1);
-		    value_decrement(row->p[len-1], row->p[len-1]);
-		    Polyhedron *pos = AddConstraints(row->p, 1, P, MaxRays);
 
 		    assert(i == 0); // for now
 		    evalue *EP = 
