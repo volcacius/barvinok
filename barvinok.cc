@@ -701,12 +701,14 @@ static void mask(Matrix *f, evalue *factor)
     free_evalue_refs(&EP);
 }
 
-static evalue *multi_mononom(vec_ZZ& p)
+static evalue *multi_monom(vec_ZZ& p)
 {
     evalue *X = new evalue();
     value_init(X->d);
-    evalue_set_si(X, 0, 1);
+    value_init(X->x.n);
     unsigned nparam = p.length()-1;
+    zz2value(p[nparam], X->x.n);
+    value_set_si(X->d, 1);
     for (int i = 0; i < nparam; ++i) {
 	if (p[i] == 0)
 	    continue;
@@ -744,7 +746,7 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
     vec_ZZ num;
     num = lambda * vertex;
 
-    evalue *EP = multi_mononom(num);
+    evalue *EP = multi_monom(num);
 
     evalue tmp;
     value_init(tmp.d);
@@ -753,9 +755,6 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
     value_assign(tmp.d, lcm);
 
     emul(&tmp, EP);
-
-    zz2value(num[nparam],tmp.x.n);
-    eadd(&tmp, EP);
 
     Matrix *L = Matrix_Alloc(inv->NbRows, W->NbColumns);
     Matrix_Product(inv, W, L);
@@ -812,10 +811,7 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
 	    value_assign(tmp.d, gcd);
 	    eadd(&tmp, EP);
 	} else {
-	    evalue *E = multi_mononom(num);
-	    zz2value(num[nparam],tmp.x.n);
-	    value_set_si(tmp.d, 1);
-	    eadd(&tmp, E);
+	    evalue *E = multi_monom(num);
 
 	    evalue EV;
 	    value_init(EV.d);
@@ -915,8 +911,8 @@ void lattice_point(
 	    p = j;
 	}
     if (nn >= 2) {
-	term->E = multi_mononom(num);
-	term->constant = num[nparam];
+	term->E = multi_monom(num);
+	term->constant = 0;
     } else {
 	term->E = NULL;
 	term->constant = num[nparam];
