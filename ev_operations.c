@@ -220,6 +220,16 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   return;
 } /* print_enode */ 
 
+static void eadd_rev(evalue *e1, evalue *res)
+{
+    evalue ev;
+    value_init(ev.d);
+    evalue_copy(&ev, e1);
+    eadd(res, &ev);
+    free_evalue_refs(res);	  
+    *res = ev;
+}
+
 static void eadd_rev_cst (evalue *e1, evalue *res)
 {
     evalue ev;
@@ -332,10 +342,13 @@ void eadd(evalue *e1,evalue *res) {
 		        case periodic:  // res and e1 are pointers to periodic numbers
 				  //add e1 to all elements of res 
 				   
+			    if(res->x.p->pos < e1->x.p->pos)
 			          for (i=0;i<res->x.p->size;i++) {
 			               eadd(e1,&res->x.p->arr[i]);
 			          }
-			          return;
+			    else
+				eadd_rev(e1, res);
+			    return;
 			}
 	         }  
                  
