@@ -1112,14 +1112,7 @@ void eadd(evalue *e1,evalue *res) {
 	    	           	    
 	               ne->x.p=new_enode(res->x.p->type,p, res->x.p->pos);
 	               for(i=0;i<p;i++)  {
-		              value_assign(ne->x.p->arr[i].d, res->x.p->arr[i%y].d);
-		              if (value_notzero_p(ne->x.p->arr[i].d))   {
-				value_init(ne->x.p->arr[i].x.n);
-				value_assign(ne->x.p->arr[i].x.n, res->x.p->arr[i%y].x.n);
-		              }
-		              else { 
-			          ne->x.p->arr[i].x.p =ecopy(res->x.p->arr[i%y].x.p);
-		              }
+			  evalue_copy(&ne->x.p->arr[i], &res->x.p->arr[i%y]);
 	               }
 	               for(i=0;i<p;i++)  {
 	                    eadd(&e1->x.p->arr[i%x], &ne->x.p->arr[i]);
@@ -1332,14 +1325,8 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		    value_set_si( newp->d,0);
 		    newp->x.p=new_enode(periodic,lcm, e1->x.p->pos);
 		        for(i=0;i<lcm;i++)  {
-		           value_assign(newp->x.p->arr[i].d, res->x.p->arr[i%iy].d);
-			   if (value_notzero_p(newp->x.p->arr[i].d))   {
-			   value_assign(newp->x.p->arr[i].x.n, res->x.p->arr[i%iy].x.n);
-			   }
-			   else {
-			   newp->x.p->arr[i].x.p =ecopy(res->x.p->arr[i%iy].x.p);	   
-			   }
-
+		           evalue_copy(&newp->x.p->arr[i], 
+				       &res->x.p->arr[i%iy]);
 			}
 			for(i=0;i<lcm;i++)  
 		            emul(&e1->x.p->arr[i%ix], &newp->x.p->arr[i]);		
