@@ -2587,6 +2587,17 @@ next:
     if (EP)
 	return EP;
 
+    Polyhedron *F = unfringe(P, MaxRays);
+    if (!PolyhedronIncludes(F, P)) {
+#ifdef DEBUG_ER
+	fprintf(stderr, "\nER: Fringed\n");
+#endif /* DEBUG_ER */
+	EP = barvinok_enumerate_e(F, exist, nparam, MaxRays);
+	Polyhedron_Free(F);
+	return EP;
+    }
+    Polyhedron_Free(F);
+
     Polyhedron *O = P;
     EP = enumerate_vd(&P, exist, nparam, MaxRays);
     if (EP) {
