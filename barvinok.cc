@@ -591,7 +591,7 @@ void decompose(Polyhedron *cone, Polyhedron **parts, int *npos, int *nneg, unsig
 
 const int MAX_TRY=10;
 /*
- * Searches for a vector that is not othogonal to any
+ * Searches for a vector that is not orthogonal to any
  * of the rays in rays.
  */
 static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
