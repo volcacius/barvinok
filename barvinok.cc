@@ -1752,6 +1752,42 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
     return true;
 }
 
+/*
+ * unimodularly transform P such that constraint r is transformed
+ * into a constraint that involves only a single (the first)
+ * existential variable
+ *
+ */
+static Polyhedron *rotate_along(Polyhedron *P, int r, int nvar, int exist,
+				unsigned MaxRays)
+{
+    Value g;
+    value_init(g);
+
+    Vector *row = Vector_Alloc(exist);
+    Vector_Copy(P->Constraint[r]+1+nvar, row->p, exist);
+    Vector_Gcd(row->p, exist, &g);
+    if (value_notone_p(g))
+	Vector_AntiScale(row->p, row->p, g, exist);
+    value_clear(g);
+
+    Matrix *M = unimodular_complete(row);
+    Matrix *M2 = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
+    for (r = 0; r < nvar; ++r)
+	value_set_si(M2->p[r][r], 1);
+    for ( ; r < nvar+exist; ++r)
+	Vector_Copy(M->p[r-nvar], M2->p[r]+nvar, exist);
+    for ( ; r < P->Dimension+1; ++r)
+	value_set_si(M2->p[r][r], 1);
+    Polyhedron *T = Polyhedron_Image(P, M2, MaxRays);
+
+    Matrix_Free(M2);
+    Matrix_Free(M);
+    Vector_Free(row);
+
+    return T;
+}
+
 static bool SplitOnVar(Polyhedron *P, int i, 
 			      int nvar, int len, int exist, int MaxRays,
 			      Vector *row, Value& f, bool independent,
@@ -1843,33 +1879,12 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
     if (r < P->NbEq) {
 	if (First_Non_Zero(P->Constraint[r]+1+nvar+first+1, 
 			   exist-first-1) != -1) {
-	    Value g;
-	    value_init(g);
-
-	    Vector *row = Vector_Alloc(exist);
-	    Vector_Copy(P->Constraint[r]+1+nvar, row->p, exist);
-	    Vector_Gcd(row->p, exist, &g);
-	    if (value_notone_p(g))
-		Vector_AntiScale(row->p, row->p, g, exist);
-	    value_clear(g);
-
-	    Matrix *M = unimodular_complete(row);
-	    Matrix *M2 = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
-	    for (r = 0; r < nvar; ++r)
-		value_set_si(M2->p[r][r], 1);
-	    for ( ; r < nvar+exist; ++r)
-		Vector_Copy(M->p[r-nvar], M2->p[r]+nvar, exist);
-	    for ( ; r < P->Dimension+1; ++r)
-		value_set_si(M2->p[r][r], 1);
-	    Polyhedron *T = Polyhedron_Image(P, M2, MaxRays);
+	    Polyhedron *T = rotate_along(P, r, nvar, exist, MaxRays);
 #ifdef DEBUG_ER
 	    fprintf(stderr, "\nER: Equality\n");
 #endif /* DEBUG_ER */
 	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
 	    Polyhedron_Free(T);
-	    Matrix_Free(M2);
-	    Matrix_Free(M);
-	    Vector_Free(row);
 	    return EP;
 	} else {
 #ifdef DEBUG_ER
