@@ -72,16 +72,16 @@ long long Enumeration_bitsize(Enumeration *en)
     return s;
 }
 
-Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
-    static Enumeration *(*orig)(Polyhedron *, Polyhedron *c, unsigned) = NULL;
-    Enumeration *res;
+    static evalue *(*orig)(Polyhedron *, Polyhedron *c, unsigned) = NULL;
+    evalue *res;
     int c;
 
     if (!orig) {
 	void *handle = dlopen("libbarvinok.so", RTLD_LAZY);
 	assert(handle);
-	orig = dlsym(handle, "barvinok_enumerate");
+	orig = dlsym(handle, "barvinok_enumerate_ev");
 	assert(orig);
 	dlclose(handle);
     }
@@ -89,7 +89,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     res = orig(P, C, MaxRays);
 
     fprintf(stderr, "SIZE: %d %lld %lld\n", P->Dimension - P->NbEq,
-	domain_bitsize(P) + domain_bitsize(C), Enumeration_bitsize(res));
+	domain_bitsize(P) + domain_bitsize(C), evalue_bitsize(res));
 
     return res;
 }
