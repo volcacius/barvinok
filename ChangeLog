@@ -1,3 +1,10 @@
+version: 0.14
+date: Wed Nov 17 19:22:23 CET 2004
+changes:
+    - use code for computing series to count non-parametric polytopes
+    - add conversion from series to explicit function
+    - fix removal of redundant equalities
+---
 version: 0.13
 date: Sat Oct 16 12:13:30 CEST 2004
 changes:
@@ -6,6 +13,7 @@ changes:
     - fix bug in reduction
     - handle empty PIP solution
     - add utility to remove equalities
+---
 version: 0.12
 date: Sun Oct  3 20:47:11 CEST 2004
 changes:
@@ -14,6 +22,7 @@ changes:
     - add patch for NTL 5.3.2
     - experimental support for Ehrhart series
     - compile fix on systems that lack <getopt.h>
+---
 version: 0.11
 date: Sat Sep 18 14:49:40 CEST 2004
 changes:
