@@ -1841,10 +1841,32 @@ ONE_NEG = 1 << 1,
 INDEPENDENT = 1 << 2,
 };
 
+#ifdef DEBUG_ER
+static int er_level = 0;
+
+static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
+			  unsigned exist, unsigned nparam, unsigned MaxRays);
+
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
-    //Polyhedron_Print(stderr, P_VALUE_FMT, P);
+    fprintf(stderr, "\nER: level %i\n", er_level);
+    int nvar = P->Dimension - exist - nparam;
+    fprintf(stderr, "%d %d %d\n", nvar, exist, nparam);
+
+    Polyhedron_Print(stderr, P_VALUE_FMT, P);
+    ++er_level;
+    evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, MaxRays);
+    --er_level;
+    return EP;
+}
+static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+#else
+evalue* barvinok_enumerate_e(Polyhedron *P, 
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+#endif
+{
     if (exist == 0) {
 	Polyhedron *U = Universe_Polyhedron(nparam);
 	evalue *EP = barvinok_enumerate_ev(P, U, MaxRays);
@@ -1868,8 +1890,6 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 	    value_set_si(EP->x.n, 1);
 	return EP;
     }
-
-    //printf("%d %d %d\n", nvar, exist, nparam);
 
     int r;
     int first;
