@@ -8,6 +8,7 @@
 
 struct option options[] = {
     { "convert",   no_argument,  0,  'c' },
+    { "size",      no_argument,  0,  's' },
     { 0, 0, 0, 0 }
 };
 
@@ -20,11 +21,15 @@ int main(int argc, char **argv)
     char **param_name;
     int c, ind = 0;
     int convert = 0;
+    int size = 0;
 
-    while ((c = getopt_long(argc, argv, "c", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "cs", options, &ind)) != -1) {
 	switch (c) {
 	case 'c':
 	    convert = 1;
+	    break;
+	case 's':
+	    size = 1;
 	    break;
 	}
     }
@@ -40,9 +45,13 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, C->Dimension);
     en = barvinok_enumerate(A, C, 600);
     Enumeration_Print(stdout, en, param_name);
+    if (size)
+	printf("\nSize: %d\n", Enumeration_size(en));
     if (convert) {
 	Enumeration_mod2table(en, C->Dimension);
 	Enumeration_Print(stdout, en, param_name);
+	if (size)
+	    printf("\nSize: %d\n", Enumeration_size(en));
     }
     Enumeration_Free(en);
     Free_ParamNames(param_name, C->Dimension);
