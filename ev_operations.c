@@ -276,7 +276,7 @@ struct section { Polyhedron * D; evalue E; };
 
 void eadd_partitions (evalue *e1,evalue *res)
 {
-    int n, i, j, final;
+    int n, i, j;
     Polyhedron *d, *fd;
     struct section *s;
     s = (struct section *) 
@@ -391,6 +391,10 @@ void eadd(evalue *e1,evalue *res) {
 	  case partition:
 		assert(EVALUE_IS_ZERO(*e1));
 		break;				/* Do nothing */
+	  case relation:
+		for (i = 1; i < res->x.p->size; ++i)
+		    eadd(e1, &res->x.p->arr[i]);
+		break;
 	  default:
 		assert(0);
 	  }
@@ -407,6 +411,15 @@ void eadd(evalue *e1,evalue *res) {
 	         (res->x.p->type == partition)));
 	if (e1->x.p->type == partition) {
 	    eadd_partitions(e1, res);
+	    return;
+	}
+	if (e1->x.p->type == relation) {
+	    eadd_rev(e1, res);
+	    return;
+	}
+	if (res->x.p->type == relation) {
+	    for (i = 1; i < res->x.p->size; ++i)
+		eadd(e1, &res->x.p->arr[i]);
 	    return;
 	}
                  if ((e1->x.p->type != res->x.p->type) ) {
@@ -842,6 +855,87 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    }
    
    return ;
+}
+
+/* Frees mask ! */
+void emask(evalue *mask, evalue *res) {
+    int n, i, j;
+    Polyhedron *d, *fd;
+    struct section *s;
+    evalue mone;
+
+    assert(mask->x.p->type == partition);
+    assert(res->x.p->type == partition);
+
+    s = (struct section *) 
+	    malloc((mask->x.p->size/2+1) * (res->x.p->size/2) * 
+		   sizeof(struct section));
+    assert(s);
+
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+
+    n = 0;
+    for (j = 0; j < res->x.p->size/2; ++j) {
+	assert(mask->x.p->size >= 2);
+	fd = DomainDifference(EVALUE_DOMAIN(res->x.p->arr[2*j]),
+			      EVALUE_DOMAIN(mask->x.p->arr[0]), 0);
+	if (!emptyQ(fd))
+	    for (i = 1; i < mask->x.p->size/2; ++i) {
+		Polyhedron *t = fd;
+		fd = DomainDifference(fd, EVALUE_DOMAIN(mask->x.p->arr[2*i]), 0);
+		Domain_Free(t);
+		if (emptyQ(fd))
+		    break;
+	    }
+	if (emptyQ(fd)) {
+	    Domain_Free(fd);
+	    continue;
+	}
+	value_init(s[n].E.d);
+	evalue_copy(&s[n].E, &res->x.p->arr[2*j+1]);
+	s[n].D = fd;
+	++n;
+    }
+    for (i = 0; i < mask->x.p->size/2; ++i) {
+	fd = EVALUE_DOMAIN(mask->x.p->arr[2*i]);
+	eadd(&mone, &mask->x.p->arr[2*i+1]);
+	emul(&mone, &mask->x.p->arr[2*i+1]);
+	for (j = 0; j < res->x.p->size/2; ++j) {
+	    Polyhedron *t;
+	    d = DomainIntersection(EVALUE_DOMAIN(res->x.p->arr[2*j]),
+				   EVALUE_DOMAIN(mask->x.p->arr[2*i]), 0);
+	    if (emptyQ(d)) {
+		Domain_Free(d);
+		continue;
+	    }
+	    t = fd;
+	    fd = DomainDifference(fd, EVALUE_DOMAIN(res->x.p->arr[2*j]), 0);
+	    if (t != EVALUE_DOMAIN(mask->x.p->arr[2*i]))
+		Domain_Free(t);
+	    value_init(s[n].E.d);
+	    evalue_copy(&s[n].E, &mask->x.p->arr[2*i+1]);
+	    emul(&res->x.p->arr[2*j+1], &s[n].E);
+	    s[n].D = d;
+	    ++n;
+	}
+	if (!emptyQ(fd)) {
+	    assert(0);		// We don't allow this.
+	}
+    }
+
+    free_evalue_refs(&mone);
+    free_evalue_refs(mask);
+    free_evalue_refs(res);
+    value_init(res->d);
+    res->x.p = new_enode(partition, 2*n, -1);
+    for (j = 0; j < n; ++j) {
+	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	value_clear(res->x.p->arr[2*j+1].d);
+	res->x.p->arr[2*j+1] = s[j].E;
+    }
+
+    free(s);
 }
 
 void evalue_copy(evalue *dst, evalue *src)

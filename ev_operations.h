@@ -78,6 +78,7 @@ void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void eadd(evalue *e1,evalue *res);
 void emul (evalue *e1, evalue *res );
+void emask(evalue *mask, evalue *res);
 int in_domain(Polyhedron *P, Value *list_args);
 double compute_evalue(evalue *e,Value *list_args);
 Value *compute_poly(Enumeration *en,Value *list_args);
