@@ -1342,9 +1342,8 @@ typedef Polyhedron * Polyhedron_p;
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
     Polyhedron ** vcone;
-    vec_ZZ sign;
+    ZZ sign;
     int ncone = 0;
-    sign.SetLength(ncone);
     unsigned dim;
     int allocated = 0;
     Value factor;
@@ -1390,7 +1389,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     }
 
     dim = P->Dimension;
-    vcone = new Polyhedron_p[P->NbRays];
 
     vec_ZZ lambda;
     //nonorthog(rays, lambda);
@@ -1404,22 +1402,20 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     vec_ZZ den;
     den.SetLength(dim);
 
-    int f = 0;
     vec_ZZ vertex;
     mpq_t count;
     mpq_init(count);
 
     for (int j = 0; j < P->NbRays; ++j) {
+	Polyhedron *vcone;
 	int npos, nneg;
 	Polyhedron *C = supporting_cone(P, j);
-	decompose(C, &vcone[j], &npos, &nneg, NbMaxCons);
+	decompose(C, &vcone, &npos, &nneg, NbMaxCons);
 	ncone += npos + nneg;
-	sign.SetLength(ncone);
-	for (int k = 0; k < npos; ++k)
-	    sign[ncone-nneg-k-1] = 1;
-	for (int k = 0; k < nneg; ++k)
-	    sign[ncone-k-1] = -1;
-	for (Polyhedron *i = vcone[j]; i; i = i->next) {
+
+	Polyhedron *i;
+	int l;
+	for (i = vcone, l = 0; i; i = i->next, ++l) {
 	    r = 0;
 	    assert(i->NbRays-1 == dim);
 	    add_rays(rays, i, &r);
@@ -1427,9 +1423,11 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 		assert(lambda * rays[k] != 0);
 	    }
 
+	    sign = (l < npos) ? 1 : -1;
+
 	    lattice_point(P->Ray[j]+1, i, vertex);
 	    num = vertex * lambda;
-	    normalize(i, lambda, sign[f], num, den);
+	    normalize(i, lambda, sign, num, den);
 
 	    dpoly d(dim, num);
 	    dpoly n(dim, den[0], 1);
@@ -1437,18 +1435,14 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 		dpoly fact(dim, den[k], 1);
 		n *= fact;
 	    }
-	    d.div(n, count, sign[f]);
-
-	    ++f;
+	    d.div(n, count, sign);
 	}
-	Domain_Free(vcone[j]);
+	Domain_Free(vcone);
     }
 
     assert(value_one_p(&count[0]._mp_den));
     value_multiply(*result, &count[0]._mp_num, factor);
     mpq_clear(count);
-
-    delete [] vcone;
 
     if (allocated)
 	Polyhedron_Free(P);
