@@ -24,9 +24,9 @@
 
 /* define this to print all the results */
 /* else, only a progress bar is printed */
- #define PRINT_ALL_RESULTS	 
+/* #define PRINT_ALL_RESULTS	 
 /* define this to continue the test after first error found */
- #define DONT_BREAK_ON_ERROR */
+/* #define DONT_BREAK_ON_ERROR */
 
 /* RANGE : normal range for evalutations (-RANGE -> RANGE) */
 #define RANGE 50
