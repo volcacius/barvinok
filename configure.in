@@ -21,9 +21,10 @@ else
 	    CPPFLAGS="-I$GMP_DIR/include $CPPFLAGS"
 	    LDFLAGS="-L$GMP_DIR/lib $LDFLAGS"
 	fi
+	poly_cv_gmpfatal="no"
 	AC_CHECK_HEADER(gmp.h,
 		[AC_CHECK_LIB(gmp,main,
-		    [poly_cv_gmpfatal="no"],
+		    [],
 		    [poly_cv_gmpfatal="yes"])],
 		[poly_cv_gmpfatal="yes"])
 	if test "$poly_cv_gmpfatal" = "yes"; then
