@@ -149,3 +149,133 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 
     return R;
 }
+
+void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
+{
+    Value c, d, e, f, tmp;
+
+    value_init(c);
+    value_init(d);
+    value_init(e);
+    value_init(f);
+    value_init(tmp);
+    value_absolute(c, a);
+    value_absolute(d, b);
+    value_set_si(e, 1);
+    value_set_si(f, 0);
+    while(value_pos_p(d)) {
+	value_division(tmp, c, d);
+	value_multiply(tmp, tmp, f);
+	value_substract(e, e, tmp);
+	value_division(tmp, c, d);
+	value_multiply(tmp, tmp, d);
+	value_substract(c, c, tmp);
+	value_swap(c, d);
+	value_swap(e, f);
+    }
+    value_assign(*g, c);
+    if (value_zero_p(a))
+	value_assign(*x, 0);
+    else if (value_pos_p(a))
+	value_assign(*x, e);
+    else value_oppose(*x, e);
+    if (value_zero_p(b))
+	value_assign(*y, 0);
+    else {
+	value_multiply(tmp, a, e);
+	value_substract(tmp, c, tmp);
+	value_division(*y, tmp, b);
+    }
+    value_clear(c);
+    value_clear(d);
+    value_clear(e);
+    value_clear(f);
+    value_clear(tmp);
+}
+
+Matrix * unimodular_complete(Vector *row) 
+{
+    Value g, b, c, old, tmp;
+    Matrix *m;
+    unsigned i, j;
+
+    value_init(b);
+    value_init(c);
+    value_init(g);
+    value_init(old);
+    value_init(tmp);
+    m = Matrix_Alloc(row->Size, row->Size);
+    for (j = 0; j < row->Size; ++j) {
+	value_assign(m->p[0][j], row->p[j]);
+    }
+    value_assign(g, row->p[0]);
+    for (i = 1; value_zero_p(g) && i < row->Size; ++i) {
+	for (j = 0; j < row->Size; ++j) {
+	    if (j == i-1)
+		value_set_si(m->p[i][j], 1);
+	    else
+		value_set_si(m->p[i][j], 0);
+	}
+    }
+    for (; i < row->Size; ++i) {
+	value_assign(old, g);
+	Euclid(old, row->p[i], &c, &b, &g);
+	value_oppose(b, b);
+	for (j = 0; j < row->Size; ++j) {
+	    if (j < i) {
+		value_multiply(tmp, row->p[j], b);
+		value_division(m->p[i][j], tmp, old);
+	    } else if (j == i)
+		value_assign(m->p[i][j], c);
+	    else
+		value_set_si(m->p[i][j], 0);
+	}
+    }
+    value_clear(b);
+    value_clear(c);
+    value_clear(g);
+    value_clear(old);
+    value_clear(tmp);
+    return m;
+}
+
+/*
+ * Returns a full-dimensional polyhedron with the same number
+ * of integer points as P
+ */
+Polyhedron *remove_equalities(Polyhedron *P)
+{
+    Value g;
+    Vector *v;
+    Polyhedron *p = Polyhedron_Copy(P), *q;
+    unsigned dim = p->Dimension;
+    Matrix *m1, *m2;
+    int i;
+
+    value_init(g);
+    while (p->NbEq > 0) {
+	v = Vector_Alloc(dim);
+	Vector_Gcd(p->Constraint[0]+1, dim, &g);
+	Vector_AntiScale(p->Constraint[0]+1, v->p, g, dim);
+	m1 = unimodular_complete(v);
+	m2 = Matrix_Alloc(dim, dim+1);
+	for (i = 0; i < dim-1 ; ++i) {
+	    Vector_Copy(m1->p[i+1], m2->p[i], dim);
+	    value_set_si(m2->p[i][dim], 0);
+	}
+	Matrix_Print(stdout,P_VALUE_FMT,m1);
+	Vector_Set(m2->p[dim-1], 0, dim);
+	value_set_si(m2->p[dim-1][dim], 1);
+	Matrix_Print(stdout,P_VALUE_FMT,m2);
+	q = Polyhedron_Image(p, m2, p->NbConstraints);
+	Vector_Free(v);
+	Matrix_Free(m1);
+	Matrix_Free(m2);
+	Polyhedron_Free(p);
+	Polyhedron_Print(stderr, P_VALUE_FMT, q);
+	p = q;
+	--dim;
+    }
+    value_clear(g);
+    return p;
+}
