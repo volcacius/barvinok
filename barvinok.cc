@@ -2032,19 +2032,33 @@ static evalue* enumerate_sure(Polyhedron *P,
     int i;
     Polyhedron *S = P;
     int nvar = P->Dimension - exist - nparam;
+    Value lcm;
+    Value f;
+    value_init(lcm);
+    value_init(f);
 
     for (i = 0; i < exist; ++i) {
 	Matrix *M = Matrix_Alloc(S->NbConstraints, S->Dimension+2);
 	int c = 0;
+	value_set_si(lcm, 1);
 	for (int j = 0; j < S->NbConstraints; ++j) {
 	    if (value_negz_p(S->Constraint[j][1+nvar+i]))
 		continue;
 	    if (value_one_p(S->Constraint[j][1+nvar+i]))
 		continue;
-	    Vector_Copy(S->Constraint[j], M->p[c], S->Dimension+2);
+	    value_lcm(lcm, S->Constraint[j][1+nvar+i], &lcm);
+	}
+
+	for (int j = 0; j < S->NbConstraints; ++j) {
+	    if (value_negz_p(S->Constraint[j][1+nvar+i]))
+		continue;
+	    if (value_one_p(S->Constraint[j][1+nvar+i]))
+		continue;
+	    value_division(f, lcm, S->Constraint[j][1+nvar+i]);
+	    Vector_Scale(S->Constraint[j], M->p[c], f, S->Dimension+2);
 	    value_substract(M->p[c][S->Dimension+1], 
 			    M->p[c][S->Dimension+1],
-			    S->Constraint[j][1+nvar+i]);
+			    lcm);
 	    value_increment(M->p[c][S->Dimension+1], 
 			    M->p[c][S->Dimension+1]);
 	    ++c;
@@ -2056,9 +2070,13 @@ static evalue* enumerate_sure(Polyhedron *P,
 	Matrix_Free(M);
 	if (emptyQ(S)) {
 	    Polyhedron_Free(S);
+	    value_clear(lcm);
+	    value_clear(f);
 	    return 0;
 	}
     }
+    value_clear(lcm);
+    value_clear(f);
 
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: Sure\n");
