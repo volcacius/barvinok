@@ -652,7 +652,7 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
 /*
  * 
  */
-static void mask(deque<string>& params, Matrix *f, evalue *factor)
+static void mask(Matrix *f, evalue *factor)
 {
     int nr = f->NbRows, nc = f->NbColumns;
     int n;
@@ -1069,7 +1069,7 @@ out:
     if (P->NbEq != 0) {
 	Matrix *f;
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
-	mask(allparams, f,  &factor);
+	mask(f, &factor);
 	Matrix_Free(f);
 	if (P->Dimension == nparam) {
 	    CEq = P;
