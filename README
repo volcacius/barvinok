@@ -1,6 +1,6 @@
 This is a (partial) reimplementation of latte
 (http://www.math.ucdavis.edu/~latte/)
-using polylib.
+using polylib (http://icps.u-strasbg.fr/polylib/).
 
 Next to polylib, it uses NTL (http://shoup.net/ntl/)
 
