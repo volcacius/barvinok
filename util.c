@@ -73,7 +73,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
 	    Vector_Set(M->p[i]+1, 0, dim - 2);
 	    break;
 	}
-    P = Rays2Polyhedron(M, n);
+    P = Rays2Polyhedron(M, n+1);
     assert(P);
     Matrix_Free(M);
     return P;
