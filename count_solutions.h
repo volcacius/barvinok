@@ -18,3 +18,5 @@ void count_accepting_paths(DFA*, int, int);
 #ifdef __cplusplus
 }
 #endif
+
+void count_solutions(Relation& r);
