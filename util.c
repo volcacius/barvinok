@@ -28,6 +28,7 @@ Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays)
     P = Constraints2Polyhedron(M, NbMaxRays);
     assert(P);
     Matrix_Free(M);
+    value_clear(mone);
     return P;
 }
 
