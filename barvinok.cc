@@ -540,7 +540,8 @@ static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
 static void vertex_period(deque<string>& params, 
 		    Polyhedron *i, vec_ZZ& lambda, Matrix *T, 
 		    Value lcm, int p, Vector *val, 
-		    EhrhartPolynom *E, evalue* ev)
+		    EhrhartPolynom *E, evalue* ev,
+		    ZZ& offset)
 {
     unsigned nparam = T->NbRows - 1;
     unsigned dim = i->Dimension;
@@ -548,21 +549,35 @@ static void vertex_period(deque<string>& params,
     value_init(tmp);
     ZZ nump;
 
-	vec_ZZ vertex;
-	values2zz(T->p[p], vertex, dim);
-	nump = vertex * lambda;
+    if (p == nparam) {
+	ZZ num;
+	Vector * values = Vector_Alloc(dim + 1);
+	Vector_Matrix_Product(val->p, T, values->p);
+	value_assign(values->p[dim], lcm);
+	lattice_point(values->p, i, lambda, num);
+	num += offset;
+	zz2value(num, ev->x.n);
+	value_assign(ev->d, lcm);
+	Vector_Free(values);
+	return;
+    }
+
+    vec_ZZ vertex;
+    values2zz(T->p[p], vertex, dim);
+    nump = vertex * lambda;
+    if (First_Non_Zero(val->p, p) == -1) {
 	value_assign(tmp, lcm);
 	EhrhartPolynom * ET = term(params[p], nump, &tmp);
 	*E += *ET;
 	delete ET;
+    }
 
-    assert(p == nparam-1); // for now
-    Vector_Gcd(T->p[p], dim, &tmp);
-    assert (value_le(tmp, lcm)); // for now
-    if (value_le(tmp, lcm)) {
-	ZZ num, count;
+    value_assign(tmp, lcm);
+    if (First_Non_Zero(T->p[p], dim) != -1)
+	Vector_Gcd(T->p[p], dim, &tmp);
+    if (value_lt(tmp, lcm)) {
+	ZZ count;
 
-	Vector * values = Vector_Alloc(dim + 1);
 	value_division(tmp, lcm, tmp);
 	value_set_si(ev->d, 0);
 	ev->x.p = new_enode(periodic, VALUE_TO_INT(tmp), p+1);
@@ -570,16 +585,13 @@ static void vertex_period(deque<string>& params,
 	do {
 	    value_decrement(tmp, tmp);
 	    --count;
+	    ZZ new_offset = offset - count * nump;
 	    value_assign(val->p[p], tmp);
-	    Vector_Matrix_Product(val->p, T, values->p);
-	    value_assign(values->p[dim], lcm);
-	    lattice_point(values->p, i, lambda, num);
-	    num -= count * nump;
-	    zz2value(num, ev->x.p->arr[VALUE_TO_INT(tmp)].x.n);
-	    value_assign(ev->x.p->arr[VALUE_TO_INT(tmp)].d, lcm);
+	    vertex_period(params, i, lambda, T, lcm, p+1, val, E, 
+			  &ev->x.p->arr[VALUE_TO_INT(tmp)], new_offset);
 	} while (value_pos_p(tmp));
-	Vector_Free(values);
-    }
+    } else 
+	vertex_period(params, i, lambda, T, lcm, p+1, val, E, ev, offset);
     value_clear(tmp);
 }
 
@@ -635,7 +647,8 @@ void lattice_point(deque<string>& params,
 	evalue ev;
 	Vector *val = Vector_Alloc(nparam+1);
 	value_set_si(val->p[nparam], 1);
-	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev);
+	ZZ offset(INIT_VAL, 0);
+	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev, offset);
 	Vector_Free(val);
 
 	*EP += EhrhartPolynom(&ev, params);
