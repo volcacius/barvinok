@@ -220,6 +220,24 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   return;
 } /* print_enode */ 
 
+static int mod_term_smaller(evalue *e1, evalue *e2)
+{
+    if (value_notzero_p(e1->d)) {
+	if (value_zero_p(e2->d))
+	    return 1;
+	return value_lt(e1->x.n, e2->x.n);
+    }
+    if (value_notzero_p(e2->d))
+	return 0;
+    if (e1->x.p->pos < e2->x.p->pos)
+	return 1;
+    else if (e1->x.p->pos > e2->x.p->pos)
+	return 0;
+    else
+	return mod_term_smaller(&e1->x.p->arr[e1->x.p->type==modulo],
+				&e2->x.p->arr[e2->x.p->type==modulo]);
+}
+
 static void eadd_rev(evalue *e1, evalue *res)
 {
     evalue ev;
@@ -315,7 +333,7 @@ void eadd(evalue *e1,evalue *res) {
 			   
 			switch (res->x.p->type) {
 			case modulo:
-			    if(res->x.p->pos < e1->x.p->pos)
+			    if(mod_term_smaller(res, e1))
 				eadd(e1,&res->x.p->arr[1]);
 			    else
 				eadd_rev_cst(e1, res);
@@ -585,8 +603,11 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))
 		    emul_poly(e1, res);
 		else {
-		    for(i=1; i<res->x.p->size ; i++)
-			emul(e1, &(res->x.p->arr[i]));    
+		    if(mod_term_smaller(res, e1))
+			for(i=1; i<res->x.p->size ; i++)
+			    emul(e1, &(res->x.p->arr[i]));    
+		    else
+			emul_rev(e1, res);
 		    return; 
 		}
 	    }
