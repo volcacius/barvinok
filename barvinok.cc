@@ -2572,6 +2572,32 @@ void ienumerator::reduce(
     }
 }
 
+static int type_offset(enode *p)
+{
+   return p->type == fractional ? 1 : 
+	  p->type == flooring ? 1 : 0;
+}
+
+static int edegree(evalue *e)
+{
+    int d = 0;
+    enode *p;
+
+    if (value_notzero_p(e->d))
+        return 0;
+
+    p = e->x.p;
+    int i = type_offset(p);
+    if (p->size-i-1 > d)
+	d = p->size - i - 1;
+    for (; i < p->size; i++) {
+	int d2 = edegree(&p->arr[i]);
+	if (d2 > d)
+	    d = d2;
+    }
+    return d;
+}
+
 void ienumerator::handle_polar(Polyhedron *C, int s)
 {
     assert(C->NbRays-1 == dim);
@@ -2596,7 +2622,6 @@ void ienumerator::handle_polar(Polyhedron *C, int s)
 	    delete E_vertex[i];
 	}
 
-    
 	/*
         {
            char * test[] = {"a", "b"};
