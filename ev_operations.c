@@ -1,3 +1,4 @@
+#include <assert.h>
 
 #include "ev_operations.h"
 
@@ -198,6 +199,16 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   return;
 } /* print_enode */ 
 
+static void eadd_rev_cst (evalue *e1, evalue *res)
+{
+    evalue ev;
+    value_init(ev.d);
+    evalue_copy(&ev, e1);
+    eadd(res, &ev.x.p->arr[ev.x.p->type==modulo]);
+    free_evalue_refs(res);	  
+    *res = ev;
+}
+
 void eadd(evalue *e1,evalue *res) {
 
  int i; 
@@ -221,24 +232,24 @@ void eadd(evalue *e1,evalue *res) {
          return ;
      }
      else if (value_notzero_p(e1->d) && value_zero_p(res->d)) {
-              if (res->x.p->type==polynomial) {
-                  /* Add the constant to the constant term of a polynomial*/
-                   eadd(e1, &res->x.p->arr[0]);
-                   return ;
-              }
-              else if (res->x.p->type==periodic) {
-                          /* Add the constant to all elements of a periodic number */
-                          for (i=0; i<res->x.p->size; i++) {
-                              eadd(e1, &res->x.p->arr[i]);
-                          }
-			     
-                          return ;
-                    } 
-                    else {
-                            fprintf(stderr, "eadd: cannot add const with vector\n");
-                        
-                            return;
-                    }
+	  switch (res->x.p->type) {
+	  case polynomial:
+	      /* Add the constant to the constant term of a polynomial*/
+	       eadd(e1, &res->x.p->arr[0]);
+	       return ;
+	  case periodic:
+	      /* Add the constant to all elements of a periodic number */
+	      for (i=0; i<res->x.p->size; i++) {
+		  eadd(e1, &res->x.p->arr[i]);
+	      }
+	      return ;
+	  case evector:
+	      fprintf(stderr, "eadd: cannot add const with vector\n");
+	      return;
+	  case modulo:
+	       eadd(e1, &res->x.p->arr[1]);
+	       return ;
+	  }
      }
      /* add polynomial or periodic to constant 
       * you have to exchange e1 and res, before doing addition */
@@ -262,52 +273,56 @@ void eadd(evalue *e1,evalue *res) {
 		      /* adding to evalues of different type. two cases are possible  
 		       * res is periodic and e1 is polynomial, you have to exchange
 		       * e1 and res then to add e1 to the constant term of res */
-		     if ((res->x.p->type == periodic)&&(e1->x.p->type == polynomial)) {
-	               
-		          evalue eval;
-		          value_set_si( eval.d, 0 );
-		          eval.x.p=ecopy(res->x.p);
-	                  res->x.p= ecopy(e1->x.p);
-                          eadd(&eval,&res->x.p->arr[0]);
-			 		         	     
+		     if (e1->x.p->type == polynomial) {
+			  eadd_rev_cst(e1, res); 
 	             }
-                     else if ((res->x.p->type == polynomial)&&(e1->x.p->type == periodic)) {
+                     else if (res->x.p->type == polynomial) {
                           /* res is polynomial and e1 is periodic,
 		            add e1 to the constant term of res */
 			 
 			  eadd(e1,&res->x.p->arr[0]);
-		     }
+		     } else
+			assert(0);
 	                	 
 		     return;
 	         }
-	         else if (e1->x.p->pos  != res->x.p->pos ) { 
+	         else if (e1->x.p->pos != res->x.p->pos ||
+			    (res->x.p->type == modulo &&
+			     !eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))) { 
 	      	 /* adding evalues of different position (i.e function of different unknowns
 		  * to case are possible  */
 			   
-			 if (res->x.p->type == polynomial) {//  res and e1 are polynomials
+			switch (res->x.p->type) {
+			case modulo:
+			    if(res->x.p->pos < e1->x.p->pos)
+				eadd(e1,&res->x.p->arr[1]);
+			    else
+				eadd_rev_cst(e1, res);
+			    return;
+			case polynomial: //  res and e1 are polynomials
 			       //  add e1 to the constant term of res
 			       
 		               eadd(e1,&res->x.p->arr[0]);
 		              // value_clear(g); value_clear(m1); value_clear(m2);
 		               return;
-		          }
-		          else {  // res and e1 are pointers to periodic numbers
+		        case periodic:  // res and e1 are pointers to periodic numbers
 				  //add e1 to all elements of res 
 				   
 			          for (i=0;i<res->x.p->size;i++) {
 			               eadd(e1,&res->x.p->arr[i]);
 			          }
 			          return;
-		          }
-                 
-				          
+			}
 	         }  
                  
                 
 		 //same type , same pos  and same size
                  if (e1->x.p->size == res->x.p->size) {
 	              // add any element in e1 to the corresponding element in res 
-	              for (i=0; i<res->x.p->size; i++) {
+		      if (res->x.p->type == modulo)
+			assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
+		      i = res->x.p->type == modulo ? 1 : 0;
+	              for (; i<res->x.p->size; i++) {
                             eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
                       }
                       return ;
@@ -387,6 +402,44 @@ void eadd(evalue *e1,evalue *res) {
      return ;
  }/* eadd  */ 
  
+static void emul_rev (evalue *e1, evalue *res)
+{
+    evalue ev;
+    value_init(ev.d);
+    evalue_copy(&ev, e1);
+    emul(res, &ev);
+    free_evalue_refs(res);	  
+    *res = ev;
+}
+
+static void emul_poly (evalue *e1, evalue *res)
+{
+    int i, j, o = res->x.p->type == modulo;
+    evalue tmp;
+    int size=(e1->x.p->size + res->x.p->size - o - 1); 
+    value_init(tmp.d);
+    value_set_si(tmp.d,0);
+    tmp.x.p=new_enode(res->x.p->type, size, res->x.p->pos);
+    if (o)
+	evalue_copy(&tmp.x.p->arr[0], &e1->x.p->arr[0]);
+    for (i=o; i < e1->x.p->size; i++) {
+	evalue_copy(&tmp.x.p->arr[i], &e1->x.p->arr[i]);
+	emul(&res->x.p->arr[o], &tmp.x.p->arr[i]);
+    }
+    for (; i<size; i++)
+	evalue_set_si(&tmp.x.p->arr[i], 0, 1);
+    for (i=o+1; i<res->x.p->size; i++)
+	for (j=o; j<e1->x.p->size; j++) {
+	    evalue ev;
+	    value_init(ev.d);
+	    evalue_copy(&ev, &e1->x.p->arr[j]);
+	    emul(&res->x.p->arr[i], &ev);
+	    eadd(&ev, &tmp.x.p->arr[i+j-o]);
+	    free_evalue_refs(&ev);
+	}
+    free_evalue_refs(res);
+    *res = tmp;
+}
 
 /* Computes the product of two evalues "e1" and "res" and puts the result in "res". you must
  * do a copy of "res" befor calling this function if you nead it after. The vector type of 
@@ -401,67 +454,45 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 }
      
    if(value_zero_p(e1->d)&& value_zero_p(res->d)) {
-	   if(e1->x.p->type==polynomial && res->x.p->type==polynomial) {
+       switch(e1->x.p->type) {
+       case polynomial:
+	   switch(res->x.p->type) {
+	   case polynomial:
 	       if(e1->x.p->pos == res->x.p->pos) {
 	       /* Product of two polynomials of the same variable */
-		 
-		    evalue *tmp;
-	            int size=(((e1->x.p->size)-1) + ((res->x.p->size)-1) +1); 
-		    tmp=(evalue *) malloc (sizeof(evalue));
-	            value_init(tmp->d);
-		    value_set_si(tmp->d,0);
-		    tmp->x.p=new_enode(polynomial, size, res->x.p->pos);
-		    for(i=0 ;i<e1->x.p->size; i++) {
-			    value_init(tmp->x.p->arr[i].d);
-			    value_assign(tmp->x.p->arr[i].d, e1->x.p->arr[i].d);
-		        if(value_notzero_p(tmp->x.p->arr[i].d)){
-				value_init(tmp->x.p->arr[i].x.n);
-				value_assign(tmp->x.p->arr[i].x.n, e1->x.p->arr[i].x.n);
-			}
-			else {
-			        tmp->x.p->arr[i].x.p=ecopy (e1->x.p->arr[i].x.p);
-					
-			}
-		    }
-		    for(i;i<size;i++){
-		         value_init(tmp->x.p->arr[i].d);
-			 value_init(tmp->x.p->arr[i].x.n);
-			 value_set_si(tmp->x.p->arr[i].d,1);
-			 value_set_si(tmp->x.p->arr[i].x.n,0);
-		    }
-		    for(i=0;i<e1->x.p->size;i++)
-			    emul(&(res->x.p->arr[0]),&(tmp->x.p->arr[i]));
-		    for(i=1;i<res->x.p->size;i++)    
-			    for(j=0;j<e1->x.p->size;j++) {
-				    evalue ev;
-				    value_init(ev.d);
-				    value_assign(ev.d, e1->x.p->arr[j].d);
-				    if(value_notzero_p(ev.d)) {
-					 value_init(ev.x.n);
-					 value_assign(ev.x.n,e1->x.p->arr[j].x.n);
-				    }
-				    else{
-				         ev.x.p=ecopy(e1->x.p->arr[j].x.p);
-				    }
-				    emul(&(res->x.p->arr[i]),&ev);
-			            eadd(&ev,&(tmp->x.p->arr[i+j]));
-				    free_evalue_refs(&ev);
-			    }
-		value_assign(res->d,tmp->d);
-		res->x.p=tmp->x.p;
-		return;
+		    emul_poly(e1, res);
+		    return;
 	       }
 	       else {
 		  /* Product of two polynomials of different variables */     
 	          
-		 for( i=0; i<res->x.p->size ; i++) 
+		if(res->x.p->pos < e1->x.p->pos)
+		     for( i=0; i<res->x.p->size ; i++) 
 		            emul(e1, &res->x.p->arr[i]);
+		else
+		    emul_rev(e1, res);
 			  
 		 return ;
 	       }      
+	   case periodic:
+	   case modulo:
+	       {
+	             /* Product of a polynomial and a periodic */		  
+		      
+		       evalue ev;
+                       value_init(ev.d);
+		       value_set_si(ev.d,0);
+		       ev.x.p=ecopy(res->x.p);
+		       res->x.p=ecopy(e1->x.p);
+		           emul(&ev,res);
+		     
+		       free_evalue_refs(&ev);	  
+		       return ;
+	       }
 	   }
-	   else{
-              if(e1->x.p->type==periodic && res->x.p->type==periodic) {   
+       case periodic:
+	   switch(res->x.p->type) {
+	   case periodic:
 		if(e1->x.p->pos==res->x.p->pos && e1->x.p->size==res->x.p->size) {
 		 /* Product of two periodics of the same parameter and period */	
                    
@@ -515,9 +546,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 			return;
 		  }
 		}		       
-	      }
-	       else {
-		  if(e1->x.p->type==periodic && res->x.p->type==polynomial) { 
+	   case polynomial:
                   /* Product of a periodic and a polynomial */
 			  
 		       for(i=0; i<res->x.p->size ; i++)
@@ -525,22 +554,26 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
                  
 		       return; 
 			       
-		  }
-		  else {
-	             /* Product of a polynomial and a periodic */		  
-		      
-		       evalue ev;
-                       value_init(ev.d);
-		       value_set_si(ev.d,0);
-		       ev.x.p=ecopy(res->x.p);
-		       res->x.p=ecopy(e1->x.p);
-		           emul(&ev,res);
-		     
-		       free_evalue_refs(&ev);	  
-		       return ;
-		  }
-	       }		   
 	   }		   
+       case modulo:
+	    switch(res->x.p->type) {
+	    case polynomial:
+	        for(i=0; i<res->x.p->size ; i++)
+		    emul(e1, &(res->x.p->arr[i]));    
+	        return; 
+	    case periodic:
+		assert(0);
+	    case modulo:
+	        if (e1->x.p->pos == res->x.p->pos &&
+			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))
+		    emul_poly(e1, res);
+		else {
+		    for(i=1; i<res->x.p->size ; i++)
+			emul(e1, &(res->x.p->arr[i]));    
+		    return; 
+		}
+	    }
+       }		   
    }
    else {
        if (value_notzero_p(e1->d)&& value_notzero_p(res->d)) {
@@ -577,7 +610,8 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	     else {
 	       /* Product of a rationel number and an expression (polynomial or peririodic) */ 
 	         
-		   for (i=0; i<res->x.p->size; i++) 
+		   i = res->x.p->type == modulo ? 1 : 0;
+		   for (; i<res->x.p->size; i++) 
 	              emul(e1, &res->x.p->arr[i]);		 
 		  
 		 return ;
