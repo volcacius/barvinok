@@ -932,18 +932,23 @@ Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays)
     value_set_si(row->p[0], 1);
     Value g;
     value_init(g);
-    Polyhedron *R = P;
+    Polyhedron *R = P, *N;
 
-    for (prev = &R; P; P = P->next) {
-	Polyhedron *T, *N;
+    for (prev = &R; P; P = N) {
+	Polyhedron *T;
 	N = P->next;
 	T = p_simplify_constraints(P, row, &g, MaxRays);
-	if (T != P) {
-	    T->next = N;
-	    *prev = T;
+
+	if (emptyQ(T) && prev != &R) {
+	    Polyhedron_Free(T);
+	    *prev = NULL;
+	    continue;
 	}
+
+	if (T != P)
+	    T->next = N;
+	*prev = T;
 	prev = &T->next;
-	P = T;
     }
 
     value_clear(g);
