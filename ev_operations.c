@@ -8,6 +8,12 @@ void evalue_set_si(evalue *ev, int n, int d) {
     value_set_si(ev->x.n, n);
 }
 
+void evalue_set(evalue *ev, Value n, Value d) {
+    value_assign(ev->d, d);
+    value_init(ev->x.n);
+    value_assign(ev->x.n, n);
+}
+
 void aep_evalue(evalue *e, int *ref) {
   
     enode *p;
