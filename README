@@ -1,6 +1,7 @@
 This is a (partial) reimplementation of latte
 (http://www.math.ucdavis.edu/~latte/)
-using polylib (http://icps.u-strasbg.fr/polylib/).
+using polylib (http://icps.u-strasbg.fr/polylib/ or
+http://www.kotnet.org/~skimo/polylib/).
 
 Next to polylib, it uses NTL (http://shoup.net/ntl/)
 
@@ -8,6 +9,48 @@ Both NTL and polylib need to have been compiled with gmp
 support.
 For NTL this means you have to specify
     NTL_GMP_LIP=on
+
+Suppose you want to put everyting in /opt,
+Then you configure/compile polylib using
+
+./configure --with-libgmp --prefix=/opt
+make
+make install
+
+For NTL,
+
+cd src
+./configure NTL_GMP_LIP=on PREFIX=/opt
+make
+make install
+
+Configure this library using
+
+./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt
+
+or
+
+./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt --enable-fractional
+
+Then
+
+make
+make check
+make install
+
+If you want to put any one of these packages in the default location
+(typically /usr/local), then the prefix argument can be omitted.
+For more information on other arguments,
+
+./configure --help
+
+Please use a version of the PolyLib library that is not
+older than August 13th 2004.
+
+The input format of barvinok_enumerate is the same as that
+of testehrhart from the PolyLib distribution.
+See the PolyLib manual, barvinok_enumerate.c or the
+examples in tests/ehrhart/ .
 
 Note that the fractional representation is subject to change.
 
