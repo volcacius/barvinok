@@ -1010,6 +1010,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	res = en;
 	res->ValidityDomain = D->Domain;
 	res->EP = EP.to_evalue(params);
+	reduce_evalue(&res->EP);
     }
 
     delete [] vcone;
