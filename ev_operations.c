@@ -497,19 +497,9 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	       }      
 	   case periodic:
 	   case modulo:
-	       {
-	             /* Product of a polynomial and a periodic */		  
-		      
-		       evalue ev;
-                       value_init(ev.d);
-		       value_set_si(ev.d,0);
-		       ev.x.p=ecopy(res->x.p);
-		       res->x.p=ecopy(e1->x.p);
-		           emul(&ev,res);
-		     
-		       free_evalue_refs(&ev);	  
-		       return ;
-	       }
+	        /* Product of a polynomial and a periodic or modulo */
+		emul_rev(e1, res);
+		return;
 	   }
        case periodic:
 	   switch(res->x.p->type) {
@@ -616,16 +606,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	     if(value_zero_p(e1->d)&& value_notzero_p(res->d)) { 
 	      /* Product of an expression (polynomial or peririodic) and a rational number */
 		     
-		 evalue ev;
-		 value_init(ev.d);
-		 value_init(ev.x.n);
-		 value_assign(ev.d, res->d);
-		 value_assign(ev.x.n, res->x.n);
-		 value_set_si( res->d, 0 );
-		 res->x.p=ecopy(e1->x.p);
-		       emul(&ev,res);
-		
-		 free_evalue_refs(&ev);
+		emul_rev(e1, res);
 		 return ;
 	     }
 	     else {
