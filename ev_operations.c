@@ -2722,6 +2722,8 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     int i;
     evalue *res;
     Matrix *origC;
+    evalue *factor = NULL;
+    evalue cum;
 
     if (EVALUE_IS_ZERO(*e))
 	return 0;
@@ -2780,7 +2782,11 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    if (value_notzero_p(D->Ray[i][pos]))
 		break;
 	assert(i < D->NbRays);
-	assert(value_pos_p(D->Ray[i][pos]));	/* for now */
+	if (value_neg_p(D->Ray[i][pos])) {
+	    ALLOC(factor);
+	    value_init(factor->d);
+	    evalue_set_si(factor, -1, 1);
+	}
 	value_set_si(row->p[0], 1);
 	value_set_si(row->p[pos], 1);
 	value_set_si(row->p[1 + nvar], -1);
@@ -2795,6 +2801,11 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     res = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
     ++i;
 
+    if (factor) {
+	value_init(cum.d);
+	evalue_copy(&cum, factor);
+    }
+
     origC = C;
     for (; i < e->x.p->size; ++i) {
 	evalue *t;
@@ -2807,6 +2818,10 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	Matrix_Print(stderr, P_VALUE_FMT, C);
 	*/
 	t = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
+
+	if (t && factor)
+	    emul(factor, t);
+
 	if (!res)
 	    res = t;
 	else if (t) {
@@ -2814,9 +2829,17 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    free_evalue_refs(t);
 	    free(t);
 	}
+	if (factor && i+1 < e->x.p->size)
+	    emul(factor, &cum);
     }
     if (C != origC)
 	Matrix_Free(C);
+
+    if (factor) {
+	free_evalue_refs(factor);
+	free_evalue_refs(&cum);
+	free(factor);
+    }
 
     Vector_Free(row);
 
