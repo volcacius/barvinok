@@ -115,7 +115,7 @@ Polyhedron* triangularize_cone(Polyhedron *P)
     int i, j, r, n, t;
     Value tmp;
     unsigned dim = P->Dimension;
-    Matrix *M = Matrix_Alloc(P->NbRays, dim+3);
+    Matrix *M = Matrix_Alloc(P->NbRays+1, dim+3);
     Matrix *M2;
     Polyhedron *L, *R, *T;
     assert(P->NbEq == 0);
@@ -127,6 +127,9 @@ Polyhedron* triangularize_cone(Polyhedron *P)
     Vector_Set(M->p[0]+1, 0, dim+1);
     value_set_si(M->p[0][0], 1);
     value_set_si(M->p[0][dim+2], 1);
+    Vector_Set(M->p[P->NbRays]+1, 0, dim+2);
+    value_set_si(M->p[P->NbRays][0], 1);
+    value_set_si(M->p[P->NbRays][dim+1], 1);
 
     for (i = 0, r = 1; i < P->NbRays; ++i) {
 	if (value_notzero_p(P->Ray[i][dim+1]))
@@ -138,23 +141,27 @@ Polyhedron* triangularize_cone(Polyhedron *P)
 	++r;
     }
 
-    L = Rays2Polyhedron(M, 2*P->NbRays+1);
-
-    for (t = 1; L->NbEq != 0 && t < MAX_TRY; ++t) {
-	Polyhedron_Free(L);
-	for (r = 1; r < P->NbRays; ++r) {
-	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
-	}
-	L = Rays2Polyhedron(M, 2*P->NbRays+1);
-    }
-    assert(L->NbEq == 0);
+    L = Rays2Polyhedron(M, 2*P->NbRays+3);
 
     M2 = Matrix_Alloc(dim+1, dim+2);
     Vector_Set(M2->p[0]+1, 0, dim);
     value_set_si(M2->p[0][0], 1);
     value_set_si(M2->p[0][dim+1], 1);
+
+    t = 1;
+    if (0) {
+try_again:
+	Polyhedron_Free(L);
+	for (r = 1; r < P->NbRays; ++r) {
+	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
+	}
+	L = Rays2Polyhedron(M, 2*P->NbRays+1);
+	++t;
+    }
+    assert(t <= MAX_TRY);
+
     for (i = 0; i < L->NbConstraints; ++i) {
-	if (value_posz_p(L->Constraint[i][dim+1]))
+	if (value_negz_p(L->Constraint[i][dim+1]))
 	    continue;
 	if (value_notzero_p(L->Constraint[i][dim+2]))
 	    continue;
@@ -162,6 +169,8 @@ Polyhedron* triangularize_cone(Polyhedron *P)
 	    Inner_Product(M->p[j]+1, L->Constraint[i]+1, dim+1, &tmp);
 	    if (value_notzero_p(tmp))
 		continue;
+	    if (r > dim)
+		goto try_again;
 	    Vector_Copy(M->p[j]+1, M2->p[r]+1, dim);
 	    value_set_si(M2->p[r][0], 1);
 	    value_set_si(M2->p[r][dim+1], 0);
