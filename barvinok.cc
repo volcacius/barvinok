@@ -910,7 +910,7 @@ static EhrhartPolynom *constant(mpq_t c)
 
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
-    Polyhedron *CEq;
+    Polyhedron *CEq, *rVD, *CA;
     Matrix *CT;
     Param_Polyhedron *PP;
     Param_Domain *D;
@@ -921,7 +921,12 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     res = NULL;
 
+    CA = align_context(C, P->Dimension, MaxRays);
+    P = DomainIntersection(P, CA, MaxRays);
+    Polyhedron_Free(CA);
+
     if (C->Dimension == 0 || emptyQ(P)) {
+contant:
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->ValidityDomain = Polyhedron_Copy(C);
 	en->next = NULL;
@@ -932,6 +937,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	    value_set_si(en->EP.x.n, 0);
 	else
 	    barvinok_count(P, &en->EP.x.n, MaxRays);
+	Polyhedron_Free(P);
 	return en;
     }
 
@@ -940,13 +946,51 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
 	// ignore f for now
 	Matrix_Free(f);
+	if (P->Dimension == 0)
+	    goto contant;
+    }
+    PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
+
+    deque<string> params, allparams;
+    default_params(params, nparam);
+    allparams = params;
+
+    if (isIdentity(CT)) {
+	free(CT);
+	free(CEq);
+	CT = NULL;
+    } else {
+	assert(CT->NbRows != CT->NbColumns);
+	if (CT->NbRows == 1) {		// no more parameters
+	    assert(PP->D->next == NULL);
+	    en = (Enumeration *)malloc(sizeof(Enumeration));
+	    en->ValidityDomain = CEq;
+	    en->next = NULL;
+	    value_init(en->EP.d);
+	    value_set_si(en->EP.d, 1);
+	    value_init(en->EP.x.n);
+	    barvinok_count(P, &en->EP.x.n, MaxRays);
+	    return en;
+	}
+	deque<string>::iterator i;
+	params.erase(params.begin(), params.end());
+	int r = 0, j, p = -1;
+	for (i = allparams.begin(), j = 0; i != allparams.end(); ++i, ++j) {
+	    if (p < j) {
+		if (r >= CT->NbRows - 1)
+		    break;
+		p = First_Non_Zero(CT->p[r], nparam);
+		assert(p != -1);
+		assert(First_Non_Zero(CT->p[r]+p+1, nparam-p-1) == -1);
+		assert(value_one_p(CT->p[r][p]));
+		++r;
+	    }
+	    if (p == j)
+		params.push_back(*i);
+	}
+	nparam = CT->NbRows - 1;
     }
 
-    PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
-    assert(isIdentity(CT)); // assume for now
-
-    deque<string> params;
-    default_params(params, nparam);
     unsigned dim = P->Dimension - nparam;
     Polyhedron ** vcone = new (Polyhedron *)[PP->nbV];
     int * npos = new int[PP->nbV];
@@ -962,6 +1006,23 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Vector *c = Vector_Alloc(dim+2);
 
     for(D=PP->D;D;D=D->next) {
+	if (!CT)
+	    rVD = D->Domain;    
+	else {
+	  Polyhedron *Dt;
+	  Dt = Polyhedron_Preimage(D->Domain,CT,MaxRays);
+	  rVD = DomainIntersection(Dt,CEq,MaxRays);
+	  
+	  /* if rVD is empty or too small in geometric dimension */
+	  if(!rVD || emptyQ(rVD) ||
+	     (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
+	    if(rVD)
+	      Polyhedron_Free(rVD);
+	    Polyhedron_Free(Dt);
+	    continue;		/* empty validity domain */
+	  }
+	  Polyhedron_Free(Dt);
+	}
 	int ncone = 0;
 	sign.SetLength(ncone);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
@@ -1046,8 +1107,8 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->next = res;
 	res = en;
-	res->ValidityDomain = D->Domain;
-	res->EP = EP.to_evalue(params);
+	res->ValidityDomain = rVD;
+	res->EP = EP.to_evalue(allparams);
 	reduce_evalue(&res->EP);
     }
 
