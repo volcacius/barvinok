@@ -718,9 +718,10 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	for (i = 0; i < res->x.p->size/2; ++i)
 	    emul(e1, &res->x.p->arr[2*i+1]);
     } else
-   if (value_zero_p(res->d) && res->x.p->type == relation)
-	emul(e1, &res->x.p->arr[1]);
-   else
+   if (value_zero_p(res->d) && res->x.p->type == relation) {
+	for (i = 1; i < res->x.p->size; ++i)
+	    emul(e1, &res->x.p->arr[i]);
+   } else
    if(value_zero_p(e1->d)&& value_zero_p(res->d)) {
        switch(e1->x.p->type) {
        case polynomial:
