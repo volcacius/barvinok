@@ -562,6 +562,25 @@ you_lose:   	/* OK, lets not do it */
             free(p);
         }
     }
+    else if (p->type == flooring) {
+        /* Try to reduce the degree */
+        for (i=p->size-1;i>=2;i--) {
+	    if (!EVALUE_IS_ZERO(p->arr[i]))
+		break;
+	    /* Zero coefficient */
+	    free_evalue_refs(&(p->arr[i]));
+        }
+        if (i+1<p->size)
+	    p->size = i+1;
+
+        /* Try to reduce its strength */
+        if (p->size == 2) {
+	    value_clear(e->d);
+            memcpy(e,&p->arr[1],sizeof(evalue));
+	    free_evalue_refs(&(p->arr[0]));
+            free(p);
+        }
+    }
     else if (p->type == relation) {
 	if (p->size == 3 && eequal(&p->arr[1], &p->arr[2])) {
 	    free_evalue_refs(&(p->arr[2]));
