@@ -102,8 +102,8 @@ void value_lcm(Value i, Value j, Value* lcm)
 {
     Value aux;
     value_init(aux);
-    Gcd(i,j,lcm);
     value_multiply(aux,i,j);
+    Gcd(i,j,lcm);
     value_division(*lcm,aux,*lcm);
     value_clear(aux);
 }
