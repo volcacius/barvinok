@@ -13,9 +13,10 @@ LDADD = libbarvinok.la
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
 
-TESTS = $(filter-out $(top_srcdir)/tests/CVS,$(wildcard $(top_srcdir)/tests/*))
+TESTFILES = \
+	$(filter-out $(top_srcdir)/tests/CVS,$(wildcard $(top_srcdir)/tests/*))
 
-EXTRA_DIST = ChangeLog $(TESTS)
+EXTRA_DIST = ChangeLog $(TESTFILES)
 
 check:
 	@for i in $(top_srcdir)/tests/*; do \
