@@ -565,3 +565,10 @@ void Enumeration_Print(FILE *Dst, Enumeration *en, char **params)
 	print_evalue(stdout, &en->EP, params);
     }
 }
+
+void Free_ParamNames(char **params, int m)
+{
+    while (--m >= 0)
+	free(params[m]);
+    free(params);
+}

@@ -534,7 +534,9 @@ static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
 	value_assign(EP.x.p->arr[1].d, *den);
     zz2value(c, EP.x.p->arr[1].x.n);
     params.push_back(param);
-    return new EhrhartPolynom(&EP, params);
+    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);
+    free_evalue_refs(&EP);
+    return ret;
 }
 
 static void vertex_period(deque<string>& params, 
@@ -861,7 +863,9 @@ static EhrhartPolynom *uni_polynom(string param, Vector *c)
 	value_assign(EP.x.p->arr[j].x.n, c->p[j]);
     }
     params.push_back(param);
-    return new EhrhartPolynom(&EP, params);
+    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);
+    free_evalue_refs(&EP);
+    return ret;
 }
 
 static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPolynom& X)
@@ -925,6 +929,8 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	decompose(C, &vcone[i], &npos[i], &nneg[i], MaxRays);
     }
 
+    Vector *c = Vector_Alloc(dim+2);
+
     for(D=PP->D;D;D=D->next) {
 	int ncone = 0;
 	sign.SetLength(ncone);
@@ -968,7 +974,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	for (int j = 0; j < ncone; ++j)
 	    num[j].constant -= min;
 	f = 0;
-	Vector *c = Vector_Alloc(dim+2);
 	EhrhartPolynom EP;
 	mpq_t count;
 	mpq_init(count);
@@ -986,6 +991,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		    EhrhartPolynom *ET = multi_polynom(params, c, *num[f].E);
 		    EP += *ET;
 		    delete ET;
+		    delete num[f].E;
 		} else if (num[f].pos != -1) {
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
 		    d.div(n, c, sign[f]);
@@ -1003,7 +1009,9 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		++f;
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;
+
 	mpq_clear(count);
+	delete [] num;
 
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->next = res;
@@ -1012,6 +1020,8 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	res->EP = EP.to_evalue(params);
 	reduce_evalue(&res->EP);
     }
+
+    Vector_Free(c);
 
     delete [] vcone;
     delete [] npos;
