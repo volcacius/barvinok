@@ -598,9 +598,24 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		assert(0);
 	    case modulo:
 	        if (e1->x.p->pos == res->x.p->pos &&
-			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))
-		    emul_poly(e1, res);
-		else {
+			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
+		    if (e1->x.p->pos != 2)
+			emul_poly(e1, res);
+		    else {
+			/* x mod 2 == (x mod 2)^2 */
+			/* a0 b0 + (a0 b1 + a1 b0 + a1 b1) (x mod 2) */
+			assert(e1->x.p->size == 3);
+			assert(res->x.p->size == 3);
+			evalue tmp;
+			value_init(tmp.d);
+			evalue_copy(&tmp, &res->x.p->arr[1]);
+			eadd(&res->x.p->arr[2], &tmp);
+			emul(&e1->x.p->arr[2], &tmp);
+			emul(&e1->x.p->arr[1], res);
+			eadd(&tmp, &res->x.p->arr[2]);
+			free_evalue_refs(&tmp);	  
+		    }
+		} else {
 		    if(mod_term_smaller(res, e1))
 			for(i=1; i<res->x.p->size ; i++)
 			    emul(e1, &(res->x.p->arr[i]));    
