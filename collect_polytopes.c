@@ -7,7 +7,7 @@
 #include "ev_operations.h"
 #include "barvinok.h"
 
-/* gcc -shared  collect_polytopes.c -rdynamic -o libcollect.so -ldl -lc -lgmp */
+/* gcc -shared -g collect_polytopes.c -rdynamic -o libcollect.so -ldl -lc -lgmp */
 
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
@@ -25,7 +25,9 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 	assert(orig);
 	dlclose(handle);
 
-	prefix = strdup(getenv("POLYTOPE_PREFIX"));
+	prefix = getenv("POLYTOPE_PREFIX");
+	if (prefix)
+	    prefix = strdup(prefix);
     }
 
     if (prefix && !recurse) {
