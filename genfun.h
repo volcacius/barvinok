@@ -26,7 +26,7 @@ struct gen_fun {
     std::vector< short_rat * > term;
 
     void add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den);
-    void print(void);
+    void print(unsigned int nparam, char **param_name);
 };
 
 #endif

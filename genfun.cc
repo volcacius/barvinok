@@ -69,7 +69,8 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
     term.push_back(r);
 }
 
-static void print_power(vec_ZZ& c, vec_ZZ& p)
+static void print_power(vec_ZZ& c, vec_ZZ& p,
+			unsigned int nparam, char **param_name)
 {
     bool first = true;
 
@@ -88,7 +89,10 @@ static void print_power(vec_ZZ& c, vec_ZZ& p)
 	    first = false;
 	} else
 	    cout << " * ";
-	cout << "x" << i;
+	if (i < nparam)
+	    cout << param_name[i];
+	else
+	    cout << "x" << i;
 	if (p[i] == 1)
 	    continue;
 	if (p[i] < 0)
@@ -103,7 +107,7 @@ static void print_power(vec_ZZ& c, vec_ZZ& p)
     }
 }
 
-void gen_fun::print(void)
+void gen_fun::print(unsigned int nparam, char **param_name)
 {
     vec_ZZ mone;
     mone.SetLength(1);
@@ -116,14 +120,16 @@ void gen_fun::print(void)
 	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
 	    if (j != 0 && term[i]->n.coeff[j][0] > 0)
 		cout << "+";
-	    print_power(term[i]->n.coeff[j], term[i]->n.power[j]);
+	    print_power(term[i]->n.coeff[j], term[i]->n.power[j],
+			nparam, param_name);
 	}
 	cout << ")/(";
 	for (int j = 0; j < term[i]->d.power.NumRows(); ++j) {
 	    if (j != 0)
 		cout << " * ";
 	    cout << "(1";
-	    print_power(mone, term[i]->d.power[j]);
+	    print_power(mone, term[i]->d.power[j],
+			nparam, param_name);
 	    cout << ")";
 	}
 	cout << ")";

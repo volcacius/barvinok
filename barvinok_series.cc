@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
     gf = barvinok_series(A, C, MAXRAYS);
-    gf->print();
+    gf->print(C->Dimension, param_name);
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
