@@ -19,6 +19,7 @@ check:
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		echo -n $$i; \
-		./test < $$i && echo " ok"; \
+		./test < $$i || echo -n " NOT"; \
+		echo " ok"; \
 	    fi \
 	done
