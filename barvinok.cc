@@ -2796,11 +2796,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		    value_multiply(f, f, P->Constraint[l][nvar+i+1]);
 		    value_substract(row->p[len-1], row->p[len-1], f);
 		    value_decrement(row->p[len-1], row->p[len-1]);
-		    Vector_Gcd(row->p+1, len - 2, &f);
-		    if (value_notone_p(f)) {
-			Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
-		    }
+		    ConstraintSimplify(row->p, row->p, len, &f);
 		    value_set_si(f, -1);
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
 		    value_decrement(row->p[len-1], row->p[len-1]);
@@ -2833,11 +2829,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 			value_set_si(f, -1);
 			Vector_Scale(row->p+1, row->p+1, f, len-1);
 			value_decrement(row->p[len-1], row->p[len-1]);
-			Vector_Gcd(row->p+1, len - 2, &f);
-			if (value_notone_p(f)) {
-			    Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			    mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
-			}
+			ConstraintSimplify(row->p, row->p, len, &f);
 			value_set_si(f, -1);
 			Vector_Scale(row->p+1, row->p+1, f, len-1);
 			value_decrement(row->p[len-1], row->p[len-1]);
