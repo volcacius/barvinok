@@ -307,8 +307,6 @@ public:
 	value_init(d1);
 	zz2value(degree_0, d0);
 	zz2value(degree_1, d1);
-	value_print(stdout, P_VALUE_FMT, d0); puts("");
-	value_print(stdout, P_VALUE_FMT, d1); puts("");
 	coeff = Matrix_Alloc(d+1, d+1+1);
 	value_set_si(coeff->p[0][0], 1);
 	value_set_si(coeff->p[0][d+1], 1);
@@ -320,7 +318,6 @@ public:
 	    value_multiply(coeff->p[i][d+1], coeff->p[i][d+1], coeff->p[i-1][d+1]);
 	    value_decrement(d0, d0);
 	}
-	Matrix_Print(stdout, P_VALUE_FMT, coeff);
 	value_clear(d0);
 	value_clear(d1);
     }
@@ -329,7 +326,6 @@ public:
 	Matrix * c = Matrix_Alloc(coeff->NbRows, coeff->NbColumns);
 	Value tmp;
 	value_init(tmp);
-	cout << d.coeff << endl;
 	for (int i = 0; i < len; ++i) {
 	    Vector_Copy(coeff->p[i], c->p[i], len+1);
 	    for (int j = 1; j <= i; ++j) {
@@ -343,15 +339,12 @@ public:
 	    zz2value(d.coeff[0], tmp);
 	    value_multiply(c->p[i][len], c->p[i][len], tmp);
 	}
-	Matrix_Print(stdout, P_VALUE_FMT, c);
-	Vector_Print(stdout, P_VALUE_FMT, count);
 	value_assign(tmp, count->p[len]);
 	if (sign == -1)
 	    value_oppose(tmp, tmp);
 	Vector_Combine(count->p, c->p[len-1], count->p,
 		       c->p[len-1][len], tmp, len);
 	value_multiply(count->p[len], count->p[len], c->p[len-1][len]);
-	Vector_Print(stdout, P_VALUE_FMT, count);
 	Vector_Normalize(count->p, len+1);
 	value_clear(tmp);
     }
@@ -497,10 +490,7 @@ void lattice_point(Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, vec_ZZ& num
 	assert(value_one_p(V->Vertex->p[i][nparam+1]));  // for now
 	values2zz(V->Vertex->p[i], vertex[i], nparam+1);
     }
-    cout << lambda << endl;
-    cout << vertex << endl;
     num = lambda * vertex;
-    cout << num << endl;
 }
 
 void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign, ZZ& num, vec_ZZ& den)
@@ -694,9 +684,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
     assert(isIdentity(CT)); // assume for now
 
-	char **param_name = Read_ParamNames(stdin, C->Dimension);
-	Param_Polyhedron_Print(stdout, PP, param_name);
-
     unsigned nparam = C->Dimension;
     unsigned dim = P->Dimension - nparam;
     Polyhedron ** vcone = new (Polyhedron *)[PP->nbV];
@@ -709,9 +696,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    Polyhedron *Polar;
 	    Polyhedron *Polars = supporting_cone_p(P, V);
-	  Print_Vertex( stdout, V->Vertex, param_name );
-	  printf( "\n" );
-	    Polyhedron_Print(stdout, P_VALUE_FMT, Polars);
 	    Polyhedron_Polarize(Polars);
 	    if (Polars->NbRays - 1 != Polars->Dimension) {
 		Polyhedron *tmp = Polars;
@@ -770,10 +754,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	    }
 	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	cout << endl;
-	cout << sign << endl;
-	cout << num << endl;
-	cout << den << endl;
 	vec_ZZ min = num[0];
 	for (int j = 1; j < num.NumRows(); ++j)
 	    for (int k = 0; k < num[j].length(); ++k)
@@ -781,10 +761,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		    min[k] = num[j][k];
 	for (int j = 0; j < num.NumRows(); ++j)
 	    num[j] -= min;
-	cout << endl;
-	cout << sign << endl;
-	cout << num << endl;
-	cout << den << endl;
 	f = 0;
 	j = 0;
 	Vector *c = Vector_Alloc(dim+2);
@@ -803,7 +779,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	    }
 	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	Vector_Print(stdout, P_VALUE_FMT, c);
 	assert(nparam == 1);
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->next = res;
