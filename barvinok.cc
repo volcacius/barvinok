@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include <gmp.h>
@@ -355,10 +354,6 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     }
 }
 
-static int rand(int max) {
-    return (int) (((double)(max))*rand()/(RAND_MAX+1.0));
-}
-
 const int MAX_TRY=10;
 /*
  * Searches for a vector that is not othogonal to any
@@ -372,7 +367,7 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
     for (int i = 2; !found && i <= 2*dim; i+=2) {
 	for (int j = 0; j < MAX_TRY; ++j) {
 	    for (int k = 0; k < dim; ++k) {
-		int r = rand(i)+2;
+		int r = random_int(i)+2;
 		int v = (2*(r%2)-1) * (r >> 1);
 		lambda[k] = v;
 	    }

@@ -7,6 +7,7 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
+int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
 Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays);
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons);

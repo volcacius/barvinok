@@ -1,5 +1,12 @@
 #include <polylib/polylibgmp.h>
+#include <stdlib.h>
 #include <assert.h>
+
+/* Return random value between 0 and max-1 inclusive
+ */
+int random_int(int max) {
+    return (int) (((double)(max))*rand()/(RAND_MAX+1.0));
+}
 
 /*
  * Rather general polar
@@ -81,12 +88,14 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
 
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 {
-    int i, j, r, n;
+    const static int MAX_TRY=10;
+    int i, j, r, n, t;
     Value tmp;
     unsigned dim = P->Dimension;
     Matrix *M = Matrix_Alloc(P->NbRays, dim+3);
     Matrix *M2;
     Polyhedron *L, *R, *T;
+    assert(P->NbEq == 0);
 
     R = NULL;
     n = 0;
@@ -108,15 +117,14 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 
     L = Rays2Polyhedron(M, NbMaxCons);
 
-    if (L->NbEq != 0) {
+    for (t = 1; L->NbEq != 0 && t < MAX_TRY; ++t) {
 	Polyhedron_Free(L);
-	value_set_si(tmp, 2);
-	Vector_Scale(M->p[1]+1, M->p[1]+1, tmp, dim);
-	Inner_Product(M->p[1]+1, M->p[1]+1, dim, &tmp);
-	value_assign(M->p[1][dim+1], tmp);
+	for (r = 1; r < P->NbRays; ++r) {
+	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
+	}
 	L = Rays2Polyhedron(M, NbMaxCons);
-	assert(L->NbEq == 0);
     }
+    assert(L->NbEq == 0);
 
     M2 = Matrix_Alloc(dim+1, dim+2);
     Vector_Set(M2->p[0]+1, 0, dim);
