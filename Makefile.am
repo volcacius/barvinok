@@ -6,13 +6,14 @@ libparker_la_SOURCES = \
 	construction.c \
 	count_paths.c \
 	count_solutions.cc
+libparker_la_LIBADD = $(MONA_OBJ)
 
 noinst_PROGRAMS = occ
 occ_SOURCES = \
 	Exit.cc \
 	lex.yy.cc \
 	y.tab.cc
-LDADD = -lcode_gen -lomega $(MONA_OBJ) libparker.la
+LDADD = -lcode_gen -lomega libparker.la
 
 YACC_FLAGS = -d
 
