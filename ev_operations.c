@@ -67,7 +67,8 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
 
 struct fixed_param {
     int	    pos;
-    Value   v;
+    evalue  s;
+    Value   d;
 };
 
 struct subst {
@@ -121,18 +122,16 @@ you_lose:   	/* OK, lets not do it */
     else if (p->type==polynomial) {
 	for (k = 0; s && k < s->n; ++k) {
 	    if (s->fixed[k].pos == p->pos) {
-		evalue v;
-		value_init(v.d);
-		value_set_si(v.d, 1);
-		value_init(v.x.n);
-		value_assign(v.x.n, s->fixed[k].v);
+		if (value_notone_p(s->fixed[k].d))
+		    continue;
+
 		for (i=p->size-1;i>=1;i--) {
-		    emul(&v, &p->arr[i]);
+		    emul(&s->fixed[k].s, &p->arr[i]);
 		    eadd(&p->arr[i], &p->arr[i-1]);
 		    free_evalue_refs(&(p->arr[i]));
 		}
 		p->size = 1;
-		free_evalue_refs(&v);
+		break;
 	    }
 	}
 
@@ -219,6 +218,37 @@ you_lose:   	/* OK, lets not do it */
     }
 } /* reduce_evalue */
 
+static void add_substitution(struct subst *s, Value *row, unsigned dim)
+{
+    int k, l;
+    evalue *r;
+
+    for (k = 0; k < dim; ++k)
+	if (value_notzero_p(row[k+1]))
+	    break;
+
+    Vector_Normalize_Positive(row+1, dim+1, k);
+    assert(s->n < s->max);
+    value_init(s->fixed[s->n].d);
+    value_assign(s->fixed[s->n].d, row[k+1]);
+    s->fixed[s->n].pos = k+1;
+    r = &s->fixed[s->n].s;
+    value_init(r->d);
+    for (l = k+1; l < dim; ++l)
+	if (value_notzero_p(row[l+1])) {
+	    value_set_si(r->d, 0);
+	    r->x.p = new_enode(polynomial, 2, l + 1);
+	    value_init(r->x.p->arr[1].x.n);
+	    value_oppose(r->x.p->arr[1].x.n, row[l+1]);
+	    value_set_si(r->x.p->arr[1].d, 1);
+	    r = &r->x.p->arr[0];
+	}
+    value_init(r->x.n);
+    value_oppose(r->x.n, row[dim+1]);
+    value_set_si(r->d, 1);
+    ++s->n;
+}
+
 void reduce_evalue (evalue *e) {
     if (value_notzero_p(e->d))
         return;	/* a rational number, its already reduced */
@@ -242,32 +272,9 @@ void reduce_evalue (evalue *e) {
 		if (s.max == 0) {
 		    s.max = dim;
 		    NALLOC(s.fixed, dim);
-		    for (j = 0; j < dim; ++j)
-			value_init(s.fixed[j].v);
 		}
-		for (j = 0; j < D->NbEq; ++j) {
-		    for (k = 0; k < D->Dimension; ++k)
-			if (value_notzero_p(D->Constraint[j][k+1])) {
-			    int l;
-			    for (l = k+1; l < D->Dimension; ++l)
-				if (value_notzero_p(D->Constraint[j][l+1]))
-				    break;
-			    if (l < D->Dimension)
-				break;
-			    s.fixed[s.n].pos = k+1;
-			    if (value_one_p(D->Constraint[j][k+1]))
-				value_oppose(s.fixed[s.n].v, D->Constraint[j][dim+1]);
-			    else if (value_mone_p(D->Constraint[j][k+1]))
-				value_assign(s.fixed[s.n].v, D->Constraint[j][dim+1]);
-			    else {
-				fprintf(stderr, "%d %d\n", j, k);
-				Polyhedron_Print(stderr, P_VALUE_FMT, D);
-				assert(0);
-			    }
-			    ++s.n;
-			    break;
-			}
-		}
+		for (j = 0; j < D->NbEq; ++j)
+		    add_substitution(&s, D->Constraint[j], dim);
 	    }
 	    _reduce_evalue(&e->x.p->arr[2*i+1], &s);
 	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
@@ -280,13 +287,16 @@ discard:
 		e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
 		--i;
 	    }
+	    if (s.n != 0) {
+		int j;
+		for (j = 0; j < s.n; ++j) {
+		    value_clear(s.fixed[j].d);
+		    free_evalue_refs(&s.fixed[j].s); 
+		}
+	    }
 	}
-	if (s.max != 0) {
-	    int j;
-	    for (j = 0; j < dim; ++j)
-		value_clear(s.fixed[j].v);
+	if (s.max != 0)
 	    free(s.fixed);
-	}
     } else
 	_reduce_evalue(e, 0);
 }
