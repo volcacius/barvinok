@@ -1,5 +1,6 @@
 lib_LTLIBRARIES = libbarvinok.la
-noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate
+noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
+		  verif_ehrhart
 
 libbarvinok_la_SOURCES = \
     debug.cpp \

@@ -16,7 +16,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <polylib/polylib.h>
+#include <polylib/polylibgmp.h>
+#include <barvinok.h>
 #define MAXRAYS 1024
 
 /* define this to print all the results */
@@ -229,7 +230,7 @@ int main(int argc,char *argv[]) {
   C = CC;
 
   /******* Compute EP *********/
-  en = Polyhedron_Enumerate(P,C,MAXRAYS);
+  en = barvinok_enumerate(P,C,MAXRAYS);
   
   /******* Initializations for check *********/
   p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
