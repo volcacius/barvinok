@@ -1090,9 +1090,7 @@ constant:
 
     if (isIdentity(CT)) {
 	Matrix_Free(CT);
-	Polyhedron_Free(CEq);
 	CT = NULL;
-	CEq = NULL;
     } else {
 	assert(CT->NbRows != CT->NbColumns);
 	if (CT->NbRows == 1) {		// no more parameters
@@ -1135,12 +1133,12 @@ constant:
 
     for(D=PP->D; D; D=next) {
 	next = D->next;
-	if (!CT) {
+	if (!CEq) {
 	    rVD = D->Domain;    
 	    D->Domain = NULL;
 	} else {
 	  Polyhedron *Dt;
-	  Dt = Polyhedron_Preimage(D->Domain,CT,MaxRays);
+	  Dt = CT ? Polyhedron_Preimage(D->Domain,CT,MaxRays) : D->Domain;
 	  rVD = DomainIntersection(Dt,CEq,MaxRays);
 	  
 	  /* if rVD is empty or too small in geometric dimension */
@@ -1148,10 +1146,12 @@ constant:
 	     (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
 	    if(rVD)
 	      Polyhedron_Free(rVD);
-	    Polyhedron_Free(Dt);
+	    if (CT)
+		Polyhedron_Free(Dt);
 	    continue;		/* empty validity domain */
 	  }
-	  Polyhedron_Free(Dt);
+	  if (CT)
+	      Polyhedron_Free(Dt);
 	}
 	int ncone = 0;
 	sign.SetLength(ncone);
