@@ -1380,7 +1380,9 @@ static void fill_in_d(evalue& e, const Value d)
       fill_in_d(e.x.p->arr[i], d);
   } else {
     assert(value_one_p(e.d));
-    value_assign(e.d,d);
+    value_gcd(e.d, e.x.n, d);
+    value_division(e.x.n, e.x.n, e.d);
+    value_division(e.d, d, e.d);
   }
 }
 
