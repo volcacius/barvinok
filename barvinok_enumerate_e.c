@@ -59,6 +59,7 @@ int main(int argc, char **argv)
 	evalue_range_reduction(EP);
     print_evalue(stdout, EP, param_name);
     free_evalue_refs(EP);
+    free(EP);
     Free_ParamNames(param_name, nparam);
     Polyhedron_Free(A);
     return 0;
