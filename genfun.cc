@@ -5,6 +5,9 @@ using std::cout;
 
 void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
 {
+    if (cn == 0)
+	return;
+
     short_rat * r = new short_rat;
     r->n.coeff.SetDims(1, 2);
     r->n.coeff[0][0] = cn;
