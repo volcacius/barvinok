@@ -1598,19 +1598,10 @@ struct icounter : public polar_decomposer {
     }
 
     virtual void handle_polar(Polyhedron *P, int sign);
-    void reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    void recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den);
+    void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
 };
 
-void icounter::recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den)
-{
-    unsigned d = num.length();
-    unsigned len = den.NumRows();  // number of factors in den
-
-    reduce(c, cd, num, den);
-}
-
-void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+void icounter::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned d = num.length()-1;
@@ -1620,11 +1611,38 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     mat_ZZ den_r;
     den_r.SetDims(len, d);
 
+    /* Since we're working incrementally, we can look
+     * for the "easiest" parameter first.
+     * In particular we first handle the parameters such
+     * that no_param + only_param == len, since that allows
+     * us to decouple the problem and the split off part
+     * may very well be zero
+     */
+    int i = 0;
     int r, k;
+    if (d > 0) {
+	for (i = 0; i < d+1; ++i) {
+	    for (r = 0; r < len; ++r) {
+		if (den_f[r][i] != 0) {
+		    for (k = 0; k <= d; ++k)
+			if (i != k && den_f[r][k] != 0)
+			    break;
+		    if (k <= d)
+			break;
+		}
+	    }
+	    if (r >= len)
+		break;
+	}
+	if (i > d)
+	    i = 0;
+    }
+
     for (r = 0; r < len; ++r) {
-	den_s[r] = den_f[r][0];
-	for (k = 1; k <= d; ++k)
-	    den_r[r][k-1] = den_f[r][k];
+	den_s[r] = den_f[r][i];
+	for (k = 0; k <= d; ++k)
+	    if (k != i)
+		den_r[r][k-(k>i)] = den_f[r][k];
     }
 
     if (d == 0) {
@@ -1649,24 +1667,18 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     }
     assert(num.length() > 1);
 
-    ZZ num_s = num[0];
+    ZZ num_s = num[i];
     vec_ZZ num_p;
     num_p.SetLength(d);
-    for (k = 1 ; k <= d; ++k)
-	num_p[k-1] = num[k];
+    for (k = 0 ; k <= d; ++k)
+	if (k != i)
+	    num_p[k-(k>i)] = num[k];
 
     vec_ZZ den_p;
     den_p.SetLength(len);
 
     normalize(c, num_s, num_p, den_s, den_p, den_r);
 
-    /* Since we're working incrementally, we should look
-     * for the "easiest" parameter first.
-     * In particular we should handle the parameters such
-     * that no_param + only_param == len, since that allows
-     * us to decouple the problem and the split off part
-     * may very well be zero
-     */
     int only_param = 0;
     int no_param = 0;
     for (int k = 0; k < len; ++k) {
@@ -1679,7 +1691,7 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 	for (int k = 0; k < len; ++k)
 	    if (den_p[k] == -1)
 		den_r[k] = -den_r[k];
-	recurse(c, cd, num_p, den_r);
+	reduce(c, cd, num_p, den_r);
     } else {
 	int k, l;
 	mat_ZZ pden;
@@ -1713,7 +1725,7 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 	    qd *= cd;
 
 	    if (qn != 0)
-		recurse(qn, qd, num_p, pden);
+		reduce(qn, qd, num_p, pden);
 	} else {
 	    dpoly_r * r = 0;
 
@@ -1760,7 +1772,7 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 		    rows += abs_n;
 		}
 		final[j]->coeff *= c;
-		recurse(final[j]->coeff, rc->denom, num_p, pden);
+		reduce(final[j]->coeff, rc->denom, num_p, pden);
 	    }
 
 	    delete rc;
