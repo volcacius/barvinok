@@ -2119,6 +2119,70 @@ static evalue* enumerate_sure2(Polyhedron *P,
     return split_sure(P, I, exist, nparam, MaxRays);
 }
 
+static evalue* enumerate_line(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    if (P->NbBid == 0)
+	return 0;
+
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: Line\n");
+#endif /* DEBUG_ER */
+
+    int nvar = P->Dimension - exist - nparam;
+    int i, j;
+    for (i = 0; i < nparam; ++i)
+	if (value_notzero_p(P->Ray[0][1+nvar+exist+i]))
+	    break;
+    assert(i < nparam);
+    for (j = i+1; j < nparam; ++j)
+	if (value_notzero_p(P->Ray[0][1+nvar+exist+i]))
+	    break;
+    assert(j >= nparam); // for now
+
+    Matrix *M = Matrix_Alloc(2, P->Dimension+2);
+    value_set_si(M->p[0][0], 1);
+    value_set_si(M->p[0][1+nvar+exist+i], 1);
+    value_set_si(M->p[1][0], 1);
+    value_set_si(M->p[1][1+nvar+exist+i], -1);
+    value_absolute(M->p[1][1+P->Dimension], P->Ray[0][1+nvar+exist+i]);
+    value_decrement(M->p[1][1+P->Dimension], M->p[1][1+P->Dimension]);
+    Polyhedron *S = AddConstraints(M->p[0], 2, P, MaxRays);
+    evalue *EP = barvinok_enumerate_e(S, exist, nparam, MaxRays);
+    Polyhedron_Free(S);
+    Matrix_Free(M);
+
+    /* If EP in its fractional maps only contains references
+     * to the remainder parameter with appropriate coefficients
+     * then we could in principle avoid adding existentially
+     * quantified variables to the validity domains.
+     * We'd have to replace the remainder by m { p/m }
+     * and multiply with an appropriate factor that is one
+     * only in the appropriate range.
+     * This last multiplication can be avoided if EP
+     * has a single validity domain with no (further)
+     * constraints on the remainder parameter
+     */
+
+    Matrix *CT = Matrix_Alloc(nparam+1, nparam+3);
+    M = Matrix_Alloc(1, 1+nparam+3);
+    for (j = 0; j < nparam; ++j)
+	if (j != i)
+	    value_set_si(CT->p[j][j], 1);
+    value_set_si(CT->p[i][nparam+1], 1);
+    value_set_si(CT->p[nparam][nparam+2], 1);
+    value_set_si(M->p[0][1+i], -1);
+    value_absolute(M->p[0][1+nparam], P->Ray[0][1+nvar+exist+i]);
+    value_set_si(M->p[0][1+nparam+1], 1);
+    Polyhedron *CEq = Constraints2Polyhedron(M, 1);
+    Matrix_Free(M);
+    addeliminatedparams_enum(EP, CT, CEq, MaxRays, nparam);
+    Polyhedron_Free(CEq);
+    Matrix_Free(CT);
+
+    return EP;
+}
+
 static evalue* new_zero_ep()
 {
     evalue *EP;
@@ -2714,6 +2778,11 @@ next:
     Polyhedron *F;
 
     evalue *EP;
+
+    EP = enumerate_line(P, exist, nparam, MaxRays);
+    if (EP)
+	return EP;
+
     EP = enumerate_sure(P, exist, nparam, MaxRays);
     if (EP)
 	goto out;
