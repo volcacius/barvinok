@@ -1559,6 +1559,261 @@ void counter::start(unsigned MaxRays)
     }
 }
 
+// incremental counter
+struct icounter : public polar_decomposer {
+    vec_ZZ lambda;
+    vec_ZZ vertex;
+    //vec_ZZ den;
+    ZZ sgn;
+    ZZ num;
+    ZZ one;
+    int j;
+    Polyhedron *P;
+    unsigned dim;
+    mpq_t count;
+    mpq_t tcount;
+    mpz_t tn;
+    mpz_t td;
+
+    icounter(Polyhedron *P) {
+	this->P = P;
+	dim = P->Dimension;
+	lambda.SetLength(1);
+	lambda[0] = 1;
+	//den.SetLength(dim);
+	mpq_init(count);
+	mpq_init(tcount);
+	mpz_init(tn);
+	mpz_init(td);
+	one = 1;
+    }
+
+    void start(unsigned MaxRays);
+
+    ~icounter() {
+	mpq_clear(count);
+	mpq_clear(tcount);
+	mpz_clear(tn);
+	mpz_clear(td);
+    }
+
+    virtual void handle_polar(Polyhedron *P, int sign);
+    void reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den);
+    void recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den);
+};
+
+void icounter::recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den)
+{
+    unsigned d = num.length();
+    unsigned len = den.NumRows();  // number of factors in den
+
+    vec_ZZ den_s;
+    den_s.SetLength(len);
+    mat_ZZ den_r;
+    den_r.SetDims(len, d-1);
+
+    int r, k;
+    for (r = 0; r < len; ++r) {
+	den_s[r] = den[r][0];
+	for (k = 1; k < d; ++k)
+	    den_r[r][k-1] = den[r][k];
+    }
+
+    if (d == 1) {
+	ZZ num_s = num[0];
+	normalize(c, num_s, den_s);
+
+	dpoly n(len, num_s);
+	dpoly D(len, den_s[0], 1);
+	for (int k = 1; k < len; ++k) {
+	    dpoly fact(len, den_s[k], 1);
+	    D *= fact;
+	}
+	mpq_set_si(tcount, 0, 1);
+	n.div(D, tcount, one);
+	zz2value(c, tn);
+	zz2value(cd, td);
+	mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
+	mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
+	mpq_canonicalize(tcount);
+	mpq_add(count, count, tcount);
+    } else {
+	reduce(c, cd, num, den_s, den_r);
+    }
+}
+
+void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
+{
+    assert(num.length() > 1);
+    unsigned d = num.length()-1;
+    unsigned len = den_s.length();  // number of factors in den
+    ZZ num_s = num[0];
+    int k = 0;
+    vec_ZZ num_p;
+    num_p.SetLength(d);
+    for (k = 1 ; k <= d; ++k)
+	num_p[k-1] = num[k];
+
+    vec_ZZ den_p;
+    den_p.SetLength(len);
+
+    normalize(c, num_s, num_p, den_s, den_p, den);
+
+    /* Since we're working incrementally, we should look
+     * for the "easiest" parameter first.
+     * In particular we should handle the parameters such
+     * that no_param + only_param == len, since that allows
+     * us to decouple the problem and the split off part
+     * may very well be zero
+     */
+    int only_param = 0;
+    int no_param = 0;
+    for (int k = 0; k < len; ++k) {
+	if (den_p[k] == 0)
+	    ++no_param;
+	else if (den_s[k] == 0)
+	    ++only_param;
+    }
+    if (no_param == 0) {
+	for (int k = 0; k < len; ++k)
+	    if (den_p[k] == -1)
+		den[k] = -den[k];
+	recurse(c, cd, num_p, den);
+    } else {
+	int k, l;
+	mat_ZZ pden;
+	pden.SetDims(only_param, d);
+
+	if (no_param + only_param == len) {
+	    for (k = 0, l = 0; k < len; ++k)
+		if (den_p[k] != 0)
+		    pden[l++] = den[k];
+
+	    for (k = 0; k < len; ++k)
+		if (den_s[k] != 0)
+		    break;
+
+	    dpoly n(no_param, num_s);
+	    dpoly D(no_param, den_s[k], 1);
+	    for ( ; ++k < len; )
+		if (den_s[k] != 0) {
+		    dpoly fact(no_param, den_s[k], 1);
+		    D *= fact;
+		}
+
+	    mpq_set_si(tcount, 0, 1);
+	    n.div(D, tcount, one);
+
+	    ZZ qn, qd;
+	    value2zz(mpq_numref(tcount), qn);
+	    value2zz(mpq_denref(tcount), qd);
+
+	    qn *= c;
+	    qd *= cd;
+
+	    if (qn != 0)
+		recurse(qn, qd, num_p, pden);
+	} else {
+	    dpoly_r * r = 0;
+
+	    for (k = 0, l = 0; k < len; ++k)
+		if (den_s[k] == 0)
+		    pden[l++] = den[k];
+
+	    for (k = 0; k < len; ++k)
+		if (den_p[k] == 0)
+		    break;
+
+	    dpoly n(no_param, num_s);
+	    dpoly D(no_param, den_s[k], 1);
+	    for ( ; ++k < len; )
+		if (den_p[k] == 0) {
+		    dpoly fact(no_param, den_s[k], 1);
+		    D *= fact;
+		}
+
+	    for (k = 0; k < len; ++k) {
+		if (den_s[k] == 0 || den_p[k] == 0)
+		    continue;
+
+		dpoly pd(no_param-1, den_s[k], 1);
+		int s = den_p[k] < 0 ? -1 : 1;
+
+		if (r == 0)
+		    r = new dpoly_r(n, pd, k, s, len);
+		else {
+		    dpoly_r *nr = new dpoly_r(r, pd, k, s, len);
+		    delete r;
+		    r = nr;
+		}
+	    }
+
+	    dpoly_r *rc = r->div(D);
+
+	    rc->denom *= cd;
+
+	    int common = pden.NumRows();
+	    vector< dpoly_r_term * >& final = rc->c[rc->len-1];
+	    int rows;
+	    for (int j = 0; j < final.size(); ++j) {
+		if (final[j]->coeff == 0)
+		    continue;
+		rows = common;
+		pden.SetDims(rows, pden.NumCols());
+		for (int k = 0; k < rc->dim; ++k) {
+		    int n = final[j]->powers[k];
+		    if (n == 0)
+			continue;
+		    int abs_n = n < 0 ? -n : n;
+		    pden.SetDims(rows+abs_n, pden.NumCols());
+		    for (int l = 0; l < abs_n; ++l) {
+			if (n > 0)
+			    pden[rows+l] = den[k];
+			else
+			    pden[rows+l] = -den[k];
+		    }
+		    rows += abs_n;
+		}
+		final[j]->coeff *= c;
+		recurse(final[j]->coeff, rc->denom, num_p, pden);
+	    }
+
+	    delete rc;
+	    delete r;
+	}
+    }
+}
+
+void icounter::handle_polar(Polyhedron *C, int s)
+{
+    assert(C->NbRays-1 == dim);
+
+    sgn = s;
+
+    lattice_point(P->Ray[j]+1, C, vertex);
+
+    vec_ZZ den_s;
+    den_s.SetLength(dim);
+    mat_ZZ den;
+    den.SetDims(dim, dim-1);
+
+    int r;
+    for (r = 0; r < dim; ++r) {
+	value2zz(C->Ray[r][1], den_s[r]);
+	values2zz(C->Ray[r]+1+1, den[r], dim-1);
+    }
+
+    reduce(sgn, one, vertex, den_s, den);
+}
+
+void icounter::start(unsigned MaxRays)
+{
+    for (j = 0; j < P->NbRays; ++j) {
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, MaxRays);
+    }
+}
+
 typedef Polyhedron * Polyhedron_p;
 
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
@@ -1609,7 +1864,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	return;
     }
 
-    counter cnt(P);
+    icounter cnt(P);
     cnt.start(NbMaxCons);
 
     assert(value_one_p(&cnt.count[0]._mp_den));
