@@ -1273,7 +1273,6 @@ void emul_partitions (evalue *e1,evalue *res)
 	    malloc((e1->x.p->size/2) * (res->x.p->size/2) * 
 		   sizeof(struct section));
     assert(s);
-    fprintf(stderr, "%d %d\n", e1->x.p->pos, res->x.p->pos);
     assert(e1->x.p->pos == res->x.p->pos);
     assert(e1->x.p->pos == EVALUE_DOMAIN(e1->x.p->arr[0])->Dimension);
 
