@@ -4,6 +4,8 @@
 #include "ev_operations.h"
 #include "util.h"
 
+#define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
+
 void evalue_set_si(evalue *ev, int n, int d) {
     value_set_si(ev->d, d);
     value_init(ev->x.n);
@@ -68,7 +70,13 @@ struct fixed_param {
     Value   v;
 };
 
-void _reduce_evalue (evalue *e, int n, struct fixed_param *fixed) {
+struct subst {
+    struct fixed_param *fixed;
+    int			n;
+    int			max;
+};
+
+void _reduce_evalue (evalue *e, struct subst *s) {
   
     enode *p;
     int i, j, k;
@@ -80,7 +88,7 @@ void _reduce_evalue (evalue *e, int n, struct fixed_param *fixed) {
   
     /* First reduce the components of p */
     for (i=0; i<p->size; i++)
-        _reduce_evalue(&p->arr[i], n, fixed);
+        _reduce_evalue(&p->arr[i], s);
 
     if (p->type==periodic) {
     
@@ -111,13 +119,13 @@ you_lose:   	/* OK, lets not do it */
         }
     }
     else if (p->type==polynomial) {
-	for (k = 0; k < n; ++k) {
-	    if (fixed[k].pos == p->pos) {
+	for (k = 0; s && k < s->n; ++k) {
+	    if (s->fixed[k].pos == p->pos) {
 		evalue v;
 		value_init(v.d);
 		value_set_si(v.d, 1);
 		value_init(v.x.n);
-		value_assign(v.x.n, fixed[k].v);
+		value_assign(v.x.n, s->fixed[k].v);
 		for (i=p->size-1;i>=1;i--) {
 		    emul(&v, &p->arr[i]);
 		    eadd(&p->arr[i], &p->arr[i-1]);
@@ -216,12 +224,11 @@ void reduce_evalue (evalue *e) {
         return;	/* a rational number, its already reduced */
 
     if (e->x.p->type == partition) {
+	struct subst s = { NULL, 0, 0 };
 	int i;
-	int n;
-	struct fixed_param *fixed = 0;
 	unsigned dim = -1;
 	for (i = 0; i < e->x.p->size/2; ++i) {
-	    n = 0;
+	    s.n = 0;
 	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
 	    /* This shouldn't really happen; 
 	     * Empty domains should not be added.
@@ -232,11 +239,11 @@ void reduce_evalue (evalue *e) {
 	    dim = D->Dimension;
 	    if (!D->next && D->NbEq) {
 		int j, k;
-		if (!fixed) {
-		    fixed = (struct fixed_param*) 
-				malloc(D->Dimension * sizeof(*fixed));
+		if (s.max == 0) {
+		    s.max = dim;
+		    NALLOC(s.fixed, dim);
 		    for (j = 0; j < dim; ++j)
-			value_init(fixed[j].v);
+			value_init(s.fixed[j].v);
 		}
 		for (j = 0; j < D->NbEq; ++j) {
 		    for (k = 0; k < D->Dimension; ++k)
@@ -247,22 +254,22 @@ void reduce_evalue (evalue *e) {
 				    break;
 			    if (l < D->Dimension)
 				break;
-			    fixed[n].pos = k+1;
+			    s.fixed[s.n].pos = k+1;
 			    if (value_one_p(D->Constraint[j][k+1]))
-				value_oppose(fixed[n].v, D->Constraint[j][dim+1]);
+				value_oppose(s.fixed[s.n].v, D->Constraint[j][dim+1]);
 			    else if (value_mone_p(D->Constraint[j][k+1]))
-				value_assign(fixed[n].v, D->Constraint[j][dim+1]);
+				value_assign(s.fixed[s.n].v, D->Constraint[j][dim+1]);
 			    else {
 				fprintf(stderr, "%d %d\n", j, k);
 				Polyhedron_Print(stderr, P_VALUE_FMT, D);
 				assert(0);
 			    }
-			    ++n;
+			    ++s.n;
 			    break;
 			}
 		}
 	    }
-	    _reduce_evalue(&e->x.p->arr[2*i+1], n, fixed);
+	    _reduce_evalue(&e->x.p->arr[2*i+1], &s);
 	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
 discard:
 		free_evalue_refs(&e->x.p->arr[2*i+1]);
@@ -274,14 +281,14 @@ discard:
 		--i;
 	    }
 	}
-	if (fixed) {
+	if (s.max != 0) {
 	    int j;
 	    for (j = 0; j < dim; ++j)
-		value_clear(fixed[j].v);
-	    free(fixed);
+		value_clear(s.fixed[j].v);
+	    free(s.fixed);
 	}
     } else
-	_reduce_evalue(e, 0, 0);
+	_reduce_evalue(e, 0);
 }
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
