@@ -1780,23 +1780,14 @@ out:
     }
 
     unsigned dim = P->Dimension - nparam;
-    Polyhedron ** vcone = new Polyhedron_p[PP->nbV];
     evalue ** vE = new evalue_p[PP->nbV];
     for (int j = 0; j < PP->nbV; ++j)
 	vE[j] = 0;
-    int * npos = new int[PP->nbV];
-    int * nneg = new int[PP->nbV];
     ZZ sign;
 
     vec_ZZ lambda;
     //nonorthog(rays, lambda);
     randomvector(P, lambda, dim);
-
-    int i;
-    for (i = 0, V = PP->V; V; ++i, V = V->next) {
-	Polyhedron *C = supporting_cone_p(P, V);
-	decompose(C, &vcone[i], &npos[i], &nneg[i], MaxRays);
-    }
 
     Vector *c = Vector_Alloc(dim+2);
 
@@ -1832,11 +1823,17 @@ out:
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    int f = 0;
 	    if (!vE[_i]) {
+		Polyhedron *C = supporting_cone_p(P, V);
+		Polyhedron *vcone;
+		int npos;
+		int nneg;
+		decompose(C, &vcone, &npos, &nneg, MaxRays);
+
 		vE[_i] = new evalue;
 		value_init(vE[_i]->d);
 		evalue_set_si(vE[_i], 0, 1);
 
-	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
+	    for (Polyhedron *i = vcone; i; i = i->next) {
 		r = 0;
 		assert(i->NbRays-1 == dim);
 		add_rays(rays, i, &r);
@@ -1844,7 +1841,7 @@ out:
 		    assert(lambda * rays[k] != 0);
 		}
 
-		sign = f < npos[_i] ? 1 : -1;
+		sign = f < npos ? 1 : -1;
 		lattice_point(V, i, lambda, &num, 0);
 		normalize(i, lambda, sign, num.constant, den);
 
@@ -1883,6 +1880,7 @@ out:
 		++f;
 	    }
 
+		Domain_Free(vcone);
 	    }
 	    eadd(vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
@@ -1919,12 +1917,8 @@ out:
 	    free_evalue_refs(vE[j]);
 	    delete vE[j];
 	}
-	Domain_Free(vcone[j]);
     }
     delete [] vE;
-    delete [] vcone;
-    delete [] npos;
-    delete [] nneg;
 
     if (CEq)
 	Polyhedron_Free(CEq);
