@@ -1542,7 +1542,7 @@ static void SwapColumns(Value **V, int n, int i, int j)
 static void SwapColumns(Polyhedron *P, int i, int j)
 {
     SwapColumns(P->Constraint, P->NbConstraints, i, j);
-    SwapColumns(P->Ray, P->NbConstraints, i, j);
+    SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
 enum constraint { 
@@ -1687,7 +1687,7 @@ next:
 	    else {
 		Polyhedron *T = Polyhedron_Copy(P);
 		SwapColumns(T, nvar+1, nvar+1+i);
-		evalue *EP = barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
+		evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
 		Polyhedron_Free(T);
 		return EP;
 	    }
