@@ -4336,9 +4336,12 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     assert(!Polyhedron_is_infinite(P, nparam));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_positive_rays(P, nparam));
+    if (P->NbEq != 0)
+	P = remove_equalities_p(P, P->Dimension-nparam, NULL);
     assert(P->NbEq == 0);
 
     partial_reducer red(P, nparam);
     red.start(MaxRays);
+    Polyhedron_Free(P);
     return red.gf;
 }
