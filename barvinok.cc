@@ -2017,5 +2017,56 @@ next:
 	    }
 	}
 
+    if (nvar == 0) {
+	for (int i = 0; i < exist; ++i)
+	    for (int l = P->NbEq; l < P->NbConstraints; ++l) {
+		if (value_negz_p(P->Constraint[l][nvar+i+1]))
+		    continue;
+
+		for (int u = P->NbEq; u < P->NbConstraints; ++u) {
+		    if (value_posz_p(P->Constraint[u][nvar+i+1]))
+			continue;
+
+		    Polyhedron *pos, *neg;
+
+		    if (!SplitOnConstraint(P, i, l, u, 
+					   nvar, len, exist, MaxRays,
+					   row, f, false,
+				           &pos, &neg))
+			continue;
+#ifdef DEBUG_ER
+		    fprintf(stderr, "\nER: Or\n");
+#endif /* DEBUG_ER */
+
+		    evalue *EN = 
+			barvinok_enumerate_e(neg, exist, nparam, MaxRays);
+		    evalue *EP = 
+			barvinok_enumerate_e(pos, exist, nparam, MaxRays);
+		    evalue E;
+		    value_init(E.d);
+		    evalue_copy(&E, EP);
+		    eadd(EN, &E);
+		    emul(EN, EP);
+		    free_evalue_refs(EN); 
+		    value_init(EN->d);
+		    evalue_set_si(EN, -1, 1);
+		    emul(EN, EP);
+		    eadd(&E, EP);
+
+		    free_evalue_refs(EN); 
+		    free(EN);
+		    free_evalue_refs(&E); 
+		    Polyhedron_Free(neg);
+		    Polyhedron_Free(pos);
+		    value_clear(f);
+		    Vector_Free(row);
+
+		    reduce_evalue(EP);
+
+		    return EP;
+		}
+	    }
+    }
+
     assert(0);
 }
