@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <polylib/polylibgmp.h>
 #include <util.h>
+#include <barvinok.h>
 
 int main()
 {
@@ -39,6 +40,10 @@ int main()
 		Polyhedron_Print(stdout, P_VALUE_FMT, B);
 		Polyhedron_Free(B);
 	    }
+	    break;
+	case 3:
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    B = decompose(A);
 	    break;
 	}
 	Polyhedron_Free(A);
