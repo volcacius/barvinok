@@ -427,21 +427,28 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
     Polyhedron *p = Polyhedron_Copy(P), *q;
     unsigned dim = p->Dimension;
     Matrix *m1, *m2, *f;
-    int i, j;
+    int i, j, skip;
 
     value_init(g);
     f = Matrix_Alloc(p->NbEq, dim-nvar+2);
     j = 0;
     *factor = f;
-    while (p->NbEq > 0) {
+    skip = 0;
+    while (p->NbEq - skip > 0) {
 	assert(dim > 0);
-	Vector_Gcd(p->Constraint[0]+1, dim+1, &g);
-	Vector_AntiScale(p->Constraint[0]+1, p->Constraint[0]+1, g, dim+1);
-	Vector_Gcd(p->Constraint[0]+1, nvar, &g);
-	Vector_Copy(p->Constraint[0]+1+nvar, f->p[j], dim-nvar+1);
+
+	while (First_Non_Zero(p->Constraint[skip]+1, nvar) == -1)
+	    ++skip;
+	if (p->NbEq - skip <= 0)
+	    break;
+
+	Vector_Gcd(p->Constraint[skip]+1, dim+1, &g);
+	Vector_AntiScale(p->Constraint[skip]+1, p->Constraint[skip]+1, g, dim+1);
+	Vector_Gcd(p->Constraint[skip]+1, nvar, &g);
+	Vector_Copy(p->Constraint[skip]+1+nvar, f->p[j], dim-nvar+1);
 	value_assign(f->p[j][dim-nvar+1], g);
 	v = Vector_Alloc(dim);
-	Vector_AntiScale(p->Constraint[0]+1, v->p, g, nvar);
+	Vector_AntiScale(p->Constraint[skip]+1, v->p, g, nvar);
 	Vector_Set(v->p+nvar, 0, dim-nvar);
 	m1 = unimodular_complete(v);
 	m2 = Matrix_Alloc(dim, dim+1);
