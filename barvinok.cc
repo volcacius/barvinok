@@ -1783,6 +1783,10 @@ out:
     int * nneg = new int[PP->nbV];
     ZZ sign;
 
+    vec_ZZ lambda;
+    //nonorthog(rays, lambda);
+    randomvector(P, lambda, dim);
+
     int i;
     for (i = 0, V = PP->V; V; ++i, V = V->next) {
 	Polyhedron *C = supporting_cone_p(P, V);
@@ -1797,6 +1801,16 @@ out:
     section *s = new section[nd];
     Polyhedron **fVD = new Polyhedron_p[nd];
 
+    vec_ZZ den;
+    den.SetLength(dim);
+    term_info num;
+
+    mat_ZZ rays;
+    rays.SetDims(dim, dim);
+
+    mpq_t count;
+    mpq_init(count);
+          
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
 
@@ -1807,32 +1821,18 @@ out:
 
 	pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
 
-	int ncone = 0;
-	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
-	    ncone += npos[_i] + nneg[_i];
-	END_FORALL_PVertex_in_ParamPolyhedron;
-
-	mat_ZZ rays;
-	rays.SetDims(ncone * dim, dim);
-	r = 0;
-	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
-	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
-		assert(i->NbRays-1 == dim);
-		add_rays(rays, i, &r);
-	    }
-	END_FORALL_PVertex_in_ParamPolyhedron;
-	vec_ZZ lambda;
-	nonorthog(rays, lambda);
-
-	vec_ZZ den;
-	den.SetLength(dim);
-	term_info num;
-          
 	value_init(s[nd].E.d);
 	evalue_set_si(&s[nd].E, 0, 1);
-	mpq_t count;
-	mpq_init(count);
-	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
+
+	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
+	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
+		r = 0;
+		assert(i->NbRays-1 == dim);
+		add_rays(rays, i, &r);
+		for (int k = 0; k < dim; ++k) {
+		    assert(lambda * rays[k] != 0);
+		}
+	    }
 	    int f = 0;
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
 		sign = f < npos[_i] ? 1 : -1;
@@ -1875,8 +1875,6 @@ out:
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	mpq_clear(count);
-
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
 	s[nd].D = rVD;
@@ -1884,6 +1882,8 @@ out:
 	if (rVD != pVD)
 	    Domain_Free(pVD);
     }
+
+    mpq_clear(count);
 
     if (nd == 0)
 	evalue_set_si(eres, 0, 1);
