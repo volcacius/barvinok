@@ -1144,9 +1144,6 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
 	mpz_fdiv_r(list_args[len+i+1], list_args[k], m);
     }
     value_clear(m);
-    for (i = 0; i < P->Dimension; ++i)
-	value_print(stderr, " %s;", list_args[i]);
-    fprintf(stderr, "\n");
 
     return in_domain(P, list_args);
 }
