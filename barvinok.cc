@@ -1737,6 +1737,29 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
     return true;
 }
 
+static bool SplitOnVar(Polyhedron *P, int i, 
+			      int nvar, int len, int exist, int MaxRays,
+			      Vector *row, Value& f, bool independent,
+			      Polyhedron **pos, Polyhedron **neg)
+{
+    for (int l = P->NbEq; l < P->NbConstraints; ++l) {
+	if (value_negz_p(P->Constraint[l][nvar+i+1]))
+	    continue;
+	for (int u = P->NbEq; u < P->NbConstraints; ++u) {
+	    if (value_posz_p(P->Constraint[u][nvar+i+1]))
+		continue;
+
+	    if (SplitOnConstraint(P, i, l, u, 
+				   nvar, len, exist, MaxRays,
+				   row, f, independent,
+				   pos, neg))
+		return true;
+	}
+    }
+
+    return false;
+}
+
 enum constraint { 
 ALL_POS = 1 << 0,
 ONE_NEG = 1 << 1,
@@ -1978,94 +2001,73 @@ next:
 	}
     for (int i = 0; i < exist; ++i)
 	if (info[i] & INDEPENDENT) {
+	    Polyhedron *pos, *neg;
+
 	    /* Find constraint again and split off negative part */
 
-	    for (int l = P->NbEq; l < P->NbConstraints; ++l) {
-		if (value_negz_p(P->Constraint[l][nvar+i+1]))
-		    continue;
-		for (int u = P->NbEq; u < P->NbConstraints; ++u) {
-		    if (value_posz_p(P->Constraint[u][nvar+i+1]))
-			continue;
-		    
-		    Polyhedron *pos, *neg;
-
-		    if (!SplitOnConstraint(P, i, l, u, 
-					   nvar, len, exist, MaxRays,
-					   row, f, true,
-				           &pos, &neg))
-			continue;
-
+	    if (SplitOnVar(P, i, nvar, len, exist, MaxRays,
+			   row, f, true, &pos, &neg)) {
 #ifdef DEBUG_ER
-		    fprintf(stderr, "\nER: Split\n");
+		fprintf(stderr, "\nER: Split\n");
 #endif /* DEBUG_ER */
 
-		    if (i != 0)
-			SwapColumns(neg, nvar+1, nvar+1+i);
-		    evalue *EP = 
-			barvinok_enumerate_e(neg, exist-1, nparam, MaxRays);
-		    evalue *E = 
-			barvinok_enumerate_e(pos, exist, nparam, MaxRays);
-		    eadd(E, EP);
-		    free_evalue_refs(E); 
-		    free(E);
-		    Polyhedron_Free(neg);
-		    Polyhedron_Free(pos);
-		    value_clear(f);
-		    Vector_Free(row);
-		    return EP;
-		}
+		if (i != 0)
+		    SwapColumns(neg, nvar+1, nvar+1+i);
+		evalue *EP = 
+		    barvinok_enumerate_e(neg, exist-1, nparam, MaxRays);
+		evalue *E = 
+		    barvinok_enumerate_e(pos, exist, nparam, MaxRays);
+		eadd(E, EP);
+		free_evalue_refs(E); 
+		free(E);
+		Polyhedron_Free(neg);
+		Polyhedron_Free(pos);
+		value_clear(f);
+		Vector_Free(row);
+		return EP;
 	    }
 	}
 
     if (nvar == 0) {
-	for (int i = 0; i < exist; ++i)
-	    for (int l = P->NbEq; l < P->NbConstraints; ++l) {
-		if (value_negz_p(P->Constraint[l][nvar+i+1]))
-		    continue;
+	int i;
+	Polyhedron *pos, *neg;
+	for (i = 0; i < exist; ++i)
+	    if (SplitOnVar(P, i, nvar, len, exist, MaxRays,
+			   row, f, false, &pos, &neg))
+		break;
 
-		for (int u = P->NbEq; u < P->NbConstraints; ++u) {
-		    if (value_posz_p(P->Constraint[u][nvar+i+1]))
-			continue;
-
-		    Polyhedron *pos, *neg;
-
-		    if (!SplitOnConstraint(P, i, l, u, 
-					   nvar, len, exist, MaxRays,
-					   row, f, false,
-				           &pos, &neg))
-			continue;
+	if (i < exist) {
 #ifdef DEBUG_ER
-		    fprintf(stderr, "\nER: Or\n");
+	    fprintf(stderr, "\nER: Or\n");
 #endif /* DEBUG_ER */
 
-		    evalue *EN = 
-			barvinok_enumerate_e(neg, exist, nparam, MaxRays);
-		    evalue *EP = 
-			barvinok_enumerate_e(pos, exist, nparam, MaxRays);
-		    evalue E;
-		    value_init(E.d);
-		    evalue_copy(&E, EP);
-		    eadd(EN, &E);
-		    emul(EN, EP);
-		    free_evalue_refs(EN); 
-		    value_init(EN->d);
-		    evalue_set_si(EN, -1, 1);
-		    emul(EN, EP);
-		    eadd(&E, EP);
+	    evalue *EN = 
+		barvinok_enumerate_e(neg, exist, nparam, MaxRays);
+	    evalue *EP = 
+		barvinok_enumerate_e(pos, exist, nparam, MaxRays);
+	    evalue E;
+	    value_init(E.d);
+	    evalue_copy(&E, EP);
+	    eadd(EN, &E);
+	    emul(EN, EP);
+	    free_evalue_refs(EN); 
+	    value_init(EN->d);
+	    evalue_set_si(EN, -1, 1);
+	    emul(EN, EP);
+	    eadd(&E, EP);
 
-		    free_evalue_refs(EN); 
-		    free(EN);
-		    free_evalue_refs(&E); 
-		    Polyhedron_Free(neg);
-		    Polyhedron_Free(pos);
-		    value_clear(f);
-		    Vector_Free(row);
+	    free_evalue_refs(EN); 
+	    free(EN);
+	    free_evalue_refs(&E); 
+	    Polyhedron_Free(neg);
+	    Polyhedron_Free(pos);
+	    value_clear(f);
+	    Vector_Free(row);
 
-		    reduce_evalue(EP);
+	    reduce_evalue(EP);
 
-		    return EP;
-		}
-	    }
+	    return EP;
+	}
     }
 
     assert(0);
