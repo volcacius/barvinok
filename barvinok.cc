@@ -400,7 +400,7 @@ void normalize(vec_ZZ& vertex, Polyhedron *i, vec_ZZ& lambda,
 	sign = -sign;
 }
 
-void count(Polyhedron *P)
+void count(Polyhedron *P, Value* result)
 {
     Polyhedron ** vpos = new (Polyhedron *)[P->NbRays];
     Polyhedron ** vneg = new (Polyhedron *)[P->NbRays];
@@ -532,6 +532,8 @@ void count(Polyhedron *P)
 	    ++f;
 	}
     }
+    assert(value_one_p(&count[0]._mp_den));
+    value_assign(*result, &count[0]._mp_num);
     mpq_clear(count);
 
     for (int j = 0; j < P->NbRays; ++j) {
