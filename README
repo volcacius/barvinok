@@ -9,6 +9,6 @@ support.
 For NTL this means you have to specify
     NTL_GMP_LIP=on
 
-Note that the modulo representation is subject to change.
+Note that the fractional representation is subject to change.
 
 Sven Verdoolaege <skimo@kotnet.org>
