@@ -53,7 +53,7 @@ fi
 AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
-AC_REPLACE_FUNCS(Enumeration_Free reduce_evalue)
+AC_REPLACE_FUNCS(Enumeration_Free reduce_evalue mpz_divisible_p)
 AC_TRY_RUN([
 #include <polylib/polylibgmp.h>
 

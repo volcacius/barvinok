@@ -52,7 +52,7 @@ static void zz2value(ZZ& z, Value& v)
     int abs_sa = sa < 0 ? -sa : sa;
 
     mp_limb_t * adata = DATA(z.rep);
-    mpz_realloc2(v, __GMP_BITS_PER_MP_LIMB * abs_sa);
+    _mpz_realloc(v, abs_sa);
     for (int i = 0; i < abs_sa; ++i)
 	v[0]._mp_d[i] = adata[i];
     v[0]._mp_size = sa;
