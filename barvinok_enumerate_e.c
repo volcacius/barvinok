@@ -19,6 +19,7 @@
 #else
 #include <getopt.h>
 struct option options[] = {
+    { "pip",   no_argument,  0,  'p' },
     { "convert",   no_argument,  0,  'c' },
     { "range",	no_argument,	0,  'r' },
     { 0, 0, 0, 0 }
@@ -36,9 +37,13 @@ int main(int argc, char **argv)
     int c, ind = 0;
     int range = 0;
     int convert = 0;
+    int pip = 0;
 
-    while ((c = getopt_long(argc, argv, "cr", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "pcr", options, &ind)) != -1) {
 	switch (c) {
+	case 'p':
+	    pip = 1;
+	    break;
 	case 'c':
 	    convert = 1;
 	    break;
@@ -63,7 +68,10 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     printf("exist: %d, nparam: %d\n", exist, nparam);
     param_name = Read_ParamNames(stdin, nparam);
-    EP = barvinok_enumerate_e(A, exist, nparam, 600);
+    if (pip)
+	EP = barvinok_enumerate_pip(A, exist, nparam, 600);
+    else
+	EP = barvinok_enumerate_e(A, exist, nparam, 600);
     reduce_evalue(EP);
     evalue_combine(EP);
     if (range)
