@@ -876,6 +876,95 @@ void free_evalue_refs(evalue *e) {
   return;
 } /* free_evalue_refs */
 
+static void mod2table_r(evalue *e, Vector *periods, int p, Vector * val, 
+			evalue *res)
+{
+    unsigned nparam = periods->Size;
+
+    if (p == nparam) {
+	double d = compute_evalue(e, val->p);
+	if (d > 0)
+	    d += .25;
+	else
+	    d -= .25;
+	value_set_si(res->d, 1);
+	value_init(res->x.n);
+	value_set_double(res->x.n, d);
+	return;
+    }
+    if (value_one_p(periods->p[p]))
+	mod2table_r(e, periods, p+1, val, res);
+    else {
+	Value tmp;
+	value_init(tmp);
+
+	value_assign(tmp, periods->p[p]);
+	value_set_si(res->d, 0);
+	res->x.p = new_enode(periodic, VALUE_TO_INT(tmp), p+1);
+	do {
+	    value_decrement(tmp, tmp);
+	    value_assign(val->p[p], tmp);
+	    mod2table_r(e, periods, p+1, val, 
+			&res->x.p->arr[VALUE_TO_INT(tmp)]);
+	} while (value_pos_p(tmp));
+
+	value_clear(tmp);
+    }
+}
+
+void evalue_mod2table(evalue *e, int nparam)
+{
+  enode *p;
+  int i;
+
+  if (EVALUE_IS_DOMAIN(*e) || value_pos_p(e->d))
+    return;
+  p = e->x.p;
+  for (i=0; i<p->size; i++) {
+    evalue_mod2table(&(p->arr[i]), nparam);
+  }
+  if (p->type == modulo) {
+    Vector *periods = Vector_Alloc(nparam);
+    Vector *val = Vector_Alloc(nparam);
+    Value tmp;
+    evalue *ev;
+    evalue EP, res;
+
+    value_init(tmp);
+    value_set_si(tmp, p->pos);
+    Vector_Set(periods->p, 1, nparam);
+    Vector_Set(val->p, 0, nparam);
+    for (ev = &p->arr[0]; value_zero_p(ev->d); ev = &ev->x.p->arr[0]) {
+      enode *p = ev->x.p;
+
+      assert(p->type == polynomial);
+      assert(p->size == 2);
+      assert(value_one_p(p->arr[1].d));
+      Gcd(tmp, p->arr[1].x.n, &periods->p[p->pos-1]);
+      value_division(periods->p[p->pos-1], tmp, periods->p[p->pos-1]);
+    }
+    value_init(EP.d);
+    mod2table_r(&p->arr[0], periods, 0, val, &EP);
+
+    value_init(res.d);
+    evalue_set_si(&res, 0, 1);
+    /* Compute the polynomial using Horner's rule */
+    for (i=p->size-1;i>1;i--) {
+      eadd(&p->arr[i], &res);
+      emul(&EP, &res);
+    }
+    eadd(&p->arr[1], &res);
+
+    free_evalue_refs(e);	  
+    free_evalue_refs(&EP);	  
+    *e = res;
+
+    value_clear(tmp);
+    Vector_Free(val);
+    Vector_Free(periods);
+  }
+} /* evalue_mod2table */
+
 /********************************************************/
 /* function in domain                                   */
 /*    check if the parameters in list_args              */

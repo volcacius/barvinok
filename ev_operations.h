@@ -81,4 +81,6 @@ void emul (evalue *e1, evalue *res );
 int in_domain(Polyhedron *P, Value *list_args);
 double compute_evalue(evalue *e,Value *list_args);
 Value *compute_poly(Enumeration *en,Value *list_args);
+void evalue_mod2table(evalue *ev, int nparam);
+
 #endif

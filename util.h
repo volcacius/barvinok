@@ -23,6 +23,7 @@ Matrix * unimodular_complete(Vector *row);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
 void Enumeration_Print(FILE *Dst, Enumeration *en, char **params);
+void Enumeration_mod2table(Enumeration *en, unsigned nparam);
 void Free_ParamNames(char **params, int m);
 
 #include "ev_operations.h"

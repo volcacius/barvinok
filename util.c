@@ -736,6 +736,12 @@ void Enumeration_Print(FILE *Dst, Enumeration *en, char **params)
     }
 }
 
+void Enumeration_mod2table(Enumeration *en, unsigned nparam)
+{
+    for (; en; en = en->next)
+	evalue_mod2table(&en->EP, nparam);
+}
+
 void Free_ParamNames(char **params, int m)
 {
     while (--m >= 0)
