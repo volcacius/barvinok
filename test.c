@@ -116,6 +116,12 @@ int main()
 		}
 	    Domain_Free(B);
 	    break;
+	case 6:
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    B = remove_equalities(A);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
+	    Polyhedron_Free(B);
+	    break;
 	}
 	Polyhedron_Free(A);
     }

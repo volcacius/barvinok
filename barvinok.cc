@@ -442,13 +442,20 @@ void normalize(Value* values, Polyhedron *i, vec_ZZ& lambda,
 
 void count(Polyhedron *P, Value* result)
 {
-    Polyhedron ** vcone = new (Polyhedron *)[P->NbRays];
-
+    Polyhedron ** vcone;
     vec_ZZ sign;
     int ncone = 0;
     sign.SetLength(ncone);
+    unsigned dim;
+    int allocated = 0;
 
-    unsigned dim = P->Dimension;
+    if (P->NbEq != 0) {
+	P = remove_equalities(P);
+	allocated = 1;
+    }
+
+    dim = P->Dimension;
+    vcone = new (Polyhedron *)[P->NbRays];
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j, 600);
@@ -543,4 +550,7 @@ void count(Polyhedron *P, Value* result)
 	Domain_Free(vcone[j]);
 
     delete [] vcone;
+
+    if (allocated)
+	Polyhedron_Free(P);
 }
