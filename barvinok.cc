@@ -82,6 +82,15 @@ static Matrix * rays(Polyhedron *C)
     return M;
 }
 
+static ZZ max(vec_ZZ& v)
+{
+    ZZ max = v[0];
+    for (int i = 1; i < v.length(); ++i)
+	if (v[i] > max)
+	    max = v[i];
+    return max;
+}
+
 class cone {
 public:
     cone(Polyhedron *C) {
@@ -110,6 +119,17 @@ public:
 	long r = LLL(det2, B, U);
 
 	cout << det2 << B << U << endl;
+
+	ZZ min = max(U[0]);
+	int index = 0;
+	for (int i = 1; i < U.NumRows(); ++i) {
+	    ZZ tmp = max(U[1]);
+	    if (tmp < min) {
+		min = tmp;
+		index = i;
+	    }
+	}
+	cout << index << ": " << min << endl;
 
 	Matrix_Free(inv);
     }
