@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/times.h>
 #include <polylib/polylibgmp.h>
@@ -40,6 +41,8 @@ int main()
 	    value_init(cb);
 	    value_init(ck);
 	    fgets(s, 128, stdin);
+	    /* workaround for apparent bug in older gmps */
+	    *strchr(s, '\n') = '\0';
 	    while ((*s=='#') || (value_read(ck, s) != 0))
 		fgets(s, 128, stdin);
 	    barvinok_count(A, &cb, 100);
