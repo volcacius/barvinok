@@ -203,7 +203,7 @@ public:
 /*
  * Barvinok's Decomposition of a simplicial cone
  *
- * Returns a list of polyhedra
+ * Returns two lists of polyhedra
  */
 void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 {
