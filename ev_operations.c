@@ -72,6 +72,47 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
     return;
 } /* addeliminatedparams_evalue */
 
+void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
+			      unsigned MaxRays)
+{
+    enode *p;
+    int i;
+
+    if (CT->NbRows == CT->NbColumns)
+	return;
+
+    if (EVALUE_IS_ZERO(*e))
+	return;
+
+    if (value_notzero_p(e->d)) {
+	evalue res;
+	value_init(res.d);
+	value_set_si(res.d, 0);
+	res.x.p = new_enode(partition, 2, -1);
+	EVALUE_SET_DOMAIN(res.x.p->arr[0], 
+	    DomainConstraintSimplify(Polyhedron_Copy(CEq), MaxRays));
+	value_clear(res.x.p->arr[1].d);
+	res.x.p->arr[1] = *e;
+	*e = res;
+	return;
+    }
+
+    p = e->x.p;
+    assert(p);
+    assert(p->type == partition);
+
+    for (i=0; i<p->size/2; i++) {
+	Polyhedron *D = EVALUE_DOMAIN(p->arr[2*i]);
+	Polyhedron *T = DomainPreimage(D, CT, MaxRays);
+	Domain_Free(D);
+	D = T;
+	T = DomainIntersection(D, CEq, MaxRays);
+	Domain_Free(D);
+	EVALUE_SET_DOMAIN(p->arr[2*i], T);
+	addeliminatedparams_evalue(&p->arr[2*i+1], CT);
+    }
+}
+
 static int mod_rational_smaller(evalue *e1, evalue *e2)
 {
     int r;
