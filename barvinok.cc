@@ -1864,6 +1864,7 @@ next:
 	    Matrix_Free(M);
 	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
 	    Polyhedron_Free(T);
+	    value_clear(f);
 	    Vector_Free(row);
 	    return EP;
 	}
