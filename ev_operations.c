@@ -1535,3 +1535,50 @@ Value *compute_poly(Enumeration *en,Value *list_args) {
   return(tmp); /* no compatible domain with the arguments */
 } /* compute_poly */ 
 
+size_t value_size(Value v) {
+    return (v[0]._mp_size > 0 ? v[0]._mp_size : -v[0]._mp_size)
+	    * sizeof(v[0]._mp_d[0]);
+}
+
+size_t domain_size(Polyhedron *D)
+{
+    int i, j;
+    size_t s = sizeof(*D);
+
+    for (i = 0; i < D->NbConstraints; ++i)
+	for (j = 0; j < D->Dimension+2; ++j)
+	    s += value_size(D->Constraint[i][j]);
+
+    for (i = 0; i < D->NbRays; ++i)
+	for (j = 0; j < D->Dimension+2; ++j)
+	    s += value_size(D->Ray[i][j]);
+
+    return s;
+}
+
+size_t enode_size(enode *p) {
+    size_t s = sizeof(*p) - sizeof(p->arr[0]);
+    int i;
+
+    if (p->type == partition)
+	for (i = 0; i < p->size/2; ++i) {
+	    s += domain_size(EVALUE_DOMAIN(p->arr[2*i]));
+	    s += evalue_size(&p->arr[2*i+1]);
+	}
+    else
+	for (i = 0; i < p->size; ++i) {
+	    s += evalue_size(&p->arr[i]);
+	}
+    return s;
+}
+
+size_t evalue_size(evalue *e)
+{
+    size_t s = sizeof(*e);
+    s += value_size(e->d);
+    if (value_notzero_p(e->d))
+	s += value_size(e->x.n);
+    else
+	s += enode_size(e->x.p);
+    return s;
+}
