@@ -1999,7 +1999,8 @@ next:
 		    fprintf(stderr, "\nER: Split\n");
 #endif /* DEBUG_ER */
 
-		    assert(i == 0); // for now
+		    if (i != 0)
+			SwapColumns(neg, nvar+1, nvar+1+i);
 		    evalue *EP = 
 			barvinok_enumerate_e(neg, exist-1, nparam, MaxRays);
 		    evalue *E = 
