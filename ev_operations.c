@@ -475,8 +475,10 @@ void eadd_partitions (evalue *e1,evalue *res)
 	    s[n].E = res->x.p->arr[2*i+1];
 	    s[n].D = fd;
 	    ++n;
-	} else
+	} else {
 	    free_evalue_refs(&res->x.p->arr[2*i+1]);
+	    Domain_Free(fd);
+	}
 	if (fd != EVALUE_DOMAIN(res->x.p->arr[2*i]))
 	    Domain_Free(EVALUE_DOMAIN(res->x.p->arr[2*i]));
 	value_clear(res->x.p->arr[2*i].d);
