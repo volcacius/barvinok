@@ -581,6 +581,44 @@ static void emul_poly (evalue *e1, evalue *res)
     *res = tmp;
 }
 
+void emul_partitions (evalue *e1,evalue *res)
+{
+    int n, i, j;
+    Polyhedron *d;
+    struct section *s;
+    s = (struct section *) 
+	    malloc((e1->x.p->size/2) * (res->x.p->size/2) * 
+		   sizeof(struct section));
+    assert(s);
+
+    n = 0;
+    for (i = 0; i < res->x.p->size/2; ++i) {
+	for (j = 0; j < e1->x.p->size/2; ++j) {
+	    d = DomainIntersection(EVALUE_DOMAIN(e1->x.p->arr[2*j]),
+				   EVALUE_DOMAIN(res->x.p->arr[2*i]), 0);
+	    if (emptyQ(d)) {
+		Domain_Free(d);
+		continue;
+	    }
+	    value_init(s[n].E.d);
+	    evalue_copy(&s[n].E, &res->x.p->arr[2*i+1]);
+	    emul(&e1->x.p->arr[2*j+1], &s[n].E);
+	    s[n].D = d;
+	    ++n;
+	}
+	Domain_Free(EVALUE_DOMAIN(res->x.p->arr[2*i]));
+    }
+
+    free(res->x.p);
+    res->x.p = new_enode(partition, 2*n, -1);
+    for (j = 0; j < n; ++j) {
+	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	res->x.p->arr[2*j+1] = s[j].E;
+    }
+
+    free(s);
+}
+
 /* Computes the product of two evalues "e1" and "res" and puts the result in "res". you must
  * do a copy of "res" befor calling this function if you nead it after. The vector type of 
  * evalues is not treated here */
@@ -593,6 +631,15 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
     return;
 }
      
+    if (value_zero_p(e1->d) && e1->x.p->type == partition) {
+        if (value_zero_p(res->d) && res->x.p->type == partition)
+	    emul_partitions(e1, res);
+	else
+	    emul_rev(e1, res);
+    } else if (value_zero_p(res->d) && res->x.p->type == partition) {
+	for (i = 0; i < res->x.p->size/2; ++i)
+	    emul(e1, &res->x.p->arr[2*i+1]);
+    } else
    if (value_zero_p(res->d) && res->x.p->type == relation)
 	emul(e1, &res->x.p->arr[1]);
    else
