@@ -68,6 +68,7 @@ int main()
 	    break;
 	case 3:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    C = B = NULL;
 	    barvinok_decompose(A,&B,&C);
 	    puts("Pos:");
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
@@ -139,6 +140,22 @@ int main()
 	    Enumeration_Free(en);
 	    Polyhedron_Free(C);
 	}
+	case 9:
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    Polyhedron_Polarize(A);
+	    C = B = NULL;
+	    barvinok_decompose(A,&B,&C);
+	    for (D = B; D; D = D->next)
+		Polyhedron_Polarize(D);
+	    for (D = C; D; D = D->next)
+		Polyhedron_Polarize(D);
+	    puts("Pos:");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
+	    puts("Neg:");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
+	    Domain_Free(B);
+	    Domain_Free(C);
+	    break;
 	}
 	Polyhedron_Free(A);
     }
