@@ -2648,6 +2648,22 @@ static bool is_single(Value *row, int pos, int len)
 	   First_Non_Zero(row+pos+1, len-pos-1) == -1;
 }
 
+static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
+				     int len, Value *v)
+{
+    value_oppose(*v, u[pos+1]);
+    Vector_Combine(l+1, u+1, c+1, *v, l[pos+1], len-1);
+    value_multiply(*v, *v, l[pos+1]);
+    value_substract(c[len-1], c[len-1], *v);
+    value_set_si(*v, -1);
+    Vector_Scale(c+1, c+1, *v, len-1);
+    value_decrement(c[len-1], c[len-1]);
+    ConstraintSimplify(c, c, len, v);
+    value_set_si(*v, -1);
+    Vector_Scale(c+1, c+1, *v, len-1);
+    value_decrement(c[len-1], c[len-1]);
+}
+
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 
@@ -2811,30 +2827,9 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		}
 		if (!(info[i] & ONE_NEG)) {
 		    if (lu_parallel) {
-			/* recalculate constant */
-			/* We actually recalculate the whole row for
-			 * now, because it may have already been scaled
-			 */
-			value_oppose(f, P->Constraint[u][nvar+i+1]);
-			Vector_Combine(P->Constraint[l]+1, P->Constraint[u]+1, 
-			       row->p+1,
-			       f, P->Constraint[l][nvar+i+1], len-1);
-			/*
-			Vector_Combine(P->Constraint[l]+len-1, 
-				       P->Constraint[u]+len-1, row->p+len-1,
-				       f, P->Constraint[l][nvar+i+1], 1);
-			*/
-			value_multiply(f, f, P->Constraint[l][nvar+i+1]);
-			value_substract(row->p[len-1], row->p[len-1], f);
-			value_set_si(f, -1);
-			Vector_Scale(row->p+1, row->p+1, f, len-1);
-			value_decrement(row->p[len-1], row->p[len-1]);
-			ConstraintSimplify(row->p, row->p, len, &f);
-			value_set_si(f, -1);
-			Vector_Scale(row->p+1, row->p+1, f, len-1);
-			value_decrement(row->p[len-1], row->p[len-1]);
-			//puts("row");
-			//Vector_Print(stdout, P_VALUE_FMT, row);
+			negative_test_constraint(P->Constraint[l],
+						 P->Constraint[u],
+						 row->p, nvar+i, len, &f);
 			Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
 			if (emptyQ(T)) {
 			    //printf("one_neg i: %d, l: %d, u: %d\n", i, l, u);
