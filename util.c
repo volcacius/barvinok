@@ -1089,7 +1089,7 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
     for (value_assign(k,LB);value_le(k,UB);value_increment(k,k)) {
         /* Insert k in context */
         value_assign(context[pos],k);
-	count_points(pos+1,P->next,context,&c);
+	count_points_e(pos+1, P->next, exist, nparam, context, &c);
 	if(value_notmone_p(c))
 	    value_addto(*res, *res, c);
 	else {
