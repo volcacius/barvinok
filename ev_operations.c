@@ -222,6 +222,14 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     fprintf(DST, "= 0 ] * \n");
     print_evalue(DST, &p->arr[1], pname);
     break;
+  case partition:
+    for (i=0; i<p->size/2; i++) {
+	Print_Domain(DST, EVALUE_DOMAIN(p->arr[2*i]), pname);
+	print_evalue(DST, &p->arr[2*i+1], pname);
+    }
+    break;
+  default:
+    assert(0);
   }
   return;
 } /* print_enode */ 
