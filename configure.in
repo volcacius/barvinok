@@ -33,6 +33,7 @@ else
 		AC_MSG_ERROR([GMP not found])
 	fi
 fi
+AC_CHECK_DECL(mpz_divisible_p,[],[AC_LIBOBJ(mpz_divisible_p)],[#include <gmp.h>])
 
 AC_ARG_WITH(polylib,
             [  --with-polylib=DIR      DIR Location of PolyLib],
@@ -53,7 +54,7 @@ fi
 AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
-AC_REPLACE_FUNCS(Enumeration_Free reduce_evalue mpz_divisible_p)
+AC_REPLACE_FUNCS(Enumeration_Free reduce_evalue)
 AC_TRY_RUN([
 #include <polylib/polylibgmp.h>
 
