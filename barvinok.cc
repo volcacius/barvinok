@@ -66,12 +66,12 @@ static void matrix2zz(Matrix *M, mat_ZZ& m)
     }
 }
 
-static void vector2zz(Vector *V, vec_ZZ& v)
+static void values2zz(Value *p, vec_ZZ& v, int len)
 {
-    v.SetLength(V->Size);
+    v.SetLength(len);
 
-    for (int i = 0; i < V->Size; ++i) {
-	value2zz(V->p[i], v[i]);
+    for (int i = 0; i < len; ++i) {
+	value2zz(p[i], v[i]);
     }
 }
 
@@ -214,6 +214,64 @@ public:
     Matrix *Rays;
 };
 
+class dpoly {
+public:
+    vec_ZZ coeff;
+    dpoly(int d, ZZ& degree, int offset = 0) {
+	coeff.SetLength(d+1);
+
+	int min = d;
+	if (degree < ZZ(INIT_VAL, d))
+	    min = to_int(degree);
+
+	ZZ c = ZZ(INIT_VAL, 1);
+	if (!offset)
+	    coeff[0] = c;
+	for (int i = 1; i <= min; ++i) {
+	    c *= (degree -i + 1);
+	    c /= i;
+	    coeff[i-offset] = c;
+	}
+    }
+    void operator *= (dpoly& f) {
+	assert(coeff.length() == f.coeff.length());
+	vec_ZZ old = coeff;
+	coeff = f.coeff[0] * coeff;
+	for (int i = 1; i < coeff.length(); ++i)
+	    for (int j = 0; i+j < coeff.length(); ++j)
+		coeff[i+j] += f.coeff[i] * old[j];
+    }
+    void div(dpoly& d, mpq_t count, ZZ& sign) {
+	int len = coeff.length();
+	Value tmp;
+	value_init(tmp);
+	mpq_t* c = new mpq_t[coeff.length()];
+	mpq_t qtmp;
+	mpq_init(qtmp);
+	for (int i = 0; i < len; ++i) {
+	    mpq_init(c[i]);
+	    zz2value(coeff[i], tmp);
+	    mpq_set_z(c[i], tmp);
+
+	    for (int j = 1; j <= i; ++j) {
+		zz2value(d.coeff[j], tmp);
+		mpq_set_z(qtmp, tmp);
+		mpq_mul(qtmp, qtmp, c[i-j]);
+		mpq_sub(c[i], c[i], qtmp);
+	    }
+
+	    zz2value(d.coeff[0], tmp);
+	    mpq_set_z(qtmp, tmp);
+	    mpq_div(c[i], c[i], qtmp);
+	}
+	delete [] c;
+	if (sign == -1)
+	    mpq_sub(count, count, c[len-1]);
+	else
+	    mpq_add(count, count, c[len-1]);
+    }
+};
+
 /*
  * Barvinok's Decomposition of a simplicial cone
  *
@@ -309,11 +367,32 @@ static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r)
     for (int k = 0; k < i->NbRays; ++k) {
 	if (!value_zero_p(i->Ray[k][dim+1]))
 	    continue;
-	Vector *shortv = Vector_Alloc(dim);
-	Vector_Copy(i->Ray[k]+1, shortv->p, dim);
-	vector2zz(shortv, rays[(*r)++]);
-	Vector_Free(shortv);
+	values2zz(i->Ray[k]+1, rays[(*r)++], dim);
     }
+}
+
+void normalize(vec_ZZ& vertex, Polyhedron *i, vec_ZZ& lambda, 
+	       ZZ& sign, ZZ& num, vec_ZZ& den)
+{
+    unsigned dim = i->Dimension;
+    int r = 0;
+    mat_ZZ rays;
+    rays.SetDims(dim, dim);
+    add_rays(rays, i, &r);
+    den = rays * lambda;
+    num = vertex * lambda;
+    int change = 0;
+
+    for (int j = 0; j < den.length(); ++j) {
+	if (den[j] > 0)
+	    change ^= 1;
+	else {
+	    den[j] = abs(den[j]);
+	    num += den[j];
+	}
+    }
+    if (change)
+	sign = -sign;
 }
 
 void count(Polyhedron *P)
@@ -347,12 +426,14 @@ void count(Polyhedron *P)
 	    Polyhedron *A = Polyhedron_Polar(i, 600);
 	    A->next = pos;
 	    pos = A;
+	    assert(A->NbRays-1 == dim);
 	    nrays += A->NbRays - 1;
 	}
 	for (Polyhedron *i = polneg; i; i = i->next) {
 	    Polyhedron *A = Polyhedron_Polar(i, 600);
 	    A->next = neg;
 	    neg = A;
+	    assert(A->NbRays-1 == dim);
 	    nrays += A->NbRays - 1;
 	}
 	Domain_Free(polpos);
@@ -383,6 +464,69 @@ void count(Polyhedron *P)
     vec_ZZ lambda;
     nonorthog(rays, lambda);
     cout << lambda;
+    cout << rays * lambda;
+
+    vec_ZZ sign;
+    vec_ZZ num;
+    mat_ZZ den;
+    sign.SetLength(nrays/dim);
+    num.SetLength(nrays/dim);
+    den.SetDims(nrays/dim,dim);
+
+    int f = 0;
+    for (int j = 0; j < P->NbRays; ++j) {
+	vec_ZZ vertex;
+	values2zz(P->Ray[j]+1, vertex, dim);
+	for (Polyhedron *i = vpos[j]; i; i = i->next) {
+	    sign[f] = 1;
+	    normalize(vertex, i, lambda, sign[f], num[f], den[f]);
+	    ++f;
+	}
+	for (Polyhedron *i = vneg[j]; i; i = i->next) {
+	    sign[f] = -1;
+	    normalize(vertex, i, lambda, sign[f], num[f], den[f]);
+	    ++f;
+	}
+    }
+    ZZ min = num[0];
+    for (int j = 1; j < num.length(); ++j)
+	if (num[j] < min)
+	    min = num[j];
+    for (int j = 0; j < num.length(); ++j)
+	num[j] -= min;
+    cout << sign;
+    cout << num;
+    cout << den;
+
+    f = 0;
+    mpq_t count;
+    mpq_init(count);
+    for (int j = 0; j < P->NbRays; ++j) {
+	for (Polyhedron *i = vpos[j]; i; i = i->next) {
+	    dpoly d(dim, num[f]);
+	    dpoly n(dim, den[f][0], 1);
+	    for (int k = 1; k < dim; ++k) {
+		dpoly f(dim, den[f][k], 1);
+		n *= f;
+	    }
+	    cout << d.coeff << "/" << n.coeff;
+	    d.div(n, count, sign[f]);
+	    mpq_out_str(stdout, 10, count);
+	    ++f;
+	}
+	for (Polyhedron *i = vneg[j]; i; i = i->next) {
+	    dpoly d(dim, num[f]);
+	    dpoly n(dim, den[f][0], 1);
+	    for (int k = 1; k < dim; ++k) {
+		dpoly f(dim, den[f][k], 1);
+		n *= f;
+	    }
+	    cout << d.coeff << "/" << n.coeff;
+	    d.div(n, count, sign[f]);
+	    mpq_out_str(stdout, 10, count);
+	    ++f;
+	}
+    }
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Domain_Free(vpos[j]);
