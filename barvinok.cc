@@ -2333,6 +2333,51 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	    } END_FORALL_PVertex_in_ParamPolyhedron;
 	}
 
+	if (!EP) {
+	    /* Search for vertex coordinate to split on */
+	    /* Now look for one that depends on the parameters */
+	    FORALL_PVertex_in_ParamPolyhedron(V, last, PP) {
+		for (int i = 0; i < exist; ++i) {
+		    value_set_si(M->p[0][0], 1);
+		    Vector_Set(M->p[0]+1, 0, nvar+exist);
+		    Vector_Copy(V->Vertex->p[i], 
+				M->p[0] + 1 + nvar + exist, nparam+1);
+		    value_oppose(M->p[0][1+nvar+i], 
+				 V->Vertex->p[i][nparam+1]);
+
+		    Polyhedron *pos, *neg;
+		    value_set_si(M->p[0][0], 1);
+		    value_decrement(M->p[0][P->Dimension+1],
+				    M->p[0][P->Dimension+1]);
+		    neg = AddConstraints(M->p[0], 1, P, MaxRays);
+		    value_set_si(f, -1);
+		    Vector_Scale(M->p[0]+1, M->p[0]+1, f, 
+				 P->Dimension+1);
+		    value_decrement(M->p[0][P->Dimension+1],
+				    M->p[0][P->Dimension+1]);
+		    value_decrement(M->p[0][P->Dimension+1],
+				    M->p[0][P->Dimension+1]);
+		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+		    if (emptyQ(neg) || emptyQ(pos)) {
+			Polyhedron_Free(pos);
+			Polyhedron_Free(neg);
+			continue;
+		    }
+		    Polyhedron_Free(pos);
+		    value_increment(M->p[0][P->Dimension+1],
+				    M->p[0][P->Dimension+1]);
+		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+#ifdef DEBUG_ER
+		    fprintf(stderr, "\nER: ParamVertex\n");
+#endif /* DEBUG_ER */
+		    EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
+		    break;
+		}
+		if (EP)
+		    break;
+	    } END_FORALL_PVertex_in_ParamPolyhedron;
+	}
+
 	Matrix_Free(M);
 	value_clear(f);
     }
