@@ -1004,3 +1004,100 @@ void line_minmax(Polyhedron *I, Value *min, Value *max)
     }
     Polyhedron_Free(I);
 }
+
+/** 
+
+PROCEDURES TO COMPUTE ENUMERATION. recursive procedure, recurse for
+each imbriquation
+
+@param pos index position of current loop index (1..hdim-1)
+@param P loop domain
+@param context context values for fixed indices 
+@return the number of integer points in this
+polyhedron 
+
+*/
+void count_points_e (int pos,Polyhedron *P,Value *context, Value *res) {
+   
+    Value LB, UB, k, c;
+
+    if (emptyQ(P)) {
+	value_set_si(*res, 0);
+	return;
+    }
+
+    value_init(LB); value_init(UB); value_init(k);
+    value_set_si(LB,0);
+    value_set_si(UB,0);
+
+    if (lower_upper_bounds(pos,P,context,&LB,&UB) !=0) {
+    
+        /* Problem if UB or LB is INFINITY */
+        fprintf(stderr, "count_points: ? infinite domain\n");
+        value_clear(LB); value_clear(UB); value_clear(k);
+	value_set_si(*res, -1);
+	return;
+    }
+  
+#ifdef EDEBUG1
+    if (!P->next) {
+        int i;
+        for (value_assign(k,LB); value_le(k,UB); value_increment(k,k)) {
+            fprintf(stderr, "(");
+            for (i=1; i<pos; i++) {
+                value_print(stderr,P_VALUE_FMT,context[i]);
+                fprintf(stderr,",");
+            }
+            value_print(stderr,P_VALUE_FMT,k);
+            fprintf(stderr,")\n");
+        }
+    }
+#endif
+  
+    value_set_si(context[pos],0);
+    if (value_lt(UB,LB)) {
+        value_clear(LB); value_clear(UB); value_clear(k);
+	value_set_si(*res, 0);
+	return;  
+    }  
+    if (!P->next) {
+        value_substract(k,UB,LB);
+        value_add_int(k,k,1);
+	value_assign(*res, k);
+        value_clear(LB); value_clear(UB); value_clear(k);
+        return;
+    } 
+
+    /*-----------------------------------------------------------------*/
+    /* Optimization idea                                               */
+    /*   If inner loops are not a function of k (the current index)    */
+    /*   i.e. if P->Constraint[i][pos]==0 for all P following this and */
+    /*        for all i,                                               */
+    /*   Then CNT = (UB-LB+1)*count_points(pos+1, P->next, context)    */
+    /*   (skip the for loop)                                           */
+    /*-----------------------------------------------------------------*/
+  
+    value_init(c);
+    value_set_si(*res, 0);
+    for (value_assign(k,LB);value_le(k,UB);value_increment(k,k)) {
+        /* Insert k in context */
+        value_assign(context[pos],k);
+	count_points(pos+1,P->next,context,&c);
+	if(value_notmone_p(c))
+	    value_addto(*res, *res, c);
+	else {
+	    value_set_si(*res, -1);
+	    break;
+        }
+    }
+    value_clear(c);
+  
+#ifdef EDEBUG11
+    fprintf(stderr,"%d\n",CNT);
+#endif
+  
+    /* Reset context */
+    value_set_si(context[pos],0);
+    value_clear(LB); value_clear(UB); value_clear(k);
+    return;
+} /* count_points_e */
