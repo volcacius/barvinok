@@ -1772,7 +1772,6 @@ void evalue_mod2table(evalue *e, int nparam)
   }
   if (p->type == relation) {
     evalue copy;
-    evalue *ev;
 
     if (p->size > 2) {
       value_init(copy.d);
@@ -1788,10 +1787,9 @@ void evalue_mod2table(evalue *e, int nparam)
       free_evalue_refs(&copy);	  
     }
     free_evalue_refs(&p->arr[0]);	  
-    ev = &p->arr[1];
-    free(p);
     value_clear(e->d);
-    *e = *ev;
+    *e = p->arr[1];
+    free(p);
   } else if (p->type == fractional) {
     Vector *periods = Vector_Alloc(nparam);
     Vector *val = Vector_Alloc(nparam);
