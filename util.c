@@ -1,6 +1,7 @@
 #include <polylib/polylibgmp.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <util.h>
 
 /* Return random value between 0 and max-1 inclusive
  */
@@ -108,7 +109,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     return P;
 }
 
-Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
+Polyhedron* triangularize_cone(Polyhedron *P)
 {
     const static int MAX_TRY=10;
     int i, j, r, n, t;
