@@ -190,6 +190,23 @@ you_lose:   	/* OK, lets not do it */
 	    free_evalue_refs(&(p->arr[0]));
 	    evalue_set_si(e, 0, 1);
 	}
+	if (value_notzero_p(p->arr[0].d)) {
+	    if (value_zero_p(p->arr[0].x.n)) {
+		value_clear(e->d);
+		memcpy(e,&p->arr[1],sizeof(evalue));
+		if (p->size == 3)
+		    free_evalue_refs(&(p->arr[2]));
+	    } else {
+		if (p->size == 3) {
+		    value_clear(e->d);
+		    memcpy(e,&p->arr[2],sizeof(evalue));
+		} else
+		    evalue_set_si(e, 0, 1);
+		free_evalue_refs(&(p->arr[1]));
+	    }
+	    free_evalue_refs(&(p->arr[0]));
+	    free(p);
+	}
     }
 } /* reduce_evalue */
 
