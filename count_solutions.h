@@ -13,10 +13,10 @@ DFA* build_DFA_eq(int, int*, int, int*);
 DFA* build_DFA_ineq(int, int*, int, int*);
 
 /* Function defined in count.c */
-void count_accepting_paths(DFA*, int, int);
+double count_accepting_paths(DFA*, int, int);
 
 #ifdef __cplusplus
 }
 #endif
 
-void count_solutions(Relation& r);
+double count_solutions(Relation& r);

@@ -445,7 +445,8 @@ printf("was substantially faster on the limited domain it handled.\n");
 		delete reachable_info;
 	}
 	| COUNT relation ';' {
-	    count_solutions(*$2);
+	    double c = count_solutions(*$2);
+	    fprintf(stdout, "%.0f\n", c); 
 	}
 	;
 

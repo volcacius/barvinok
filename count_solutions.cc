@@ -14,7 +14,7 @@ static void max_index(Constraint_Handle c, varvector& vv)
     }
 }
 
-void count_solutions(Relation& r) 
+double count_solutions(Relation& r) 
 {
     int dim;
 
@@ -99,9 +99,11 @@ void count_solutions(Relation& r)
 	dfaFree(t);
     }
 
-    count_accepting_paths(dfa, dfa->ns, dim);
+    double c = count_accepting_paths(dfa, dfa->ns, dim);
     dfaFree(dfa);
 
     delete [] coeffs;
     delete [] indices;
+
+    return c;
 }

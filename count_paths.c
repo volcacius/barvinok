@@ -4,7 +4,7 @@
 #include "dfa.h"
 
 
-void count_accepting_paths(DFA *dfa, int num_states, int num_freevars)
+double count_accepting_paths(DFA *dfa, int num_states, int num_freevars)
 {
   int dead_state[num_states];		/* list of dead states */
   int num_edges_from[num_states];	/* number of (live) edges from state i */
@@ -125,7 +125,6 @@ void count_accepting_paths(DFA *dfa, int num_states, int num_freevars)
     if (dfa->f[j] == 1) 
       num_paths += N1[j];
 
-  printf("DFA: %i states, %.0f accepting paths, length of all accepting paths is %i.\n", 
-	 dfa->ns, num_paths, L);
+  return num_paths;
 }
 
