@@ -549,7 +549,7 @@ static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
 static void vertex_period(deque<string>& params, 
 		    Polyhedron *i, vec_ZZ& lambda, Matrix *T, 
 		    Value lcm, int p, Vector *val, 
-		    EhrhartPolynom *E, evalue* ev,
+		    evalue *E, evalue* ev,
 		    ZZ& offset)
 {
     unsigned nparam = T->NbRows - 1;
@@ -581,12 +581,9 @@ static void vertex_period(deque<string>& params,
 	value_assign(tmp, lcm);
 	EhrhartPolynom * ET = term(params[p], nump, &tmp);
 	evalue EV1=(*ET).to_evalue(params);  
-	evalue EV2=(*E).to_evalue(params);  
-	eadd(&EV1,&EV2);   
+	eadd(&EV1, E);   
 	delete ET;
-	*E=EhrhartPolynom(&EV2,params);
 	free_evalue_refs(&EV1); 
-	free_evalue_refs(&EV2);  
     }
 
     value_assign(tmp, lcm);
@@ -694,25 +691,24 @@ static void mask(Matrix *f, evalue *factor)
     free_evalue_refs(&EP);
 }
 
-static EhrhartPolynom *multi_mononom(deque<string>& params, vec_ZZ& p)
+static evalue *multi_mononom(deque<string>& params, vec_ZZ& p)
 {
-    EhrhartPolynom *X = new EhrhartPolynom();
-    evalue EV1=(*X).to_evalue(params);  
+    evalue *X = new evalue();
+    value_init(X->d);
+    evalue_set_si(X, 0, 1);
     unsigned nparam = p.length()-1;
     for (int i = 0; i < nparam; ++i) {
 	EhrhartPolynom *T = term(params[i], p[i]);
 	evalue EV2=(*T).to_evalue(params); 
-	eadd(&EV2,&EV1); 
+	eadd(&EV2, X); 
 	delete T;
 	free_evalue_refs(&EV2); 
     }
-    *X=EhrhartPolynom(&EV1,params) ;  
-    free_evalue_refs(&EV1); 
     return X;
 }
 
 struct term_info {
-    EhrhartPolynom *E;
+    evalue	   *E;
     ZZ		    constant;
     ZZ		    coeff;
     int		    pos;
@@ -747,8 +743,9 @@ void lattice_point(deque<string>& params,
 	}
 	Matrix *T = Transpose(mv);
 
-	EhrhartPolynom * EP = new EhrhartPolynom();
-	 
+	evalue *EP = new evalue();
+	value_init(EP->d);
+	evalue_set_si(EP, 0, 1);
 	evalue ev;
 	Vector *val = Vector_Alloc(nparam+1);
 	value_set_si(val->p[nparam], 1);
@@ -756,11 +753,8 @@ void lattice_point(deque<string>& params,
 	value_init(ev.d);
 	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev, offset);
 	Vector_Free(val);
-        evalue  EV=(*EP).to_evalue(params); 
-        eadd(&ev,&EV);
-	*EP=EhrhartPolynom(&EV,params);  
-	   free_evalue_refs(&ev);   
-	   free_evalue_refs(&EV)  ;   
+        eadd(&ev, EP);
+	free_evalue_refs(&ev);   
 
 	term->E = EP;
 	term->constant = 0;
@@ -1179,11 +1173,10 @@ out:
 		    dpoly_n d(dim, num[f].constant, one);
 		    d.div(n, c, sign[f]);
 		    evalue EV; 
-		    evalue EX = num[f].E->to_evalue(params);
-		    multi_polynom(c, &EX, &EV);
+		    multi_polynom(c, num[f].E, &EV);
 		    eadd(&EV , &EP);
 		    free_evalue_refs(&EV);
-		    free_evalue_refs(&EX);
+		    free_evalue_refs(num[f].E);
 		    delete num[f].E; 
 		} else if (num[f].pos != -1) {
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
