@@ -567,7 +567,11 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 void manual_count(Polyhedron *P, Value* result)
 {
     Polyhedron *U = Universe_Polyhedron(0);
+#ifndef NEW_ENUMERATE
     Enumeration *en = Polyhedron_Enumerate(P,U,1024);
+#else
+    Enumeration *en = Polyhedron_Enumerate(P,U,1024,NULL);
+#endif
     Value *v = compute_poly(en,NULL);
     value_assign(*result, *v);
     value_clear(*v);
