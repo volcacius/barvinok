@@ -2182,7 +2182,6 @@ void evalue_combine(evalue *e)
 			ecmp(&tmp.x.p->arr[1], &e->x.p->arr[2*k+1]) != 0)
 		    P = &D->next;
 		else {
-		    fprintf(stderr, "Bingo\n");
 		    D->next = EVALUE_DOMAIN(e->x.p->arr[2*i]);
 		    EVALUE_DOMAIN(e->x.p->arr[2*i]) = D;
 		    *P = NULL;
