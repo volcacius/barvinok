@@ -527,7 +527,6 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& lambda, ZZ& num)
 static evalue *term(int param, ZZ& c, Value *den = NULL)
 {
     evalue *EP = new evalue();
-    deque<string> params;
     value_init(EP->d);
     value_set_si(EP->d,0);
     EP->x.p = new_enode(polynomial, 2, param + 1);
@@ -541,7 +540,7 @@ static evalue *term(int param, ZZ& c, Value *den = NULL)
     return EP;
 }
 
-static void vertex_period(deque<string>& params, 
+static void vertex_period(
 		    Polyhedron *i, vec_ZZ& lambda, Matrix *T, 
 		    Value lcm, int p, Vector *val, 
 		    evalue *E, evalue* ev,
@@ -596,11 +595,11 @@ static void vertex_period(deque<string>& params,
 	    --count;
 	    ZZ new_offset = offset - count * nump;
 	    value_assign(val->p[p], tmp);
-	    vertex_period(params, i, lambda, T, lcm, p+1, val, E, 
+	    vertex_period(i, lambda, T, lcm, p+1, val, E, 
 			  &ev->x.p->arr[VALUE_TO_INT(tmp)], new_offset);
 	} while (value_pos_p(tmp));
     } else
-	vertex_period(params, i, lambda, T, lcm, p+1, val, E, ev, offset);
+	vertex_period(i, lambda, T, lcm, p+1, val, E, ev, offset);
     value_clear(tmp);
 }
 
@@ -685,7 +684,7 @@ static void mask(Matrix *f, evalue *factor)
     free_evalue_refs(&EP);
 }
 
-static evalue *multi_mononom(deque<string>& params, vec_ZZ& p)
+static evalue *multi_mononom(vec_ZZ& p)
 {
     evalue *X = new evalue();
     value_init(X->d);
@@ -707,7 +706,7 @@ struct term_info {
     int		    pos;
 };
 
-void lattice_point(deque<string>& params, 
+void lattice_point(
     Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
@@ -744,7 +743,7 @@ void lattice_point(deque<string>& params,
 	value_set_si(val->p[nparam], 1);
 	ZZ offset(INIT_VAL, 0);
 	value_init(ev.d);
-	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev, offset);
+	vertex_period(i, lambda, T, lcm, 0, val, EP, &ev, offset);
 	Vector_Free(val);
         eadd(&ev, EP);
 	free_evalue_refs(&ev);   
@@ -776,7 +775,7 @@ void lattice_point(deque<string>& params,
 	    p = j;
 	}
     if (nn >= 2) {
-	term->E = multi_mononom(params, num);
+	term->E = multi_mononom(num);
 	term->constant = num[nparam];
     } else {
 	term->E = NULL;
@@ -939,15 +938,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     value_clear(factor);
 }
 
-static void default_params(deque<string>& params, int n)
-{
-    for (int i = 1; i <= n; ++i) {
-	ostringstream s;
-	s << "p" << i;
-	params.push_back(s.str());
-    }
-}
-
 static void uni_polynom(int param, Vector *c, evalue *EP)
 { 
     unsigned dim = c->Size-2;
@@ -998,10 +988,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     P = DomainIntersection(P, CA, MaxRays);
     Polyhedron_Free(CA);
 
-    deque<string> params, allparams;
-    default_params(params, nparam);
-    allparams = params;
-
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
 	res = (Enumeration *)malloc(sizeof(Enumeration));
@@ -1049,22 +1035,6 @@ out:
 	    assert(PP->D->next == NULL);
 	    Param_Polyhedron_Free(PP);
 	    goto constant;
-	}
-	deque<string>::iterator i;
-	params.erase(params.begin(), params.end());
-	int r = 0, j, p = -1;
-	for (i = allparams.begin(), j = 0; i != allparams.end(); ++i, ++j) {
-	    if (p < j) {
-		if (r >= CT->NbRows - 1)
-		    break;
-		p = First_Non_Zero(CT->p[r], nparam);
-		assert(p != -1);
-		assert(First_Non_Zero(CT->p[r]+p+1, nparam-p-1) == -1);
-		assert(value_one_p(CT->p[r][p]));
-		++r;
-	    }
-	    if (p == j)
-		params.push_back(*i);
 	}
 	nparam = CT->NbRows - 1;
     }
@@ -1135,7 +1105,7 @@ out:
 	int f = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
-		lattice_point(params, V, i, lambda, &num[f]);
+		lattice_point(V, i, lambda, &num[f]);
 		normalize(i, lambda, sign[f], num[f].constant, den[f]);
 		++f;
 	    }
