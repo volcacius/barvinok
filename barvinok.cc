@@ -117,12 +117,15 @@ static Matrix * rays(Polyhedron *C)
     return M;
 }
 
+/*
+ * Returns the largest absolute value in the vector
+ */
 static ZZ max(vec_ZZ& v)
 {
-    ZZ max = v[0];
+    ZZ max = abs(v[0]);
     for (int i = 1; i < v.length(); ++i)
-	if (v[i] > max)
-	    max = v[i];
+	if (abs(v[i]) > max)
+	    max = abs(v[i]);
     return max;
 }
 
