@@ -1283,6 +1283,13 @@ static double compute_enode(enode *p, Value *list_args) {
     else if (p->size > 2)
       res = compute_evalue(&p->arr[2], list_args);
   }
+  else if (p->type == partition) {
+    for (i = 0; i < p->size/2; ++i)
+      if (in_domain, EVALUE_DOMAIN(p->arr[2*i]), list_args) {
+	res = compute_evalue(&p->arr[2*i+1], list_args);
+	break;
+      }
+  }
   value_clear(m);
   value_clear(param);
   return res;
