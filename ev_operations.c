@@ -1039,6 +1039,8 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    return ;
 }
 
+#define EVALUE_IS_ONE(ev)	(value_pos_p((ev).d) && value_one_p((ev).x.n))
+
 /* Frees mask ! */
 void emask(evalue *mask, evalue *res) {
     int n, i, j;
@@ -1046,7 +1048,12 @@ void emask(evalue *mask, evalue *res) {
     struct section *s;
     evalue mone;
 
+    if (EVALUE_IS_ZERO(*res))
+	return;
+
+    assert(value_zero_p(mask->d));
     assert(mask->x.p->type == partition);
+    assert(value_zero_p(res->d));
     assert(res->x.p->type == partition);
 
     s = (struct section *) 
@@ -1080,6 +1087,9 @@ void emask(evalue *mask, evalue *res) {
 	++n;
     }
     for (i = 0; i < mask->x.p->size/2; ++i) {
+	if (EVALUE_IS_ONE(mask->x.p->arr[2*i+1]))
+	    continue;
+
 	fd = EVALUE_DOMAIN(mask->x.p->arr[2*i]);
 	eadd(&mone, &mask->x.p->arr[2*i+1]);
 	emul(&mone, &mask->x.p->arr[2*i+1]);
@@ -1096,13 +1106,14 @@ void emask(evalue *mask, evalue *res) {
 	    if (t != EVALUE_DOMAIN(mask->x.p->arr[2*i]))
 		Domain_Free(t);
 	    value_init(s[n].E.d);
-	    evalue_copy(&s[n].E, &mask->x.p->arr[2*i+1]);
-	    emul(&res->x.p->arr[2*j+1], &s[n].E);
+	    evalue_copy(&s[n].E, &res->x.p->arr[2*j+1]);
+	    emul(&mask->x.p->arr[2*i+1], &s[n].E);
 	    s[n].D = d;
 	    ++n;
 	}
+
 	if (!emptyQ(fd)) {
-	    assert(0);		// We don't allow this.
+	    /* Just ignore; this may have been previously masked off */
 	}
     }
 
@@ -1110,11 +1121,15 @@ void emask(evalue *mask, evalue *res) {
     free_evalue_refs(mask);
     free_evalue_refs(res);
     value_init(res->d);
-    res->x.p = new_enode(partition, 2*n, -1);
-    for (j = 0; j < n; ++j) {
-	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
-	value_clear(res->x.p->arr[2*j+1].d);
-	res->x.p->arr[2*j+1] = s[j].E;
+    if (n == 0)
+	evalue_set_si(res, 0, 1);
+    else {
+	res->x.p = new_enode(partition, 2*n, -1);
+	for (j = 0; j < n; ++j) {
+	    EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	    value_clear(res->x.p->arr[2*j+1].d);
+	    res->x.p->arr[2*j+1] = s[j].E;
+	}
     }
 
     free(s);
