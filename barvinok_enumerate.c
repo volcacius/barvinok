@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 {
     Polyhedron *A, *C;
     Matrix *M;
-    Enumeration *en;
+    evalue *EP;
     char **param_name;
     int c, ind = 0;
     int convert = 0;
@@ -60,17 +60,18 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
-    en = barvinok_enumerate(A, C, MAXRAYS);
-    Enumeration_Print(stdout, en, param_name);
+    EP = barvinok_enumerate_ev(A, C, MAXRAYS);
+    print_evalue(stdout, EP, param_name);
     if (size)
-	printf("\nSize: %d\n", Enumeration_size(en));
+	printf("\nSize: %d\n", evalue_size(EP));
     if (convert) {
-	Enumeration_mod2table(en, C->Dimension);
-	Enumeration_Print(stdout, en, param_name);
+	evalue_mod2table(EP, C->Dimension);
+	print_evalue(stdout, EP, param_name);
 	if (size)
-	    printf("\nSize: %d\n", Enumeration_size(en));
+	    printf("\nSize: %d\n", evalue_size(EP));
     }
-    Enumeration_Free(en);
+    free_evalue_refs(EP);
+    free(EP);
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
