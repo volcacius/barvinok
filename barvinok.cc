@@ -303,6 +303,19 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
     assert(found);
 }
 
+static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r)
+{
+    unsigned dim = i->Dimension;
+    for (int k = 0; k < i->NbRays; ++k) {
+	if (!value_zero_p(i->Ray[k][dim+1]))
+	    continue;
+	Vector *shortv = Vector_Alloc(dim);
+	Vector_Copy(i->Ray[k]+1, shortv->p, dim);
+	vector2zz(shortv, rays[(*r)++]);
+	Vector_Free(shortv);
+    }
+}
+
 void count(Polyhedron *P)
 {
     Polyhedron ** vpos = new (Polyhedron *)[P->NbRays];
@@ -361,16 +374,10 @@ void count(Polyhedron *P)
     rays.SetDims(nrays, dim);
     int r = 0;
     for (int j = 0; j < P->NbRays; ++j) {
-	for (Polyhedron *i = vpos[j]; i; i = i->next) {
-	    for (int k = 0; k < vpos[j]->NbRays; ++k) {
-		if (!value_zero_p(vpos[j]->Ray[k][dim+1]))
-		    continue;
-		Vector *shortv = Vector_Alloc(dim);
-		Vector_Copy(vpos[j]->Ray[k]+1, shortv->p, dim);
-		vector2zz(shortv, rays[r++]);
-		Vector_Free(shortv);
-	    }
-	}
+	for (Polyhedron *i = vpos[j]; i; i = i->next)
+	    add_rays(rays, i, &r);
+	for (Polyhedron *i = vneg[j]; i; i = i->next)
+	    add_rays(rays, i, &r);
     }
     cout << rays;
     vec_ZZ lambda;
