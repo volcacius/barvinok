@@ -916,10 +916,10 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     unsigned dim = P->Dimension - nparam;
     Polyhedron ** vcone = new (Polyhedron *)[PP->nbV];
     vec_ZZ sign;
-    int ncone = 0;
-    sign.SetLength(ncone);
 
     for(D=PP->D;D;D=D->next) {
+	int ncone = 0;
+	sign.SetLength(ncone);
 	int n = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    int npos, nneg;
