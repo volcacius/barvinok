@@ -26,6 +26,7 @@ LDADD = libbarvinok.la
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
 barvinok_series_SOURCES = barvinok_series.cc
+verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
