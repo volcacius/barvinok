@@ -11,6 +11,7 @@
 extern "C" {
 #include <polylib/polylibgmp.h>
 #include "ev_operations.h"
+#include "piputil.h"
 }
 #include "config.h"
 #include <barvinok.h>
@@ -2745,6 +2746,65 @@ static evalue* enumerate_vd(Polyhedron **PA,
     return EP;
 }
 
+#ifndef HAVE_PIPLIB
+static evalue *enumerate_pip(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    return 0;
+}
+#else
+static evalue *enumerate_pip(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    int nvar = P->Dimension - exist - nparam;
+    evalue *EP = new_zero_ep();
+    Polyhedron *Q, *N, *T = 0;
+
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: PIP\n");
+#endif /* DEBUG_ER */
+
+    for (int i = 0; i < P->Dimension; ++i) {
+	bool pos = false;
+	bool neg = false;
+	for (int j = 0; j < P->NbRays; ++j) {
+	    if (value_pos_p(P->Ray[j][1+i]))
+		pos = true;
+	    else if (value_neg_p(P->Ray[j][1+i]))
+		neg = true;
+	}
+	assert(!(pos && neg));	// for now
+	if (neg) {
+	    if (!T)
+		T = Polyhedron_Copy(P);
+	    for (int j = 0; j < T->NbRays; ++j)
+		value_oppose(T->Ray[j][1+i], T->Ray[j][1+i]);
+	    for (int j = 0; j < T->NbConstraints; ++j)
+		value_oppose(T->Constraint[j][1+i], T->Constraint[j][1+i]);
+	}
+    }
+
+    Polyhedron *D = pip_lexmin(T ? T : P, exist, nparam);
+    for (Q = D; Q; Q = N) {
+	N = Q->next;
+	Q->next = 0;
+	evalue *E;
+	exist = Q->Dimension - nvar - nparam;
+	E = barvinok_enumerate_e(Q, exist, nparam, MaxRays);
+	Polyhedron_Free(Q);
+	eadd(E, EP);
+	free_evalue_refs(E); 
+	free(E);
+    }
+
+    if (T)
+	Polyhedron_Free(T);
+
+    return EP;
+}
+#endif
+
+
 static bool is_single(Value *row, int pos, int len)
 {
     return First_Non_Zero(row, pos) == -1 && 
@@ -3010,6 +3070,10 @@ next:
     evalue *EP;
 
     EP = enumerate_line(P, exist, nparam, MaxRays);
+    if (EP)
+	return EP;
+
+    EP = enumerate_pip(P, exist, nparam, MaxRays);
     if (EP)
 	return EP;
 
