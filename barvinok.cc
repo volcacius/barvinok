@@ -413,6 +413,19 @@ struct dpoly_r {
 	this->dim = dim;
 	c = new vector< dpoly_r_term * > [len];
     }
+    dpoly_r(dpoly& num, int dim) {
+	denom = 1;
+	len = num.coeff.length();
+	c = new vector< dpoly_r_term * > [len];
+	this->dim = dim;
+	int powers[dim];
+	memset(powers, 0, dim * sizeof(int));
+
+	for (int i = 0; i < len; ++i) {
+	    ZZ coeff = num.coeff[i];
+	    add_term(i, powers, coeff);
+	}
+    }
     dpoly_r(dpoly& num, dpoly& den, int pos, int sign, int dim) {
 	denom = 1;
 	len = num.coeff.length();
@@ -1096,6 +1109,7 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
     return false;
 }
 
+/* modifies f argument ! */
 static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
 {
     Value m;
@@ -2124,6 +2138,457 @@ void enumerator::handle_polar(Polyhedron *C, int s)
     } 
 }
 
+struct ienumerator : public polar_decomposer {
+    Polyhedron *P, *pVD;
+    unsigned dim, nbV;
+    evalue ** vE;
+    int _i;
+    Param_Vertices *V;
+    ZZ sgn;
+    mat_ZZ den;
+    evalue mone;
+    evalue ** E_vertex;
+    vec_ZZ vertex;
+
+    ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) {
+	this->P = P;
+	this->dim = dim;
+	this->nbV = nbV;
+
+	vE = new evalue_p[nbV];
+	for (int j = 0; j < nbV; ++j)
+	    vE[j] = 0;
+
+	E_vertex = new evalue_p[dim];
+	vertex.SetLength(dim);
+
+	den.SetDims(dim, dim);
+	value_init(mone.d);
+	evalue_set_si(&mone, -1, 1);
+    }
+
+    void decompose_at(Param_Vertices *V, int _i, unsigned MaxRays/*, Polyhedron *pVD*/) {
+	Polyhedron *C = supporting_cone_p(P, V);
+	this->_i = _i;
+	this->V = V;
+	//this->pVD = pVD;
+
+	vE[_i] = new evalue;
+	value_init(vE[_i]->d);
+	evalue_set_si(vE[_i], 0, 1);
+
+	decompose(C, MaxRays);
+    }
+
+    ~ienumerator() {
+    	for (int j = 0; j < nbV; ++j)
+	    if (vE[j]) {
+		free_evalue_refs(vE[j]);
+		delete vE[j];
+	    }
+	delete [] vE;
+
+	delete [] E_vertex;
+
+	free_evalue_refs(&mone);
+    }
+
+    virtual void handle_polar(Polyhedron *P, int sign);
+    void reduce(evalue *factor, vec_ZZ& num, evalue ** E_num, 
+	mat_ZZ& den_f);
+};
+
+static evalue* new_zero_ep()
+{
+    evalue *EP;
+    ALLOC(evalue, EP);
+    value_init(EP->d);
+    evalue_set_si(EP, 0, 1);
+    return EP;
+}
+
+void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 
+		   evalue **E_vertex)
+{
+    unsigned nparam = V->Vertex->NbColumns - 2;
+    unsigned dim = C->Dimension;
+    vec_ZZ vertex;
+    vertex.SetLength(nparam+1);
+
+    Value lcm, tmp;
+    value_init(lcm);
+    value_init(tmp);
+    value_set_si(lcm, 1);
+
+    for (int j = 0; j < V->Vertex->NbRows; ++j) {
+	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
+    }
+
+    if (value_notone_p(lcm)) {
+	Matrix * mv = Matrix_Alloc(dim, nparam+1);
+	for (int j = 0 ; j < dim; ++j) {
+	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
+	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
+	}
+
+	Matrix* Rays = rays2(C);
+	Matrix *T = Transpose(Rays);
+	Matrix *T2 = Matrix_Copy(T);
+	Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
+	int ok = Matrix_Inverse(T2, inv);
+	assert(ok);
+	Matrix_Free(Rays);
+	Matrix_Free(T2);
+	Matrix *L = Matrix_Alloc(inv->NbRows, mv->NbColumns);
+	Matrix_Product(inv, mv, L);
+	Matrix_Free(inv);
+
+	evalue f;
+	value_init(f.d);
+	value_init(f.x.n);
+
+	ZZ one;
+
+	evalue *remainders[dim];
+	for (int i = 0; i < dim; ++i) {
+	    remainders[i] = new_zero_ep();
+	    one = 1;
+	    ceil_mod(L->p[i], nparam+1, lcm, one, remainders[i], 0);
+	}
+	Matrix_Free(L);
+
+
+	for (int i = 0; i < V->Vertex->NbRows; ++i) {
+	    values2zz(mv->p[i], vertex, nparam+1);
+	    E_vertex[i] = multi_monom(vertex);
+	    num[i] = 0;
+
+	    value_set_si(f.x.n, 1);
+	    value_assign(f.d, lcm);
+
+	    emul(&f, E_vertex[i]);
+
+	    for (int j = 0; j < dim; ++j) {
+		if (value_zero_p(T->p[i][j]))
+		    continue;
+		evalue cp;
+		value_init(cp.d);
+		evalue_copy(&cp, remainders[j]);
+		if (value_notone_p(T->p[i][j])) {
+		    value_set_si(f.d, 1);
+		    value_assign(f.x.n, T->p[i][j]);
+		    emul(&f, &cp);
+		}
+		eadd(&cp, E_vertex[i]);
+		free_evalue_refs(&cp);
+	    }
+	}
+	for (int i = 0; i < dim; ++i) {
+	    free_evalue_refs(remainders[i]); 
+	    free(remainders[i]);
+	}
+
+	free_evalue_refs(&f); 
+
+	Matrix_Free(T);
+	Matrix_Free(mv);
+	value_clear(lcm);
+	value_clear(tmp);
+	return;
+    }
+    value_clear(lcm);
+    value_clear(tmp);
+
+    for (int i = 0; i < V->Vertex->NbRows; ++i) {
+	/* fixed value */
+	if (First_Non_Zero(V->Vertex->p[i], nparam) == -1) {
+	    E_vertex[i] = 0;
+	    value2zz(V->Vertex->p[i][nparam], num[i]);
+	} else {
+	    values2zz(V->Vertex->p[i], vertex, nparam+1);
+	    E_vertex[i] = multi_monom(vertex);
+	    num[i] = 0;
+	}
+    }
+}
+
+struct E_poly_term {
+    int	    *powers;
+    evalue  *E;
+};
+
+void ienumerator::reduce(
+	evalue *factor, vec_ZZ& num, evalue ** E_num, 
+	mat_ZZ& den_f)
+{
+    unsigned len = den_f.NumRows();  // number of factors in den
+    unsigned dim = num.length();
+
+    if (dim == 0) {
+	eadd(factor, vE[_i]);
+	return;
+    }
+
+    vec_ZZ den_s;
+    den_s.SetLength(len);
+    mat_ZZ den_r;
+    den_r.SetDims(len, dim-1);
+
+    int i = 0;
+    int r, k;
+
+    for (r = 0; r < len; ++r) {
+	den_s[r] = den_f[r][i];
+	for (k = 0; k <= dim-1; ++k)
+	    if (k != i)
+		den_r[r][k-(k>i)] = den_f[r][k];
+    }
+
+    ZZ num_s = num[i];
+    vec_ZZ num_p;
+    num_p.SetLength(dim-1);
+    evalue * E_num_p[dim-1];
+    for (k = 0 ; k <= dim-1; ++k)
+	if (k != i) {
+	    num_p[k-(k>i)] = num[k];
+	    E_num_p[k-(k>i)] = E_num[k];
+	}
+
+    vec_ZZ den_p;
+    den_p.SetLength(len);
+
+    ZZ one;
+    one = 1;
+    normalize(one, num_s, num_p, den_s, den_p, den_r);
+    if (one != 1)
+	emul(&mone, factor);
+
+    int only_param = 0;
+    int no_param = 0;
+    for (int k = 0; k < len; ++k) {
+	if (den_p[k] == 0)
+	    ++no_param;
+	else if (den_s[k] == 0)
+	    ++only_param;
+    }
+    if (no_param == 0) {
+	for (int k = 0; k < len; ++k)
+	    if (den_p[k] == -1)
+		den_r[k] = -den_r[k];
+	reduce(factor, num_p, E_num_p, den_r);
+    } else {
+	int k, l;
+	mat_ZZ pden;
+	pden.SetDims(only_param, dim-1);
+
+	for (k = 0, l = 0; k < len; ++k)
+	    if (den_s[k] == 0)
+		pden[l++] = den_r[k];
+
+	for (k = 0; k < len; ++k)
+	    if (den_p[k] == 0)
+		break;
+
+	dpoly n(no_param, num_s);
+	dpoly D(no_param, den_s[k], 1);
+	for ( ; ++k < len; )
+	    if (den_p[k] == 0) {
+		dpoly fact(no_param, den_s[k], 1);
+		D *= fact;
+	    }
+
+	dpoly_r * r = 0;
+	if (no_param + only_param == len)
+	    r = new dpoly_r(n, len);
+	else {
+	    for (k = 0; k < len; ++k) {
+		if (den_s[k] == 0 || den_p[k] == 0)
+		    continue;
+
+		dpoly pd(no_param-1, den_s[k], 1);
+		int s = den_p[k] < 0 ? -1 : 1;
+
+		if (r == 0)
+		    r = new dpoly_r(n, pd, k, s, len);
+		else {
+		    dpoly_r *nr = new dpoly_r(r, pd, k, s, len);
+		    delete r;
+		    r = nr;
+		}
+	    }
+	}
+	dpoly_r *rc = r->div(D);
+	delete r;
+	r = rc;
+	if (E_num[i] == 0) {
+	    int common = pden.NumRows();
+	    vector< dpoly_r_term * >& final = r->c[r->len-1];
+	    int rows;
+	    evalue t;
+	    evalue f;
+	    value_init(f.d);
+	    value_init(f.x.n);
+	    zz2value(r->denom, f.d);
+	    for (int j = 0; j < final.size(); ++j) {
+		if (final[j]->coeff == 0)
+		    continue;
+		rows = common;
+		pden.SetDims(rows, pden.NumCols());
+		for (int k = 0; k < r->dim; ++k) {
+		    int n = final[j]->powers[k];
+		    if (n == 0)
+			continue;
+		    int abs_n = n < 0 ? -n : n;
+		    pden.SetDims(rows+abs_n, pden.NumCols());
+		    for (int l = 0; l < abs_n; ++l) {
+			if (n > 0)
+			    pden[rows+l] = den_r[k];
+			else
+			    pden[rows+l] = -den_r[k];
+		    }
+		    rows += abs_n;
+		}
+		value_init(t.d);
+		evalue_copy(&t, factor);
+		zz2value(final[j]->coeff, f.x.n);
+		emul(&f, &t);
+		reduce(&t, num_p, E_num_p, pden);
+		free_evalue_refs(&t);
+	    }
+	    free_evalue_refs(&f);
+	} else {
+	    evalue cum;  // factor * 1 * E_num[i]/1 * (E_num[i]-1)/2 *...
+	    value_init(cum.d);
+	    evalue_copy(&cum, factor);
+	    evalue f;
+	    value_init(f.d);
+	    value_init(f.x.n);
+	    value_set_si(f.d, 1);
+	    value_set_si(f.x.n, 1);
+	    evalue t;	// E_num[i] - (m-1)
+	    value_init(t.d);
+	    evalue_copy(&t, E_num[i]);
+	    evalue *cst;
+	    for (cst = &t; value_zero_p(cst->d); ) {
+		if (cst->x.p->type == fractional)
+		    cst = &cst->x.p->arr[1];
+		else
+		    cst = &cst->x.p->arr[0];
+	    }
+	    vector<E_poly_term *> terms;
+	    for (int m = 0; m < r->len; ++m) {
+		if (m > 0) {
+		    if (m > 1) {
+			value_set_si(f.d, m);
+			emul(&f, &cum);
+			value_substract(cst->x.n, cst->x.n, cst->d);
+		    }
+		    emul(&t, &cum);
+		}
+		vector< dpoly_r_term * >& current = r->c[r->len-1-m];
+		for (int j = 0; j < current.size(); ++j) {
+		    if (current[j]->coeff == 0)
+			continue;
+		    evalue *f2 = new evalue;
+		    value_init(f2->d);
+		    value_init(f2->x.n);
+		    zz2value(current[j]->coeff, f2->x.n);
+		    zz2value(r->denom, f2->d);
+		    emul(&cum, f2);
+		    int k;
+		    for (k = 0; k < terms.size(); ++k) {
+			if (memcmp(terms[k]->powers, current[j]->powers,
+				    r->dim * sizeof(int)) == 0) {
+			    eadd(f2, terms[k]->E);
+			    free_evalue_refs(f2); 
+			    delete f2;
+			    break;
+			}
+		    }
+		    if (k >= terms.size()) {
+			E_poly_term *ET = new E_poly_term;
+			ET->powers = new int[r->dim];
+			memcpy(ET->powers, current[j]->powers, 
+				r->dim * sizeof(int));
+			ET->E = f2;
+			terms.push_back(ET);
+		    }
+		}
+	    }
+	    free_evalue_refs(&f);
+	    free_evalue_refs(&t);
+	    free_evalue_refs(&cum);
+
+	    int common = pden.NumRows();
+	    int rows;
+	    for (int j = 0; j < terms.size(); ++j) {
+		rows = common;
+		pden.SetDims(rows, pden.NumCols());
+		for (int k = 0; k < r->dim; ++k) {
+		    int n = terms[j]->powers[k];
+		    if (n == 0)
+			continue;
+		    int abs_n = n < 0 ? -n : n;
+		    pden.SetDims(rows+abs_n, pden.NumCols());
+		    for (int l = 0; l < abs_n; ++l) {
+			if (n > 0)
+			    pden[rows+l] = den_r[k];
+			else
+			    pden[rows+l] = -den_r[k];
+		    }
+		    rows += abs_n;
+		}
+		reduce(terms[j]->E, num_p, E_num_p, pden);
+		free_evalue_refs(terms[j]->E); 
+		delete terms[j]->E;
+		delete [] terms[j]->powers;
+		delete terms[j];
+	    }
+	}
+	delete r;
+    }
+}
+
+void ienumerator::handle_polar(Polyhedron *C, int s)
+{
+    assert(C->NbRays-1 == dim);
+
+    sgn = s;
+
+    lattice_point(V, C, vertex, E_vertex);
+
+    int r;
+    for (r = 0; r < dim; ++r)
+	values2zz(C->Ray[r]+1, den[r], dim);
+
+    evalue one;
+    value_init(one.d);
+    evalue_set_si(&one, s, 1);
+    reduce(&one, vertex, E_vertex, den);
+    free_evalue_refs(&one);
+
+    for (int i = 0; i < dim; ++i)
+	if (E_vertex[i]) {
+	    free_evalue_refs(E_vertex[i]);
+	    delete E_vertex[i];
+	}
+
+    
+	/*
+        {
+           char * test[] = {"a", "b"};
+           evalue E;
+           value_init(E.d);
+           evalue_copy(&E, vE[_i]);
+           frac2floor_in_domain(&E, pVD);
+	   printf("***** Curr value:");
+           print_evalue(stdout, &E, test);
+           fprintf(stdout, "\n");
+        }
+	*/
+
+}
+
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     //P = unfringe(P, MaxRays);
@@ -2212,7 +2677,8 @@ out:
 
     unsigned dim = P->Dimension - nparam;
 
-    enumerator et(P, dim, PP->nbV);
+    //enumerator et(P, dim, PP->nbV);
+    ienumerator et(P, dim, PP->nbV);
 
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
@@ -3061,15 +3527,6 @@ static evalue* enumerate_ray(Polyhedron *P,
 	free(ER);
     }
 
-    return EP;
-}
-
-static evalue* new_zero_ep()
-{
-    evalue *EP;
-    ALLOC(evalue, EP);
-    value_init(EP->d);
-    evalue_set_si(EP, 0, 1);
     return EP;
 }
 
