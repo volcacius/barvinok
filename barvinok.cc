@@ -1704,27 +1704,33 @@ static void SwapColumns(Polyhedron *P, int i, int j)
     SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
+static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
+				     int len, Value *v)
+{
+    value_oppose(*v, u[pos+1]);
+    Vector_Combine(l+1, u+1, c+1, *v, l[pos+1], len-1);
+    value_multiply(*v, *v, l[pos+1]);
+    value_substract(c[len-1], c[len-1], *v);
+    value_set_si(*v, -1);
+    Vector_Scale(c+1, c+1, *v, len-1);
+    value_decrement(c[len-1], c[len-1]);
+    ConstraintSimplify(c, c, len, v);
+}
+
+static void oppose_constraint(Value *c, int len, Value *v)
+{
+    value_set_si(*v, -1);
+    Vector_Scale(c+1, c+1, *v, len-1);
+    value_decrement(c[len-1], c[len-1]);
+}
+
 static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
 			      int nvar, int len, int exist, int MaxRays,
 			      Vector *row, Value& f, bool independent,
 			      Polyhedron **pos, Polyhedron **neg)
 {
-    value_oppose(f, P->Constraint[u][nvar+i+1]);
-    Vector_Combine(P->Constraint[l]+1, P->Constraint[u]+1, 
-		   row->p+1,
-		   f, P->Constraint[l][nvar+i+1], len-1);
-
-    //printf("l: %d, u: %d\n", l, u);
-    value_multiply(f, f, P->Constraint[l][nvar+i+1]);
-    value_substract(row->p[len-1], row->p[len-1], f);
-    value_set_si(f, -1);
-    Vector_Scale(row->p+1, row->p+1, f, len-1);
-    value_decrement(row->p[len-1], row->p[len-1]);
-    Vector_Gcd(row->p+1, len - 2, &f);
-    if (value_notone_p(f)) {
-	Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-	mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
-    }
+    negative_test_constraint(P->Constraint[l], P->Constraint[u],
+			     row->p, nvar+i, len, &f);
     *neg = AddConstraints(row->p, 1, P, MaxRays);
 
     /* We found an independent, but useless constraint
@@ -1736,9 +1742,7 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
 	return false;
     }
 
-    value_set_si(f, -1);
-    Vector_Scale(row->p+1, row->p+1, f, len-1);
-    value_decrement(row->p[len-1], row->p[len-1]);
+    oppose_constraint(row->p, len, &f);
     *pos = AddConstraints(row->p, 1, P, MaxRays);
 
     if (emptyQ((*pos))) {
@@ -2648,22 +2652,6 @@ static bool is_single(Value *row, int pos, int len)
 	   First_Non_Zero(row+pos+1, len-pos-1) == -1;
 }
 
-static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
-				     int len, Value *v)
-{
-    value_oppose(*v, u[pos+1]);
-    Vector_Combine(l+1, u+1, c+1, *v, l[pos+1], len-1);
-    value_multiply(*v, *v, l[pos+1]);
-    value_substract(c[len-1], c[len-1], *v);
-    value_set_si(*v, -1);
-    Vector_Scale(c+1, c+1, *v, len-1);
-    value_decrement(c[len-1], c[len-1]);
-    ConstraintSimplify(c, c, len, v);
-    value_set_si(*v, -1);
-    Vector_Scale(c+1, c+1, *v, len-1);
-    value_decrement(c[len-1], c[len-1]);
-}
-
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 
@@ -2830,6 +2818,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 			negative_test_constraint(P->Constraint[l],
 						 P->Constraint[u],
 						 row->p, nvar+i, len, &f);
+			oppose_constraint(row->p, len, &f);
 			Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
 			if (emptyQ(T)) {
 			    //printf("one_neg i: %d, l: %d, u: %d\n", i, l, u);
