@@ -768,7 +768,6 @@ struct term_info {
     int		    pos;
 };
 
-#ifdef USE_MODULO
 bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
 {
     bool ret = true;
@@ -942,6 +941,7 @@ evalue* ceil3(Value *coef, int len, Value d)
     return E;
 }
 
+#ifdef USE_MODULO
 evalue* lattice_point(
     Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
 {
@@ -1387,7 +1387,6 @@ out:
 	}
     }
 
-#ifdef USE_MODULO
     Polyhedron *Q = ParamPolyhedron_Reduce(P, P->Dimension-nparam, &factor);
     if (Q) {
 	Polyhedron_Free(P);
@@ -1398,7 +1397,6 @@ out:
 	}
 	P = Q;
     }
-#endif
     Polyhedron *oldP = P;
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
     if (P != oldP)

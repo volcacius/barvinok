@@ -15,9 +15,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 
-#ifdef USE_MODULO
 evalue* ceil3(Value *coef, int len, Value d);
-#endif
 
 #if defined(__cplusplus)
 }

@@ -606,9 +606,8 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     return P;
 }
 
-#ifdef USE_MODULO
-Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
-				   evalue* factor)
+static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar, 
+					      evalue* factor)
 {
     int nsingle;
     int **singles;
@@ -683,6 +682,22 @@ Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar,
     reduce_evalue(factor);
 
     return P;
+}
+
+#ifdef USE_MODULO
+Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
+				   evalue* factor)
+{
+    return ParamPolyhedron_Reduce_mod(P, nvar, factor);
+}
+#else
+Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
+				   evalue* factor)
+{
+    Polyhedron *R = ParamPolyhedron_Reduce_mod(P, nvar, factor);
+    evalue_mod2table(factor, P->Dimension - nvar);
+    reduce_evalue(factor);
+    return R;
 }
 #endif
 
