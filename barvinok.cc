@@ -1340,8 +1340,6 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     Polyhedron *T, *R = P;
     Value g;
     value_init(g);
-    fprintf(stderr, "in");
-    Polyhedron_Print(stderr, P_VALUE_FMT, P);
     Vector *row = Vector_Alloc(len);
     value_set_si(row->p[0], 1);
 
@@ -1352,7 +1350,6 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     for (int v = 0; v < P->Dimension; ++v) {
 	value_set_si(M->p[0][v], 1);
 	Polyhedron *I = Polyhedron_Image(P, M, 2+1);
-	Polyhedron_Print(stdout, P_VALUE_FMT, I);
 	value_set_si(M->p[0][v], 0);
 	for (int r = 0; r < I->NbConstraints; ++r) {
 	    if (value_zero_p(I->Constraint[r][0]))
@@ -1367,16 +1364,12 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 	    Vector_Set(row->p+1, 0, len-2);
 	    value_division(row->p[1+v], I->Constraint[r][1], g);
 	    mpz_fdiv_q(row->p[len-1], I->Constraint[r][2], g);
-			puts("row");
-			Vector_Print(stdout, P_VALUE_FMT, row);
 	    T = R;
 	    R = AddConstraints(row->p, 1, R, MaxRays);
 	    if (T != P)
 		Polyhedron_Free(T);
 	}
     }
-    fprintf(stderr, "out");
-    Polyhedron_Print(stderr, P_VALUE_FMT, R);
     value_clear(g);
     return R;
 }
