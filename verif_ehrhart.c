@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include <polylib/polylibgmp.h>
+#include "ev_operations.h"
 #include <barvinok.h>
 #define MAXRAYS 1024
 

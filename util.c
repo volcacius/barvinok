@@ -1,4 +1,5 @@
 #include <polylib/polylibgmp.h>
+#include "ev_operations.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <util.h>
