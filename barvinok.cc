@@ -424,7 +424,7 @@ struct dpoly_r {
 	    add_term(i, powers, coeff);
 	}
     }
-    dpoly_r(dpoly& num, dpoly& den, int pos, int sign, int dim) {
+    dpoly_r(dpoly& num, dpoly& den, int pos, int dim) {
 	denom = 1;
 	len = num.coeff.length();
 	c = new vector< dpoly_r_term * > [len];
@@ -434,14 +434,14 @@ struct dpoly_r {
 	for (int i = 0; i < len; ++i) {
 	    ZZ coeff = num.coeff[i];
 	    memset(powers, 0, dim * sizeof(int));
-	    powers[pos] = sign;
+	    powers[pos] = 1;
 
 	    add_term(i, powers, coeff);
 
 	    for (int j = 1; j <= i; ++j) {
 		for (int k = 0; k < c[i-j].size(); ++k) {
 		    memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
-		    powers[pos] += sign;
+		    powers[pos]++;
 		    coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
 		    add_term(i, powers, coeff);
 		}
@@ -449,7 +449,7 @@ struct dpoly_r {
 	}
 	//dump();
     }
-    dpoly_r(dpoly_r* num, dpoly& den, int pos, int sign, int dim) {
+    dpoly_r(dpoly_r* num, dpoly& den, int pos, int dim) {
 	denom = num->denom;
 	len = num->len;
 	c = new vector< dpoly_r_term * > [len];
@@ -460,14 +460,14 @@ struct dpoly_r {
 	for (int i = 0 ; i < len; ++i) {
 	    for (int k = 0; k < num->c[i].size(); ++k) {
 		memcpy(powers, num->c[i][k]->powers, dim*sizeof(int));
-		powers[pos] += sign;
+		powers[pos]++;
 		add_term(i, powers, num->c[i][k]->coeff);
 	    }
 
 	    for (int j = 1; j <= i; ++j) {
 		for (int k = 0; k < c[i-j].size(); ++k) {
 		    memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
-		    powers[pos] += sign;
+		    powers[pos]++;
 		    coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
 		    add_term(i, powers, coeff);
 		}
@@ -1438,11 +1438,11 @@ static void normalize(ZZ& sign,
 	    if (f[j][k] != 0)
 		break;
 	if (k < nparam) {
+	    den_p[j] = 1;
 	    if (den_s[j] > 0) {
-		den_p[j] = -1;
-		num_p -= f[j];
-	    } else
-		den_p[j] = 1;
+		f[j] = -f[j];
+		num_p += f[j];
+	    }
 	} else
 	    den_p[j] = 0;
 	if (den_s[j] > 0)
@@ -1633,9 +1633,6 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 	    ++only_param;
     }
     if (no_param == 0) {
-	for (int k = 0; k < len; ++k)
-	    if (den_p[k] == -1)
-		den_r[k] = -den_r[k];
 	reduce(c, cd, num_p, den_r);
     } else {
 	int k, l;
@@ -1679,12 +1676,16 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 		    continue;
 
 		dpoly pd(no_param-1, den_s[k], 1);
-		int s = den_p[k] < 0 ? -1 : 1;
+
+		int l;
+		for (l = 0; l < k; ++l)
+		    if (den_r[l] == den_r[k])
+			break;
 
 		if (r == 0)
-		    r = new dpoly_r(n, pd, k, s, len);
+		    r = new dpoly_r(n, pd, l, len);
 		else {
-		    dpoly_r *nr = new dpoly_r(r, pd, k, s, len);
+		    dpoly_r *nr = new dpoly_r(r, pd, l, len);
 		    delete r;
 		    r = nr;
 		}
@@ -1706,15 +1707,10 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 		    int n = final[j]->powers[k];
 		    if (n == 0)
 			continue;
-		    int abs_n = n < 0 ? -n : n;
-		    pden.SetDims(rows+abs_n, pden.NumCols());
-		    for (int l = 0; l < abs_n; ++l) {
-			if (n > 0)
-			    pden[rows+l] = den_r[k];
-			else
-			    pden[rows+l] = -den_r[k];
-		    }
-		    rows += abs_n;
+		    pden.SetDims(rows+n, pden.NumCols());
+		    for (int l = 0; l < n; ++l)
+			pden[rows+l] = den_r[k];
+		    rows += n;
 		}
 		final[j]->coeff *= c;
 		reduce(final[j]->coeff, rc->denom, num_p, pden);
@@ -2389,9 +2385,6 @@ void ienumerator::reduce(
 	    ++only_param;
     }
     if (no_param == 0) {
-	for (int k = 0; k < len; ++k)
-	    if (den_p[k] == -1)
-		den_r[k] = -den_r[k];
 	reduce(factor, num_p, E_num_p, den_r);
     } else {
 	int k, l;
@@ -2423,12 +2416,16 @@ void ienumerator::reduce(
 		    continue;
 
 		dpoly pd(no_param-1, den_s[k], 1);
-		int s = den_p[k] < 0 ? -1 : 1;
+
+		int l;
+		for (l = 0; l < k; ++l)
+		    if (den_r[l] == den_r[k])
+			break;
 
 		if (r == 0)
-		    r = new dpoly_r(n, pd, k, s, len);
+		    r = new dpoly_r(n, pd, l, len);
 		else {
-		    dpoly_r *nr = new dpoly_r(r, pd, k, s, len);
+		    dpoly_r *nr = new dpoly_r(r, pd, l, len);
 		    delete r;
 		    r = nr;
 		}
@@ -2455,15 +2452,10 @@ void ienumerator::reduce(
 		    int n = final[j]->powers[k];
 		    if (n == 0)
 			continue;
-		    int abs_n = n < 0 ? -n : n;
-		    pden.SetDims(rows+abs_n, pden.NumCols());
-		    for (int l = 0; l < abs_n; ++l) {
-			if (n > 0)
-			    pden[rows+l] = den_r[k];
-			else
-			    pden[rows+l] = -den_r[k];
-		    }
-		    rows += abs_n;
+		    pden.SetDims(rows+n, pden.NumCols());
+		    for (int l = 0; l < n; ++l)
+			pden[rows+l] = den_r[k];
+		    rows += n;
 		}
 		value_init(t.d);
 		evalue_copy(&t, factor);
@@ -2551,15 +2543,10 @@ void ienumerator::reduce(
 		    int n = terms[j]->powers[k];
 		    if (n == 0)
 			continue;
-		    int abs_n = n < 0 ? -n : n;
-		    pden.SetDims(rows+abs_n, pden.NumCols());
-		    for (int l = 0; l < abs_n; ++l) {
-			if (n > 0)
-			    pden[rows+l] = den_r[k];
-			else
-			    pden[rows+l] = -den_r[k];
-		    }
-		    rows += abs_n;
+		    pden.SetDims(rows+n, pden.NumCols());
+		    for (int l = 0; l < n; ++l)
+			pden[rows+l] = den_r[k];
+		    rows += n;
 		}
 		reduce(terms[j]->E, num_p, E_num_p, pden);
 		free_evalue_refs(terms[j]->E); 
