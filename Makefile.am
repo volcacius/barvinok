@@ -5,8 +5,10 @@ lib_LTLIBRARIES = libparker.la
 libparker_la_SOURCES = \
 	construction.c \
 	count_paths.c \
-	count_solutions.cc
+	count_solutions.cc \
+	count_solutions.h
 libparker_la_LIBADD = $(MONA_OBJ)
+include_HEADERS = count_solutions.h
 
 noinst_PROGRAMS = occ
 occ_SOURCES = \
