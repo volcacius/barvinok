@@ -1662,12 +1662,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     evalue *EP = barvinok_enumerate_ev(P, C, MaxRays);
 
     if (EVALUE_IS_ZERO(*EP)) {
-	/*
-	ALLOC(res);
-	res->next = NULL;
-	res->EP = *EP;
-	res->ValidityDomain = Universe_Polyhedron(C->Dimension);
-	*/
 	free(EP);
 	return res;
     }
