@@ -691,10 +691,10 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 			    Polyhedron_Free(s[nd].D);
 			    continue;
 			}
-			L = ceil3(P->Constraint[singles[i][1+k]]+1+nvar, 
+			L = bv_ceil3(P->Constraint[singles[i][1+k]]+1+nvar, 
 				  dim-nvar+1,
 				  P->Constraint[singles[i][1+k]][i+1]);
-			U = ceil3(P->Constraint[singles[i][1+l]]+1+nvar, 
+			U = bv_ceil3(P->Constraint[singles[i][1+l]]+1+nvar, 
 				  dim-nvar+1,
 				  P->Constraint[singles[i][1+l]][i+1]);
 			eadd(L, U);

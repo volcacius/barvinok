@@ -768,7 +768,7 @@ struct term_info {
     int		    pos;
 };
 
-bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
+static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
 {
     bool ret = true;
     int len = num.length();
@@ -814,7 +814,7 @@ bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
     return ret;
 }
 
-void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
+static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
 {
     Value gcd;
     value_init(gcd);
@@ -902,7 +902,7 @@ out:
     value_clear(mone);
 }
 
-evalue* ceil3(Value *coef, int len, Value d)
+evalue* bv_ceil3(Value *coef, int len, Value d)
 {
     Vector *val = Vector_Alloc(len);
 
