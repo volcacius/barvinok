@@ -123,6 +123,7 @@ you_lose:   	/* OK, lets not do it */
 		    free_evalue_refs(&(p->arr[i]));
 		}
 		p->size = 1;
+		free_evalue_refs(&v);
 	    }
 	}
 
