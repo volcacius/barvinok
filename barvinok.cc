@@ -1897,6 +1897,39 @@ ONE_NEG = 1 << 1,
 INDEPENDENT = 1 << 2,
 };
 
+static evalue* enumerate_or(Polyhedron *pos, Polyhedron *neg,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: Or\n");
+#endif /* DEBUG_ER */
+
+    evalue *EN = 
+	barvinok_enumerate_e(neg, exist, nparam, MaxRays);
+    evalue *EP = 
+	barvinok_enumerate_e(pos, exist, nparam, MaxRays);
+    evalue E;
+    value_init(E.d);
+    evalue_copy(&E, EP);
+    eadd(EN, &E);
+    emul(EN, EP);
+    free_evalue_refs(EN); 
+    value_init(EN->d);
+    evalue_set_si(EN, -1, 1);
+    emul(EN, EP);
+    eadd(&E, EP);
+
+    free_evalue_refs(EN); 
+    free(EN);
+    free_evalue_refs(&E); 
+    Polyhedron_Free(neg);
+    Polyhedron_Free(pos);
+
+    reduce_evalue(EP);
+
+    return EP;
+}
+
 #ifdef DEBUG_ER
 static int er_level = 0;
 
@@ -2167,34 +2200,8 @@ next:
 
     assert (i < exist);
 
-#ifdef DEBUG_ER
-    fprintf(stderr, "\nER: Or\n");
-#endif /* DEBUG_ER */
-
-    evalue *EN = 
-	barvinok_enumerate_e(neg, exist, nparam, MaxRays);
-    evalue *EP = 
-	barvinok_enumerate_e(pos, exist, nparam, MaxRays);
-    evalue E;
-    value_init(E.d);
-    evalue_copy(&E, EP);
-    eadd(EN, &E);
-    emul(EN, EP);
-    free_evalue_refs(EN); 
-    value_init(EN->d);
-    evalue_set_si(EN, -1, 1);
-    emul(EN, EP);
-    eadd(&E, EP);
-
-    free_evalue_refs(EN); 
-    free(EN);
-    free_evalue_refs(&E); 
-    Polyhedron_Free(neg);
-    Polyhedron_Free(pos);
+    evalue *EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
     value_clear(f);
     Vector_Free(row);
-
-    reduce_evalue(EP);
-
     return EP;
 }
