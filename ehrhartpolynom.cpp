@@ -260,6 +260,15 @@ PeriodicNumber PeriodicNumber::operator+(const PeriodicNumber& pn2) const
   }
   value_clear(tmp);
 
+  // if the periodic number has parameters (i.e. not constant coef),
+  // then "" should not occur as parameter!
+  if (result.parameter_names.find("") != result.parameter_names.end()) {
+    assert(result.period[""] == 1);
+    result.parameter_names.erase("");
+    result.period.erase("");
+    result.stride.erase("");
+  } 
+
   if (DebugBlackboard.debug("EHRHARTPOLYNOM")>=3) {
     cout<<"In PeriodicNumber::operator+ result of addition is:"<<endl;
     cout<<result.to_string()<<endl;
