@@ -971,31 +971,23 @@ static void uni_polynom(int param, Vector *c, evalue *EP)
 	evalue_set(&EP->x.p->arr[j], c->p[j], c->p[dim+1]);
 }
 
-static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPolynom& X)
+static void multi_polynom(Vector *c, evalue* X, evalue *EP)
 {
- 	
     unsigned dim = c->Size-2;
     evalue EC;
-    value_init(EC.d);
-    value_init(EC.x.n);
-    value_assign(EC.d, c->p[dim+1]);
-        
-    EhrhartPolynom *res = new EhrhartPolynom(); 
-    value_assign(EC.x.n, c->p[dim]);
 
-    evalue  EV1=(*res).to_evalue(params); 
-    eadd(&EC,&EV1);   
-    evalue EV2=X.to_evalue(params);  
+    value_init(EC.d);
+    evalue_set(&EC, c->p[dim], c->p[dim+1]);
+
+    value_init(EP->d);
+    evalue_set(EP, c->p[dim], c->p[dim+1]);
+        
     for (int i = dim-1; i >= 0; --i) {
-	emul(&EV2,&EV1);       
+	emul(X, EP);       
 	value_assign(EC.x.n, c->p[i]);
-	eadd(&EC,&EV1);
+	eadd(&EC, EP);
     }
-    *res = EhrhartPolynom(&EV1, params);
     free_evalue_refs(&EC);
-    free_evalue_refs(&EV2);
-    free_evalue_refs(&EV1);
-    return res;
 }
 
 
@@ -1186,11 +1178,12 @@ out:
 		    ZZ one(INIT_VAL, 1);
 		    dpoly_n d(dim, num[f].constant, one);
 		    d.div(n, c, sign[f]);
-		    EhrhartPolynom *ET = multi_polynom(params, c, *num[f].E);
-		    evalue EV = ET->to_evalue(params); 
+		    evalue EV; 
+		    evalue EX = num[f].E->to_evalue(params);
+		    multi_polynom(c, &EX, &EV);
 		    eadd(&EV , &EP);
-		    delete ET;
 		    free_evalue_refs(&EV);
+		    free_evalue_refs(&EX);
 		    delete num[f].E; 
 		} else if (num[f].pos != -1) {
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
