@@ -1343,7 +1343,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
     Polyhedron ** vcone;
     ZZ sign;
-    int ncone = 0;
     unsigned dim;
     int allocated = 0;
     Value factor;
@@ -1411,7 +1410,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	int npos, nneg;
 	Polyhedron *C = supporting_cone(P, j);
 	decompose(C, &vcone, &npos, &nneg, NbMaxCons);
-	ncone += npos + nneg;
 
 	Polyhedron *i;
 	int l;
