@@ -163,7 +163,7 @@ public:
 	value_clear(v);
     }
 
-    Vector* short_vector() {
+    Vector* short_vector(vec_ZZ& lambda) {
 	Matrix *M = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
@@ -187,6 +187,8 @@ public:
 	}
 
 	Matrix_Free(inv);
+
+	lambda = B[index];
 
 	Vector *z = zz2vector(U[index]);
 	Value tmp;
@@ -316,17 +318,19 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 	    neg = Polyhedron_Copy(c->Cone);
 	delete c;
     }
+    vec_ZZ lambda;
     while (!nonuni.empty()) {
 	c = nonuni.back();
 	nonuni.pop_back();
-	Vector* v = c->short_vector();
+	Vector* v = c->short_vector(lambda);
 	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
+	    if (lambda[i] == 0)
+		continue;
 	    Matrix* M = Matrix_Copy(c->Rays);
 	    Vector_Copy(v->p, M->p[i], v->Size);
 	    cone * pc = new cone(M);
-	    if (pc->det == 0)
-		delete pc;
-	    else if (abs(pc->det) > 1) {
+	    assert (pc->det != 0);
+	    if (abs(pc->det) > 1) {
 		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
 	    } else {
