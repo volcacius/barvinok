@@ -1,3 +1,5 @@
+#include <polylib/polylibgmp.h>
+
 void Enumeration_Free(Enumeration *en)
 {
   Enumeration *ee;
