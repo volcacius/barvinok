@@ -60,7 +60,7 @@ static void zz2value(ZZ& z, Value& v)
 }
 
 #undef ALLOC
-#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
+#define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
 
 /*
  * We just ignore the last column and row
@@ -714,7 +714,7 @@ static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
     mpz_fdiv_q(max, max, d);
 
     if (value_eq(min, max)) {
-	ALLOC(ret);
+	ALLOC(Value, ret);
 	value_init(*ret);
 	value_assign(*ret, min);
     } 
@@ -1010,7 +1010,7 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 
     /* copy EP to malloc'ed evalue */
     evalue *E;
-    ALLOC(E);
+    ALLOC(evalue, E);
     *E = *EP;
     delete EP;
 
@@ -1181,6 +1181,8 @@ void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign, ZZ& num, vec_ZZ& den)
 	sign = -sign;
 }
 
+typedef Polyhedron * Polyhedron_p;
+
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
     Polyhedron ** vcone;
@@ -1232,7 +1234,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     }
 
     dim = P->Dimension;
-    vcone = new (Polyhedron *)[P->NbRays];
+    vcone = new Polyhedron_p[P->NbRays];
 
     for (int j = 0; j < P->NbRays; ++j) {
 	int npos, nneg;
@@ -1448,7 +1450,7 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     int r = 0;
     unsigned nparam = C->Dimension;
     evalue *eres;
-    ALLOC(eres);
+    ALLOC(evalue, eres);
     value_init(eres->d);
     value_set_si(eres->d, 0);
 
@@ -1534,7 +1536,7 @@ out:
     }
 
     unsigned dim = P->Dimension - nparam;
-    Polyhedron ** vcone = new (Polyhedron *)[PP->nbV];
+    Polyhedron ** vcone = new Polyhedron_p[PP->nbV];
     int * npos = new int[PP->nbV];
     int * nneg = new int[PP->nbV];
     vec_ZZ sign;
@@ -1551,7 +1553,7 @@ out:
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
     struct section { Polyhedron *D; evalue E; };
     section *s = new section[nd];
-    Polyhedron **fVD = new (Polyhedron*)[nd];
+    Polyhedron **fVD = new Polyhedron_p[nd];
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
@@ -1897,7 +1899,7 @@ static bool double_bound(Polyhedron *P, int nvar, int exist,
 enum constraint { 
 ALL_POS = 1 << 0,
 ONE_NEG = 1 << 1,
-INDEPENDENT = 1 << 2,
+INDEPENDENT = 1 << 2
 };
 
 static evalue* enumerate_or(Polyhedron *D,
@@ -2444,7 +2446,7 @@ static evalue* enumerate_ray(Polyhedron *P,
 static evalue* new_zero_ep()
 {
     evalue *EP;
-    ALLOC(EP);
+    ALLOC(evalue, EP);
     value_init(EP->d);
     evalue_set_si(EP, 0, 1);
     return EP;
@@ -2470,8 +2472,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
     for (nd = 0, D=PP->D; D; D=D->next, ++nd)
 	;
 
-    Polyhedron **VD = new (Polyhedron*)[nd];
-    Polyhedron **fVD = new (Polyhedron*)[nd];
+    Polyhedron **VD = new Polyhedron_p[nd];
+    Polyhedron **fVD = new Polyhedron_p[nd];
     for(nd = 0, D=PP->D; D; D=D->next) {
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
 					fVD, nd, MaxRays);
@@ -2927,7 +2929,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
     Value f;
     value_init(f);
 
-    enum constraint info[exist];
+    enum constraint* info = new constraint[exist];
     for (int i = 0; i < exist; ++i) {
 	info[i] = ALL_POS;
 	for (int l = P->NbEq; l < P->NbConstraints; ++l) {
@@ -3018,6 +3020,7 @@ next:
 	    Polyhedron_Free(T);
 	    value_clear(f);
 	    Vector_Free(row);
+	    delete [] info;
 	    return EP;
 	}
     for (int i = 0; i < exist; ++i)
@@ -3027,6 +3030,7 @@ next:
 #endif /* DEBUG_ER */
 	    Vector_Free(row);
 	    value_clear(f);
+	    delete [] info;
 	    if (i == 0)
 		return barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
 	    else {
@@ -3060,9 +3064,11 @@ next:
 		Polyhedron_Free(pos);
 		value_clear(f);
 		Vector_Free(row);
+		delete [] info;
 		return EP;
 	    }
 	}
+    delete [] info;
 
     Polyhedron *O = P;
     Polyhedron *F;
