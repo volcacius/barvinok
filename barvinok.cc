@@ -5,6 +5,7 @@
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
 #include <barvinok.h>
+#include <util.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
 }
@@ -252,5 +253,50 @@ void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     } else {
 	*ppos = neg;
 	*pneg = pos;
+    }
+}
+
+void count(Polyhedron *P)
+{
+    for (int j = 0; j < P->NbRays; ++j) {
+	Polyhedron *C = supporting_cone(P, j, 600);
+	printf("%d:\n", j);
+	Polyhedron_Print(stdout, P_VALUE_FMT, C);
+	Polyhedron *Polar = Polyhedron_Polar(C, 600);
+	Polyhedron_Free(C);
+	Polyhedron_Print(stdout, P_VALUE_FMT, Polar);
+
+	Polyhedron *polpos, *polneg;
+	decompose(Polar, &polpos, &polneg);
+	Polyhedron_Free(Polar);
+
+	puts("Pos:");
+	Polyhedron_Print(stdout, P_VALUE_FMT, polpos);
+
+	puts("Neg:");
+	Polyhedron_Print(stdout, P_VALUE_FMT, polneg);
+
+	Polyhedron *pos = NULL, *neg = NULL;
+	for (Polyhedron *i = polpos; polpos; polpos = polpos->next) {
+	    Polyhedron *A = Polyhedron_Polar(i, 600);
+	    A->next = pos;
+	    pos = A;
+	}
+	for (Polyhedron *i = polneg; polneg; polneg = polneg->next) {
+	    Polyhedron *A = Polyhedron_Polar(i, 600);
+	    A->next = neg;
+	    neg = A;
+	}
+	Domain_Free(polpos);
+	Domain_Free(polneg);
+
+	puts("Pos:");
+	Polyhedron_Print(stdout, P_VALUE_FMT, pos);
+
+	puts("Neg:");
+	Polyhedron_Print(stdout, P_VALUE_FMT, neg);
+
+	Domain_Free(pos);
+	Domain_Free(neg);
     }
 }

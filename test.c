@@ -51,6 +51,10 @@ int main()
 	    Domain_Free(B);
 	    Domain_Free(C);
 	    break;
+	case 4:
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    count(A);
+	    break;
 	}
 	Polyhedron_Free(A);
     }
