@@ -2,6 +2,11 @@
 #include "ev_operations.h"
 #include <polylib/polylibgmp.h>
 
+void evalue_set_si(evalue *ev, int n, int d) {
+    value_set_si(ev->d, d);
+    value_init(ev->x.n);
+    value_set_si(ev->x.n, n);
+}
 
 void eadd(evalue *e1,evalue *res) {
 
