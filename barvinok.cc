@@ -223,7 +223,8 @@ public:
 	    Vector_Set(M->p[Rays->NbRows]+1, 0, Rays->NbColumns-1);
 	    value_set_si(M->p[Rays->NbRows][0], 1);
 	    value_set_si(M->p[Rays->NbRows][Rays->NbColumns], 1);
-	    Cone = Rays2Polyhedron(M, 600);
+	    Cone = Rays2Polyhedron(M, M->NbRows+1);
+	    assert(Cone->NbConstraints == Cone->NbRays);
 	    Matrix_Free(M);
 	}
 	return Cone;
@@ -334,7 +335,8 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
 	    } else {
-		Polyhedron *p = Polyhedron_Copy(pc->poly());
+		Polyhedron *p = pc->poly();
+		pc->Cone = 0;
 		if (pc->det > 0) {
 		    p->next = pos;
 		    pos = p;
