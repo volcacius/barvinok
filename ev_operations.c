@@ -374,33 +374,31 @@ void eadd(evalue *e1,evalue *res) {
                 }
                 
 		/* Sizes are different */
-                if (res->x.p->type==polynomial) {
+		switch(res->x.p->type) {
+		case polynomial:
+		case modulo:
                     /* VIN100: if e1-size > res-size you have to copy e1 in a   */
                     /* new enode and add res to that new node. If you do not do */
                     /* that, you lose the the upper weight part of e1 !         */
 
-                     if(e1->x.p->size > res->x.p->size) {
-                          enode *tmp;
-                          tmp = ecopy(e1->x.p);
-                          for(i=0;i<res->x.p->size;++i) {
-                              eadd(&res->x.p->arr[i], &tmp->arr[i]);
-                              //  free_evalue_refs(&res->x.p->arr[i]);
-                          }
-                          res->x.p = tmp;
-    	  
-                     }
+                     if(e1->x.p->size > res->x.p->size)
+			  eadd_rev(e1, res);
                      else {
 	  	     
-                        for (i=0; i<e1->x.p->size ; i++) {
+		        if (res->x.p->type == modulo)
+		    	    assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
+		        i = res->x.p->type == modulo ? 1 : 0;
+                        for (; i<e1->x.p->size ; i++) {
                              eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
                         } 
                       		   
                         return ;
                      } 
-                }
+		     break;
                 
     /* add two periodics of the same pos (unknown) but whith different sizes (periods) */
-                else if (res->x.p->type==periodic) {
+	        case periodic:
+		{
 		      /* you have to create a new evalue 'ne' in whitch size equals to the lcm
 		       of the sizes of e1 and res, then to copy res periodicaly in ne, after
 		       to add periodicaly elements of e1 to elements of ne, and finaly to 
@@ -438,8 +436,8 @@ void eadd(evalue *e1,evalue *res) {
 		      res->x.p=ne->x.p;
 	    	    
                         return ;
-                }
-                else { /* evector */
+		}
+		case evector:
                      fprintf(stderr, "eadd: ?cannot add vectors of different length\n");
                      return ;
                 }
