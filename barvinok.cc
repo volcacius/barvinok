@@ -1990,11 +1990,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 	return new_zero_ep();
 
     if (nvar == 0 && nparam == 0) {
-	evalue *EP;
-	ALLOC(EP);
-	value_init(EP->d);
-	value_init(EP->x.n);
-	value_set_si(EP->d, 1);
+	evalue *EP = new_zero_ep();
 	barvinok_count(P, &EP->x.n, MaxRays);
 	if (value_pos_p(EP->x.n))
 	    value_set_si(EP->x.n, 1);
