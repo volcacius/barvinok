@@ -1196,6 +1196,19 @@ out:
     value_clear(m);
 }
 
+#ifdef USE_MODULO
+static void ceil(Value *coef, int len, Value d, ZZ& f, 
+                 evalue *EP, Polyhedron *PD) {
+    ceil_mod(coef, len, d, f, EP, PD);
+}
+#else
+static void ceil(Value *coef, int len, Value d, ZZ& f, 
+                 evalue *EP, Polyhedron *PD) {
+    ceil_mod(coef, len, d, f, EP, PD);
+    evalue_mod2table(EP, len-1);
+}
+#endif
+
 evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 {
     Vector *val = Vector_Alloc(len);
@@ -2259,7 +2272,7 @@ void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num,
 	for (int i = 0; i < dim; ++i) {
 	    remainders[i] = new_zero_ep();
 	    one = 1;
-	    ceil_mod(L->p[i], nparam+1, lcm, one, remainders[i], 0);
+	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], 0);
 	}
 	Matrix_Free(L);
 
@@ -2474,6 +2487,7 @@ void ienumerator::reduce(
 	    evalue t;	// E_num[i] - (m-1)
 	    value_init(t.d);
 	    evalue_copy(&t, E_num[i]);
+#ifdef USE_MODULO
 	    evalue *cst;
 	    for (cst = &t; value_zero_p(cst->d); ) {
 		if (cst->x.p->type == fractional)
@@ -2481,13 +2495,18 @@ void ienumerator::reduce(
 		else
 		    cst = &cst->x.p->arr[0];
 	    }
+#endif
 	    vector<E_poly_term *> terms;
 	    for (int m = 0; m < r->len; ++m) {
 		if (m > 0) {
 		    if (m > 1) {
 			value_set_si(f.d, m);
 			emul(&f, &cum);
+#ifdef USE_MODULO
 			value_substract(cst->x.n, cst->x.n, cst->d);
+#else
+			eadd(&mone, &t);
+#endif
 		    }
 		    emul(&t, &cum);
 		}
