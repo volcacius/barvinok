@@ -308,6 +308,9 @@ public:
 class dpoly_n {
 public:
     Matrix *coeff;
+    ~dpoly_n() {
+	Matrix_Free(coeff);
+    }
     dpoly_n(int d, ZZ& degree_0, ZZ& degree_1, int offset = 0) {
 	Value d0, d1;
 	value_init(d0);
@@ -354,6 +357,7 @@ public:
 	    Vector_Copy(c->p[len-1], count->p, len+1);
 	Vector_Normalize(count->p, len+1);
 	value_clear(tmp);
+	Matrix_Free(c);
     }
 };
 
@@ -884,6 +888,7 @@ static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPo
 	value_assign(EC.x.n, c->p[i]);
 	*res += EhrhartPolynom(&EC, params);
     }
+    free_evalue_refs(&EC);
     return res;
 }
 
@@ -895,7 +900,9 @@ static EhrhartPolynom *constant(mpq_t c)
     value_init(EP.x.n);
     value_assign(EP.d, &c[0]._mp_den);
     value_assign(EP.x.n, &c[0]._mp_num);
-    return new EhrhartPolynom(&EP, params);
+    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);
+    free_evalue_refs(&EP);
+    return ret;
 }
 
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
@@ -1023,6 +1030,8 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     Vector_Free(c);
 
+    for (int j = 0; j < PP->nbV; ++j)
+	Domain_Free(vcone[j]);
     delete [] vcone;
     delete [] npos;
     delete [] nneg;
