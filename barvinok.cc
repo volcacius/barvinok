@@ -1581,8 +1581,10 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 		    for (j = 0; j < exist; ++j)
 			if (j != i && value_notzero_p(row->p[nvar+j+1]))
 			    break;
-		    if (j == exist)
+		    if (j == exist) {
+			//printf("independent: l: %d, u: %d\n", l, u);
 			info[i] = (constraint)(info[i] | INDEPENDENT);
+		    }
 		}
 		if (info[i] & ALL_POS) {
 		    value_addto(row->p[len-1], row->p[len-1], 
@@ -1600,39 +1602,51 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
 		    value_decrement(row->p[len-1], row->p[len-1]);
 		    Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
-		    if (!emptyQ(T))
+		    if (!emptyQ(T)) {
+			//printf("not all_pos: l: %d, u: %d\n", l, u);
 			info[i] = (constraint)(info[i] ^ ALL_POS);
+		    }
 		    //puts("pos remainder");
 		    //Polyhedron_Print(stdout, P_VALUE_FMT, T);
 		    Polyhedron_Free(T);
 		}
 		if (!(info[i] & ONE_NEG)) {
-		    /* recalculate constant */
-		    value_oppose(f, P->Constraint[u][nvar+i+1]);
-		    Vector_Combine(P->Constraint[l]+len-2, 
-				   P->Constraint[u]+1, row->p+len-2,
-				   f, P->Constraint[l][nvar+i+1], 1);
-		    value_multiply(f, f, P->Constraint[l][nvar+i+1]);
-		    value_substract(row->p[len-1], row->p[len-1], f);
-		    value_set_si(f, -1);
-		    Vector_Scale(row->p+1, row->p+1, f, len-1);
-		    value_decrement(row->p[len-1], row->p[len-1]);
-		    Vector_Gcd(row->p+1, len - 2, &f);
-		    if (value_notone_p(f)) {
-			Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			mpz_fdiv_r(row->p[len-1], row->p[len-1], f);
+		    int j;
+		    for (j = 0; j < exist; ++j)
+			if (j != i && 
+			    (value_notzero_p(P->Constraint[l][nvar+j+1]) ||
+			     value_notzero_p(P->Constraint[u][nvar+j+1])))
+			    break;
+		    if (j == exist) {
+			/* recalculate constant */
+			value_oppose(f, P->Constraint[u][nvar+i+1]);
+			Vector_Combine(P->Constraint[l]+len-1, 
+				       P->Constraint[u]+len-1, row->p+len-1,
+				       f, P->Constraint[l][nvar+i+1], 1);
+			value_multiply(f, f, P->Constraint[l][nvar+i+1]);
+			value_substract(row->p[len-1], row->p[len-1], f);
+			value_set_si(f, -1);
+			Vector_Scale(row->p+1, row->p+1, f, len-1);
+			value_decrement(row->p[len-1], row->p[len-1]);
+			Vector_Gcd(row->p+1, len - 2, &f);
+			if (value_notone_p(f)) {
+			    Vector_AntiScale(row->p+1, row->p+1, f, len-2);
+			    mpz_fdiv_r(row->p[len-1], row->p[len-1], f);
+			}
+			value_set_si(f, -1);
+			Vector_Scale(row->p+1, row->p+1, f, len-1);
+			value_decrement(row->p[len-1], row->p[len-1]);
+			//puts("row");
+			//Vector_Print(stdout, P_VALUE_FMT, row);
+			Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
+			if (emptyQ(T)) {
+			    //printf("one_neg l: %d, u: %d\n", l, u);
+			    info[i] = (constraint)(info[i] | ONE_NEG);
+			}
+			//puts("neg remainder");
+			//Polyhedron_Print(stdout, P_VALUE_FMT, T);
+			Polyhedron_Free(T);
 		    }
-		    value_set_si(f, -1);
-		    Vector_Scale(row->p+1, row->p+1, f, len-1);
-		    value_decrement(row->p[len-1], row->p[len-1]);
-		    //puts("row");
-		    //Vector_Print(stdout, P_VALUE_FMT, row);
-		    Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
-		    if (emptyQ(T))
-			info[i] = (constraint)(info[i] | ONE_NEG);
-		    //puts("neg remainder");
-		    //Polyhedron_Print(stdout, P_VALUE_FMT, T);
-		    Polyhedron_Free(T);
 		}
 		if (!(info[i] & ALL_POS) && (info[i] & ONE_NEG))
 		    goto next;
@@ -1644,6 +1658,10 @@ next:
 	;
     }
 
+    /*
+    for (int i = 0; i < exist; ++i)
+	printf("%i: %i\n", i, info[i]);
+    */
     for (int i = 0; i < exist; ++i)
 	if (info[i] & ALL_POS) {
 	    // Eliminate
