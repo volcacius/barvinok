@@ -131,16 +131,32 @@ you_lose:   	/* OK, lets not do it */
     else if (p->type==polynomial) {
 	for (k = 0; s && k < s->n; ++k) {
 	    if (s->fixed[k].pos == p->pos) {
-		if (value_notone_p(s->fixed[k].d))
+		int divide = value_notone_p(s->fixed[k].d);
+		evalue d;
+
+		if (divide && m != 0)
 		    continue;
+
+		if (divide) {
+		    value_init(d.d);
+		    value_assign(d.d, s->fixed[k].d);
+		    value_init(d.x.n);
+		    value_set_si(d.x.n, 1);
+		}
 
 		for (i=p->size-1;i>=1;i--) {
 		    emul(&s->fixed[k].s, &p->arr[i]);
+		    if (divide)
+			emul(&d, &p->arr[i]);
 		    eadd(&p->arr[i], &p->arr[i-1]);
 		    free_evalue_refs(&(p->arr[i]));
 		}
 		p->size = 1;
 		_reduce_evalue(&p->arr[0], s, m);
+
+		if (divide)
+		    free_evalue_refs(&d);
+
 		break;
 	    }
 	}
