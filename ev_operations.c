@@ -2812,6 +2812,9 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 
 	t = barvinok_enumerate_e(D, 0, nparam, 0);
 
+	/* Double check that D was not unbounded. */
+	assert(!(value_pos_p(t->d) && value_neg_p(t->x.n)));
+
 	if (C != 0)
 	    Polyhedron_Free(D);
 
