@@ -1,0 +1,7 @@
+---
+version: 0.02
+date: Mon Oct 20 14:15:45 CEST 2003
+changes:
+    - change name from count to barvinok_count
+    - return -1 is polyhedron is unbounded
+    - trivially optimize counting in presence of some independent constraints
