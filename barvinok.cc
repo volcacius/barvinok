@@ -1373,6 +1373,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 	Polyhedron_Free(I);
     }
     Matrix_Free(M);
+    Vector_Free(row);
     value_clear(g);
     return R;
 }
