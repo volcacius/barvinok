@@ -22,14 +22,16 @@ if test "x$with_mona" != "x"; then
 			with_mona=""
 		fi
 	done
+	if test "x$with_mona" = "x"; then
+		AC_MSG_RESULT(not found)
+	else
+		AC_MSG_RESULT($MONAPATH)
+	fi
 fi
 
 if test "x$with_mona" = "x"; then
-	AC_MSG_RESULT(not found)
 	AC_MSG_WARN(http://www.brics.dk/mona/download)
 	AC_MSG_ERROR(mona required)
-else
-	AC_MSG_RESULT($MONAPATH)
 fi
 
 AC_ARG_WITH(omega,
