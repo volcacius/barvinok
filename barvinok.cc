@@ -2761,6 +2761,9 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
     int nvar = P->Dimension - exist - nparam;
     evalue *EP = new_zero_ep();
     Polyhedron *Q, *N, *T = 0;
+    Value min, tmp;
+    value_init(min);
+    value_init(tmp);
 
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: PIP\n");
@@ -2769,14 +2772,44 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
     for (int i = 0; i < P->Dimension; ++i) {
 	bool pos = false;
 	bool neg = false;
+	bool posray = false;
+	bool negray = false;
+	value_set_si(min, 0);
 	for (int j = 0; j < P->NbRays; ++j) {
-	    if (value_pos_p(P->Ray[j][1+i]))
+	    if (value_pos_p(P->Ray[j][1+i])) {
 		pos = true;
-	    else if (value_neg_p(P->Ray[j][1+i]))
+		if (value_zero_p(P->Ray[j][1+P->Dimension]))
+		    posray = true;
+	    } else if (value_neg_p(P->Ray[j][1+i])) {
 		neg = true;
+		if (value_zero_p(P->Ray[j][1+P->Dimension]))
+		    negray = true;
+		else {
+		    mpz_fdiv_q(tmp, 
+			       P->Ray[j][1+i], P->Ray[j][1+P->Dimension]);
+		    if (value_lt(tmp, min))
+			value_assign(min, tmp);
+		}
+	    }
 	}
-	assert(!(pos && neg));	// for now
-	if (neg) {
+	if (pos && neg) {
+	    assert(!(posray && negray));
+	    assert(!negray);		// for now
+	    Polyhedron *O = T ? T : P;
+	    /* shift by a safe amount */
+	    Matrix *M = Matrix_Alloc(O->NbRays, O->Dimension+2);
+	    Vector_Copy(O->Ray[0], M->p[0], O->NbRays * (O->Dimension+2));
+	    for (int j = 0; j < P->NbRays; ++j) {
+		if (value_notzero_p(M->p[j][1+P->Dimension])) {
+		    value_multiply(tmp, min, M->p[j][1+P->Dimension]);
+		    value_substract(M->p[j][1+i], M->p[j][1+i], tmp);
+		}
+	    }
+	    if (T)
+		Polyhedron_Free(T);
+	    T = Rays2Polyhedron(M, MaxRays);
+	    Matrix_Free(M);
+	} else if (neg) {
 	    /* negating a parameter requires that we substitute in the
 	     * sign again afterwards.
 	     * Disallow for now.
@@ -2790,6 +2823,8 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 		value_oppose(T->Constraint[j][1+i], T->Constraint[j][1+i]);
 	}
     }
+    value_clear(min);
+    value_clear(tmp);
 
     Polyhedron *D = pip_lexmin(T ? T : P, exist, nparam);
     for (Q = D; Q; Q = N) {
