@@ -116,6 +116,7 @@ public:
 
     ~cone() {
 	Polyhedron_Free(Cone);
+	Matrix_Free(Rays);
     }
 
     ZZ det;
