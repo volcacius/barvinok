@@ -86,6 +86,15 @@ int main()
 ],,
 AC_MSG_WARN([This version of polylib leaks]))
 
+AC_MSG_CHECKING([number of arguments of Polyhedron_Enumerate])
+AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
+	       [Polyhedron_Enumerate(NULL,NULL,0,NULL)],
+	       [AC_MSG_RESULT(4)
+		AC_DEFINE(HAVE_ENUMERATE4,[],
+			  [Polyhedron_Enumerate takes four arguments])],
+	       [AC_MSG_RESULT(3)])
+
+
 AC_ARG_WITH(ntl,
             [  --with-ntl=DIR          DIR Location of NTL],
             [ echo "Package tnl : $withval" && ntl_package=$withval],  
@@ -104,4 +113,5 @@ AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
 ])
 
+AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT(Makefile)
