@@ -475,6 +475,8 @@ void reduce_evalue (evalue *e) {
 		goto discard;
 
 	    dim = D->Dimension;
+	    if (D->next)
+		D = DomainConvex(D, 0);
 	    if (!D->next && D->NbEq) {
 		int j, k;
 		if (s.max < dim) {
@@ -489,6 +491,8 @@ void reduce_evalue (evalue *e) {
 		for (j = 0; j < D->NbEq; ++j)
 		    add_substitution(&s, D->Constraint[j], dim);
 	    }
+	    if (D != EVALUE_DOMAIN(e->x.p->arr[2*i]))
+		Domain_Free(D);
 	    _reduce_evalue(&e->x.p->arr[2*i+1], &s, 0);
 	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
 discard:
