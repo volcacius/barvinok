@@ -2599,7 +2599,8 @@ next:
     Polyhedron_Free(F);
 
     Polyhedron *O = P;
-    EP = enumerate_vd(&P, exist, nparam, MaxRays);
+    if (nparam)
+	EP = enumerate_vd(&P, exist, nparam, MaxRays);
     if (EP) {
 	if (O != P)
 	    Polyhedron_Free(P);
