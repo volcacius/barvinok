@@ -28,6 +28,7 @@
 struct option options[] = {
     { "pip",   no_argument,  0,  'p' },
     { "convert",   no_argument,  0,  'c' },
+    { "floor",     no_argument,  0,  'f' },
     { "range",	no_argument,	0,  'r' },
     { 0, 0, 0, 0 }
 };
@@ -45,11 +46,15 @@ int main(int argc, char **argv)
     int range = 0;
     int convert = 0;
     int pip = 0;
+    int floor = 0;
 
-    while ((c = getopt_long(argc, argv, "pcr", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "pfcr", options, &ind)) != -1) {
 	switch (c) {
 	case 'p':
 	    pip = 1;
+	    break;
+	case 'f':
+	    floor = 1;
 	    break;
 	case 'c':
 	    convert = 1;
@@ -84,7 +89,10 @@ int main(int argc, char **argv)
     if (range)
 	evalue_range_reduction(EP);
     print_evalue(stdout, EP, param_name);
-    if (convert) {
+    if (floor) {
+	evalue_frac2floor(EP);
+	print_evalue(stdout, EP, param_name);
+    } else if (convert) {
 	evalue_mod2table(EP, nparam);
 	print_evalue(stdout, EP, param_name);
     }
