@@ -2206,6 +2206,7 @@ void evalue_combine(evalue *e)
 	    free_evalue_refs(evs[i]);
 	}
     }
+    free(evs);
     free(e->x.p);
     p->size = 2*k;
     e->x.p = p;
