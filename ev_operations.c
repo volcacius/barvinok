@@ -586,7 +586,7 @@ static void emul_poly (evalue *e1, evalue *res)
 
 void emul_partitions (evalue *e1,evalue *res)
 {
-    int n, i, j;
+    int n, i, j, k;
     Polyhedron *d;
     struct section *s;
     s = (struct section *) 
@@ -603,6 +603,26 @@ void emul_partitions (evalue *e1,evalue *res)
 		Domain_Free(d);
 		continue;
 	    }
+
+	    /* This code is only needed because the partitions
+	       are not true partitions.
+	     */
+	    for (k = 0; k < n; ++k) {
+		if (DomainIncludes(s[k].D, d))
+		    break;
+		if (DomainIncludes(d, s[k].D)) {
+		    Domain_Free(s[k].D);
+		    free_evalue_refs(&s[k].E);
+		    if (n > k)
+			s[k] = s[--n];
+		    --k;
+		}
+	    }
+	    if (k < n) {
+		Domain_Free(d);
+		continue;
+	    }
+
 	    value_init(s[n].E.d);
 	    evalue_copy(&s[n].E, &res->x.p->arr[2*i+1]);
 	    emul(&e1->x.p->arr[2*j+1], &s[n].E);
