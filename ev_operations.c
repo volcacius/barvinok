@@ -688,6 +688,7 @@ discard:
 		int j;
 		for (j = 0; j < s.n; ++j) {
 		    value_clear(s.fixed[j].d);
+		    value_clear(s.fixed[j].m);
 		    free_evalue_refs(&s.fixed[j].s); 
 		}
 	    }
