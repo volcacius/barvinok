@@ -652,8 +652,8 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
 /*
  * 
  */
- static void mask(deque<string>& params, Matrix *f, EhrhartPolynom *factor)
-{   
+static void mask(deque<string>& params, Matrix *f, evalue *factor)
+{
     int nr = f->NbRows, nc = f->NbColumns;
     int n;
     bool found = false;
@@ -690,10 +690,7 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
     value_clear(tmp);
     Vector_Free(val);
     Vector_Free(lcm);
-    evalue EV=(*factor).to_evalue(params); 
-    emul(&EP,&EV); 
-    *factor = EhrhartPolynom(&EV, params); 
-    free_evalue_refs(&EV); 
+    emul(&EP,factor); 
     free_evalue_refs(&EP);
 }
 
@@ -1034,7 +1031,9 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Enumeration *en, *res;
     int r = 0;
     unsigned nparam = C->Dimension;
-    EhrhartPolynom factor(1);
+    evalue factor;
+    value_init(factor.d);
+    evalue_set_si(&factor, 1, 1);
     
     res = NULL;
 
@@ -1048,28 +1047,23 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
-	en = (Enumeration *)malloc(sizeof(Enumeration));
-	en->ValidityDomain = CEq ? CEq : Polyhedron_Copy(C);
-	en->next = NULL;
-	value_init(en->EP.d);
-	value_set_si(en->EP.d, 1);
-	value_init(en->EP.x.n);
+	res = (Enumeration *)malloc(sizeof(Enumeration));
+	res->ValidityDomain = CEq ? CEq : Polyhedron_Copy(C);
+	res->next = NULL;
+	value_init(res->EP.d);
+	value_set_si(res->EP.d, 1);
+	value_init(res->EP.x.n);
 	if (emptyQ(P))
-	    value_set_si(en->EP.x.n, 0);
+	    value_set_si(res->EP.x.n, 0);
 	else
-	    barvinok_count(P, &en->EP.x.n, MaxRays);
+	    barvinok_count(P, &res->EP.x.n, MaxRays);
+	emul(&factor, &res->EP);
+out:
 	Polyhedron_Free(P);
-   	if (factor != 1) {
-		
-	    evalue EP = en->EP;
-	    EhrhartPolynom E(&EP, allparams);
-	    en->EP = (factor * E).to_evalue(allparams);
-	    reduce_evalue(&en->EP);
-	    free_evalue_refs(&EP);
-	}
 	if (CT)
 	    Matrix_Free(CT);
-	return en;
+	   
+	return res;
     }
 
     if (P->NbEq != 0) {
@@ -1249,10 +1243,8 @@ constant:
 	en->next = res;
 	res = en;
 	res->ValidityDomain = rVD;
-   	evalue EV = factor.to_evalue(allparams);
-   	emul(&EV, &EP); 
+   	emul(&factor, &EP); 
 	res->EP = EP;
-	free_evalue_refs(&EV);
 	reduce_evalue(&res->EP);
     }
 
@@ -1265,12 +1257,8 @@ constant:
     delete [] nneg;
 
     Param_Polyhedron_Free(PP);
-    Polyhedron_Free(P);
-    if (CT)
-	Matrix_Free(CT);
-       
     if (CEq)
 	Polyhedron_Free(CEq);
 
-    return res;
+    goto out;
 }
