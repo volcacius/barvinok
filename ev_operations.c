@@ -199,8 +199,9 @@ static int relations_depth(evalue *e)
     return d;
 }
 
-static void poly_denom(evalue *p, Value *d)
+static void poly_denom_not_constant(evalue **pp, Value *d)
 {
+    evalue *p = *pp;
     value_set_si(*d, 1);
 
     while (value_zero_p(p->d)) {
@@ -210,6 +211,12 @@ static void poly_denom(evalue *p, Value *d)
 	value_lcm(*d, p->x.p->arr[1].d, d);
 	p = &p->x.p->arr[0];
     }
+    *pp = p;
+}
+
+static void poly_denom(evalue *p, Value *d)
+{
+    poly_denom_not_constant(&p, d);
     value_lcm(*d, p->d, d);
 }
 
@@ -524,6 +531,44 @@ you_lose:   	/* OK, lets not do it */
 		evalue_copy(&v.x.p->arr[0], &p->arr[0]);
 
 		reorder = 1;
+	    }
+
+	    if (!reorder) {
+		Value m;
+		Value r;
+		value_init(m);
+		value_init(r);
+		evalue *pp = &p->arr[0];
+		poly_denom_not_constant(&pp, &m);
+		mpz_fdiv_r(r, m, pp->d);
+		if (value_notzero_p(r)) {
+		    value_init(v.d);
+		    value_set_si(v.d, 0);
+		    v.x.p = new_enode(fractional, 3, -1);
+
+		    value_multiply(r, m, pp->x.n);
+		    value_multiply(v.x.p->arr[1].d, m, pp->d);
+		    value_init(v.x.p->arr[1].x.n);
+		    mpz_fdiv_r(v.x.p->arr[1].x.n, r, pp->d);
+		    mpz_fdiv_q(r, r, pp->d);
+
+		    evalue_set_si(&v.x.p->arr[2], 1, 1);
+		    evalue_copy(&v.x.p->arr[0], &p->arr[0]);
+		    pp = &v.x.p->arr[0];
+		    while (value_zero_p(pp->d))
+			pp = &pp->x.p->arr[0];
+
+		    value_assign(pp->d, m);
+		    value_assign(pp->x.n, r);
+
+		    Gcd(pp->d, pp->x.n, &r);
+		    value_division(pp->d, pp->d, r);
+		    value_division(pp->x.n, pp->x.n, r);
+
+		    reorder = 1;
+		}
+		value_clear(m);
+		value_clear(r);
 	    }
 
 	    if (!reorder) {
