@@ -25,6 +25,7 @@
 #include <getopt.h>
 struct option options[] = {
     { "convert",   no_argument,  0,  'c' },
+    { "floor",     no_argument,  0,  'f' },
     { "size",      no_argument,  0,  's' },
     { 0, 0, 0, 0 }
 };
@@ -38,12 +39,16 @@ int main(int argc, char **argv)
     char **param_name;
     int c, ind = 0;
     int convert = 0;
+    int floor = 0;
     int size = 0;
 
-    while ((c = getopt_long(argc, argv, "cs", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "fcs", options, &ind)) != -1) {
 	switch (c) {
 	case 'c':
 	    convert = 1;
+	    break;
+	case 'f':
+	    floor = 1;
 	    break;
 	case 's':
 	    size = 1;
@@ -64,7 +69,11 @@ int main(int argc, char **argv)
     print_evalue(stdout, EP, param_name);
     if (size)
 	printf("\nSize: %d\n", evalue_size(EP));
-    if (convert) {
+    if (floor) {
+	fprintf(stderr, "WARNING: floor conversion not supported\n");
+	evalue_frac2floor(EP);
+	print_evalue(stdout, EP, param_name);
+    } else if (convert) {
 	evalue_mod2table(EP, C->Dimension);
 	print_evalue(stdout, EP, param_name);
 	if (size)
