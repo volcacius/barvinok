@@ -124,6 +124,61 @@ you_lose:   	/* OK, lets not do it */
     }
 } /* reduce_evalue */
 
+void print_evalue(FILE *DST,evalue *e,char **pname) {
+  
+  if(value_notzero_p(e->d)) {    
+    if(value_notone_p(e->d)) {
+      value_print(DST,VALUE_FMT,e->x.n);
+      fprintf(DST,"/");
+      value_print(DST,VALUE_FMT,e->d);
+    }  
+    else {
+      value_print(DST,VALUE_FMT,e->x.n);
+    }
+  }  
+  else
+    print_enode(DST,e->x.p,pname);
+  return;
+} /* print_evalue */
+
+void print_enode(FILE *DST,enode *p,char **pname) {
+  
+  int i;
+  
+  if (!p) {
+    fprintf(DST, "NULL");
+    return;
+  }
+  if (p->type == evector) {
+    fprintf(DST, "{ ");
+    for (i=0; i<p->size; i++) {
+      print_evalue(DST, &p->arr[i], pname);
+      if (i!=(p->size-1))
+	fprintf(DST, ", ");
+    }
+    fprintf(DST, " }\n");
+  }
+  else if (p->type == polynomial) {
+    fprintf(DST, "( ");
+    for (i=p->size-1; i>=0; i--) {
+      print_evalue(DST, &p->arr[i], pname);
+      if (i==1) fprintf(DST, " * %s + ", pname[p->pos-1]);
+      else if (i>1) 
+	fprintf(DST, " * %s^%d + ", pname[p->pos-1], i);
+    }
+    fprintf(DST, " )\n");
+  }
+  else if (p->type == periodic) {
+    fprintf(DST, "[ ");
+    for (i=0; i<p->size; i++) {
+      print_evalue(DST, &p->arr[i], pname);
+      if (i!=(p->size-1)) fprintf(DST, ", ");
+    }
+    fprintf(DST," ]_%s", pname[p->pos-1]);
+  }
+  return;
+} /* print_enode */ 
+
 void eadd(evalue *e1,evalue *res) {
 
  int i; 

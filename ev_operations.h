@@ -18,6 +18,8 @@
 #define ecopy _new_ecopy
 #define new_enode _new_new_enode
 #define free_evalue_refs _new_free_evalue_refs
+#define print_evalue _new_print_evalue
+#define print_enode _new_print_enode
 #define reduce_evalue _new_reduce
 
 typedef enum { polynomial, periodic, evector } enode_type;
@@ -53,6 +55,8 @@ enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);
 int eequal(evalue *e1,evalue *e2);
 void free_evalue_refs(evalue *e);
+void print_evalue(FILE *DST,evalue *e,char **pname);
+void print_enode(FILE *DST,enode *p,char **pname);
 void reduce_evalue (evalue *e);
 void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
