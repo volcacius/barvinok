@@ -5,6 +5,9 @@ http://www.kotnet.org/~skimo/polylib/).
 
 Next to polylib, it uses NTL (http://shoup.net/ntl/)
 
+Optionally, PIP (http://www.prism.uvsq.fr/~cedb/bastools/piplib.html)
+can be used during enumeration of integer projections.
+
 Both NTL and polylib need to have been compiled with gmp
 support.
 For NTL this means you have to specify
