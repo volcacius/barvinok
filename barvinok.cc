@@ -1952,6 +1952,16 @@ next:
 			mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
 		    }
 		    Polyhedron *neg = AddConstraints(row->p, 1, P, MaxRays);
+
+		    /* We found an independent, but useless constraint
+		     * Maybe we should detect this earlier and not
+		     * mark the variable as INDEPENDENT
+		     */
+		    if (emptyQ(neg)) {
+			Polyhedron_Free(neg);
+			continue;
+		    }
+
 		    value_set_si(f, -1);
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
 		    value_decrement(row->p[len-1], row->p[len-1]);
@@ -1972,7 +1982,6 @@ next:
 		    return EP;
 		}
 	    }
-	    assert(0); // can't happen
 	}
 
     assert(0);
