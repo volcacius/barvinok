@@ -1496,7 +1496,6 @@ void counter::start(unsigned MaxRays)
 }
 
 struct reducer : public polar_decomposer {
-    vec_ZZ lambda;
     vec_ZZ vertex;
     //vec_ZZ den;
     ZZ sgn;
@@ -1514,8 +1513,6 @@ struct reducer : public polar_decomposer {
     reducer(Polyhedron *P) {
 	this->P = P;
 	dim = P->Dimension;
-	lambda.SetLength(1);
-	lambda[0] = 1;
 	//den.SetLength(dim);
 	mpq_init(tcount);
 	mpz_init(tn);
