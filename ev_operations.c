@@ -3129,12 +3129,9 @@ evalue *esum(evalue *e, int nvar)
     assert(e->x.p->type == partition);
 
     for (i = 0; i < e->x.p->size/2; ++i) {
-	char *test[] = { "A", "B", "C", "D", "E", "F", "G" };
 	evalue *t;
 	t = esum_over_domain(&e->x.p->arr[2*i+1], nvar,
 			     EVALUE_DOMAIN(e->x.p->arr[2*i]), 0);
-	Polyhedron_Print(stderr, P_VALUE_FMT, EVALUE_DOMAIN(e->x.p->arr[2*i]));
-	print_evalue(stderr, t, test);
 	eadd(t, res);
 	free_evalue_refs(t);
 	free(t);
