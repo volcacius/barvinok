@@ -16,6 +16,8 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     evalue *res;
     static int counter = 0;
 
+    fprintf(stderr, "IN INSTRUMENTED BARVINOK_ENUMERATE_EV");
+    fflush(stderr);
     if (!orig) {
 	void *handle = dlopen("libbarvinok.so", RTLD_LAZY);
 	assert(handle);
