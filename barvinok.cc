@@ -1795,8 +1795,13 @@ static bool SplitOnVar(Polyhedron *P, int i,
 	    if (SplitOnConstraint(P, i, l, u, 
 				   nvar, len, exist, MaxRays,
 				   row, f, independent,
-				   pos, neg))
+				   pos, neg)) {
+		if (independent) {
+		    if (i != 0)
+			SwapColumns(*neg, nvar+1, nvar+1+i);
+		}
 		return true;
+	    }
 	}
     }
 
@@ -2054,8 +2059,6 @@ next:
 		fprintf(stderr, "\nER: Split\n");
 #endif /* DEBUG_ER */
 
-		if (i != 0)
-		    SwapColumns(neg, nvar+1, nvar+1+i);
 		evalue *EP = 
 		    barvinok_enumerate_e(neg, exist-1, nparam, MaxRays);
 		evalue *E = 
