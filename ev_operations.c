@@ -277,7 +277,6 @@ void eadd_partitions (evalue *e1,evalue *res)
 {
     int n, i, j, final;
     Polyhedron *d, *fd;
-    /* put in a separate function ! */
     struct section *s;
     s = (struct section *) 
 	    malloc((e1->x.p->size/2+1) * (res->x.p->size/2+1) * 
