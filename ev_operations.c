@@ -102,7 +102,7 @@ static void realloc_substitution(struct subst *s, int d)
     s->max += d;
 }
 
-static void add_modulo_substitution(struct subst *s, evalue *r)
+static int add_modulo_substitution(struct subst *s, evalue *r)
 {
     evalue *p;
     evalue *f;
@@ -114,7 +114,7 @@ static void add_modulo_substitution(struct subst *s, evalue *r)
 
     /* May have been reduced already */
     if (value_notzero_p(m->d))
-	return;
+	return 0;
 
     if (s->n >= s->max) {
 	int d = relations_depth(r);
@@ -151,6 +151,8 @@ static void add_modulo_substitution(struct subst *s, evalue *r)
 	free_evalue_refs(&mone);
     }
     ++s->n;
+
+    return 1;
 }
 
 int _reduce_evalue (evalue *e, struct subst *s, int m) {
@@ -175,7 +177,7 @@ int _reduce_evalue (evalue *e, struct subst *s, int m) {
     for (i=0; i<p->size; i++) {
 	int add = p->type == relation && i == 1;
 	if (add)
-	    add_modulo_substitution(s, e);
+	    add = add_modulo_substitution(s, e);
 
         if (i == 0 && p->type==modulo) {
 	    int factor;
