@@ -2532,6 +2532,7 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
     line_minmax(I, &min, &max); /* frees I */
     mpz_fdiv_q(min, min, d);
     mpz_fdiv_q(max, max, d);
+    value_substract(d, max, min);
 
     if (value_eq(min, max)) {
 	evalue inc;
@@ -2545,6 +2546,61 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	*e = p->arr[1];
 	free(p);
 	free_evalue_refs(&inc);
+	r = 1;
+    } else if (value_one_p(d) && p->size > 3) {
+	evalue rem;
+	value_init(rem.d);
+	value_set_si(rem.d, 0);
+	rem.x.p = new_enode(fractional, 3, -1);
+	evalue_copy(&rem.x.p->arr[0], &p->arr[0]);
+	rem.x.p->arr[1] = p->arr[1];
+	rem.x.p->arr[2] = p->arr[2];
+	for (i = 3; i < p->size; ++i)
+	    p->arr[i-2] = p->arr[i];
+	p->size -= 2;
+
+	evalue inc;
+	value_init(inc.d);
+	value_init(inc.x.n);
+	value_set_si(inc.d, 1);
+	value_oppose(inc.x.n, min);
+
+	evalue t;
+	value_init(t.d);
+	evalue_copy(&t, &p->arr[0]);
+	eadd(&inc, &t);
+
+	evalue f;
+	value_init(f.d);
+	value_set_si(f.d, 0);
+	f.x.p = new_enode(fractional, 3, -1);
+	evalue_copy(&f.x.p->arr[0], &p->arr[0]);
+	evalue_set_si(&f.x.p->arr[1], 1, 1);
+	evalue_set_si(&f.x.p->arr[2], 2, 1);
+
+	evalue factor;
+	value_init(factor.d);
+	evalue_set_si(&factor, -1, 1);
+	emul(&t, &factor);
+
+	eadd(&f, &factor);
+	emul(&t, &factor);
+
+	evalue_set_si(&f.x.p->arr[1], 0, 1);
+	evalue_set_si(&f.x.p->arr[2], -1, 1);
+	eadd(&f, &factor);
+
+	emul(&factor, e);
+	eadd(&rem, e);
+
+	free_evalue_refs(&inc);
+	free_evalue_refs(&t);
+	free_evalue_refs(&f);
+	free_evalue_refs(&factor);
+	free_evalue_refs(&rem);
+
+	reduce_in_domain(e, D);
+
 	r = 1;
     } else {
 	_reduce_evalue(&p->arr[0], 0, 1);
