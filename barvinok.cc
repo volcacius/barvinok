@@ -1721,6 +1721,18 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
     int nvar = P->Dimension - exist - nparam;
     int len = P->Dimension + 2;
 
+    if (nvar == 0 && nparam == 0) {
+	evalue *EP;
+	ALLOC(EP);
+	value_init(EP->d);
+	value_init(EP->x.n);
+	value_set_si(EP->d, 1);
+	barvinok_count(P, &EP->x.n, MaxRays);
+	if (value_pos_p(EP->x.n))
+	    value_set_si(EP->x.n, 1);
+	return EP;
+    }
+
     //printf("%d %d %d\n", nvar, exist, nparam);
 
     int r;
