@@ -1,13 +1,26 @@
 #include <polylib/polylibgmp.h>
-#include "ev_operations.h"
 #include <stdlib.h>
 #include <assert.h>
-#include <util.h>
 #include "config.h"
 
 #ifndef HAVE_ENUMERATE4
 #define Polyhedron_Enumerate(a,b,c,d) Polyhedron_Enumerate(a,b,c)
 #endif
+
+void manual_count(Polyhedron *P, Value* result)
+{
+    Polyhedron *U = Universe_Polyhedron(0);
+    Enumeration *en = Polyhedron_Enumerate(P,U,1024,NULL);
+    Value *v = compute_poly(en,NULL);
+    value_assign(*result, *v);
+    value_clear(*v);
+    free(v);
+    Enumeration_Free(en);
+    Polyhedron_Free(U);
+}
+
+#include "ev_operations.h"
+#include <util.h>
 
 /* Return random value between 0 and max-1 inclusive
  */
@@ -568,18 +581,6 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     value_clear(neg);
 
     return P;
-}
-
-void manual_count(Polyhedron *P, Value* result)
-{
-    Polyhedron *U = Universe_Polyhedron(0);
-    Enumeration *en = Polyhedron_Enumerate(P,U,1024,NULL);
-    Value *v = compute_poly(en,NULL);
-    value_assign(*result, *v);
-    value_clear(*v);
-    free(v);
-    Enumeration_Free(en);
-    Polyhedron_Free(U);
 }
 
 Bool isIdentity(Matrix *M)
