@@ -1975,6 +1975,45 @@ static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
     ConstraintSimplify(c, c, len, v);
 }
 
+static bool parallel_constraints(Value *l, Value *u, Value *c, int pos,
+				 int len)
+{
+    bool parallel;
+    Value g1;
+    Value g2;
+    value_init(g1);
+    value_init(g2);
+
+    Vector_Gcd(&l[1+pos], len, &g1);
+    Vector_Gcd(&u[1+pos], len, &g2);
+    Vector_Combine(l+1+pos, u+1+pos, c+1, g2, g1, len);
+    parallel = First_Non_Zero(c+1, len) == -1;
+
+    value_clear(g1);
+    value_clear(g2);
+
+    return parallel;
+}
+
+static void negative_test_constraint7(Value *l, Value *u, Value *c, int pos,
+				      int exist, int len, Value *v)
+{
+    Value g;
+    value_init(g);
+
+    Vector_Gcd(&u[1+pos], exist, v);
+    Vector_Gcd(&l[1+pos], exist, &g);
+    Vector_Combine(l+1, u+1, c+1, *v, g, len-1);
+    value_multiply(*v, *v, g);
+    value_substract(c[len-1], c[len-1], *v);
+    value_set_si(*v, -1);
+    Vector_Scale(c+1, c+1, *v, len-1);
+    value_decrement(c[len-1], c[len-1]);
+    ConstraintSimplify(c, c, len, v);
+
+    value_clear(g);
+}
+
 static void oppose_constraint(Value *c, int len, Value *v)
 {
     value_set_si(*v, -1);
@@ -2154,7 +2193,8 @@ static bool double_bound(Polyhedron *P, int nvar, int exist,
 enum constraint { 
 ALL_POS = 1 << 0,
 ONE_NEG = 1 << 1,
-INDEPENDENT = 1 << 2
+INDEPENDENT = 1 << 2,
+ROT_NEG = 1 << 3
 };
 
 static evalue* enumerate_or(Polyhedron *D,
@@ -3283,9 +3323,28 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 			//puts("neg remainder");
 			//Polyhedron_Print(stdout, P_VALUE_FMT, T);
 			Polyhedron_Free(T);
+		    } else if (!(info[i] & ROT_NEG)) {
+			if (parallel_constraints(P->Constraint[l],
+						 P->Constraint[u],
+						 row->p, nvar, exist)) {
+			    negative_test_constraint7(P->Constraint[l],
+						     P->Constraint[u],
+						     row->p, nvar, exist,
+						     len, &f);
+			    oppose_constraint(row->p, len, &f);
+			    Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
+			    if (emptyQ(T)) {
+				// printf("rot_neg i: %d, l: %d, u: %d\n", i, l, u);
+				info[i] = (constraint)(info[i] | ROT_NEG);
+				r = l;
+			    }
+			    //puts("neg remainder");
+			    //Polyhedron_Print(stdout, P_VALUE_FMT, T);
+			    Polyhedron_Free(T);
+			}
 		    }
 		}
-		if (!(info[i] & ALL_POS) && (info[i] & ONE_NEG))
+		if (!(info[i] & ALL_POS) && (info[i] & (ONE_NEG | ROT_NEG)))
 		    goto next;
 	    }
 	}
@@ -3335,6 +3394,19 @@ next:
 		Polyhedron_Free(T);
 		return EP;
 	    }
+	}
+    for (int i = 0; i < exist; ++i)
+	if (info[i] & ROT_NEG) {
+#ifdef DEBUG_ER
+	    fprintf(stderr, "\nER: Rotate\n");
+#endif /* DEBUG_ER */
+	    Vector_Free(row);
+	    value_clear(f);
+	    delete [] info;
+	    Polyhedron *T = rotate_along(P, r, nvar, exist, MaxRays);
+	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+	    Polyhedron_Free(T);
+	    return EP;
 	}
     for (int i = 0; i < exist; ++i)
 	if (info[i] & INDEPENDENT) {
