@@ -28,6 +28,8 @@ using std::ostringstream;
 #define SIZE(p) (((long *) (p))[1])
 #define DATA(p) ((mp_limb_t *) (((long *) (p)) + 2))
 
+#define USE_MODULO
+
 static void value2zz(Value v, ZZ& z)
 {
     int sa = v[0]._mp_size;
@@ -132,6 +134,23 @@ static Matrix * rays(Polyhedron *C)
 	}
     assert(c == dim);
     value_set_si(M->p[dim][dim], 1);
+
+    return M;
+}
+
+static Matrix * rays2(Polyhedron *C)
+{
+    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
+    assert(C->NbRays - 1 == C->Dimension);
+
+    Matrix *M = Matrix_Alloc(dim, dim);
+    assert(M);
+
+    int i, c;
+    for (i = 0, c = 0; i <= dim && c < dim; ++i)
+	if (value_zero_p(C->Ray[i][dim+1]))
+	    Vector_Copy(C->Ray[i] + 1, M->p[c++], dim);
+    assert(c == dim);
 
     return M;
 }
@@ -707,6 +726,147 @@ struct term_info {
     int		    pos;
 };
 
+#ifdef USE_MODULO
+evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
+{
+    unsigned nparam = W->NbColumns - 1;
+
+    Matrix* Rays = rays2(i);
+    Matrix *T = Transpose(Rays);
+    Matrix *T2 = Matrix_Copy(T);
+    Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
+    int ok = Matrix_Inverse(T2, inv);
+    assert(ok);
+    Matrix_Free(Rays);
+    Matrix_Free(T2);
+    mat_ZZ vertex;
+    matrix2zz(W, vertex, W->NbRows, W->NbColumns);
+
+    vec_ZZ num;
+    num = lambda * vertex;
+
+    evalue *EP = multi_mononom(num);
+
+    evalue tmp;
+    value_init(tmp.d);
+    value_init(tmp.x.n);
+    value_set_si(tmp.x.n, 1);
+    value_assign(tmp.d, lcm);
+
+    emul(&tmp, EP);
+
+    zz2value(num[nparam],tmp.x.n);
+    eadd(&tmp, EP);
+
+    Matrix *L = Matrix_Alloc(inv->NbRows, W->NbColumns);
+    Matrix_Product(inv, W, L);
+
+    mat_ZZ RT;
+    matrix2zz(T, RT, T->NbRows, T->NbColumns);
+
+    vec_ZZ p = lambda * RT;
+
+    Value gcd;
+    value_init(gcd);
+    Value mone;
+    value_init(mone);
+    value_set_si(mone, -1);
+    for (int i = 0; i < L->NbRows; ++i) {
+	Vector_Gcd(L->p[i], nparam+1, &gcd);
+	Gcd(gcd, lcm, &gcd);
+	Vector_AntiScale(L->p[i], L->p[i], gcd, nparam+1);
+	Vector_Scale(L->p[i], L->p[i], mone, nparam+1);
+	values2zz(L->p[i], num, nparam+1);
+
+	value_division(gcd, lcm, gcd);
+	if (value_one_p(gcd))
+	    continue;
+
+	ZZ g;
+	value2zz(gcd, g);
+
+	int j;
+	for (j = 0; j < nparam+1; ++j)
+	    num[j] = num[j] % g;
+	for (j = 0; j < nparam+1; ++j)
+	    if (num[j] != 0)
+		break;
+	if (j == nparam+1)
+	    continue;
+
+	if (j < nparam && num[j] > g/2) {
+	    for (int k = j; k < nparam; ++k)
+		if (num[k] != 0)
+		    num[k] = g - num[k];
+	    num[nparam] = g - 1 - num[nparam];
+	    value_assign(tmp.d, gcd);
+	    ZZ t = p[i]*(g-1);
+	    zz2value(t, tmp.x.n);
+	    eadd(&tmp, EP);
+	    p[i] = -p[i];
+	}
+
+	if (j >= nparam) {
+	    ZZ t = num[nparam] * p[i];
+	    zz2value(t, tmp.x.n);
+	    value_assign(tmp.d, gcd);
+	    eadd(&tmp, EP);
+	} else {
+	    evalue *E = multi_mononom(num);
+	    zz2value(num[nparam],tmp.x.n);
+	    value_set_si(tmp.d, 1);
+	    eadd(&tmp, E);
+
+	    evalue EV;
+	    value_init(EV.d);
+	    value_set_si(EV.d, 0);
+	    EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(gcd));
+	    evalue_copy(&EV.x.p->arr[0], E);
+	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
+	    value_init(EV.x.p->arr[2].x.n);
+	    zz2value(p[i], EV.x.p->arr[2].x.n);
+	    value_assign(EV.x.p->arr[2].d, gcd);
+
+	    eadd(&EV, EP);
+	    free_evalue_refs(&EV); 
+	    free_evalue_refs(E); 
+	    delete E;
+	}
+    }
+
+    Matrix_Free(inv);
+    free_evalue_refs(&tmp); 
+    return EP;
+}
+#else
+evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
+{
+    Matrix *T = Transpose(W);
+    unsigned nparam = T->NbRows - 1;
+
+    evalue *EP = new evalue();
+    value_init(EP->d);
+    evalue_set_si(EP, 0, 1);
+
+    evalue ev;
+    Vector *val = Vector_Alloc(nparam+1);
+    value_set_si(val->p[nparam], 1);
+    ZZ offset(INIT_VAL, 0);
+    value_init(ev.d);
+    vertex_period(i, lambda, T, lcm, 0, val, EP, &ev, offset);
+    Vector_Free(val);
+    eadd(&ev, EP);
+    free_evalue_refs(&ev);   
+
+    Matrix_Free(T);
+
+    reduce_evalue(EP);
+    print_evalue(stdout, EP, pn);
+
+    return EP;
+}
+#endif
+
 void lattice_point(
     Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term)
 {
@@ -722,39 +882,15 @@ void lattice_point(
 	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
     }
     if (value_notone_p(lcm)) {
-	Matrix* Rays = rays(i);
-	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
-	int ok = Matrix_Inverse(Rays, inv);
-	assert(ok);
-	Matrix_Free(Rays);
-	Rays = rays(i);
-
 	Matrix * mv = Matrix_Alloc(dim, nparam+1);
 	for (int j = 0 ; j < dim; ++j) {
 	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
 	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
 	}
-	Matrix *T = Transpose(mv);
 
-	evalue *EP = new evalue();
-	value_init(EP->d);
-	evalue_set_si(EP, 0, 1);
-	evalue ev;
-	Vector *val = Vector_Alloc(nparam+1);
-	value_set_si(val->p[nparam], 1);
-	ZZ offset(INIT_VAL, 0);
-	value_init(ev.d);
-	vertex_period(i, lambda, T, lcm, 0, val, EP, &ev, offset);
-	Vector_Free(val);
-        eadd(&ev, EP);
-	free_evalue_refs(&ev);   
-
-	term->E = EP;
+	term->E = lattice_point(i, lambda, mv, lcm);
 	term->constant = 0;
 
-	Matrix_Free(inv);
-	Matrix_Free(Rays);
-	Matrix_Free(T);
 	Matrix_Free(mv);
 	value_clear(lcm);
 	value_clear(tmp);
