@@ -4,6 +4,24 @@
 #include <util.h>
 #include <barvinok.h>
 
+void manual_count(Polyhedron *P, Value* result)
+{
+    Polyhedron *U = Universe_Polyhedron(0);
+    Enumeration *ee, *en = Polyhedron_Enumerate(P,U,1024);
+    Value *v = compute_poly(en,NULL);
+    value_assign(*result, *v);
+    value_clear(*v);
+    free(v);
+    while (en) {
+	free_evalue_refs(&(en->EP));
+	Polyhedron_Free(en->ValidityDomain);
+        ee = en->next;
+	free(en);
+	en = ee;
+    }
+    Polyhedron_Free(U);
+}
+
 int main()
 {
     int i, nbPol, nbMat, func, j;
@@ -55,8 +73,13 @@ int main()
 	case 4: {
 	    Value c;
 	    value_init(c);
+	    printf("manual: ");
+	    manual_count(A, &c);
+	    value_print(stdout, P_VALUE_FMT, c);
+	    puts("");
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    count(A, &c);
+	    printf("Barvinok: ");
 	    value_print(stdout, P_VALUE_FMT, c);
 	    puts("");
 	    value_clear(c);
