@@ -1981,6 +1981,84 @@ static evalue* enumerate_sum(Polyhedron *P,
     return EP;
 }
 
+static evalue* enumerate_sure(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    int i;
+    Polyhedron *S = P;
+    int nvar = P->Dimension - exist - nparam;
+
+    for (i = 0; i < exist; ++i) {
+	Matrix *M = Matrix_Alloc(S->NbConstraints, S->Dimension+2);
+	int c = 0;
+	for (int j = 0; j < S->NbConstraints; ++j) {
+	    if (value_negz_p(S->Constraint[j][1+nvar+i]))
+		continue;
+	    if (value_one_p(S->Constraint[j][1+nvar+i]))
+		continue;
+	    Vector_Copy(S->Constraint[j], M->p[c], S->Dimension+2);
+	    value_substract(M->p[c][S->Dimension+1], 
+			    M->p[c][S->Dimension+1],
+			    S->Constraint[j][1+nvar+i]);
+	    value_increment(M->p[c][S->Dimension+1], 
+			    M->p[c][S->Dimension+1]);
+	    ++c;
+	}
+	Polyhedron *O = S;
+	S = AddConstraints(M->p[0], c, S, MaxRays);
+	if (O != P)
+	    Polyhedron_Free(O);
+	Matrix_Free(M);
+	if (emptyQ(S)) {
+	    Polyhedron_Free(S);
+	    return 0;
+	}
+    }
+
+    Matrix *M = Matrix_Alloc(exist, S->Dimension+2);
+    for (i = 0; i < exist; ++i)
+	value_set_si(M->p[i][nvar+i+1], 1);
+    Polyhedron *O = S;
+    S = DomainAddRays(S, M, MaxRays);
+    Polyhedron_Free(O);
+    Polyhedron *F = DomainAddRays(P, M, MaxRays);
+    Polyhedron *D = DomainDifference(F, S, MaxRays);
+    O = D;
+    D = Disjoint_Domain(D, 0, MaxRays);
+    Polyhedron_Free(F);
+    Domain_Free(O);
+    Matrix_Free(M);
+
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: Sure\n");
+#endif /* DEBUG_ER */
+
+    M = Matrix_Alloc(P->Dimension+1-exist, P->Dimension+1);
+    for (int j = 0; j < nvar; ++j)
+	value_set_si(M->p[j][j], 1);
+    for (int j = 0; j < nparam+1; ++j)
+	value_set_si(M->p[nvar+j][nvar+exist+j], 1);
+    Polyhedron *T = Polyhedron_Image(S, M, MaxRays);
+    evalue *EP = barvinok_enumerate_e(T, 0, nparam, MaxRays);
+    Polyhedron_Free(S);
+    Polyhedron_Free(T);
+    Matrix_Free(M);
+
+    for (Polyhedron *Q = D; Q; Q = Q->next) {
+	Polyhedron *N = Q->next;
+	Q->next = 0;
+	T = DomainIntersection(P, Q, MaxRays);
+	evalue *E = barvinok_enumerate_e(T, exist, nparam, MaxRays);
+	eadd(E, EP);
+	free_evalue_refs(E); 
+	free(E);
+	Polyhedron_Free(T);
+	Q->next = N;
+    }
+    Domain_Free(D);
+    return EP;
+}
+
 static evalue* new_zero_ep()
 {
     evalue *EP;
@@ -2273,6 +2351,11 @@ next:
 	    }
 	}
 
+    evalue *EP;
+    EP = enumerate_sure(P, exist, nparam, MaxRays);
+    if (EP)
+	return EP;
+
     if (nvar != 0)
 	return enumerate_sum(P, exist, nparam, MaxRays);
 
@@ -2287,7 +2370,7 @@ next:
 
     assert (i < exist);
 
-    evalue *EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
+    EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
     value_clear(f);
     Vector_Free(row);
     return EP;
