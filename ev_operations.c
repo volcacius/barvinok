@@ -1944,3 +1944,115 @@ size_t evalue_size(evalue *e)
 	s += enode_size(e->x.p);
     return s;
 }
+
+static evalue *find_second(evalue *base, evalue *cst, evalue *e, Value m)
+{
+    evalue *found = NULL;
+    evalue offset;
+    evalue copy;
+    int i;
+
+    if (value_pos_p(e->d) || e->x.p->type != fractional)
+	return NULL;
+
+    value_init(offset.d);
+    value_init(offset.x.n);
+    poly_denom(&e->x.p->arr[0], &offset.d);
+    Lcm3(m, offset.d, &offset.d);
+    value_set_si(offset.x.n, 1);
+
+    value_init(copy.d);
+    evalue_copy(&copy, cst);
+
+    eadd(&offset, cst);
+    mpz_fdiv_r(cst->x.n, cst->x.n, cst->d);
+
+    if (eequal(base, &e->x.p->arr[0]))
+	found = &e->x.p->arr[0];
+    else {
+	value_set_si(offset.x.n, -2);
+
+	eadd(&offset, cst);
+	mpz_fdiv_r(cst->x.n, cst->x.n, cst->d);
+
+	if (eequal(base, &e->x.p->arr[0]))
+	    found = base;
+    }
+    free_evalue_refs(cst);
+    free_evalue_refs(&offset);
+    *cst = copy;
+
+    for (i = 1; !found && i < e->x.p->size; ++i)
+	found = find_second(base, cst, &e->x.p->arr[i], m);
+
+    return found;
+}
+
+static evalue *find_relation_pair(evalue *e)
+{
+    int i;
+    evalue *found = NULL;
+
+    if (EVALUE_IS_DOMAIN(*e) || value_pos_p(e->d))
+	return NULL;
+
+    if (e->x.p->type == fractional) {
+	Value m;
+	evalue *cst;
+
+	value_init(m);
+	poly_denom(&e->x.p->arr[0], &m);
+
+	for (cst = &e->x.p->arr[0]; value_zero_p(cst->d); 
+				    cst = &cst->x.p->arr[0])
+	    ;
+
+	for (i = 1; !found && i < e->x.p->size; ++i)
+	    found = find_second(&e->x.p->arr[0], cst, &e->x.p->arr[i], m);
+
+	value_clear(m);
+    }
+
+    i = e->x.p->type == relation;
+    for (; !found && i < e->x.p->size; ++i)
+	found = find_relation_pair(&e->x.p->arr[i]);
+
+    return found;
+}
+
+void evalue_mod2relation(evalue *e) {
+    evalue *d;
+
+    if (value_zero_p(e->d) && e->x.p->type == partition) {
+	int i;
+
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    evalue_mod2relation(&e->x.p->arr[2*i+1]);
+
+	return;
+    }
+
+    while ((d = find_relation_pair(e)) != NULL) {
+	evalue split;
+	evalue *ev;
+
+	value_init(split.d);
+	value_set_si(split.d, 0);
+	split.x.p = new_enode(relation, 3, 0);
+	evalue_set_si(&split.x.p->arr[1], 1, 1);
+	evalue_set_si(&split.x.p->arr[2], 1, 1);
+
+	ev = &split.x.p->arr[0];
+	value_set_si(ev->d, 0);
+	ev->x.p = new_enode(fractional, 3, -1);
+	evalue_set_si(&ev->x.p->arr[1], 0, 1);
+	evalue_set_si(&ev->x.p->arr[2], 1, 1);
+	evalue_copy(&ev->x.p->arr[0], d);
+
+	emul(&split, e);
+
+	reduce_evalue(e);
+
+	free_evalue_refs(&split);	  
+    }
+}
