@@ -24,15 +24,24 @@
 #define compute_evalue _new_compute_evalue
 #define compute_poly _new_compute_poly
 
-typedef enum { polynomial, periodic, evector, modulo, relation } enode_type;
+typedef enum { polynomial, periodic, evector, modulo, relation, 
+               partition } enode_type;
 
 typedef struct _evalue {
   Value d;              /* denominator */
   union {
-    Value n;            /* numerator (if denominator != 0) */
+    Value n;            /* numerator (if denominator > 0) */
     struct _enode *p;	/* pointer   (if denominator == 0) */
+    Polyhedron *D;	/* domain    (if denominator == -1) */
   } x;
 } evalue;
+
+#define EVALUE_DOMAIN(ev)   	((ev).x.D)
+#define EVALUE_SET_DOMAIN(ev, D)		\
+    do {					\
+	value_set_si((ev).d, -1);		\
+	EVALUE_DOMAIN(ev) = D;		    	\
+    } while(0)
 
 typedef struct _enode {
   enode_type type;      /* polynomial or periodic or evector */
