@@ -1,9 +1,9 @@
 AC_INIT
-AM_INIT_AUTOMAKE(barvinok, 0.10)
+AM_INIT_AUTOMAKE(barvinok, 0.11)
 AC_PROG_LIBTOOL
 AC_PROG_CXX
 AC_SUBST(versioninfo)
-versioninfo=4:0:0
+versioninfo=5:0:1
 
 AC_CHECK_HEADERS(getopt.h)
 
