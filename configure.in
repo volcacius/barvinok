@@ -14,10 +14,9 @@ AC_ARG_WITH(mona,
 
 if test "x$with_mona" != "x"; then
 	AC_SUBST(MONAPATH)
-	AC_SUBST(MONA_OBJ)
 	MONAPATH=$with_mona
-	MONA_OBJ="$MONAPATH/DFA/libdfa.a $MONAPATH/BDD/libbdd.a \
-		  $MONAPATH/Mem/libmem.a"
+	LDFLAGS="-L$MONAPATH/DFA -L$MONAPATH/BDD -L$MONAPATH/Mem $LDFLAGS"
+	LIBS="-ldfa -lbdd -lmem $LIBS"
 	for i in $MONA_OBJ; do
 		if test ! -f $i; then
 			with_mona=""
