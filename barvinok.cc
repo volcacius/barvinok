@@ -679,8 +679,8 @@ static void mask(deque<string>& params, Matrix *f, EhrhartPolynom *factor)
 	    }
     }
     evalue EP;
-    mask_r(f, nr, lcm, 0, val, &EP);
     value_init(EP.d);
+    mask_r(f, nr, lcm, 0, val, &EP);
     value_clear(tmp);
     Vector_Free(val);
     Vector_Free(lcm);
