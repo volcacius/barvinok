@@ -542,9 +542,9 @@ you_lose:   	/* OK, lets not do it */
 	    if (!reorder) {
 		Value m;
 		Value r;
+		evalue *pp = &p->arr[0];
 		value_init(m);
 		value_init(r);
-		evalue *pp = &p->arr[0];
 		poly_denom_not_constant(&pp, &m);
 		mpz_fdiv_r(r, m, pp->d);
 		if (value_notzero_p(r)) {
