@@ -762,6 +762,7 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
 
     mat_ZZ RT;
     matrix2zz(T, RT, T->NbRows, T->NbColumns);
+    Matrix_Free(T);
 
     vec_ZZ p = lambda * RT;
 
@@ -832,6 +833,10 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
 	    delete E;
 	}
     }
+
+    Matrix_Free(L);
+    value_clear(gcd);
+    value_clear(mone);
 
     Matrix_Free(inv);
     free_evalue_refs(&tmp); 
