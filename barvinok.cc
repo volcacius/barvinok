@@ -368,14 +368,12 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     vector<cone *> nonuni;
     cone * c = new cone(C);
     ZZ det = c->det;
+    int s = sign(det);
     assert(det != 0);
     if (abs(det) > 1) {
 	nonuni.push_back(c);
     } else {
-	if (det > 0) 
-	    pos = Polyhedron_Copy(c->Cone);
-	else
-	    neg = Polyhedron_Copy(c->Cone);
+	pos = Polyhedron_Copy(c->Cone);
 	delete c;
     }
     vec_ZZ lambda;
@@ -396,7 +394,7 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 	    } else {
 		Polyhedron *p = pc->poly();
 		pc->Cone = 0;
-		if (pc->det > 0) {
+		if (sign(pc->det) == s) {
 		    p->next = pos;
 		    pos = p;
 		} else {
@@ -410,13 +408,8 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 	Vector_Free(v);
 	delete c;
     }
-    if (det > 0) {
-	*ppos = pos;
-	*pneg = neg;
-    } else {
-	*ppos = neg;
-	*pneg = pos;
-    }
+    *ppos = pos;
+    *pneg = neg;
 }
 
 const int MAX_TRY=10;
