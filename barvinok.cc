@@ -1257,8 +1257,70 @@ static void multi_polynom(Vector *c, evalue* X, evalue *EP)
 }
 
 
+Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
+{
+    int len = P->Dimension+2;
+    Polyhedron *T, *R = P;
+    Value g;
+    value_init(g);
+    puts("in");
+    Polyhedron_Print(stdout, P_VALUE_FMT, P);
+    Vector *row = Vector_Alloc(len);
+    value_set_si(row->p[0], 1);
+    for (int r = P->NbEq; r < P->NbConstraints; ++r) {
+	Vector_Gcd(P->Constraint[r]+1, len - 2, &g);
+	if (value_notone_p(g)) {
+	    value_print(stdout, P_VALUE_FMT, P->Constraint[r][len-1]);
+	    puts(" = cst");
+	    value_print(stdout, P_VALUE_FMT, g);
+	    puts(" = g");
+	    Vector_AntiScale(P->Constraint[r]+1, row->p+1, g, len-2);
+	    mpz_fdiv_q(row->p[len-1], P->Constraint[r][len-1], g);
+			puts("row");
+			Vector_Print(stdout, P_VALUE_FMT, row);
+	    T = R;
+	    R = AddConstraints(row->p, 1, R, MaxRays);
+	    if (T != P)
+		Polyhedron_Free(T);
+	}
+    }
+    Matrix *M = Matrix_Alloc(2, len-1);
+    value_set_si(M->p[1][len-2], 1);
+    for (int v = 0; v < P->Dimension; ++v) {
+	value_set_si(M->p[0][v], 1);
+	Polyhedron *I = Polyhedron_Image(P, M, 2+1);
+	Polyhedron_Print(stdout, P_VALUE_FMT, I);
+	value_set_si(M->p[0][v], 0);
+	for (int r = 0; r < I->NbConstraints; ++r) {
+	    if (value_zero_p(I->Constraint[r][0]))
+		continue;
+	    if (value_zero_p(I->Constraint[r][1]))
+		continue;
+	    if (value_one_p(I->Constraint[r][1]))
+		continue;
+	    if (value_mone_p(I->Constraint[r][1]))
+		continue;
+	    value_absolute(g, I->Constraint[r][1]);
+	    Vector_Set(row->p+1, 0, len-2);
+	    value_division(row->p[1+v], I->Constraint[r][1], g);
+	    mpz_fdiv_q(row->p[len-1], I->Constraint[r][2], g);
+			puts("row");
+			Vector_Print(stdout, P_VALUE_FMT, row);
+	    T = R;
+	    R = AddConstraints(row->p, 1, R, MaxRays);
+	    if (T != P)
+		Polyhedron_Free(T);
+	}
+    }
+    puts("out");
+    Polyhedron_Print(stdout, P_VALUE_FMT, R);
+    value_clear(g);
+    return R;
+}
+
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
+    //P = unfringe(P, MaxRays);
     Polyhedron *CEq = NULL, *rVD, *pVD, *CA;
     Matrix *CT = NULL;
     Param_Polyhedron *PP = NULL;
