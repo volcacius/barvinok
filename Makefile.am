@@ -29,7 +29,7 @@ barvinok_series_SOURCES = barvinok_series.cc
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
-EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl
+EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl NTL_5_3_2.patch
 
 check:
 	@for i in $(top_srcdir)/tests/*; do \

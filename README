@@ -4,6 +4,7 @@ using polylib (http://icps.u-strasbg.fr/polylib/ or
 http://www.kotnet.org/~skimo/polylib/).
 
 Next to polylib, it uses NTL (http://shoup.net/ntl/)
+Mac users may want to apply NTL_5_3_2.patch
 
 Optionally, PIP (http://www.prism.uvsq.fr/~cedb/bastools/piplib.html)
 can be used during enumeration of integer projections.
