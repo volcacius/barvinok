@@ -37,6 +37,8 @@ struct gen_fun {
     ~gen_fun() {
 	if (context)
 	    Polyhedron_Free(context);
+	for (int i = 0; i < term.size(); ++i)
+	    delete term[i];
     }
 };
 

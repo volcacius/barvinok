@@ -68,6 +68,7 @@ int main(int argc, char **argv)
 	EP = *gf;
 	print_evalue(stdout, EP, param_name);
     }
+    delete gf;
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
