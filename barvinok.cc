@@ -1340,8 +1340,8 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     Polyhedron *T, *R = P;
     Value g;
     value_init(g);
-    puts("in");
-    Polyhedron_Print(stdout, P_VALUE_FMT, P);
+    fprintf(stderr, "in");
+    Polyhedron_Print(stderr, P_VALUE_FMT, P);
     Vector *row = Vector_Alloc(len);
     value_set_si(row->p[0], 1);
 
@@ -1375,8 +1375,8 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 		Polyhedron_Free(T);
 	}
     }
-    puts("out");
-    Polyhedron_Print(stdout, P_VALUE_FMT, R);
+    fprintf(stderr, "out");
+    Polyhedron_Print(stderr, P_VALUE_FMT, R);
     value_clear(g);
     return R;
 }
