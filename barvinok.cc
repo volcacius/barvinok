@@ -3071,11 +3071,11 @@ next:
 
     EP = enumerate_line(P, exist, nparam, MaxRays);
     if (EP)
-	return EP;
+	goto out;
 
     EP = enumerate_pip(P, exist, nparam, MaxRays);
     if (EP)
-	return EP;
+	goto out;
 
     EP = enumerate_redundant_ray(P, exist, nparam, MaxRays);
     if (EP)
