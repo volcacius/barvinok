@@ -1,4 +1,4 @@
-MONAPATH = 
+MONAPATH = /home/skimo/src/mona-1.4
 
 CC = gcc
 CFLAGS = -O3 -DNDEBUG
