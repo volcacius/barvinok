@@ -190,13 +190,15 @@ public:
 	Value tmp;
 	value_init(tmp);
 	Polyhedron *C = poly();
-	for (int i = 0; i < C->NbConstraints; ++i) {
+	int i;
+	for (i = 0; i < C->NbConstraints; ++i) {
 	    Inner_Product(z->p, C->Constraint[i]+1, z->Size-1, &tmp);
-	    if (value_neg_p(tmp)) {
-		value_set_si(tmp, -1);
-		Vector_Scale(z->p, z->p, tmp, z->Size-1);
+	    if (value_pos_p(tmp))
 		break;
-	    }
+	}
+	if (i == C->NbConstraints) {
+	    value_set_si(tmp, -1);
+	    Vector_Scale(z->p, z->p, tmp, z->Size-1);
 	}
 	value_clear(tmp);
 	return z;
