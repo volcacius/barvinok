@@ -88,18 +88,11 @@ static void values2zz(Value *p, vec_ZZ& v, int len)
 }
 
 /*
- * We add a 0 at the end, because we need it afterwards
  */
-static Vector * zz2vector(vec_ZZ& v)
+static void zz2values(vec_ZZ& v, Value *p)
 {
-    Vector *vec = Vector_Alloc(v.length()+1);
-    assert(vec);
     for (int i = 0; i < v.length(); ++i)
-	zz2value(v[i], vec->p[i]);
-
-    value_set_si(vec->p[v.length()], 0);
-
-    return vec;
+	zz2value(v[i], p[i]);
 }
 
 static void rays(mat_ZZ& r, Polyhedron *C)
@@ -218,7 +211,11 @@ public:
 
 	lambda = B[index];
 
-	Vector *z = zz2vector(U[index]);
+	Vector *z = Vector_Alloc(U[index].length()+1);
+	assert(z);
+	zz2values(U[index], z->p);
+	value_set_si(z->p[U[index].length()], 0);
+
 	Value tmp;
 	value_init(tmp);
 	Polyhedron *C = poly();
@@ -772,7 +769,53 @@ struct term_info {
 };
 
 #ifdef USE_MODULO
-void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP)
+bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
+{
+    bool ret = true;
+    int len = num.length();
+    Matrix *T = Matrix_Alloc(2, len);
+    zz2values(num, T->p[0]);
+    value_set_si(T->p[1][len-1], 1);
+    Polyhedron *I = Polyhedron_Image(PD, T, PD->NbConstraints);
+    Matrix_Free(T);
+
+    int i;
+    for (i = 0; i < I->NbRays; ++i)
+	if (value_zero_p(I->Ray[i][2])) {
+	    Polyhedron_Free(I);
+	    return true;
+	}
+
+    Value min, max;
+    value_init(min);
+    value_init(max);
+    for (i = 0; i < I->NbConstraints; ++i) {
+	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+	if (value_pos_p(I->Constraint[i][1]))
+	    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
+	else
+	    mpz_fdiv_q(max, I->Constraint[i][2], I->Constraint[i][1]);
+    }
+    mpz_fdiv_q(min, min, d);
+    mpz_fdiv_q(max, max, d);
+    if (value_eq(min, max)) {
+	ret = false;
+	value_oppose(min, min);
+	evalue EV;
+	value_init(EV.d);
+	value_set_si(EV.d, 1);
+	value_init(EV.x.n);
+	value_multiply(EV.x.n, min, d);
+	eadd(&EV, E);
+	free_evalue_refs(&EV); 
+    }
+    value_clear(min);
+    value_clear(max);
+    Polyhedron_Free(I);
+    return ret;
+}
+
+void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
 {
     Value gcd;
     value_init(gcd);
@@ -786,13 +829,14 @@ void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP)
     Gcd(gcd, d, &gcd);
     Vector_AntiScale(coef, coef, gcd, len);
     Vector_Scale(coef, coef, mone, len);
-    values2zz(coef, num, len);
 
     value_division(gcd, d, gcd);
     ZZ g;
     value2zz(gcd, g);
     if (value_one_p(gcd))
 	goto out;
+
+    values2zz(coef, num, len);
 
     int j;
     for (j = 0; j < len; ++j)
@@ -826,18 +870,27 @@ void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP)
 	eadd(&tmp, EP);
     } else {
 	evalue *E = multi_monom(num);
-
 	evalue EV;
 	value_init(EV.d);
-	value_set_si(EV.d, 0);
-	EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(gcd));
-	evalue_copy(&EV.x.p->arr[0], E);
-	evalue_set_si(&EV.x.p->arr[1], 0, 1);
-	value_init(EV.x.p->arr[2].x.n);
-	zz2value(f, EV.x.p->arr[2].x.n);
-	value_assign(EV.x.p->arr[2].d, gcd);
 
-	eadd(&EV, EP);
+	if (PD && !mod_needed(PD, num, gcd, E)) {
+	    value_init(EV.x.n);
+	    zz2value(f, EV.x.n);
+	    value_assign(EV.d, gcd);
+	    emul(&EV, E);
+	    eadd(E, EP);
+	} else {
+	    value_set_si(EV.d, 0);
+	    EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(gcd));
+	    evalue_copy(&EV.x.p->arr[0], E);
+	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
+	    value_init(EV.x.p->arr[2].x.n);
+	    zz2value(f, EV.x.p->arr[2].x.n);
+	    value_assign(EV.x.p->arr[2].d, gcd);
+
+	    eadd(&EV, EP);
+	}
+
 	free_evalue_refs(&EV); 
 	free_evalue_refs(E); 
 	delete E;
@@ -875,7 +928,7 @@ evalue* ceil3(Value *coef, int len, Value d)
 
     ZZ one;
     one = 1;
-    ceil_mod(val->p, len, d, one, EP);
+    ceil_mod(val->p, len, d, one, EP, NULL);
 
     /* copy EP to malloc'ed evalue */
     evalue *E;
@@ -888,7 +941,8 @@ evalue* ceil3(Value *coef, int len, Value d)
     return E;
 }
 
-evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
+evalue* lattice_point(
+    Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
 {
     unsigned nparam = W->NbColumns - 1;
 
@@ -926,7 +980,7 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
     vec_ZZ p = lambda * RT;
 
     for (int i = 0; i < L->NbRows; ++i) {
-	ceil_mod(L->p[i], nparam+1, lcm, p[i], EP);
+	ceil_mod(L->p[i], nparam+1, lcm, p[i], EP, PD);
     }
 
     Matrix_Free(L);
@@ -936,7 +990,8 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
     return EP;
 }
 #else
-evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
+evalue* lattice_point(
+    Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
 {
     Matrix *T = Transpose(W);
     unsigned nparam = T->NbRows - 1;
@@ -964,7 +1019,8 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm)
 #endif
 
 void lattice_point(
-    Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term)
+    Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term,
+    Polyhedron *PD)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = i->Dimension;
@@ -984,7 +1040,7 @@ void lattice_point(
 	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
 	}
 
-	term->E = lattice_point(i, lambda, mv, lcm);
+	term->E = lattice_point(i, lambda, mv, lcm, PD);
 	term->constant = 0;
 
 	Matrix_Free(mv);
@@ -1203,7 +1259,7 @@ static void multi_polynom(Vector *c, evalue* X, evalue *EP)
 
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
-    Polyhedron *CEq = NULL, *rVD, *CA;
+    Polyhedron *CEq = NULL, *rVD, *pVD, *CA;
     Matrix *CT = NULL;
     Param_Polyhedron *PP = NULL;
     Param_Domain *D, *next;
@@ -1305,7 +1361,7 @@ out:
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
 	if (!CEq) {
-	    rVD = D->Domain;    
+	    pVD = rVD = D->Domain;    
 	    D->Domain = NULL;
 	} else {
 	  Polyhedron *Dt;
@@ -1323,6 +1379,7 @@ out:
 	  }
 	  if (CT)
 	      Polyhedron_Free(Dt);
+	  pVD = CT ? Polyhedron_Image(rVD,CT,MaxRays) : rVD;
 	}
 	int ncone = 0;
 	sign.SetLength(ncone);
@@ -1354,7 +1411,7 @@ out:
 	int f = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
-		lattice_point(V, i, lambda, &num[f]);
+		lattice_point(V, i, lambda, &num[f], pVD);
 		normalize(i, lambda, sign[f], num[f].constant, den[f]);
 		++f;
 	    }
@@ -1417,6 +1474,8 @@ out:
 	reduce_evalue(&s[nd].E);
 	s[nd].D = rVD;
 	++nd;
+	if (rVD != pVD)
+	    Polyhedron_Free(pVD);
     }
 
     eres->x.p = new_enode(partition, 2*nd, -1);
