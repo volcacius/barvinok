@@ -998,19 +998,6 @@ static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPo
     return res;
 }
 
-static EhrhartPolynom *constant(mpq_t c)
-{
-    evalue EP;
-    deque<string> params;
-    value_init(EP.d);
-    value_init(EP.x.n);
-    value_assign(EP.d, &c[0]._mp_den);
-    value_assign(EP.x.n, &c[0]._mp_num);
-    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);
-    free_evalue_refs(&EP);
-    return ret;
-}
-
 
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
@@ -1216,12 +1203,11 @@ out:
 		    mpq_set_si(count, 0, 1);
 		    dpoly d(dim, num[f].constant);
 		    d.div(n, count, sign[f]);
-		    EhrhartPolynom *E = constant(count);
-		    evalue EV = E->to_evalue(params);
+		    evalue EV;
+		    value_init(EV.d);
+		    evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
 		    eadd(&EV , &EP);
-		    delete E;
 		    free_evalue_refs(&EV);
-		    
 		} 
 		++f;
 	    }
