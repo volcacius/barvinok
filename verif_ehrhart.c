@@ -43,6 +43,8 @@
 
 Value min, max;
 
+char **params;
+
 #ifdef DONT_BREAK_ON_ERROR
 #define PRINT_ALL_RESULTS
 #endif
@@ -108,11 +110,23 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
 	  fprintf(stderr,", ");
 	  value_print(stderr,VALUE_FMT,z[k]);
 	}
-	fprintf(stderr," ) should be");
+	fprintf(stderr," ) should be ");
 	value_print(stderr,VALUE_FMT,tmp);
 	fprintf(stderr,", while EP eval gives ");
 	value_print(stderr,VALUE_FMT,c);
 	fprintf(stderr,".\n");
+	{
+	    Enumeration_Print(stderr, en, params);
+	    Enumeration *ee;
+	    ee = en;
+	    while (ee) {
+		if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
+		    Print_Domain(stderr, ee->ValidityDomain, params);
+		    print_evalue(stderr, &ee->EP, params);
+		}
+		ee = ee->next;
+	    }
+	}
 #ifndef DONT_BREAK_ON_ERROR
 	value_clear(c); value_clear(tmp);
 	return(0);
@@ -167,6 +181,7 @@ int main(int argc,char *argv[]) {
   
   P = Constraints2Polyhedron(P1,MAXRAYS);
   C = Constraints2Polyhedron(C1,MAXRAYS);
+  params = Read_ParamNames(stdin, C->Dimension);
   Matrix_Free(C1);
   Matrix_Free(P1);
 
@@ -274,6 +289,7 @@ int main(int argc,char *argv[]) {
   for(i=0;i<=(P->Dimension+1);i++) 
     value_clear(p[i]);
   value_clear(tmp);
+  Free_ParamNames(params, C->Dimension);
   return(0);
 } /* main */
 
