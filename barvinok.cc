@@ -2777,6 +2777,11 @@ static evalue *enumerate_pip(Polyhedron *P,
 	}
 	assert(!(pos && neg));	// for now
 	if (neg) {
+	    /* negating a parameter requires that we substitute in the
+	     * sign again afterwards.
+	     * Disallow for now.
+	     */
+	    assert(i < nvar+exist);
 	    if (!T)
 		T = Polyhedron_Copy(P);
 	    for (int j = 0; j < T->NbRays; ++j)
