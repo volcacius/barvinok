@@ -190,9 +190,9 @@ public:
 	Value tmp;
 	value_init(tmp);
 	for (int i = 0; i < Rays->NbRows; ++i) {
-	    Inner_Product(z->p, Rays->p[0]+1, z->Size-1, &tmp);
+	    Inner_Product(z->p, Rays->p[i]+1, z->Size-1, &tmp);
 	    if (value_neg_p(tmp)) {
-		value_set_si(tmp, 1);
+		value_set_si(tmp, -1);
 		Vector_Scale(z->p, z->p, tmp, z->Size-1);
 		break;
 	    }
