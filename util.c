@@ -1117,3 +1117,36 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
     value_clear(LB); value_clear(UB); value_clear(k);
     return;
 } /* count_points_e */
+
+int DomainContains(Polyhedron *P, Value *list_args, int len, 
+		   unsigned MaxRays, int set)
+{
+    int i;
+    Value m;
+
+    if (P->Dimension == len)
+	return in_domain(P, list_args);
+
+    assert(set); // assume list_args is large enough
+    assert((P->Dimension - len) % 2 == 0);
+    value_init(m);
+    for (i = 0; i < P->Dimension - len; i += 2) {
+	int j, k;
+	for (j = 0 ; j < P->NbEq; ++j)
+	    if (value_notzero_p(P->Constraint[j][1+len+i]))
+		break;
+	assert(j < P->NbEq);
+	value_absolute(m, P->Constraint[j][1+len+i]);
+	k = First_Non_Zero(P->Constraint[j]+1, len);
+	assert(k != -1);
+	assert(First_Non_Zero(P->Constraint[j]+1+k+1, len - k - 1) == -1);
+	mpz_fdiv_q(list_args[len+i], list_args[k], m);
+	mpz_fdiv_r(list_args[len+i+1], list_args[k], m);
+    }
+    value_clear(m);
+    for (i = 0; i < P->Dimension; ++i)
+	value_print(stderr, " %s;", list_args[i]);
+    fprintf(stderr, "\n");
+
+    return in_domain(P, list_args);
+}

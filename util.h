@@ -32,6 +32,8 @@ Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays);
 int line_minmax(Polyhedron *I, Value *min, Value *max);
 void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 		     Value *context, Value *res);
+int DomainContains(Polyhedron *P, Value *list_args, int len, 
+		   unsigned MaxRays, int set);
 
 #include "ev_operations.h"
 
