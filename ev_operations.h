@@ -88,5 +88,6 @@ void evalue_combine(evalue *e);
 void evalue_range_reduction(evalue *e);
 size_t evalue_size(evalue *e);
 size_t domain_size(Polyhedron *D);
+Enumeration* partition2enumeration(evalue *EP);
 
 #endif

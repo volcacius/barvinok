@@ -1665,26 +1665,9 @@ out:
 
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
-    Enumeration *en, *res = NULL;
     evalue *EP = barvinok_enumerate_ev(P, C, MaxRays);
 
-    if (EVALUE_IS_ZERO(*EP)) {
-	free(EP);
-	return res;
-    }
-
-    for (int i = 0; i < EP->x.p->size/2; ++i) {
-	en = (Enumeration *)malloc(sizeof(Enumeration));
-	en->next = res;
-	res = en;
-	res->ValidityDomain = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	value_clear(EP->x.p->arr[2*i].d);
-	res->EP = EP->x.p->arr[2*i+1];
-    }
-    free(EP->x.p);
-    value_clear(EP->d);
-    free(EP);
-    return res;
+    return partition2enumeration(EP);
 }
 
 static void SwapColumns(Value **V, int n, int i, int j)

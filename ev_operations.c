@@ -2526,3 +2526,29 @@ void evalue_range_reduction(evalue *e)
 	    }
 	}
 }
+
+/* Frees EP 
+ */
+Enumeration* partition2enumeration(evalue *EP)
+{
+    int i;
+    Enumeration *en, *res = NULL;
+
+    if (EVALUE_IS_ZERO(*EP)) {
+	free(EP);
+	return res;
+    }
+
+    for (i = 0; i < EP->x.p->size/2; ++i) {
+	en = (Enumeration *)malloc(sizeof(Enumeration));
+	en->next = res;
+	res = en;
+	res->ValidityDomain = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	value_clear(EP->x.p->arr[2*i].d);
+	res->EP = EP->x.p->arr[2*i+1];
+    }
+    free(EP->x.p);
+    value_clear(EP->d);
+    free(EP);
+    return res;
+}
