@@ -214,18 +214,18 @@ public:
 	zz2values(U[index], z->p);
 	value_set_si(z->p[U[index].length()], 0);
 
-	Value tmp;
-	value_init(tmp);
 	Polyhedron *C = poly();
 	int i;
 	for (i = 0; i < lambda.length(); ++i)
 	    if (lambda[i] > 0)
 		break;
 	if (i == lambda.length()) {
+	    Value tmp;
+	    value_init(tmp);
 	    value_set_si(tmp, -1);
 	    Vector_Scale(z->p, z->p, tmp, z->Size-1);
+	    value_clear(tmp);
 	}
-	value_clear(tmp);
 	return z;
     }
 
