@@ -245,6 +245,19 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     return 1;
 }
 
+static void reorder_fractional(enode *p, evalue *v)
+{
+    int i;
+
+    for (i=p->size-1;i>=2;i--) {
+	emul(v, &p->arr[i]);
+	eadd(&p->arr[i], &p->arr[i-1]);
+	free_evalue_refs(&(p->arr[i]));
+    }
+    p->size = 2;
+    free_evalue_refs(v);
+}
+
 void _reduce_evalue (evalue *e, struct subst *s, int fract) {
   
     enode *p;
@@ -515,13 +528,7 @@ you_lose:   	/* OK, lets not do it */
 	}
 
 	if (reorder) {
-	    for (i=p->size-1;i>=2;i--) {
-		emul(&v, &p->arr[i]);
-		eadd(&p->arr[i], &p->arr[i-1]);
-		free_evalue_refs(&(p->arr[i]));
-	    }
-	    p->size = 2;
-	    free_evalue_refs(&v);
+	    reorder_fractional(p, &v);
 	    _reduce_evalue(&p->arr[1], s, fract);
 	}
 
@@ -2277,4 +2284,85 @@ void evalue_combine(evalue *e)
 	Domain_Free(E);
 	EVALUE_SET_DOMAIN(p->arr[2*i], D);
     }
+}
+
+static reduce_in_domain(evalue *e, Polyhedron *D)
+{
+    int i;
+    enode *p;
+    Matrix *T;
+    Polyhedron *I, *H;
+    unsigned dim;
+    evalue *pp;
+    Value d, min, max;
+
+    if (value_notzero_p(e->d))
+	return;
+
+    p = e->x.p;
+
+    /* skip condition of relation for now */
+    i = p->type == relation ? 1 : 
+	p->type == fractional ? 1 : 0;
+    for (; i<p->size; i++)
+	reduce_in_domain(&p->arr[i], D);
+
+    if (p->type != fractional)
+	return;
+
+    dim = D->Dimension;
+    T = Matrix_Alloc(2, dim+1);
+    assert(T);
+
+    value_init(d);
+    value_init(min);
+    value_init(max);
+    pp = &p->arr[0];
+    value_set_si(T->p[1][dim], 1);
+    poly_denom(pp, &d);
+    while (value_zero_p(pp->d)) {
+	assert(pp->x.p->type == polynomial);
+	assert(pp->x.p->size == 2);
+	assert(value_notzero_p(pp->x.p->arr[1].d));
+	value_division(T->p[0][pp->x.p->pos-1], d, pp->x.p->arr[1].d);
+	value_multiply(T->p[0][pp->x.p->pos-1], 
+		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
+	pp = &pp->x.p->arr[0];
+    }
+    value_division(T->p[0][dim], d, pp->d);
+    value_multiply(T->p[0][dim], T->p[0][dim], pp->x.n);
+    I = DomainImage(D, T, 0);
+    H = DomainConvex(I, 0);
+    line_minmax(H, &min, &max, d, 0); /* frees H */
+    Domain_Free(I);
+
+    if (value_eq(min, max)) {
+	evalue inc;
+	value_init(inc.d);
+	value_init(inc.x.n);
+	value_set_si(inc.d, 1);
+	value_oppose(inc.x.n, min);
+	eadd(&inc, &p->arr[0]);
+	reorder_fractional(p, &p->arr[0]); /* frees arr[0] */
+	value_clear(e->d);
+	*e = p->arr[1];
+	free(p);
+	free_evalue_refs(&inc);
+    }
+
+    Matrix_Free(T);
+    value_clear(d);
+    value_clear(min);
+    value_clear(max);
+}
+
+void evalue_range_reduction(evalue *e)
+{
+    int i;
+    if (value_notzero_p(e->d) || e->x.p->type != partition)
+	return;
+
+    for (i = 0; i < e->x.p->size/2; ++i)
+	reduce_in_domain(&e->x.p->arr[2*i+1],
+			 EVALUE_DOMAIN(e->x.p->arr[2*i]));
 }

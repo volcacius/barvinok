@@ -29,6 +29,7 @@ void Free_ParamNames(char **params, int m);
 int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2);
 int ConstraintSimplify(Value *old, Value *n, int len, Value* v);
 Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays);
+void line_minmax(Polyhedron *I, Value *min, Value *max, Value d, int zero);
 
 #include "ev_operations.h"
 

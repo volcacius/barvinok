@@ -703,28 +703,7 @@ static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
     Value min, max;
     value_init(min);
     value_init(max);
-    if (I->NbEq >= 1) {
-	value_oppose(I->Constraint[0][2], I->Constraint[0][2]);
-	/* There should never be a remainder here */
-	if (value_pos_p(I->Constraint[0][1]))
-	    mpz_fdiv_q(min, I->Constraint[0][2], I->Constraint[0][1]);
-	else
-	    mpz_fdiv_q(min, I->Constraint[0][2], I->Constraint[0][1]);
-	value_assign(max, min);
-    } else for (i = 0; i < I->NbConstraints; ++i) {
-	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
-	if (value_pos_p(I->Constraint[i][1]))
-	    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
-	else
-	    mpz_fdiv_q(max, I->Constraint[i][2], I->Constraint[i][1]);
-    }
-    Polyhedron_Free(I);
-
-    if (zero)
-	mpz_cdiv_q(min, min, d);
-    else
-	mpz_fdiv_q(min, min, d);
-    mpz_fdiv_q(max, max, d);
+    line_minmax(I, &min, &max, d, zero);
     if (value_eq(min, max)) {
 	ALLOC(ret);
 	value_init(*ret);
@@ -1681,6 +1660,18 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Enumeration *en, *res = NULL;
     evalue *EP = barvinok_enumerate_ev(P, C, MaxRays);
+
+    if (EVALUE_IS_ZERO(*EP)) {
+	/*
+	ALLOC(res);
+	res->next = NULL;
+	res->EP = *EP;
+	res->ValidityDomain = Universe_Polyhedron(C->Dimension);
+	*/
+	free(EP);
+	return res;
+    }
+
     for (int i = 0; i < EP->x.p->size/2; ++i) {
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->next = res;
