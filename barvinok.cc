@@ -961,23 +961,14 @@ static void default_params(deque<string>& params, int n)
     }
 }
 
-static EhrhartPolynom *uni_polynom(string param, Vector *c)
+static void uni_polynom(int param, Vector *c, evalue *EP)
 { 
-    evalue EP;
-    deque<string> params;
     unsigned dim = c->Size-2;
-    value_init(EP.d);
-    value_set_si(EP.d,0);
-    EP.x.p = new_enode(polynomial, dim+1, 1);
-    for (int j = 0; j <= dim; ++j) {
-	value_assign(EP.x.p->arr[j].d, c->p[dim+1]);
-	value_init(EP.x.p->arr[j].x.n);
-	value_assign(EP.x.p->arr[j].x.n, c->p[j]);
-    }
-    params.push_back(param);
-    EhrhartPolynom * ret = new EhrhartPolynom(&EP, params);
-    free_evalue_refs(&EP);
-    return ret;
+    value_init(EP->d);
+    value_set_si(EP->d,0);
+    EP->x.p = new_enode(polynomial, dim+1, param+1);
+    for (int j = 0; j <= dim; ++j)
+	evalue_set(&EP->x.p->arr[j], c->p[j], c->p[dim+1]);
 }
 
 static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPolynom& X)
@@ -1217,10 +1208,9 @@ out:
 		} else if (num[f].pos != -1) {
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
 		    d.div(n, c, sign[f]);
-		    EhrhartPolynom *E = uni_polynom(params[num[f].pos], c);
-		    evalue EV = E->to_evalue(params);
+		    evalue EV;
+		    uni_polynom(num[f].pos, c, &EV);
 		    eadd(&EV , &EP);
-		    delete E;
 		    free_evalue_refs(&EV);
 		} else {
 		    mpq_set_si(count, 0, 1);
