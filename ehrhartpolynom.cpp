@@ -1031,6 +1031,7 @@ static EhrhartPolynom convert_evalue(const ::evalue e,
 	  exponent[param_name]=i;
 	  EhrhartPolynom ep1(exponent, EhrhartPolynom::periodic_rational(pn,one));
 	  result += ep1 * convert_evalue(en->arr[i],parameter_names); 
+	  value_clear(one);
 	}
       }
       break;
@@ -1138,6 +1139,7 @@ EhrhartPolynom::operator+(const EhrhartPolynom& e2) const
       value_clear(prod1);
       value_clear(prod2);
       result.data[(*i).first] = periodic_rational(pn1+pn2, lcm_val);
+      value_clear(lcm_val);
     }
   }
   if(DebugBlackboard.debug("EHRHARTPOLYNOM")>=3) {
@@ -1211,10 +1213,12 @@ EhrhartPolynom EhrhartPolynom::operator*(const EhrhartPolynom& e2) const
       value_division(common_denominator, common_denominator, gcd_product_denominator);
       EhrhartPolynom term(exponent,
 			  periodic_rational(pn1_x_pn2, common_denominator));
+      value_clear(common_denominator);
       result+=term;
     }
   }
   value_clear(div1); value_clear(div2); value_clear(lcm_val); value_clear(gcd_product_denominator);
+  value_clear(gcd_of_product);
 
   result.simplify();
   if(DebugBlackboard.debug("EHRHARTPOLYNOM")>=2) {
