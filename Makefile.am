@@ -12,3 +12,5 @@ LDADD = libbarvinok.la
 
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
+
+EXTRA_DIST = ChangeLog
