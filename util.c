@@ -209,6 +209,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
     value_set_si(M->p[P->NbRays][0], 1);
     value_set_si(M->p[P->NbRays][dim+1], 1);
 
+    /* Delaunay triangulation */
     for (i = 0, r = 1; i < P->NbRays; ++i) {
 	if (value_notzero_p(P->Ray[i][dim+1]))
 	    continue;
@@ -245,6 +246,7 @@ try_again:
     n = 0;
 
     for (i = 0; i < L->NbConstraints; ++i) {
+	/* Ignore perpendicular facets, i.e., facets with 0 z-coordinate */
 	if (value_negz_p(L->Constraint[i][dim+1]))
 	    continue;
 	if (value_notzero_p(L->Constraint[i][dim+2]))
