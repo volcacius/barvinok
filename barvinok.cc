@@ -719,6 +719,7 @@ static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
     mpz_fdiv_q(max, max, d);
     if (value_eq(min, max)) {
 	ALLOC(ret);
+	value_init(*ret);
 	value_assign(*ret, min);
     } 
     value_clear(min);
