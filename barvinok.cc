@@ -2119,6 +2119,43 @@ static evalue* enumerate_sure2(Polyhedron *P,
     return split_sure(P, I, exist, nparam, MaxRays);
 }
 
+static evalue* enumerate_cyclic(Polyhedron *P,
+			  unsigned exist, unsigned nparam, 
+			  evalue * EP, int r, int p, unsigned MaxRays)
+{
+    int nvar = P->Dimension - exist - nparam;
+
+    /* If EP in its fractional maps only contains references
+     * to the remainder parameter with appropriate coefficients
+     * then we could in principle avoid adding existentially
+     * quantified variables to the validity domains.
+     * We'd have to replace the remainder by m { p/m }
+     * and multiply with an appropriate factor that is one
+     * only in the appropriate range.
+     * This last multiplication can be avoided if EP
+     * has a single validity domain with no (further)
+     * constraints on the remainder parameter
+     */
+
+    Matrix *CT = Matrix_Alloc(nparam+1, nparam+3);
+    Matrix *M = Matrix_Alloc(1, 1+nparam+3);
+    for (int j = 0; j < nparam; ++j)
+	if (j != p)
+	    value_set_si(CT->p[j][j], 1);
+    value_set_si(CT->p[p][nparam+1], 1);
+    value_set_si(CT->p[nparam][nparam+2], 1);
+    value_set_si(M->p[0][1+p], -1);
+    value_absolute(M->p[0][1+nparam], P->Ray[0][1+nvar+exist+p]);
+    value_set_si(M->p[0][1+nparam+1], 1);
+    Polyhedron *CEq = Constraints2Polyhedron(M, 1);
+    Matrix_Free(M);
+    addeliminatedparams_enum(EP, CT, CEq, MaxRays, nparam);
+    Polyhedron_Free(CEq);
+    Matrix_Free(CT);
+
+    return EP;
+}
+
 static evalue* enumerate_line(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
@@ -2152,35 +2189,64 @@ static evalue* enumerate_line(Polyhedron *P,
     Polyhedron_Free(S);
     Matrix_Free(M);
 
-    /* If EP in its fractional maps only contains references
-     * to the remainder parameter with appropriate coefficients
-     * then we could in principle avoid adding existentially
-     * quantified variables to the validity domains.
-     * We'd have to replace the remainder by m { p/m }
-     * and multiply with an appropriate factor that is one
-     * only in the appropriate range.
-     * This last multiplication can be avoided if EP
-     * has a single validity domain with no (further)
-     * constraints on the remainder parameter
-     */
+    return enumerate_cyclic(P, exist, nparam, EP, 0, i, MaxRays);
+}
 
-    Matrix *CT = Matrix_Alloc(nparam+1, nparam+3);
-    M = Matrix_Alloc(1, 1+nparam+3);
-    for (j = 0; j < nparam; ++j)
-	if (j != i)
-	    value_set_si(CT->p[j][j], 1);
-    value_set_si(CT->p[i][nparam+1], 1);
-    value_set_si(CT->p[nparam][nparam+2], 1);
-    value_set_si(M->p[0][1+i], -1);
-    value_absolute(M->p[0][1+nparam], P->Ray[0][1+nvar+exist+i]);
-    value_set_si(M->p[0][1+nparam+1], 1);
-    Polyhedron *CEq = Constraints2Polyhedron(M, 1);
+static evalue* enumerate_ray(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    assert(P->NbBid == 0);
+
+    int r;
+    for (r = 0; r < P->NbRays; ++r)
+	if (value_zero_p(P->Ray[r][P->Dimension+1]))
+	    break;
+    if (r >= P->NbRays)
+	return 0;
+
+    int r2;
+    for (r2 = r+1; r2 < P->NbRays; ++r2)
+	if (value_zero_p(P->Ray[r2][P->Dimension+1]))
+	    break;
+    if (r2 < P->NbRays)
+	return 0;
+
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: Ray\n");
+#endif /* DEBUG_ER */
+
+    int nvar = P->Dimension - exist - nparam;
+    Value m;
+    Value one;
+    value_init(m);
+    value_init(one);
+    value_set_si(one, 1);
+    int i, j;
+    for (i = 0; i < nparam; ++i)
+	if (value_notzero_p(P->Ray[r][1+nvar+exist+i]))
+	    break;
+    assert(i < nparam);
+    for (j = i+1; j < nparam; ++j)
+	if (value_notzero_p(P->Ray[r][1+nvar+exist+i]))
+	    break;
+    assert(j >= nparam); // for now
+
+    Matrix *M = Matrix_Alloc(P->NbRays, P->Dimension+2);
+    for (j = 0; j < P->NbRays; ++j) {
+	Vector_Combine(P->Ray[j], P->Ray[r], M->p[j], 
+		       one, P->Ray[j][P->Dimension+1], P->Dimension+2);
+    }
+    Polyhedron *S = Rays2Polyhedron(M, MaxRays);
+    Polyhedron *D = DomainDifference(P, S, MaxRays);
+    assert(D->next == 0);
+    evalue *EP = barvinok_enumerate_e(D, exist, nparam, MaxRays);
+    Polyhedron_Free(S);
+    Polyhedron_Free(D);
     Matrix_Free(M);
-    addeliminatedparams_enum(EP, CT, CEq, MaxRays, nparam);
-    Polyhedron_Free(CEq);
-    Matrix_Free(CT);
+    value_clear(one);
+    value_clear(m);
 
-    return EP;
+    return enumerate_cyclic(P, exist, nparam, EP, r, i, MaxRays);
 }
 
 static evalue* new_zero_ep()
@@ -2784,6 +2850,10 @@ next:
 	return EP;
 
     EP = enumerate_sure(P, exist, nparam, MaxRays);
+    if (EP)
+	goto out;
+
+    EP = enumerate_ray(P, exist, nparam, MaxRays);
     if (EP)
 	goto out;
 
