@@ -1,3 +1,13 @@
+version: 0.10
+date: Sat Sep 18 14:49:40 CEST 2004
+changes:
+    - fix minor bugs
+    - find and use PIP if available
+    - don't overallocate matrices on newer PolyLibs
+    - verification program for enumeration of integer projections
+    - summation of enumerations
+    - avoid gccisms
+    - support older versions of GMP
 ---
 version: 0.10
 date: Tue Jul  6 22:09:11 CEST 2004
