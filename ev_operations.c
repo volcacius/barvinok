@@ -697,10 +697,10 @@ discard:
 	    free(e->x.p);
 	    evalue_set_si(e, 0, 1);
 	}
-	if (s.max != 0)
-	    free(s.fixed);
     } else
 	_reduce_evalue(e, &s, 0);
+    if (s.max != 0)
+	free(s.fixed);
 }
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
