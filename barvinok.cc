@@ -488,16 +488,126 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& lambda, ZZ& num)
     num = vertex * lambda;
 }
 
-void lattice_point(Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, vec_ZZ& num)
+static EhrhartPolynom *term(string param, ZZ& c, Value *den = NULL)
+{
+    evalue EP;
+    deque<string> params;
+    value_init(EP.d);
+    value_set_si(EP.d,0);
+    EP.x.p = new_enode(polynomial, 2, 1);
+    value_set_si(EP.x.p->arr[0].d, 1);
+    value_set_si(EP.x.p->arr[0].x.n, 0);
+    if (den == NULL)
+	value_set_si(EP.x.p->arr[1].d, 1);
+    else
+	value_assign(EP.x.p->arr[1].d, *den);
+    zz2value(c, EP.x.p->arr[1].x.n);
+    params.push_back(param);
+    return new EhrhartPolynom(&EP, params);
+}
+
+static void vertex_period(deque<string>& params, 
+		    Polyhedron *i, vec_ZZ& lambda, Matrix *T, 
+		    Value lcm, int p, Vector *val, 
+		    EhrhartPolynom *E, evalue* ev)
+{
+    unsigned nparam = T->NbRows - 1;
+    unsigned dim = i->Dimension;
+    Value tmp;
+    value_init(tmp);
+    ZZ nump;
+
+	vec_ZZ vertex;
+	values2zz(T->p[p], vertex, dim);
+	nump = vertex * lambda;
+	value_assign(tmp, lcm);
+	EhrhartPolynom * ET = term(params[p], nump, &tmp);
+	*E += *ET;
+	delete ET;
+
+    assert(p == nparam-1); // for now
+    Vector_Gcd(T->p[p], dim, &tmp);
+    assert (value_le(tmp, lcm)); // for now
+    if (value_le(tmp, lcm)) {
+	ZZ num, count;
+
+	Vector * values = Vector_Alloc(dim + 1);
+	value_division(tmp, lcm, tmp);
+	value_set_si(ev->d, 0);
+	ev->x.p = new_enode(periodic, VALUE_TO_INT(tmp), p+1);
+	value2zz(tmp, count);
+	do {
+	    value_decrement(tmp, tmp);
+	    --count;
+	    value_assign(val->p[p], tmp);
+	    Vector_Matrix_Product(val->p, T, values->p);
+	    value_assign(values->p[dim], lcm);
+	    lattice_point(values->p, i, lambda, num);
+	    num -= count * nump;
+	    zz2value(num, ev->x.p->arr[VALUE_TO_INT(tmp)].x.n);
+	    value_assign(ev->x.p->arr[VALUE_TO_INT(tmp)].d, lcm);
+	} while (value_pos_p(tmp));
+	Vector_Free(values);
+    }
+    value_clear(tmp);
+}
+
+void lattice_point(deque<string>& params, 
+    Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, vec_ZZ& num,
+    EhrhartPolynom **E)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
+    unsigned dim = i->Dimension;
     mat_ZZ vertex;
     vertex.SetDims(V->Vertex->NbRows, nparam+1);
+    Value lcm, tmp;
+    value_init(lcm);
+    value_init(tmp);
+    value_set_si(lcm, 1);
+    *E = NULL;
+    for (int j = 0; j < V->Vertex->NbRows; ++j) {
+	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
+    }
+    if (value_notone_p(lcm)) {
+	Matrix* Rays = rays(i);
+	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
+	int ok = Matrix_Inverse(Rays, inv);
+	assert(ok);
+	Matrix_Free(Rays);
+	Rays = rays(i);
+
+	Matrix * mv = Matrix_Alloc(dim, nparam+1);
+	for (int j = 0 ; j < dim; ++j) {
+	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
+	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
+	}
+	Matrix *T = Transpose(mv);
+
+	EhrhartPolynom * EP = new EhrhartPolynom();
+	evalue ev;
+	Vector *val = Vector_Alloc(nparam+1);
+	value_set_si(val->p[nparam], 1);
+	vertex_period(params, i, lambda, T, lcm, 0, val, EP, &ev);
+	Vector_Free(val);
+
+	*EP += EhrhartPolynom(&ev, params);
+
+	*E = EP;
+
+	num[nparam] = 0;
+	num[0] = 0;
+	// -> degree_0 = 0; degree_1 = 1
+
+	return;
+	//exit(0);
+    }
     for (int i = 0; i < V->Vertex->NbRows; ++i) {
 	assert(value_one_p(V->Vertex->p[i][nparam+1]));  // for now
 	values2zz(V->Vertex->p[i], vertex[i], nparam+1);
     }
     num = lambda * vertex;
+    value_clear(lcm);
+    value_clear(tmp);
 }
 
 void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign, ZZ& num, vec_ZZ& den)
@@ -700,35 +810,14 @@ static EhrhartPolynom *uni_polynom(string param, Vector *c)
     return new EhrhartPolynom(&EP, params);
 }
 
-static EhrhartPolynom *term(string param, ZZ& c)
+static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPolynom& X)
 {
-    evalue EP;
-    deque<string> params;
-    value_init(EP.d);
-    value_set_si(EP.d,0);
-    EP.x.p = new_enode(polynomial, 2, 1);
-    value_set_si(EP.x.p->arr[0].d, 1);
-    value_set_si(EP.x.p->arr[0].x.n, 0);
-    value_set_si(EP.x.p->arr[1].d, 1);
-    zz2value(c, EP.x.p->arr[1].x.n);
-    params.push_back(param);
-    return new EhrhartPolynom(&EP, params);
-}
-
-static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, vec_ZZ& p)
-{
-    EhrhartPolynom X;
-    evalue EC;
     unsigned dim = c->Size-2;
-    unsigned nparam = p.length()-1;
+    evalue EC;
     value_init(EC.d);
     value_init(EC.x.n);
     value_assign(EC.d, c->p[dim+1]);
-    for (int i = 0; i < nparam; ++i) {
-	EhrhartPolynom *T = term(params[i], p[i]);
-	X += *T;
-	delete T;
-    }
+
     EhrhartPolynom *res = new EhrhartPolynom();
     value_assign(EC.x.n, c->p[dim]);
     *res += EhrhartPolynom(&EC, params);
@@ -738,6 +827,18 @@ static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, vec_ZZ& p
 	*res += EhrhartPolynom(&EC, params);
     }
     return res;
+}
+
+static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, vec_ZZ& p)
+{
+    EhrhartPolynom X;
+    unsigned nparam = p.length()-1;
+    for (int i = 0; i < nparam; ++i) {
+	EhrhartPolynom *T = term(params[i], p[i]);
+	X += *T;
+	delete T;
+    }
+    return multi_polynom(params, c, X);
 }
 
 static EhrhartPolynom *constant(mpq_t c)
@@ -828,12 +929,13 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	mat_ZZ den;
 	num.SetDims(ncone,nparam+1);
 	den.SetDims(ncone,dim);
+	EhrhartPolynom **E = new EhrhartPolynom*[ncone];
 
 	int f = 0;
 	int j = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
-		lattice_point(V, i, lambda, num[f]);
+		lattice_point(params, V, i, lambda, num[f], &E[f]);
 		normalize(i, lambda, sign[f], num[f][nparam], den[f]);
 		++f;
 	    }
@@ -866,7 +968,15 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 			++nn;
 			p = j;
 		    }
-		if (nn == 1) {
+		if (E[f] != NULL) {
+		    ZZ one(INIT_VAL, 1);
+		    assert(num[f][0] == 0); // didn't think about this case yet
+		    dpoly_n d(dim, num[f][nparam], one);
+		    d.div(n, c, sign[f]);
+		    EhrhartPolynom *ET = multi_polynom(params, c, *E[f]);
+		    EP += *ET;
+		    delete ET;
+		} else if (nn == 1) {
 		    dpoly_n d(dim, num[f][nparam], num[f][p]);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *E = uni_polynom(params[p], c);

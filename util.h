@@ -7,6 +7,7 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
+void value_lcm(Value i, Value j, Value* lcm);
 int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
 void Polyhedron_Polarize(Polyhedron *P);
