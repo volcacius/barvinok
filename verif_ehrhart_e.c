@@ -20,7 +20,13 @@
 #include "ev_operations.h"
 #include "util.h"
 #include <barvinok.h>
-#define MAXRAYS 1024
+#include "config.h"
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS     0
+#else
+#define MAXRAYS  1024
+#endif
 
 /* define this to print all the results */
 /* else, only a progress bar is printed */
