@@ -12,13 +12,7 @@ void manual_count(Polyhedron *P, Value* result)
     value_assign(*result, *v);
     value_clear(*v);
     free(v);
-    while (en) {
-	free_evalue_refs(&(en->EP));
-	Polyhedron_Free(en->ValidityDomain);
-        ee = en->next;
-	free(en);
-	en = ee;
-    }
+    Enumeration_Free(en);
     Polyhedron_Free(U);
 }
 
