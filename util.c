@@ -223,7 +223,7 @@ void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
     if (value_zero_p(b))
 	value_set_si(*y, 0);
     else {
-	value_multiply(tmp, a, e);
+	value_multiply(tmp, a, *x);
 	value_substract(tmp, c, tmp);
 	value_division(*y, tmp, b);
     }
