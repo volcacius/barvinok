@@ -123,6 +123,27 @@ you_lose:   	/* OK, lets not do it */
             free(p);
         }
     }
+    else if (p->type==modulo) {
+	  
+        /* Try to reduce the degree */
+        for (i=p->size-1;i>=1;i--) {
+            if (value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n))
+	
+                /* Zero coefficient */
+                continue;
+            else
+                break;
+        }
+        if (i==0) p->size = 2;
+        else if (i+1<p->size) p->size = i+1;
+
+        /* Try to reduce its strength */
+        if (p->size == 2) {
+	    value_clear(e->d);
+            memcpy(e,&p->arr[1],sizeof(evalue));
+            free(p);
+        }
+    }
 } /* reduce_evalue */
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
