@@ -1598,7 +1598,7 @@ struct icounter : public polar_decomposer {
     }
 
     virtual void handle_polar(Polyhedron *P, int sign);
-    void reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den);
+    void reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
     void recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den);
 };
 
@@ -1607,19 +1607,27 @@ void icounter::recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den)
     unsigned d = num.length();
     unsigned len = den.NumRows();  // number of factors in den
 
+    reduce(c, cd, num, den);
+}
+
+void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+{
+    unsigned len = den_f.NumRows();  // number of factors in den
+    unsigned d = num.length()-1;
+
     vec_ZZ den_s;
     den_s.SetLength(len);
     mat_ZZ den_r;
-    den_r.SetDims(len, d-1);
+    den_r.SetDims(len, d);
 
     int r, k;
     for (r = 0; r < len; ++r) {
-	den_s[r] = den[r][0];
-	for (k = 1; k < d; ++k)
-	    den_r[r][k-1] = den[r][k];
+	den_s[r] = den_f[r][0];
+	for (k = 1; k <= d; ++k)
+	    den_r[r][k-1] = den_f[r][k];
     }
 
-    if (d == 1) {
+    if (d == 0) {
 	ZZ num_s = num[0];
 	normalize(c, num_s, den_s);
 
@@ -1637,18 +1645,11 @@ void icounter::recurse(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den)
 	mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
 	mpq_canonicalize(tcount);
 	mpq_add(count, count, tcount);
-    } else {
-	reduce(c, cd, num, den_s, den_r);
+	return;
     }
-}
-
-void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
-{
     assert(num.length() > 1);
-    unsigned d = num.length()-1;
-    unsigned len = den_s.length();  // number of factors in den
+
     ZZ num_s = num[0];
-    int k = 0;
     vec_ZZ num_p;
     num_p.SetLength(d);
     for (k = 1 ; k <= d; ++k)
@@ -1657,7 +1658,7 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
     vec_ZZ den_p;
     den_p.SetLength(len);
 
-    normalize(c, num_s, num_p, den_s, den_p, den);
+    normalize(c, num_s, num_p, den_s, den_p, den_r);
 
     /* Since we're working incrementally, we should look
      * for the "easiest" parameter first.
@@ -1677,8 +1678,8 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
     if (no_param == 0) {
 	for (int k = 0; k < len; ++k)
 	    if (den_p[k] == -1)
-		den[k] = -den[k];
-	recurse(c, cd, num_p, den);
+		den_r[k] = -den_r[k];
+	recurse(c, cd, num_p, den_r);
     } else {
 	int k, l;
 	mat_ZZ pden;
@@ -1686,7 +1687,7 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
 
 	for (k = 0, l = 0; k < len; ++k)
 	    if (den_s[k] == 0)
-		pden[l++] = den[k];
+		pden[l++] = den_r[k];
 
 	for (k = 0; k < len; ++k)
 	    if (den_p[k] == 0)
@@ -1752,9 +1753,9 @@ void icounter::reduce(ZZ& c, ZZ& cd, vec_ZZ& num, vec_ZZ& den_s, mat_ZZ& den)
 		    pden.SetDims(rows+abs_n, pden.NumCols());
 		    for (int l = 0; l < abs_n; ++l) {
 			if (n > 0)
-			    pden[rows+l] = den[k];
+			    pden[rows+l] = den_r[k];
 			else
-			    pden[rows+l] = -den[k];
+			    pden[rows+l] = -den_r[k];
 		    }
 		    rows += abs_n;
 		}
@@ -1776,18 +1777,14 @@ void icounter::handle_polar(Polyhedron *C, int s)
 
     lattice_point(P->Ray[j]+1, C, vertex);
 
-    vec_ZZ den_s;
-    den_s.SetLength(dim);
     mat_ZZ den;
-    den.SetDims(dim, dim-1);
+    den.SetDims(dim, dim);
 
     int r;
-    for (r = 0; r < dim; ++r) {
-	value2zz(C->Ray[r][1], den_s[r]);
-	values2zz(C->Ray[r]+1+1, den[r], dim-1);
-    }
+    for (r = 0; r < dim; ++r)
+	values2zz(C->Ray[r]+1, den[r], dim);
 
-    reduce(sgn, one, vertex, den_s, den);
+    reduce(sgn, one, vertex, den);
 }
 
 void icounter::start(unsigned MaxRays)
