@@ -906,12 +906,11 @@ evalue* ceil3(Value *coef, int len, Value d)
 {
     Vector *val = Vector_Alloc(len);
 
-    Value mone;
-    value_init(mone);
-    value_set_si(mone, -1);
-    value_absolute(d, d);
-    Vector_Scale(coef, val->p, mone, len);
-    value_clear(mone);
+    Value t;
+    value_init(t);
+    value_set_si(t, -1);
+    Vector_Scale(coef, val->p, t, len);
+    value_absolute(t, d);
 
     vec_ZZ num;
     values2zz(val->p, num, len);
@@ -921,13 +920,14 @@ evalue* ceil3(Value *coef, int len, Value d)
     value_init(tmp.d);
     value_init(tmp.x.n);
     value_set_si(tmp.x.n, 1);
-    value_assign(tmp.d, d);
+    value_assign(tmp.d, t);
 
     emul(&tmp, EP);
 
     ZZ one;
     one = 1;
-    ceil_mod(val->p, len, d, one, EP, NULL);
+    ceil_mod(val->p, len, t, one, EP, NULL);
+    value_clear(t);
 
     /* copy EP to malloc'ed evalue */
     evalue *E;
