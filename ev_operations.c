@@ -912,6 +912,7 @@ void eadd_partitions (evalue *e1,evalue *res)
     assert(s);
     assert(e1->x.p->pos == res->x.p->pos);
     assert(e1->x.p->pos == EVALUE_DOMAIN(e1->x.p->arr[0])->Dimension);
+    assert(res->x.p->pos == EVALUE_DOMAIN(res->x.p->arr[0])->Dimension);
 
     n = 0;
     for (j = 0; j < e1->x.p->size/2; ++j) {
@@ -1275,6 +1276,7 @@ void emul_partitions (evalue *e1,evalue *res)
     assert(s);
     assert(e1->x.p->pos == res->x.p->pos);
     assert(e1->x.p->pos == EVALUE_DOMAIN(e1->x.p->arr[0])->Dimension);
+    assert(res->x.p->pos == EVALUE_DOMAIN(res->x.p->arr[0])->Dimension);
 
     n = 0;
     for (i = 0; i < res->x.p->size/2; ++i) {
@@ -1577,6 +1579,7 @@ void emask(evalue *mask, evalue *res) {
     assert(res->x.p->type == partition);
     assert(mask->x.p->pos == res->x.p->pos);
     assert(res->x.p->pos == EVALUE_DOMAIN(res->x.p->arr[0])->Dimension);
+    assert(mask->x.p->pos == EVALUE_DOMAIN(mask->x.p->arr[0])->Dimension);
     pos = res->x.p->pos;
 
     s = (struct section *) 
