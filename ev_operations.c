@@ -782,9 +782,14 @@ static double compute_enode(enode *p, Value *list_args) {
     res +=compute_evalue(&p->arr[0],list_args);
   }
   else if (p->type == modulo) {
-    value_set_double(param, compute_evalue(&p->arr[0], list_args));
+    double d = compute_evalue(&p->arr[0], list_args);
+    if (d > 0)
+	d += .25;
+    else 
+	d -= .25;
+    value_set_double(param, d);
     value_set_si(m, p->pos);
-    value_modulus(param, param, m);
+    mpz_fdiv_r(param, param, m);
     
     /* Compute the polynomial using Horner's rule */
     for (i=p->size-1;i>1;i--) {
