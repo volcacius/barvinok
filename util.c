@@ -626,6 +626,25 @@ int ConstraintSimplify(Value *old, Value *new, int len, Value* v)
     return 1;
 }
 
+/*
+ * Project on final dim dimensions
+ */
+static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
+{
+    int i;
+    int remove = P->Dimension - dim;
+
+    if (P->Dimension == dim)
+	return Polyhedron_Copy(P);
+
+    Matrix *T = Matrix_Alloc(dim+1, P->Dimension+1);
+    for (i = 0; i < dim+1; ++i)
+	value_set_si(T->p[i][i+remove], 1);
+    Polyhedron *I = Polyhedron_Image(P, T, P->NbConstraints);
+    Matrix_Free(T);
+    return I;
+}
+
 struct section { Polyhedron * D; evalue E; };
 
 static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar, 
@@ -641,12 +660,14 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	return 0;
 
     {
+	Polyhedron *C, *T;
 	int i, j, p, n;
 	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
 	Value tmp;
 	evalue mone;
 	value_init(mone.d);
 	evalue_set_si(&mone, -1, 1);
+	C = Polyhedron_Project(P, dim-nvar);
 
 	value_init(tmp);
 
@@ -721,12 +742,14 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 			    Polyhedron_Free(s[nd].D);
 			    continue;
 			}
+			T = DomainIntersection(s[nd].D, C, 0);
 			L = bv_ceil3(P->Constraint[singles[i][1+k]]+1+nvar, 
 				  dim-nvar+1,
-				  P->Constraint[singles[i][1+k]][i+1]);
+				  P->Constraint[singles[i][1+k]][i+1], T);
 			U = bv_ceil3(P->Constraint[singles[i][1+l]]+1+nvar, 
 				  dim-nvar+1,
-				  P->Constraint[singles[i][1+l]][i+1]);
+				  P->Constraint[singles[i][1+l]][i+1], T);
+			Domain_Free(T);
 			eadd(L, U);
 			eadd(&mone, U);
 			emul(&mone, U);
@@ -762,6 +785,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	value_clear(tmp);
 
 	free_evalue_refs(&mone); 
+	Polyhedron_Free(C);
     }
 
     reduce_evalue(factor);

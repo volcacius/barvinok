@@ -736,23 +736,6 @@ static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
 }
 
 /*
- * Project on final dim dimensions
- */
-static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
-{
-    if (P->Dimension == dim)
-	return Polyhedron_Copy(P);
-
-    int remove = P->Dimension - dim;
-    Matrix *T = Matrix_Alloc(dim+1, P->Dimension+1);
-    for (int i = 0; i < dim+1; ++i)
-	value_set_si(T->p[i][i+remove], 1);
-    Polyhedron *I = Polyhedron_Image(P, T, P->NbConstraints);
-    Matrix_Free(T);
-    return I;
-}
-
-/*
  * Normalize linear expression coef modulo m
  * Removes common factor and reduces coefficients
  * Returns index of first non-zero coefficient or len
@@ -993,7 +976,7 @@ out:
     value_clear(m);
 }
 
-evalue* bv_ceil3(Value *coef, int len, Value d)
+evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 {
     Vector *val = Vector_Alloc(len);
 
@@ -1017,7 +1000,7 @@ evalue* bv_ceil3(Value *coef, int len, Value d)
 
     ZZ one;
     one = 1;
-    ceil_mod(val->p, len, t, one, EP, NULL);
+    ceil_mod(val->p, len, t, one, EP, P);
     value_clear(t);
 
     /* copy EP to malloc'ed evalue */

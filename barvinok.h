@@ -17,7 +17,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 
 /* private function */
-evalue* bv_ceil3(Value *coef, int len, Value d);
+evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P);
 
 #if defined(__cplusplus)
 }
