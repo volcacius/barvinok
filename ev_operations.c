@@ -326,18 +326,21 @@ void eadd_partitions (evalue *e1,evalue *res)
 	    ++n;
 	}
 	if (!emptyQ(fd)) {
-	    if (fd != EVALUE_DOMAIN(res->x.p->arr[2*i]))
-		Domain_Free(EVALUE_DOMAIN(res->x.p->arr[2*i]));
 	    s[n].E = res->x.p->arr[2*i+1];
 	    s[n].D = fd;
 	    ++n;
-	}
+	} else
+	    free_evalue_refs(&res->x.p->arr[2*i+1]);
+	if (fd != EVALUE_DOMAIN(res->x.p->arr[2*i]))
+	    Domain_Free(EVALUE_DOMAIN(res->x.p->arr[2*i]));
+	value_clear(res->x.p->arr[2*i].d);
     }
 
     free(res->x.p);
     res->x.p = new_enode(partition, 2*n, -1);
     for (j = 0; j < n; ++j) {
 	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	value_clear(res->x.p->arr[2*j+1].d);
 	res->x.p->arr[2*j+1] = s[j].E;
     }
 
@@ -607,12 +610,15 @@ void emul_partitions (evalue *e1,evalue *res)
 	    ++n;
 	}
 	Domain_Free(EVALUE_DOMAIN(res->x.p->arr[2*i]));
+	value_clear(res->x.p->arr[2*i].d);
+	free_evalue_refs(&res->x.p->arr[2*i+1]);
     }
 
     free(res->x.p);
     res->x.p = new_enode(partition, 2*n, -1);
     for (j = 0; j < n; ++j) {
 	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	value_clear(res->x.p->arr[2*j+1].d);
 	res->x.p->arr[2*j+1] = s[j].E;
     }
 
@@ -904,6 +910,7 @@ void free_evalue_refs(evalue *e) {
   
   if (EVALUE_IS_DOMAIN(*e)) {
     Domain_Free(EVALUE_DOMAIN(*e));
+    value_clear(e->d);
     return;
   } else if (value_pos_p(e->d)) {
     

@@ -1559,6 +1559,7 @@ out:
     eres->x.p = new_enode(partition, 2*nd, -1);
     for (int j = 0; j < nd; ++j) {
 	EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
+	value_clear(eres->x.p->arr[2*j+1].d);
 	eres->x.p->arr[2*j+1] = s[j].E;
     }
     delete [] s;
