@@ -925,8 +925,9 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
     value_init(tmp.d);
     evalue_set_si(&tmp, 0, 1);
 
+    int p = j;
     if (g % 2 == 0)
-	while (j < len-1 && num[j] == g/2)
+	while (j < len-1 && (num[j] == g/2 || num[j] == 0))
 	    ++j;
     if (j < len-1 && num[j] > g/2) {
 	for (int k = j; k < len-1; ++k)
@@ -940,7 +941,7 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
 	f = -f;
     }
 
-    if (j >= len-1) {
+    if (p >= len-1) {
 	ZZ t = num[len-1] * f;
 	zz2value(t, tmp.x.n);
 	value_assign(tmp.d, m);
