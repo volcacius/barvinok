@@ -90,6 +90,7 @@ int main(int argc, char **argv)
 	evalue_range_reduction(EP);
     print_evalue(stdout, EP, param_name);
     if (floor) {
+	fprintf(stderr, "WARNING: floor conversion not supported\n");
 	evalue_frac2floor(EP);
 	print_evalue(stdout, EP, param_name);
     } else if (convert) {
