@@ -84,19 +84,19 @@ reachable_information *reachable_info;
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
 %nonassoc ASSERT_UNSAT
-%left UNION p1 '+' '-'
+%left UNION OMEGA_P1 '+' '-'
 %nonassoc  SUPERSETOF SUBSETOF
-%left 		p2 RESTRICT_DOMAIN RESTRICT_RANGE
-%left INTERSECTION p3 '*' '@' 
-%left 		p4
-%left OR    	p5
-%left AND   	p6 
+%left 		OMEGA_P2 RESTRICT_DOMAIN RESTRICT_RANGE
+%left INTERSECTION OMEGA_P3 '*' '@' 
+%left 		OMEGA_P4
+%left OR    	OMEGA_P5
+%left AND   	OMEGA_P6 
 %left COMPOSE JOIN CARRIED_BY
-%right NOT APPROX DOMAIN RANGE HULL PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS DIFFERENCE DIFFERENCE_TO_RELATION INVERSE COMPLEMENT FARKAS SAMPLE SYM_SAMPLE MAKE_UPPER_BOUND MAKE_LOWER_BOUND p7
-%left p8
+%right NOT APPROX DOMAIN RANGE HULL PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS DIFFERENCE DIFFERENCE_TO_RELATION INVERSE COMPLEMENT FARKAS SAMPLE SYM_SAMPLE MAKE_UPPER_BOUND MAKE_LOWER_BOUND OMEGA_P7
+%left OMEGA_P8
 %nonassoc GIVEN
-%left p9
-%left '('	p10
+%left OMEGA_P9
+%left '('	OMEGA_P10
 %right COUNT
 
 
@@ -661,25 +661,25 @@ relation : OPEN_BRACE
 		$$ = new Relation(*relationMap(s));
 		}
 	 | '(' relation ')'	{$$ = $2;}
-	 | relation '+' 	%prec p9
+	 | relation '+' 	%prec OMEGA_P9
 		{ $$ = new Relation();
 		  *$$ = TransitiveClosure(*$1, 1,Relation::Null());
 		  delete $1;
 		}
-	 | relation '*' 	%prec p9
+	 | relation '*' 	%prec OMEGA_P9
 		{ $$ = new Relation();
 		  int vars = $1->n_inp();
 		  *$$ = Union(Identity(vars),
 			      TransitiveClosure(*$1, 1,Relation::Null()));
 		  delete $1;
 		}
-         | relation '+' WITHIN relation %prec p9
+         | relation '+' WITHIN relation %prec OMEGA_P9
                 {$$ = new Relation();
                  *$$= TransitiveClosure(*$1, 1,*$4);
                  delete $1;
                  delete $4;
 	       }
-	 | MINIMIZE_RANGE relation %prec p8
+	 | MINIMIZE_RANGE relation %prec OMEGA_P8
 		{
 		Relation o(*$2);
 		Relation r(*$2);
@@ -688,7 +688,7 @@ relation : OPEN_BRACE
 		*$$ = Difference(o,r);
 		delete $2;
 		}
-	 | MAXIMIZE_RANGE relation %prec p8
+	 | MAXIMIZE_RANGE relation %prec OMEGA_P8
 		{
 		Relation o(*$2);
 		Relation r(*$2);
@@ -697,7 +697,7 @@ relation : OPEN_BRACE
 		*$$ = Difference(o,r);
 		delete $2;
 		}
-	 | MINIMIZE_DOMAIN relation %prec p8
+	 | MINIMIZE_DOMAIN relation %prec OMEGA_P8
 		{
 		Relation o(*$2);
 		Relation r(*$2);
@@ -706,7 +706,7 @@ relation : OPEN_BRACE
 		*$$ = Difference(o,r);
 		delete $2;
 		}
-	 | MAXIMIZE_DOMAIN relation %prec p8
+	 | MAXIMIZE_DOMAIN relation %prec OMEGA_P8
 		{
 		Relation o(*$2);
 		Relation r(*$2);
@@ -715,7 +715,7 @@ relation : OPEN_BRACE
 		*$$ = Difference(o,r);
 		delete $2;
 		}
-	 | MAXIMIZE relation %prec p8
+	 | MAXIMIZE relation %prec OMEGA_P8
 		{
 		Relation c(*$2);
 		Relation r(*$2);
@@ -725,7 +725,7 @@ relation : OPEN_BRACE
 		assert($$->n_inp() ==$$->n_out());
 		*$$ = Difference(r,Domain(Intersection(*$$,LexForward($$->n_inp()))));
 		}
-	 | MINIMIZE relation %prec p8
+	 | MINIMIZE relation %prec OMEGA_P8
 		{
 		Relation c(*$2);
 		Relation r(*$2);
@@ -735,131 +735,131 @@ relation : OPEN_BRACE
 		assert($$->n_inp() ==$$->n_out());
 		*$$ = Difference(r,Range(Intersection(*$$,LexForward($$->n_inp()))));
 		}
-         | FARKAS relation   %prec p8
+         | FARKAS relation   %prec OMEGA_P8
 		{
 		$$ = new Relation();
 		*$$ = Farkas(*$2, Basic_Farkas);
 		delete $2;
 		}
-         | DECOUPLED_FARKAS relation   %prec p8
+         | DECOUPLED_FARKAS relation   %prec OMEGA_P8
 		{
 		$$ = new Relation();
 		*$$ = Farkas(*$2, Decoupled_Farkas);
 		delete $2;
 		}
-	 | relation '@' 	%prec p9
+	 | relation '@' 	%prec OMEGA_P9
 		{ $$ = new Relation();
 		  *$$ = ConicClosure(*$1);
 		  delete $1;
 		}
-	 | PROJECT_AWAY_SYMBOLS relation   %prec p8
+	 | PROJECT_AWAY_SYMBOLS relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Project_Sym(*$2);
 		  delete $2;
 		}
-	 | PROJECT_ON_SYMBOLS relation   %prec p8
+	 | PROJECT_ON_SYMBOLS relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Project_On_Sym(*$2);
 		  delete $2;
 		}
-	 | DIFFERENCE relation   %prec p8
+	 | DIFFERENCE relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Deltas(*$2);
 		  delete $2;
 		}
-         | DIFFERENCE_TO_RELATION relation   %prec p8
+         | DIFFERENCE_TO_RELATION relation   %prec OMEGA_P8
                 { $$ = new Relation();
                   *$$ = DeltasToRelation(*$2,$2->n_set(),$2->n_set());
                   delete $2;
                 }
-	 | DOMAIN relation   %prec p8
+	 | DOMAIN relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Domain(*$2);
 		  delete $2;
 		}
-	 | VENN relation   %prec p8
+	 | VENN relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = VennDiagramForm(*$2,Relation::True(*$2));
 		  delete $2;
 		}
-	 | VENN relation GIVEN  relation  %prec p8
+	 | VENN relation GIVEN  relation  %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = VennDiagramForm(*$2,*$4);
 		  delete $2;
 		  delete $4;
 		}
-	 | CONVEX_HULL relation   %prec p8
+	 | CONVEX_HULL relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = ConvexHull(*$2);
 		  delete $2;
 		}
-	 | POSITIVE_COMBINATION relation   %prec p8
+	 | POSITIVE_COMBINATION relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Farkas(*$2,Positive_Combination_Farkas);
 		  delete $2;
 		}
-	 | CONVEX_COMBINATION relation   %prec p8
+	 | CONVEX_COMBINATION relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Farkas(*$2,Convex_Combination_Farkas);
 		  delete $2;
 		}
-	 | PAIRWISE_CHECK relation   %prec p8
+	 | PAIRWISE_CHECK relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = CheckForConvexRepresentation(CheckForConvexPairs(*$2));
 		  delete $2;
 		}
-	 | CONVEX_CHECK relation   %prec p8
+	 | CONVEX_CHECK relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = CheckForConvexRepresentation(*$2);
 		  delete $2;
 		}
-	 | AFFINE_HULL relation   %prec p8
+	 | AFFINE_HULL relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = AffineHull(*$2);
 		  delete $2;
 		}
-	 | CONIC_HULL relation   %prec p8
+	 | CONIC_HULL relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = ConicHull(*$2);
 		  delete $2;
 		}
-	 | LINEAR_HULL relation   %prec p8
+	 | LINEAR_HULL relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = LinearHull(*$2);
 		  delete $2;
 		}
-	 | HULL relation   %prec p8
+	 | HULL relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Hull(*$2,false,1,Null_Relation());
 		  delete $2;
 		}
-	 | HULL relation GIVEN relation  %prec p8
+	 | HULL relation GIVEN relation  %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Hull(*$2,false,1,*$4);
 		  delete $2;
 		  delete $4;
 		}
-	 | APPROX relation   %prec p8
+	 | APPROX relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Approximate(*$2);
 		  delete $2;
 		}
-	 | RANGE relation   %prec p8
+	 | RANGE relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Range(*$2);
 		  delete $2;
 		}
-	 | INVERSE relation   %prec p8
+	 | INVERSE relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Inverse(*$2);
 		  delete $2;
 		}
-	 | COMPLEMENT relation   %prec p8
+	 | COMPLEMENT relation   %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Complement(*$2);
 		  delete $2;
 		}
-	 | GIST relation GIVEN relation %prec p8
+	 | GIST relation GIVEN relation %prec OMEGA_P8
 		{ $$ = new Relation();
 		  *$$ = Gist(*$2,*$4,1);
 		  delete $2;
@@ -935,12 +935,12 @@ relation : OPEN_BRACE
                   *$$ = Intersection(*$2, Relation::Unknown(*$2));
                   delete $2;
                 }
-         | MAKE_UPPER_BOUND relation %prec p8
+         | MAKE_UPPER_BOUND relation %prec OMEGA_P8
                 { $$ = new Relation();
                   *$$ = Upper_Bound(*$2);
                   delete $2;
                 } 
-         | MAKE_LOWER_BOUND relation %prec p8
+         | MAKE_LOWER_BOUND relation %prec OMEGA_P8
                 { $$ = new Relation();
                   *$$ = Lower_Bound(*$2);
                   delete $2;
@@ -1044,7 +1044,7 @@ optionalTupleVarList :
 	|
 	;
 
-tupleVar : VAR %prec p10
+tupleVar : VAR %prec OMEGA_P10
 	{ Declaration_Site *ds = defined($1);
 	  if (!ds) currentTupleDescriptor->extend($1,currentTuple,tuplePos);
 	  else {
@@ -1060,11 +1060,11 @@ tupleVar : VAR %prec p10
 	}
 	| '*'
 	{currentTupleDescriptor->extend(); tuplePos++; }
-	| exp %prec p1
+	| exp %prec OMEGA_P1
 	{currentTupleDescriptor->extend($1); tuplePos++; }
-	| exp ':' exp %prec p1
+	| exp ':' exp %prec OMEGA_P1
 	{currentTupleDescriptor->extend($1,$3); tuplePos++; }
-	| exp ':' exp ':' INT %prec p1
+	| exp ':' exp ':' INT %prec OMEGA_P1
 	{currentTupleDescriptor->extend($1,$3,$5); tuplePos++; }
 	;
 
@@ -1137,13 +1137,13 @@ constraintChain : expList REL_OP expList
 		;
 
 simpleExp : 
-	VAR	%prec p9 	
+	VAR	%prec OMEGA_P9 	
 		{ Variable_Ref * v = lookupScalar($1);
 		  if (!v) YYERROR;
 		  $$ = new Exp(v); 
 		  free($1); 
 		  }
-	| VAR '(' {argCount = 1;}  argumentList ')' %prec p9 	
+	| VAR '(' {argCount = 1;}  argumentList ')' %prec OMEGA_P9 	
 		{Variable_Ref *v;
 		 if ($4 == Input_Tuple) v = functionOfInput[$1];
 		 else v = functionOfOutput[$1];
