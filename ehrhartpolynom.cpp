@@ -227,7 +227,7 @@ PeriodicNumber PeriodicNumber::operator+(const PeriodicNumber& pn2) const
   // now fill in the correct values.
   Value tmp;
   value_init(tmp);
-  for(unsigned long i=0;i<datasize;i++) {
+  for(unsigned long i=0;i<result.datasize;i++) {
     // find out which period-values for which parameters
     // map to data[i].
     map<string, int> index;
