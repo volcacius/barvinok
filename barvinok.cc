@@ -418,36 +418,46 @@ void count(Polyhedron *P, Value* result)
 	Polyhedron_Free(C);
 	Polyhedron_Print(stdout, P_VALUE_FMT, Polar);
 
-	Polyhedron *polpos, *polneg;
-	decompose(Polar, &polpos, &polneg);
-	Polyhedron_Free(Polar);
-
-	puts("Pos:");
-	Polyhedron_Print(stdout, P_VALUE_FMT, polpos);
-
-	puts("Neg:");
-	Polyhedron_Print(stdout, P_VALUE_FMT, polneg);
+	Polyhedron *Polars;
+	if (Polar->NbRays - 1 == Polar->Dimension)
+	    Polars = Polar;
+	else {
+	    Polars = triangularize_cone(Polar, 600);
+	    Polyhedron_Free(Polar);
+	}
 
 	Polyhedron ** conep = &vcone[j];
 	*conep = NULL;
-	for (Polyhedron *i = polpos; i; i = i->next) {
-	    Polyhedron *A = Polyhedron_Polar(i, 600);
-	    *conep = A;
-	    conep = &A->next;
-	    assert(A->NbRays-1 == dim);
-	    sign.SetLength(++ncone);
-	    sign[ncone-1] = 1;
+	for (Polar = Polars; Polar; Polar = Polar->next) {
+	    Polyhedron *polpos, *polneg;
+	    decompose(Polar, &polpos, &polneg);
+
+	    puts("Pos:");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, polpos);
+
+	    puts("Neg:");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, polneg);
+
+	    for (Polyhedron *i = polpos; i; i = i->next) {
+		Polyhedron *A = Polyhedron_Polar(i, 600);
+		*conep = A;
+		conep = &A->next;
+		assert(A->NbRays-1 == dim);
+		sign.SetLength(++ncone);
+		sign[ncone-1] = 1;
+	    }
+	    for (Polyhedron *i = polneg; i; i = i->next) {
+		Polyhedron *A = Polyhedron_Polar(i, 600);
+		*conep = A;
+		conep = &A->next;
+		assert(A->NbRays-1 == dim);
+		sign.SetLength(++ncone);
+		sign[ncone-1] = -1;
+	    }
+	    Domain_Free(polpos);
+	    Domain_Free(polneg);
 	}
-	for (Polyhedron *i = polneg; i; i = i->next) {
-	    Polyhedron *A = Polyhedron_Polar(i, 600);
-	    *conep = A;
-	    conep = &A->next;
-	    assert(A->NbRays-1 == dim);
-	    sign.SetLength(++ncone);
-	    sign[ncone-1] = -1;
-	}
-	Domain_Free(polpos);
-	Domain_Free(polneg);
+	Domain_Free(Polars);
 
 	puts("Cones:");
 	Polyhedron_Print(stdout, P_VALUE_FMT, vcone[j]);
