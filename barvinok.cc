@@ -2190,6 +2190,96 @@ static evalue* enumerate_line(Polyhedron *P,
     return enumerate_cyclic(P, exist, nparam, EP, 0, i, MaxRays);
 }
 
+static int single_param_pos(Polyhedron*P, unsigned exist, unsigned nparam, 
+			    int r)
+{
+    int nvar = P->Dimension - exist - nparam;
+    if (First_Non_Zero(P->Ray[r]+1, nvar) != -1)
+	return -1;
+    int i = First_Non_Zero(P->Ray[r]+1+nvar+exist, nparam);
+    if (i == -1)
+	return -1;
+    if (First_Non_Zero(P->Ray[r]+1+nvar+exist+1, nparam-i-1) != -1)
+	return -1;
+    return i;
+}
+
+static evalue* enumerate_remove_ray(Polyhedron *P, int r,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+#ifdef DEBUG_ER
+    fprintf(stderr, "\nER: RedundantRay\n");
+#endif /* DEBUG_ER */
+
+    Value one;
+    value_init(one);
+    value_set_si(one, 1);
+    int len = P->NbRays-1;
+    Matrix *M = Matrix_Alloc(2 * len, P->Dimension+2);
+    Vector_Copy(P->Ray[0], M->p[0], r * (P->Dimension+2));
+    Vector_Copy(P->Ray[r+1], M->p[r], (len-r) * (P->Dimension+2));
+    for (int j = 0; j < P->NbRays; ++j) {
+	if (j == r)
+	    continue;
+	Vector_Combine(P->Ray[j], P->Ray[r], M->p[len+j-(j>r)], 
+		       one, P->Ray[j][P->Dimension+1], P->Dimension+2);
+    }
+
+    P = Rays2Polyhedron(M, MaxRays);
+    Matrix_Free(M);
+    evalue *EP = barvinok_enumerate_e(P, exist, nparam, MaxRays);
+    Polyhedron_Free(P);
+    value_clear(one);
+
+    return EP;
+}
+
+static evalue* enumerate_redundant_ray(Polyhedron *P,
+			  unsigned exist, unsigned nparam, unsigned MaxRays)
+{
+    assert(P->NbBid == 0);
+    int nvar = P->Dimension - exist - nparam;
+    Value m;
+    value_init(m);
+
+    for (int r = 0; r < P->NbRays; ++r) {
+	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
+	    continue;
+	int i1 = single_param_pos(P, exist, nparam, r);
+	if (i1 == -1)
+	    continue;
+	for (int r2 = r+1; r2 < P->NbRays; ++r2) {
+	    if (value_notzero_p(P->Ray[r2][P->Dimension+1]))
+		continue;
+	    int i2 = single_param_pos(P, exist, nparam, r2);
+	    if (i2 == -1)
+		continue;
+	    if (i1 != i2)
+		continue;
+
+	    value_division(m, P->Ray[r][1+nvar+exist+i1], 
+			      P->Ray[r2][1+nvar+exist+i1]);
+	    value_multiply(m, m, P->Ray[r2][1+nvar+exist+i1]);
+	    /* r2 divides r => r redundant */
+	    if (value_eq(m, P->Ray[r][1+nvar+exist+i1])) {
+		value_clear(m);
+		return enumerate_remove_ray(P, r, exist, nparam, MaxRays);
+	    }
+
+	    value_division(m, P->Ray[r2][1+nvar+exist+i1], 
+			      P->Ray[r][1+nvar+exist+i1]);
+	    value_multiply(m, m, P->Ray[r][1+nvar+exist+i1]);
+	    /* r divides r2 => r2 redundant */
+	    if (value_eq(m, P->Ray[r2][1+nvar+exist+i1])) {
+		value_clear(m);
+		return enumerate_remove_ray(P, r2, exist, nparam, MaxRays);
+	    }
+	}
+    }
+    value_clear(m);
+    return 0;
+}
+
 static evalue* enumerate_ray(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
@@ -2848,6 +2938,10 @@ next:
     EP = enumerate_line(P, exist, nparam, MaxRays);
     if (EP)
 	return EP;
+
+    EP = enumerate_redundant_ray(P, exist, nparam, MaxRays);
+    if (EP)
+	goto out;
 
     EP = enumerate_sure(P, exist, nparam, MaxRays);
     if (EP)
