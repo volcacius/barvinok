@@ -382,6 +382,10 @@ struct dpoly_r_term {
     ZZ	    coeff;
 };
 
+/* len: number of elements in c
+ * each element in c is the coefficient of a power of t
+ * in the MacLaurin expansion
+ */
 struct dpoly_r {
     vector< dpoly_r_term * >	*c;
     int len;
@@ -1379,15 +1383,10 @@ void lattice_point(
     value_clear(tmp);
 }
 
-void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign, ZZ& num, vec_ZZ& den)
+static void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
 {
-    unsigned dim = i->Dimension;
+    unsigned dim = den.length();
 
-    int r = 0;
-    mat_ZZ rays;
-    rays.SetDims(dim, dim);
-    add_rays(rays, i, &r);
-    den = rays * lambda;
     int change = 0;
 
     for (int j = 0; j < den.length(); ++j) {
@@ -1398,6 +1397,61 @@ void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign, ZZ& num, vec_ZZ& den)
 	    num += den[j];
 	}
     }
+    if (change)
+	sign = -sign;
+}
+
+/* input:
+ *	f: the powers in the denominator for the remaining vars
+ *	      each row refers to a factor
+ *      den_s: for each factor, the power of  (s+1)
+ *	sign
+ *	num_s: powers in the numerator corresponding to the summed vars
+ *	num_p: powers in the numerator corresponidng to the remaining vars
+ * number of rays in cone: "dim" = "k"
+ * length of each ray: "dim" = "d"
+ * for now, it is assume: k == d
+ * output:
+ *	den_p: for each factor
+ *		0: independent of remaining vars
+ *		1: power corresponds to corresponding row in f
+ *	       -1: power is inverse of corresponding row in f
+ */
+static void normalize(ZZ& sign,
+		      ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
+		      mat_ZZ& f)
+{
+    unsigned dim = f.NumRows();
+    unsigned nparam = num_p.length();
+    unsigned nvar = dim - nparam;
+
+    int change = 0;
+
+    for (int j = 0; j < den_s.length(); ++j) {
+	if (den_s[j] == 0) {
+	    den_p[j] = 1;
+	    continue;
+	}
+	int k;
+	for (k = 0; k < nparam; ++k)
+	    if (f[j][k] != 0)
+		break;
+	if (k < nparam) {
+	    if (den_s[j] > 0) {
+		den_p[j] = -1;
+		num_p -= f[j];
+	    } else
+		den_p[j] = 1;
+	} else
+	    den_p[j] = 0;
+	if (den_s[j] > 0)
+	    change ^= 1;
+	else {
+	    den_s[j] = abs(den_s[j]);
+	    num_s += den_s[j];
+	}
+    }
+
     if (change)
 	sign = -sign;
 }
@@ -1445,7 +1499,8 @@ void counter::handle_polar(Polyhedron *C, int s)
 
     lattice_point(P->Ray[j]+1, C, vertex);
     num = vertex * lambda;
-    normalize(C, lambda, sign, num, den);
+    den = rays * lambda;
+    normalize(sign, num, den);
 
     dpoly d(dim, num);
     dpoly n(dim, den[0], 1);
@@ -1758,7 +1813,8 @@ void enumerator::handle_polar(Polyhedron *C, int s)
     sign = s;
 
     lattice_point(V, C, lambda, &num, 0);
-    normalize(C, lambda, sign, num.constant, den);
+    den = rays * lambda;
+    normalize(sign, num.constant, den);
 
     dpoly n(dim, den[0], 1);
     for (int k = 1; k < dim; ++k) {
@@ -3507,48 +3563,6 @@ out:
     return EP;
 }
 
-static void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign,
-		      ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
-		      mat_ZZ& f)
-{
-    unsigned dim = i->Dimension;
-    unsigned nparam = num_p.length();
-    unsigned nvar = dim - nparam;
-
-    int r = 0;
-    mat_ZZ rays;
-    rays.SetDims(dim, nvar);
-    add_rays(rays, i, &r, nvar, true);
-    den_s = rays * lambda;
-    int change = 0;
-
-
-    for (int j = 0; j < den_s.length(); ++j) {
-	values2zz(i->Ray[j]+1+nvar, f[j], nparam);
-	if (den_s[j] == 0) {
-	    den_p[j] = 1;
-	    continue;
-	}
-	if (First_Non_Zero(i->Ray[j]+1+nvar, nparam) != -1) {
-	    if (den_s[j] > 0) {
-		den_p[j] = -1;
-		num_p -= f[j];
-	    } else
-		den_p[j] = 1;
-	} else
-	    den_p[j] = 0;
-	if (den_s[j] > 0)
-	    change ^= 1;
-	else {
-	    den_s[j] = abs(den_s[j]);
-	    num_s += den_s[j];
-	}
-    }
-
-    if (change)
-	sign = -sign;
-}
-
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Polyhedron ** vcone;
@@ -3626,6 +3640,8 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     gen_fun * gf = new gen_fun;
 
+    rays.SetDims(dim, nvar);
+
     for (int j = 0; j < P->NbRays; ++j) {
 	if (!value_pos_p(P->Ray[j][dim+1]))
 	    continue;
@@ -3638,8 +3654,14 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		num_s += vertex[k] * lambda[k];
 	    for ( ; k < dim; ++k)
 		num_p[k-nvar] = vertex[k];
-	    normalize(i, lambda, sign[f], num_s, num_p, 
-		      den_s, den_p, den);
+
+	    int r = 0;
+	    add_rays(rays, i, &r, nvar, true);
+	    for (r = 0; r < dim; ++r)
+		values2zz(i->Ray[r]+1+nvar, den[r], nparam);
+	    den_s = rays * lambda;
+
+	    normalize(sign[f], num_s, num_p, den_s, den_p, den);
 
 	    int only_param = 0;
 	    int no_param = 0;
