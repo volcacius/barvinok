@@ -606,6 +606,26 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     return P;
 }
 
+/*
+ * Replaces constraint a x >= c by x >= ceil(c/a)
+ * where "a" is a common factor in the coefficients
+ * old is the constraint; v points to an initialized
+ * value that this procedure can use.
+ * Return non-zero if something changed.
+ * Result is places in new.
+ */
+int ConstraintSimplify(Value *old, Value *new, int len, Value* v)
+{
+    Vector_Gcd(old+1, len - 2, v);
+
+    if (value_one_p(*v))
+	return 0;
+
+    Vector_AntiScale(old+1, new+1, *v, len-2);
+    mpz_fdiv_q(new[len-1], old[len-1], *v);
+    return 1;
+}
+
 struct section { Polyhedron * D; evalue E; };
 
 static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar, 
@@ -671,6 +691,8 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 				       tmp,
 				       P->Constraint[singles[i][1+k]][i+1],
 				       dim-nvar+1);
+			ConstraintSimplify(M->p[q], M->p[q], 
+					   dim-nvar+2, &tmp);
 			if (k2 > k)
 			    value_decrement(M->p[q][dim-nvar+1],
 					    M->p[q][dim-nvar+1]);
@@ -688,6 +710,8 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 					   tmp,
 					   P->Constraint[singles[i][1+l2]][i+1],
 					   dim-nvar+1);
+			    ConstraintSimplify(M->p[q], M->p[q], 
+					       dim-nvar+2, &tmp);
 			    if (l2 > l)
 				value_decrement(M->p[q][dim-nvar+1],
 						M->p[q][dim-nvar+1]);

@@ -1369,10 +1369,7 @@ static Polyhedron *simplify_constraints(Polyhedron *P, unsigned MaxRays)
      * will add a conflicting constraint
      */
     for (int r = 0; r < P->NbConstraints; ++r) {
-	Vector_Gcd(P->Constraint[r]+1, len - 2, &g);
-	if (value_notone_p(g)) {
-	    Vector_AntiScale(P->Constraint[r]+1, row->p+1, g, len-2);
-	    mpz_fdiv_q(row->p[len-1], P->Constraint[r][len-1], g);
+	if (ConstraintSimplify(P->Constraint[r], row->p, len, &g)) {
 	    T = R;
 	    R = AddConstraints(row->p, 1, R, MaxRays);
 	    if (T != P)
