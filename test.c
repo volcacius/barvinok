@@ -16,14 +16,14 @@ static void time_diff(struct tms *before, struct tms *after)
 
 int main()
 {
-    int i, nbPol, nbMat, func, j;
+    int i, nbPol, nbVec, func, j;
     Polyhedron *A, *B, *C, *D, *E, *F, *G;
     char s[128];
 
-    nbPol = nbMat = 0;
+    nbPol = nbVec = 0;
     fgets(s, 128, stdin);
     while ((*s=='#') ||
-	    ((sscanf(s, "D %d", &nbPol)<1) && (sscanf(s, "M %d", &nbMat)<1)) )
+	    ((sscanf(s, "D %d", &nbPol)<1) && (sscanf(s, "V %d", &nbVec)<1)) )
 	fgets(s, 128, stdin);
 
     for (i = 0; i < nbPol; ++i) {
@@ -127,6 +127,13 @@ int main()
 	}
 	}
 	Polyhedron_Free(A);
+    }
+    for (i = 0; i < nbVec; ++i) {
+	Vector *V = Vector_Read();
+	Matrix *M = unimodular_complete(V);
+	Matrix_Print(stdout, P_VALUE_FMT, M);
+	Matrix_Free(M);
+	Vector_Free(V);
     }
 
     return 0;

@@ -15,6 +15,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T);
 Polyhedron *remove_equalities(Polyhedron *P);
 void manual_count(Polyhedron *P, Value* result);
 Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
+Matrix * unimodular_complete(Vector *row);
 
 #if defined(__cplusplus)
 }
