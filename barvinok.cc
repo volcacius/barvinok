@@ -28,6 +28,18 @@ static void value2zz(Value v, ZZ& z)
     SIZE(z.rep) = sa;
 }
 
+static void zz2value(ZZ& z, Value& v)
+{
+    int sa = SIZE(z.rep);
+    int abs_sa = sa < 0 ? -sa : sa;
+
+    mp_limb_t * adata = DATA(z.rep);
+    mpz_realloc2(v, __GMP_BITS_PER_MP_LIMB * abs_sa);
+    for (int i = 0; i < abs_sa; ++i)
+	v[0]._mp_d[i] = adata[i];
+    v[0]._mp_size = sa;
+}
+
 /*
  * We just ignore the last column and row
  * If the final element is not equal to one
@@ -102,6 +114,12 @@ public:
 	cout << A << endl;
 	det = determinant(A);
 	cout << "det: " << det << endl;
+	Value v;
+	value_init(v);
+	zz2value(det, v);
+	value_print(stdout, P_VALUE_FMT, v);
+	puts("");
+	value_clear(v);
     }
 
     void short_vector() {
