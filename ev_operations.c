@@ -193,17 +193,6 @@ static int relations_depth(evalue *e)
     return d;
 }
 
-static void Lcm3(Value i, Value j, Value *res)
-{
-    Value aux;
-
-    value_init(aux);
-    Gcd(i,j,&aux);
-    value_multiply(*res,i,j);
-    value_division(*res, *res, aux);  
-    value_clear(aux);
-}
-
 static void poly_denom(evalue *p, Value *d)
 {
     value_set_si(*d, 1);
@@ -212,10 +201,10 @@ static void poly_denom(evalue *p, Value *d)
 	assert(p->x.p->type == polynomial);
 	assert(p->x.p->size == 2);
 	assert(value_notzero_p(p->x.p->arr[1].d));
-	Lcm3(*d, p->x.p->arr[1].d, d);
+	value_lcm(*d, p->x.p->arr[1].d, d);
 	p = &p->x.p->arr[0];
     }
-    Lcm3(*d, p->d, d);
+    value_lcm(*d, p->d, d);
 }
 
 #define EVALUE_IS_ONE(ev)	(value_one_p((ev).d) && value_one_p((ev).x.n))
@@ -1897,7 +1886,7 @@ void evalue_mod2table(evalue *e, int nparam)
       assert(p->type == polynomial);
       assert(p->size == 2);
       value_assign(periods->p[p->pos-1], p->arr[1].d);
-      Lcm3(tmp, p->arr[1].d, &tmp);
+      value_lcm(tmp, p->arr[1].d, &tmp);
     }
     value_init(EP.d);
     mod2table_r(&p->arr[0], periods, tmp, 0, val, &EP);
@@ -2183,7 +2172,7 @@ static evalue *find_second(evalue *base, evalue *cst, evalue *e, Value m)
     value_init(offset.d);
     value_init(offset.x.n);
     poly_denom(&e->x.p->arr[0], &offset.d);
-    Lcm3(m, offset.d, &offset.d);
+    value_lcm(m, offset.d, &offset.d);
     value_set_si(offset.x.n, 1);
 
     value_init(copy.d);
