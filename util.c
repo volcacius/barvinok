@@ -47,7 +47,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
     Matrix *M;
     Value tmp;
     int i, n, j;
-    unsigned char *supporting = (unsigned char *)malloc(P->NbRays);
+    unsigned char *supporting = (unsigned char *)malloc(P->NbConstraints);
     unsigned dim = P->Dimension + 2;
 
     assert(v >=0 && v < P->NbRays);
