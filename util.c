@@ -951,6 +951,12 @@ Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays)
 	prev = &T->next;
     }
 
+    if (R->next && emptyQ(R)) {
+	N = R->next;
+	Polyhedron_Free(R);
+	R = N;
+    }
+
     value_clear(g);
     Vector_Free(row);
     return R;
