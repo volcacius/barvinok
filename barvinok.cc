@@ -697,7 +697,7 @@ static void mask(Matrix *f, evalue *factor)
 	    continue;
 	value_init(EP.d);
 	value_set_si(EP.d, 0);
-	EP.x.p = new_enode(indicator, 2, 0);
+	EP.x.p = new_enode(relation, 2, 0);
 	value_clear(EP.x.p->arr[1].d);
 	EP.x.p->arr[1] = *factor;
 	evalue *ev = &EP.x.p->arr[0];

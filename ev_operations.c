@@ -216,7 +216,7 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     }
     fprintf(DST, " )\n");
     break;
-  case indicator:
+  case relation:
     fprintf(DST, "[ ");
     print_evalue(DST, &p->arr[0], pname);
     fprintf(DST, "= 0 ] * \n");
@@ -501,7 +501,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
     return;
 }
      
-   if (value_zero_p(res->d) && res->x.p->type == indicator)
+   if (value_zero_p(res->d) && res->x.p->type == relation)
 	emul(e1, &res->x.p->arr[1]);
    else
    if(value_zero_p(e1->d)&& value_zero_p(res->d)) {
@@ -633,7 +633,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		}
 	    }
 	    break;
-       case indicator:
+       case relation:
 	    emul_rev(e1, res);
 	    break;
        default:
@@ -834,7 +834,7 @@ static double compute_enode(enode *p, Value *list_args) {
     value_modulus(m,m,param);
     res = compute_evalue(&p->arr[VALUE_TO_INT(m)],list_args);
   }
-  else if (p->type == indicator) {
+  else if (p->type == relation) {
     if (fabs(compute_evalue(&p->arr[0], list_args)) < 0.5)
       res = compute_evalue(&p->arr[1], list_args);
   }
