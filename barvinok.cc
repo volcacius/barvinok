@@ -552,6 +552,18 @@ static void vertex_period(deque<string>& params,
     value_clear(tmp);
 }
 
+static EhrhartPolynom *multi_mononom(deque<string>& params, vec_ZZ& p)
+{
+    EhrhartPolynom *X = new EhrhartPolynom();
+    unsigned nparam = p.length()-1;
+    for (int i = 0; i < nparam; ++i) {
+	EhrhartPolynom *T = term(params[i], p[i]);
+	*X += *T;
+	delete T;
+    }
+    return X;
+}
+
 void lattice_point(deque<string>& params, 
     Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, vec_ZZ& num,
     EhrhartPolynom **E)
@@ -606,6 +618,20 @@ void lattice_point(deque<string>& params,
 	values2zz(V->Vertex->p[i], vertex[i], nparam+1);
     }
     num = lambda * vertex;
+
+    int p = -1;
+    int nn = 0;
+    for (int j = 0; j < nparam; ++j)
+	if (num[j] != 0) {
+	    ++nn;
+	    p = j;
+	}
+    if (nn >= 2) {
+	*E = multi_mononom(params, num);
+	// num[nparam] unchanged
+	num[0] = 0;
+    }
+
     value_clear(lcm);
     value_clear(tmp);
 }
@@ -829,18 +855,6 @@ static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, EhrhartPo
     return res;
 }
 
-static EhrhartPolynom *multi_polynom(deque<string>& params, Vector *c, vec_ZZ& p)
-{
-    EhrhartPolynom X;
-    unsigned nparam = p.length()-1;
-    for (int i = 0; i < nparam; ++i) {
-	EhrhartPolynom *T = term(params[i], p[i]);
-	X += *T;
-	delete T;
-    }
-    return multi_polynom(params, c, X);
-}
-
 static EhrhartPolynom *constant(mpq_t c)
 {
     evalue EP;
@@ -941,13 +955,12 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	    }
 	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	vec_ZZ min = num[0];
+	ZZ min = num[0][nparam];
 	for (int j = 1; j < num.NumRows(); ++j)
-	    for (int k = 0; k < num[j].length(); ++k)
-		if (num[j][k] < min[k])
-		    min[k] = num[j][k];
+	    if (num[j][nparam] < min)
+		min = num[j][nparam];
 	for (int j = 0; j < num.NumRows(); ++j)
-	    num[j] -= min;
+	    num[j][nparam] -= min;
 	f = 0;
 	j = 0;
 	Vector *c = Vector_Alloc(dim+2);
@@ -970,7 +983,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		    }
 		if (E[f] != NULL) {
 		    ZZ one(INIT_VAL, 1);
-		    assert(num[f][0] == 0); // didn't think about this case yet
 		    dpoly_n d(dim, num[f][nparam], one);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *ET = multi_polynom(params, c, *E[f]);
@@ -989,14 +1001,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		    EhrhartPolynom *E = constant(count);
 		    EP += *E;
 		    delete E;
-		} else {
-		    ZZ one(INIT_VAL, 1);
-		    dpoly_n d(dim, num[f][nparam], one);
-		    d.div(n, c, sign[f]);
-		    EhrhartPolynom *E = multi_polynom(params, c, num[f]);
-		    EP += *E;
-		    delete E;
-		}
+		} 
 		++f;
 	    }
 	    ++j;
