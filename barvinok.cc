@@ -411,8 +411,10 @@ void normalize(Value* values, Polyhedron *i, vec_ZZ& lambda,
 	value_set_si(lambda->p[dim], 1);
 	Vector *A = Vector_Alloc(dim+1);
 	Vector_Matrix_Product(lambda->p, Rays, A->p);
+	Vector_Free(lambda);
 	Matrix_Free(Rays);
 	values2zz(A->p, vertex, dim);
+	Vector_Free(A);
     } else
 	values2zz(values, vertex, dim);
 
