@@ -77,19 +77,28 @@ struct subst {
     int			max;
 };
 
-void _reduce_evalue (evalue *e, struct subst *s) {
+void _reduce_evalue (evalue *e, struct subst *s, int m) {
   
     enode *p;
     int i, j, k;
   
-    if (value_notzero_p(e->d))
+    if (value_notzero_p(e->d)) {
+	if (m) {
+	    assert(value_one_p(e->d));
+	    value_set_si(e->d, m);
+	    mpz_fdiv_r(e->x.n, e->x.n, e->d);
+	    value_set_si(e->d, 1);
+	}
         return;	/* a rational number, its already reduced */
+    }
+
     if(!(p = e->x.p))
         return;	/* hum... an overflow probably occured */
   
     /* First reduce the components of p */
     for (i=0; i<p->size; i++)
-        _reduce_evalue(&p->arr[i], s);
+        _reduce_evalue(&p->arr[i], s, 
+		       (i == 0 && p->type==modulo) ? p->pos : m);
 
     if (p->type==periodic) {
     
@@ -276,7 +285,7 @@ void reduce_evalue (evalue *e) {
 		for (j = 0; j < D->NbEq; ++j)
 		    add_substitution(&s, D->Constraint[j], dim);
 	    }
-	    _reduce_evalue(&e->x.p->arr[2*i+1], &s);
+	    _reduce_evalue(&e->x.p->arr[2*i+1], &s, 0);
 	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
 discard:
 		free_evalue_refs(&e->x.p->arr[2*i+1]);
@@ -298,7 +307,7 @@ discard:
 	if (s.max != 0)
 	    free(s.fixed);
     } else
-	_reduce_evalue(e, 0);
+	_reduce_evalue(e, 0, 0);
 }
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
