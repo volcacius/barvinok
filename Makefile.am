@@ -1,6 +1,6 @@
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
-		  verif_ehrhart
+		  verif_ehrhart barvinok_enumerate_e
 
 libbarvinok_la_SOURCES = \
     ev_operations.c \
