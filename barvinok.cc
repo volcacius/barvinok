@@ -264,11 +264,16 @@ public:
 	    mpq_set_z(qtmp, tmp);
 	    mpq_div(c[i], c[i], qtmp);
 	}
-	delete [] c;
 	if (sign == -1)
 	    mpq_sub(count, count, c[len-1]);
 	else
 	    mpq_add(count, count, c[len-1]);
+
+	value_clear(tmp);
+	mpq_clear(qtmp);
+	for (int i = 0; i < len; ++i)
+	    mpq_clear(c[i]);
+	delete [] c;
     }
 };
 
@@ -527,6 +532,7 @@ void count(Polyhedron *P)
 	    ++f;
 	}
     }
+    mpq_clear(count);
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Domain_Free(vpos[j]);
