@@ -393,6 +393,8 @@ struct dpoly_r {
     ZZ denom;
 
     void add_term(int i, int * powers, ZZ& coeff) {
+	if (coeff == 0)
+	    return;
 	for (int k = 0; k < c[i].size(); ++k) {
 	    if (memcmp(c[i][k]->powers, powers, dim * sizeof(int)) == 0) {
 		c[i][k]->coeff += coeff;
