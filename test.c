@@ -125,6 +125,20 @@ int main()
 	    value_clear(f);
 	    break;
 	}
+	case 8: {
+	    Enumeration *en;
+	    Matrix *M = Matrix_Read();
+	    char **param_name;
+	    C = Constraints2Polyhedron(M, 600);
+	    Matrix_Free(M);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
+	    en = barvinok_enumerate(A, C, 600);
+	    param_name = Read_ParamNames(stdin, C->Dimension);
+	    print_evalue(stdout, &en->EP, param_name);
+	    Enumeration_Free(en);
+	    Polyhedron_Free(C);
+	}
 	}
 	Polyhedron_Free(A);
     }
