@@ -299,13 +299,12 @@ you_lose:   	/* OK, lets not do it */
 		int divide = value_notone_p(s->fixed[k].d);
 		evalue d;
 
-		if (divide && fract)
-		    continue;
-
 		if (value_notzero_p(s->fixed[k].m)) {
 		    if (!fract)
 			continue;
 		    assert(p->size == 2);
+		    if (divide && value_ne(s->fixed[k].d, p->arr[1].x.n))
+			continue;
 		    if (!mpz_divisible_p(s->fixed[k].m, p->arr[1].d))
 			continue;
 		    divide = 1;
@@ -371,10 +370,10 @@ you_lose:   	/* OK, lets not do it */
 	    evalue *pp = &p->arr[0];
 	    assert(value_zero_p(pp->d) && pp->x.p->type == polynomial);
 	    assert(pp->x.p->size == 2);
-	    f = &pp->x.p->arr[1];
 
 	    /* search for exact duplicate among the modulo inequalities */
 	    do {
+		f = &pp->x.p->arr[1];
 		for (k = 0; s && k < s->n; ++k) {
 		    if (-s->fixed[k].pos == pp->x.p->pos &&
 			    value_eq(s->fixed[k].d, f->x.n) &&
