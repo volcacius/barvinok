@@ -35,6 +35,20 @@ int main()
 	    fgets(s, 128, stdin);
 
 	switch(func) {
+	case 0: {
+	    Value cb, ck;
+	    value_init(cb);
+	    value_init(ck);
+	    fgets(s, 128, stdin);
+	    while ((*s=='#') || (value_read(ck, s) != 0))
+		fgets(s, 128, stdin);
+	    barvinok_count(A, &cb);
+	    if (value_ne(cb, ck))
+		return -1;
+	    value_clear(cb);
+	    value_clear(ck);
+	    break;
+	}
 	case 1:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    B = Polyhedron_Polar(A, 600);

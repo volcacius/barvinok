@@ -14,3 +14,9 @@ test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
 
 EXTRA_DIST = ChangeLog
+
+check:
+	@for i in $(top_srcdir)/tests/*; do \
+	    echo -n $$i; \
+	    ./test < $$i && echo " ok"; \
+	done
