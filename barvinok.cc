@@ -1895,33 +1895,31 @@ ONE_NEG = 1 << 1,
 INDEPENDENT = 1 << 2,
 };
 
-static evalue* enumerate_or(Polyhedron *pos, Polyhedron *neg,
+static evalue* enumerate_or(Polyhedron *D,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: Or\n");
 #endif /* DEBUG_ER */
 
-    evalue *EN = 
-	barvinok_enumerate_e(neg, exist, nparam, MaxRays);
+    Polyhedron *N = D->next;
+    D->next = 0;
     evalue *EP = 
-	barvinok_enumerate_e(pos, exist, nparam, MaxRays);
-    evalue E;
-    value_init(E.d);
-    evalue_copy(&E, EP);
-    eadd(EN, &E);
-    emul(EN, EP);
-    free_evalue_refs(EN); 
-    value_init(EN->d);
-    evalue_set_si(EN, -1, 1);
-    emul(EN, EP);
-    eadd(&E, EP);
+	barvinok_enumerate_e(D, exist, nparam, MaxRays);
+    Polyhedron_Free(D);
 
-    free_evalue_refs(EN); 
-    free(EN);
-    free_evalue_refs(&E); 
-    Polyhedron_Free(neg);
-    Polyhedron_Free(pos);
+    for (D = N; D; D = N) {
+	N = D->next;
+	D->next = 0;
+
+	evalue *EN = 
+	    barvinok_enumerate_e(D, exist, nparam, MaxRays);
+
+	eor(EN, EP);
+	free_evalue_refs(EN); 
+	free(EN);
+	Polyhedron_Free(D);
+    }
 
     reduce_evalue(EP);
 
@@ -2484,7 +2482,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 #ifdef DEBUG_ER
 		    fprintf(stderr, "\nER: Vertex\n");
 #endif /* DEBUG_ER */
-		    EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
+		    pos->next = neg;
+		    EP = enumerate_or(pos, exist, nparam, MaxRays);
 		    break;
 		}
 		if (EP)
@@ -2529,7 +2528,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 #ifdef DEBUG_ER
 		    fprintf(stderr, "\nER: ParamVertex\n");
 #endif /* DEBUG_ER */
-		    EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
+		    pos->next = neg;
+		    EP = enumerate_or(pos, exist, nparam, MaxRays);
 		    break;
 		}
 		if (EP)
@@ -2893,7 +2893,8 @@ next:
 
     assert (i < exist);
 
-    EP = enumerate_or(pos, neg, exist, nparam, MaxRays);
+    pos->next = neg;
+    EP = enumerate_or(pos, exist, nparam, MaxRays);
 
 out2:
     if (O != P)
