@@ -805,6 +805,15 @@ static void mask(Matrix *f, evalue *factor)
 	    evalue_set_si(factor, 0, 1);
 	    break;
 	}
+	vec_ZZ row;
+	values2zz(f->p[n], row, nc-1);
+	ZZ g;
+	value2zz(m, g);
+	if (j < (nc-1)-1 && row[j] > g/2) {
+	    for (int k = j; k < (nc-1); ++k)
+		if (row[k] != 0)
+		    row[k] = g - row[k];
+	}
 
 	value_init(EP.d);
 	value_set_si(EP.d, 0);
@@ -816,8 +825,6 @@ static void mask(Matrix *f, evalue *factor)
 	ev->x.p = new_enode(modulo, 3, VALUE_TO_INT(m));
 	evalue_set_si(&ev->x.p->arr[1], 0, 1);
 	evalue_set_si(&ev->x.p->arr[2], 1, 1);
-	vec_ZZ row;
-	values2zz(f->p[n], row, nc-1);
 	evalue *E = multi_monom(row);
 	value_clear(ev->x.p->arr[0].d);
 	ev->x.p->arr[0] = *E;
