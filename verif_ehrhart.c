@@ -94,47 +94,44 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
       printf(" ");
 #endif
 
-#ifndef INT_COUNT_POINTS
       /* Count manually the number of points */
+#ifndef INT_COUNT_POINTS
       count_points(1,S,z,&tmp);
 #else
 		cc = count_points(1,S,z);
 #ifdef PRINT_ALL_RESULTS
 	printf(", count = %d. ",cc);
 #endif
-
-#endif
-
-#ifdef INT_COUNT_POINTS
       value_set_si(tmp,cc);
-#endif
+#endif /* INT_COUNT_POINTS */
+
       if(value_ne(tmp,c)) {
-	printf("\n"); 
-	fflush(stdout);
-	fprintf(stderr,"Error !\n");
-	fprintf(stderr,"EP( ");
-	value_print(stderr,VALUE_FMT,z[S->Dimension-nparam+1]);
-	for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-	  fprintf(stderr,", ");
-	  value_print(stderr,VALUE_FMT,z[k]);
-	}
-	fprintf(stderr," ) should be ");
-	value_print(stderr,VALUE_FMT,tmp);
-	fprintf(stderr,", while EP eval gives ");
-	value_print(stderr,VALUE_FMT,c);
-	fprintf(stderr,".\n");
-	{
-	    Enumeration_Print(stderr, en, params);
-	    Enumeration *ee;
-	    ee = en;
-	    while (ee) {
-		if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
-		    Print_Domain(stderr, ee->ValidityDomain, params);
-		    print_evalue(stderr, &ee->EP, params);
-		}
-		ee = ee->next;
-	    }
-	}
+        printf("\n"); 
+        fflush(stdout);
+        fprintf(stderr,"Error !\n");
+        fprintf(stderr,"EP( ");
+        value_print(stderr,VALUE_FMT,z[S->Dimension-nparam+1]);
+        for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
+          fprintf(stderr,", ");
+          value_print(stderr,VALUE_FMT,z[k]);
+        }
+        fprintf(stderr," ) should be ");
+        value_print(stderr,VALUE_FMT,tmp);
+        fprintf(stderr,", while EP eval gives ");
+        value_print(stderr,VALUE_FMT,c);
+        fprintf(stderr,".\n");
+        {
+        	 Enumeration_Print(stderr, en, params);
+        	 Enumeration *ee;
+        	 ee = en;
+        	 while (ee) {
+                if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
+                	 Print_Domain(stderr, ee->ValidityDomain, params);
+                	 print_evalue(stderr, &ee->EP, params);
+                }
+                ee = ee->next;
+          }
+        }
 #ifndef DONT_BREAK_ON_ERROR
 	value_clear(c); value_clear(tmp);
 	return(0);
