@@ -323,8 +323,9 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 	    Matrix* M = Matrix_Copy(c->Rays);
 	    Vector_Copy(v->p, M->p[i], v->Size);
 	    cone * pc = new cone(M);
-	    assert(pc->det != 0);
-	    if (abs(pc->det) > 1) {
+	    if (pc->det == 0)
+		delete pc;
+	    else if (abs(pc->det) > 1) {
 		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
 	    } else {
