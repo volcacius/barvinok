@@ -185,10 +185,6 @@ Polyhedron* triangularize_cone(Polyhedron *P)
 void check_triangulization(Polyhedron *P, Polyhedron *T)
 {
     Polyhedron *C, *D, *E, *F, *G, *U;
-	    puts("whole");
-	    Polyhedron_Print(stdout, P_VALUE_FMT, P);
-	    puts("parts");
-	    Polyhedron_Print(stdout, P_VALUE_FMT, T);
     for (C = T; C; C = C->next) {
 	if (C == T)
 	    U = C;
@@ -200,7 +196,6 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
 	    C->next = NULL;
 	    D->next = NULL;
 	    E = DomainIntersection(C, D, 600);
-	    Polyhedron_Print(stdout, P_VALUE_FMT, E);
 	    assert(E->NbRays == 0 || E->NbEq >= 1);
 	    Polyhedron_Free(E);
 	    C->next = F;
