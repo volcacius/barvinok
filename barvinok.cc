@@ -390,6 +390,7 @@ struct dpoly_r {
     vector< dpoly_r_term * >	*c;
     int len;
     int dim;
+    ZZ denom;
 
     void add_term(int i, int * powers, ZZ& coeff) {
 	for (int k = 0; k < c[i].size(); ++k) {
@@ -405,11 +406,13 @@ struct dpoly_r {
 	c[i].push_back(t);
     }
     dpoly_r(int len, int dim) {
+	denom = 1;
 	this->len = len;
 	this->dim = dim;
 	c = new vector< dpoly_r_term * > [len];
     }
     dpoly_r(dpoly& num, dpoly& den, int pos, int sign, int dim) {
+	denom = 1;
 	len = num.coeff.length();
 	c = new vector< dpoly_r_term * > [len];
 	this->dim = dim;
@@ -433,11 +436,10 @@ struct dpoly_r {
 	}
 	//dump();
     }
-    void div(dpoly& d, ZZ& sign, gen_fun *gf, mat_ZZ& pden, mat_ZZ& den,
-		vec_ZZ& num_p) {
-	dpoly_r rc(len, dim);
-	ZZ max_d = power(d.coeff[0], len+1);
-	ZZ cur_d = max_d;
+    dpoly_r *div(dpoly& d) {
+	dpoly_r *rc = new dpoly_r(len, dim);
+	rc->denom = power(d.coeff[0], len+1);
+	ZZ cur_d = rc->denom;
 	ZZ coeff;
 
 	for (int i = 0; i < len; ++i) {
@@ -445,20 +447,25 @@ struct dpoly_r {
 
 	    for (int k = 0; k < c[i].size(); ++k) {
 		coeff = c[i][k]->coeff * cur_d;
-		rc.add_term(i, c[i][k]->powers, coeff);
+		rc->add_term(i, c[i][k]->powers, coeff);
 	    }
 
 	    for (int j = 1; j <= i; ++j) {
-		for (int k = 0; k < rc.c[i-j].size(); ++k) {
-		    coeff = - d.coeff[j] * rc.c[i-j][k]->coeff / d.coeff[0];
-		    rc.add_term(i, rc.c[i-j][k]->powers, coeff);
+		for (int k = 0; k < rc->c[i-j].size(); ++k) {
+		    coeff = - d.coeff[j] * rc->c[i-j][k]->coeff / d.coeff[0];
+		    rc->add_term(i, rc->c[i-j][k]->powers, coeff);
 		}
 	    }
 	}
+	return rc;
+    }
+    void div(dpoly& d, ZZ& sign, gen_fun *gf, mat_ZZ& pden, mat_ZZ& den,
+		vec_ZZ& num_p) {
+	dpoly_r * rc = div(d);
 	//rc.dump();
 	int common = pden.NumRows();
 
-	vector< dpoly_r_term * >& final = rc.c[len-1];
+	vector< dpoly_r_term * >& final = rc->c[len-1];
 	int rows;
 	for (int j = 0; j < final.size(); ++j) {
 	    rows = common;
@@ -477,8 +484,9 @@ struct dpoly_r {
 		}
 		rows += abs_n;
 	    }
-	    gf->add(final[j]->coeff, max_d, num_p, pden);
+	    gf->add(final[j]->coeff, rc->denom, num_p, pden);
 	}
+	delete rc;
     }
     void dump(void) {
 	for (int i = 0; i < len; ++i) {
