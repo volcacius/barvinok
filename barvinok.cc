@@ -496,6 +496,75 @@ struct dpoly_r {
     }
 };
 
+struct decomposer {
+    void decompose(Polyhedron *C);
+    virtual void handle(Polyhedron *P, int sign) = 0;
+};
+
+struct polar_decomposer : public decomposer {
+    void decompose(Polyhedron *C, unsigned MaxRays);
+    virtual void handle(Polyhedron *P, int sign);
+    virtual void handle_polar(Polyhedron *P, int sign) = 0;
+};
+
+void decomposer::decompose(Polyhedron *C)
+{
+    vector<cone *> nonuni;
+    cone * c = new cone(C);
+    ZZ det = c->det;
+    int s = sign(det);
+    assert(det != 0);
+    if (abs(det) > 1) {
+	nonuni.push_back(c);
+    } else {
+	handle(C, 1);
+	delete c;
+    }
+    vec_ZZ lambda;
+    while (!nonuni.empty()) {
+	c = nonuni.back();
+	nonuni.pop_back();
+	Vector* v = c->short_vector(lambda);
+	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
+	    if (lambda[i] == 0)
+		continue;
+	    Matrix* M = Matrix_Copy(c->Rays);
+	    Vector_Copy(v->p, M->p[i], v->Size);
+	    cone * pc = new cone(M);
+	    assert (pc->det != 0);
+	    if (abs(pc->det) > 1) {
+		assert(abs(pc->det) < abs(c->det));
+		nonuni.push_back(pc);
+	    } else {
+		handle(pc->poly(), sign(pc->det) * s);
+		delete pc;
+	    }
+	    Matrix_Free(M);
+	}
+	Vector_Free(v);
+	delete c;
+    }
+}
+
+void polar_decomposer::decompose(Polyhedron *cone, unsigned MaxRays)
+{
+    Polyhedron_Polarize(cone);
+    if (cone->NbRays - 1 != cone->Dimension) {
+	Polyhedron *tmp = cone;
+	cone = triangularize_cone(cone, MaxRays);
+	Polyhedron_Free(tmp);
+    }
+    for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
+	decomposer::decompose(Polar);
+    Domain_Free(cone);
+}
+
+void polar_decomposer::handle(Polyhedron *P, int sign)
+{
+    Polyhedron_Polarize(P);
+    handle_polar(P, sign);
+}
+
 /*
  * Barvinok's Decomposition of a simplicial cone
  *
@@ -1337,6 +1406,68 @@ void normalize(Polyhedron *i, vec_ZZ& lambda, ZZ& sign, ZZ& num, vec_ZZ& den)
 	sign = -sign;
 }
 
+struct counter : public polar_decomposer {
+    vec_ZZ lambda;
+    mat_ZZ rays;
+    vec_ZZ vertex;
+    vec_ZZ den;
+    ZZ sign;
+    ZZ num;
+    int j;
+    Polyhedron *P;
+    unsigned dim;
+    mpq_t count;
+
+    counter(Polyhedron *P) {
+	this->P = P;
+	dim = P->Dimension;
+	randomvector(P, lambda, dim);
+	rays.SetDims(dim, dim);
+	den.SetLength(dim);
+	mpq_init(count);
+    }
+
+    void start(unsigned MaxRays);
+
+    ~counter() {
+	mpq_clear(count);
+    }
+
+    virtual void handle_polar(Polyhedron *P, int sign);
+};
+
+void counter::handle_polar(Polyhedron *C, int s)
+{
+    int r = 0;
+    assert(C->NbRays-1 == dim);
+    add_rays(rays, C, &r);
+    for (int k = 0; k < dim; ++k) {
+	assert(lambda * rays[k] != 0);
+    }
+
+    sign = s;
+
+    lattice_point(P->Ray[j]+1, C, vertex);
+    num = vertex * lambda;
+    normalize(C, lambda, sign, num, den);
+
+    dpoly d(dim, num);
+    dpoly n(dim, den[0], 1);
+    for (int k = 1; k < dim; ++k) {
+	dpoly fact(dim, den[k], 1);
+	n *= fact;
+    }
+    d.div(n, count, sign);
+}
+
+void counter::start(unsigned MaxRays)
+{
+    for (j = 0; j < P->NbRays; ++j) {
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, MaxRays);
+    }
+}
+
 typedef Polyhedron * Polyhedron_p;
 
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
@@ -1387,60 +1518,11 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	return;
     }
 
-    dim = P->Dimension;
+    counter cnt(P);
+    cnt.start(NbMaxCons);
 
-    vec_ZZ lambda;
-    //nonorthog(rays, lambda);
-    randomvector(P, lambda, dim);
-    //cout << "lambda: " << lambda << endl;
-
-    mat_ZZ rays;
-    rays.SetDims(dim, dim);
-
-    ZZ num;
-    vec_ZZ den;
-    den.SetLength(dim);
-
-    vec_ZZ vertex;
-    mpq_t count;
-    mpq_init(count);
-
-    for (int j = 0; j < P->NbRays; ++j) {
-	Polyhedron *vcone;
-	int npos, nneg;
-	Polyhedron *C = supporting_cone(P, j);
-	decompose(C, &vcone, &npos, &nneg, NbMaxCons);
-
-	Polyhedron *i;
-	int l;
-	for (i = vcone, l = 0; i; i = i->next, ++l) {
-	    r = 0;
-	    assert(i->NbRays-1 == dim);
-	    add_rays(rays, i, &r);
-	    for (int k = 0; k < dim; ++k) {
-		assert(lambda * rays[k] != 0);
-	    }
-
-	    sign = (l < npos) ? 1 : -1;
-
-	    lattice_point(P->Ray[j]+1, i, vertex);
-	    num = vertex * lambda;
-	    normalize(i, lambda, sign, num, den);
-
-	    dpoly d(dim, num);
-	    dpoly n(dim, den[0], 1);
-	    for (int k = 1; k < dim; ++k) {
-		dpoly fact(dim, den[k], 1);
-		n *= fact;
-	    }
-	    d.div(n, count, sign);
-	}
-	Domain_Free(vcone);
-    }
-
-    assert(value_one_p(&count[0]._mp_den));
-    value_multiply(*result, &count[0]._mp_num, factor);
-    mpq_clear(count);
+    assert(value_one_p(&cnt.count[0]._mp_den));
+    value_multiply(*result, &cnt.count[0]._mp_num, factor);
 
     if (allocated)
 	Polyhedron_Free(P);
