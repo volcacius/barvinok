@@ -78,11 +78,12 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
 		if (r->n.power[0] == term[i]->n.power[j])
 		    break;
 	    if (j < len) {
-		ZZ g = GCD(cd, term[i]->n.coeff[j][1]);
-		r->n.coeff[0][0] = term[i]->n.coeff[j][0] * (cd / g) +
-				   (term[i]->n.coeff[j][1] / g) * cn;
-		r->n.coeff[0][1] = term[i]->n.coeff[j][1] / g * cd;
-		term[i]->n.coeff[j] = r->n.coeff[0];
+		ZZ g = GCD(r->n.coeff[0][1], term[i]->n.coeff[j][1]);
+		ZZ n = term[i]->n.coeff[j][0] * (r->n.coeff[0][1] / g) +
+			   (term[i]->n.coeff[j][1] / g) * r->n.coeff[0][0];
+		ZZ d = term[i]->n.coeff[j][1] / g * r->n.coeff[0][1];
+		term[i]->n.coeff[j][0] = n;
+		term[i]->n.coeff[j][1] = d;
 	    } else {
 		int dim = term[i]->n.power.NumCols();
 		term[i]->n.coeff.SetDims(len+1, 2);
