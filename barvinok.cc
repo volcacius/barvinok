@@ -1800,7 +1800,7 @@ struct partial_reducer : public reducer {
     gen_fun * gf;
 
     partial_reducer(Polyhedron *P, unsigned nparam) : reducer(P) {
-	gf = new gen_fun;
+	gf = new gen_fun(Polyhedron_Project(P, nparam));
 	lower = nparam;
 	untouched = nparam;
     }

@@ -27,10 +27,17 @@ struct short_rat {
 
 struct gen_fun {
     std::vector< short_rat * > term;
+    Polyhedron *context;
 
     void add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den);
     void print(unsigned int nparam, char **param_name);
     operator evalue *();
+
+    gen_fun(Polyhedron *C = NULL) : context(C) {}
+    ~gen_fun() {
+	if (context)
+	    Polyhedron_Free(context);
+    }
 };
 
 #endif

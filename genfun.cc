@@ -193,7 +193,7 @@ gen_fun::operator evalue *()
 	unsigned nparam = term[i]->d.power.NumCols();
 	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + nparam + 1); 
 	mat_ZZ& d = term[i]->d.power;
-	Polyhedron *U = Universe_Polyhedron(nparam);
+	Polyhedron *U = context ? context : Universe_Polyhedron(nparam);
 
 	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
 	    for (int r = 0; r < nparam; ++r) {
@@ -229,7 +229,8 @@ gen_fun::operator evalue *()
 	    }
 	}
 	Matrix_Free(C);
-	Polyhedron_Free(U);
+	if (!context)
+	    Polyhedron_Free(U);
     }
     value_clear(factor.d);
     value_clear(factor.x.n);
