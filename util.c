@@ -63,7 +63,7 @@ Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays)
 /*
  * Returns the supporting cone of P at the vertex with index v
  */
-Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
+Polyhedron* supporting_cone(Polyhedron *P, int v)
 {
     Matrix *M;
     Value tmp;
@@ -89,7 +89,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
 	if (supporting[i])
 	    Vector_Copy(P->Constraint[i], M->p[j++], dim);
     free(supporting);
-    P = Constraints2Polyhedron(M, NbMaxRays);
+    P = Constraints2Polyhedron(M, P->NbRays+1);
     assert(P);
     Matrix_Free(M);
     M = Matrix_Alloc(P->NbRays, dim);
@@ -137,14 +137,14 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	++r;
     }
 
-    L = Rays2Polyhedron(M, NbMaxCons);
+    L = Rays2Polyhedron(M, 2*P->NbRays+1);
 
     for (t = 1; L->NbEq != 0 && t < MAX_TRY; ++t) {
 	Polyhedron_Free(L);
 	for (r = 1; r < P->NbRays; ++r) {
 	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
 	}
-	L = Rays2Polyhedron(M, NbMaxCons);
+	L = Rays2Polyhedron(M, 2*P->NbRays+1);
     }
     assert(L->NbEq == 0);
 
@@ -167,7 +167,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	    ++r;
 	}
 	assert(r == dim+1);
-	T = Rays2Polyhedron(M2, P->NbConstraints);
+	T = Rays2Polyhedron(M2, P->NbConstraints+1);
 	T->next = R;
 	R = T;
 	++n;

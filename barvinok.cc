@@ -502,7 +502,7 @@ void barvinok_count(Polyhedron *P, Value* result)
     vcone = new (Polyhedron *)[P->NbRays];
 
     for (int j = 0; j < P->NbRays; ++j) {
-	Polyhedron *C = supporting_cone(P, j, 600);
+	Polyhedron *C = supporting_cone(P, j);
 	Polyhedron_Polarize(C);
 	Polyhedron *Polar = C;
 
@@ -510,7 +510,7 @@ void barvinok_count(Polyhedron *P, Value* result)
 	if (Polar->NbRays - 1 == Polar->Dimension)
 	    Polars = Polar;
 	else {
-	    Polars = triangularize_cone(Polar, 600);
+	    Polars = triangularize_cone(Polar);
 	    // check_triangulization(Polar, Polars);
 	    Polyhedron_Free(Polar);
 	}

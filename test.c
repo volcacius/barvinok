@@ -61,7 +61,7 @@ int main()
 	case 2:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    for (j = 0; j < A->NbRays; ++j) {
-		B = supporting_cone(A, j, 600);
+		B = supporting_cone(A, j);
 		Polyhedron_Print(stdout, P_VALUE_FMT, B);
 		Polyhedron_Free(B);
 	    }
@@ -101,7 +101,7 @@ int main()
 	}
 	case 5:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = triangularize_cone(A, 600);
+	    B = triangularize_cone(A);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    check_triangulization(A, B);
 	    Domain_Free(B);
