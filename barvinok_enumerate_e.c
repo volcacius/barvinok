@@ -1,6 +1,5 @@
 #include <unistd.h>
 #include <sys/times.h>
-#include <getopt.h>
 #include <polylib/polylibgmp.h>
 #include "ev_operations.h"
 #include <util.h>
@@ -15,11 +14,16 @@
  * The polytope is in PolyLib notation.
  */
 
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
 struct option options[] = {
     { "convert",   no_argument,  0,  'c' },
     { "range",	no_argument,	0,  'r' },
     { 0, 0, 0, 0 }
 };
+#endif
 
 int main(int argc, char **argv)
 {

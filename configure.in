@@ -5,6 +5,8 @@ AC_PROG_CXX
 AC_SUBST(versioninfo)
 versioninfo=4:0:0
 
+AC_CHECK_HEADERS(getopt.h)
+
 dnl Check for GMP library
 AC_MSG_CHECKING(whether to use GMP)
 AC_ARG_WITH(libgmp, 
