@@ -925,6 +925,9 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
     value_init(tmp.d);
     evalue_set_si(&tmp, 0, 1);
 
+    if (g % 2 == 0)
+	while (j < len-1 && num[j] == g/2)
+	    ++j;
     if (j < len-1 && num[j] > g/2) {
 	for (int k = j; k < len-1; ++k)
 	    if (num[k] != 0)
