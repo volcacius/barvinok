@@ -496,7 +496,7 @@ struct dpoly_r {
 		for (int k = 0; k < dim; ++k) {
 		    cout << c[i][j]->powers[k] << " ";
 		}
-		cout << ": " << c[i][j]->coeff << endl;
+		cout << ": " << c[i][j]->coeff << "/" << denom << endl;
 	    }
 	    cout << endl;
 	}
