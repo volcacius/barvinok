@@ -1716,15 +1716,6 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
 		   row->p+1,
 		   f, P->Constraint[l][nvar+i+1], len-1);
 
-    if (independent) {
-	int j;
-	for (j = 0; j < exist; ++j)
-	    if (j != i && value_notzero_p(row->p[nvar+j+1]))
-		break;
-	if (j != exist)
-	    return false;
-    }
-
     //printf("l: %d, u: %d\n", l, u);
     value_multiply(f, f, P->Constraint[l][nvar+i+1]);
     value_substract(row->p[len-1], row->p[len-1], f);
@@ -1767,7 +1758,6 @@ static bool SplitOnVar(Polyhedron *P, int i,
 			      Polyhedron **pos, Polyhedron **neg)
 {
     int j;
-    bool lower = false;
 
     for (int l = P->NbEq; l < P->NbConstraints; ++l) {
 	if (value_negz_p(P->Constraint[l][nvar+i+1]))
@@ -1777,14 +1767,15 @@ static bool SplitOnVar(Polyhedron *P, int i,
 	    for (j = 0; j < exist; ++j)
 		if (j != i && value_notzero_p(P->Constraint[l][nvar+j+1]))
 		    break;
-	    lower = j >= exist;
+	    if (j < exist)
+		continue;
 	}
 
 	for (int u = P->NbEq; u < P->NbConstraints; ++u) {
 	    if (value_posz_p(P->Constraint[u][nvar+i+1]))
 		continue;
 
-	    if (independent && !lower) {
+	    if (independent) {
 		for (j = 0; j < exist; ++j)
 		    if (j != i && value_notzero_p(P->Constraint[u][nvar+j+1]))
 			break;
