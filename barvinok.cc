@@ -1616,7 +1616,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			if (j != i && value_notzero_p(row->p[nvar+j+1]))
 			    break;
 		    if (j == exist) {
-			//printf("independent: l: %d, u: %d\n", l, u);
+			//printf("independent: i: %d, l: %d, u: %d\n", i, l, u);
 			info[i] = (constraint)(info[i] | INDEPENDENT);
 		    }
 		}
@@ -1637,7 +1637,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 		    value_decrement(row->p[len-1], row->p[len-1]);
 		    Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
 		    if (!emptyQ(T)) {
-			//printf("not all_pos: l: %d, u: %d\n", l, u);
+			//printf("not all_pos: i: %d, l: %d, u: %d\n", i, l, u);
 			info[i] = (constraint)(info[i] ^ ALL_POS);
 		    }
 		    //puts("pos remainder");
@@ -1674,7 +1674,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			//Vector_Print(stdout, P_VALUE_FMT, row);
 			Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
 			if (emptyQ(T)) {
-			    //printf("one_neg l: %d, u: %d\n", l, u);
+			    //printf("one_neg i: %d, l: %d, u: %d\n", i, l, u);
 			    info[i] = (constraint)(info[i] | ONE_NEG);
 			}
 			//puts("neg remainder");
@@ -1699,7 +1699,15 @@ next:
     for (int i = 0; i < exist; ++i)
 	if (info[i] & ALL_POS) {
 	    // Eliminate
-	    assert(!"IMPLEMENTED");
+	    // Maybe we should chew off some of the fat here
+	    Matrix *M = Matrix_Alloc(P->Dimension, P->Dimension+1);
+	    for (int j = 0; j < P->Dimension; ++j)
+		value_set_si(M->p[j][j + (j >= i+nvar)], 1);
+	    Polyhedron *T = Polyhedron_Image(P, M, MaxRays);
+	    Matrix_Free(M);
+	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+	    Polyhedron_Free(T);
+	    return EP;
 	}
     for (int i = 0; i < exist; ++i)
 	if (info[i] & ONE_NEG) {
