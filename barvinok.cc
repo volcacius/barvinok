@@ -550,11 +550,13 @@ static void vertex_period(deque<string>& params,
     ZZ nump;
 
     if (p == nparam) {
-	ZZ num;
+	ZZ num, l;
 	Vector * values = Vector_Alloc(dim + 1);
 	Vector_Matrix_Product(val->p, T, values->p);
 	value_assign(values->p[dim], lcm);
 	lattice_point(values->p, i, lambda, num);
+	value2zz(lcm, l);
+	num *= l;
 	num += offset;
 	zz2value(num, ev->x.n);
 	value_assign(ev->d, lcm);
