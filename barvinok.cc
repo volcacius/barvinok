@@ -790,10 +790,22 @@ static void mask(Matrix *f, evalue *factor)
     evalue EP;
     nr = n;
 
+    Value m;
+    value_init(m);
+
     for (n = 0; n < nr; ++n) {
-	if (value_one_p(f->p[n][nc-1]) ||
-	    value_mone_p(f->p[n][nc-1]))
+	value_assign(m, f->p[n][nc-1]);
+	if (value_one_p(m) || value_mone_p(m))
 	    continue;
+
+	int j = normal_mod(f->p[n], nc-1, &m);
+	if (j == nc-1) {
+	    free_evalue_refs(factor);
+	    value_init(factor->d);
+	    evalue_set_si(factor, 0, 1);
+	    break;
+	}
+
 	value_init(EP.d);
 	value_set_si(EP.d, 0);
 	EP.x.p = new_enode(relation, 2, 0);
@@ -801,7 +813,7 @@ static void mask(Matrix *f, evalue *factor)
 	EP.x.p->arr[1] = *factor;
 	evalue *ev = &EP.x.p->arr[0];
 	value_set_si(ev->d, 0);
-	ev->x.p = new_enode(modulo, 3, VALUE_TO_INT(f->p[n][nc-1]));
+	ev->x.p = new_enode(modulo, 3, VALUE_TO_INT(m));
 	evalue_set_si(&ev->x.p->arr[1], 0, 1);
 	evalue_set_si(&ev->x.p->arr[2], 1, 1);
 	vec_ZZ row;
@@ -812,6 +824,8 @@ static void mask(Matrix *f, evalue *factor)
 	delete E;
 	*factor = EP;
     }
+
+    value_clear(m);
 }
 #else
 /*
