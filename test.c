@@ -43,8 +43,11 @@ int main()
 	    fgets(s, 128, stdin);
 	    /* workaround for apparent bug in older gmps */
 	    *strchr(s, '\n') = '\0';
-	    while ((*s=='#') || (value_read(ck, s) != 0))
+	    while ((*s=='#') || (value_read(ck, s) != 0)) {
 		fgets(s, 128, stdin);
+		/* workaround for apparent bug in older gmps */
+		*strchr(s, '\n') = '\0';
+	    }
 	    barvinok_count(A, &cb, 100);
 	    if (value_ne(cb, ck))
 		return -1;
