@@ -135,20 +135,15 @@ public:
     cone(Polyhedron *C) {
 	Cone = Polyhedron_Copy(C);
 	Rays = rays(C);
-	Matrix_Print(stdout, P_VALUE_FMT, Rays);
 	set_det();
     }
     void set_det() {
 	mat_ZZ A;
 	matrix2zz(Rays, A);
-	cout << A << endl;
 	det = determinant(A);
-	cout << "det: " << det << endl;
 	Value v;
 	value_init(v);
 	zz2value(det, v);
-	value_print(stdout, P_VALUE_FMT, v);
-	puts("");
 	value_clear(v);
     }
 
@@ -157,7 +152,6 @@ public:
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
 	assert(ok);
-	Matrix_Print(stdout, P_VALUE_FMT, inv);
 	Matrix_Free(M);
 
 	ZZ det2;
@@ -165,8 +159,6 @@ public:
 	mat_ZZ U;
 	matrix2zz(inv, B);
 	long r = LLL(det2, B, U);
-
-	cout << det2 << B << U << endl;
 
 	ZZ min = max(U[0]);
 	int index = 0;
@@ -177,7 +169,6 @@ public:
 		index = i;
 	    }
 	}
-	cout << index << ": " << min << endl;
 
 	Matrix_Free(inv);
 	return zz2vector(U[index]);
@@ -233,17 +224,14 @@ void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 	c = nonuni.back();
 	nonuni.pop_back();
 	Vector* v = c->short_vector();
-	Vector_Print(stdout, P_VALUE_FMT, v);
 	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
 	    Matrix* M = Matrix_Copy(c->Rays);
 	    Vector_Copy(v->p, M->p[i], v->Size);
-	    Matrix_Print(stdout, P_VALUE_FMT, M);
 	    cone * pc = new cone(M);
 	    if (abs(pc->det) > 1)
 		nonuni.push_back(pc);
 	    else {
 		Polyhedron *p = Polyhedron_Copy(pc->poly());
-		Polyhedron_Print(stdout, P_VALUE_FMT, p);
 		if (pc->det > 0) {
 		    p->next = pos;
 		    pos = p;
