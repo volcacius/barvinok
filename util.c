@@ -477,12 +477,12 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 	    break;
 
 	Vector_Gcd(p->Constraint[skip]+1, dim+1, &g);
+	Vector_AntiScale(p->Constraint[skip]+1, p->Constraint[skip]+1, g, dim+1);
+	Vector_Gcd(p->Constraint[skip]+1, nvar, &g);
 	if (!factor && value_notone_p(g) && value_notmone_p(g)) {
 	    ++skip;
 	    continue;
 	}
-	Vector_AntiScale(p->Constraint[skip]+1, p->Constraint[skip]+1, g, dim+1);
-	Vector_Gcd(p->Constraint[skip]+1, nvar, &g);
 	if (factor) {
 	    Vector_Copy(p->Constraint[skip]+1+nvar, f->p[j], dim-nvar+1);
 	    value_assign(f->p[j][dim-nvar+1], g);
