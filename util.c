@@ -649,6 +649,21 @@ static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
     return I;
 }
 
+/* Constructs a new constraint that ensures that
+ * the first constraint is (strictly) smaller than
+ * the second.
+ */
+void smaller_constraint(Value *a, Value *b, Value *c, int pos, int shift,
+			int len, int strict, Value *tmp)
+{
+    value_oppose(*tmp, b[pos+1]);
+    value_set_si(c[0], 1);
+    Vector_Combine(a+1+shift, b+1+shift, c+1, *tmp, a[pos+1], len-shift-1);
+    if (strict)
+	value_decrement(c[len-shift-1], c[len-shift-1]);
+    ConstraintSimplify(c, c, len-shift, tmp);
+}
+
 struct section { Polyhedron * D; evalue E; };
 
 static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar, 
@@ -667,13 +682,12 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	Polyhedron *C, *T;
 	int i, j, p, n;
 	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
-	Value tmp, g;
+	Value g;
 	evalue mone;
 	value_init(mone.d);
 	evalue_set_si(&mone, -1, 1);
 	C = Polyhedron_Project(P, dim-nvar);
 
-	value_init(tmp);
 	value_init(g);
 
 	for (i = 0, j = 0; i < dim; ++i) {
@@ -709,38 +723,20 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 			if (k2 == k)
 			    continue;
 			q = k2 - (k2 > k);
-			value_oppose(tmp, P->Constraint[singles[i][1+k2]][i+1]);
-			value_set_si(M->p[q][0], 1);
-			Vector_Combine(P->Constraint[singles[i][1+k]]+1+nvar,
-				       P->Constraint[singles[i][1+k2]]+1+nvar,
-				       M->p[q]+1,
-				       tmp,
-				       P->Constraint[singles[i][1+k]][i+1],
-				       dim-nvar+1);
-			if (k2 > k)
-			    value_decrement(M->p[q][dim-nvar+1],
-					    M->p[q][dim-nvar+1]);
-			ConstraintSimplify(M->p[q], M->p[q], 
-					   dim-nvar+2, &g);
+			smaller_constraint(
+			    P->Constraint[singles[i][1+k]],
+			    P->Constraint[singles[i][1+k2]],
+			    M->p[q], i, nvar, dim+2, k2 > k, &g);
 		    }
 		    for (l = p; l < p+n; ++l) {
-			value_oppose(tmp, P->Constraint[singles[i][1+l]][i+1]);
 			for (l2 = p; l2 < p+n; ++l2) {
 			    if (l2 == l)
 				continue;
 			    q = l2-1 - (l2 > l);
-			    value_set_si(M->p[q][0], 1);
-			    Vector_Combine(P->Constraint[singles[i][1+l2]]+1+nvar,
-					   P->Constraint[singles[i][1+l]]+1+nvar,
-					   M->p[q]+1,
-					   tmp,
-					   P->Constraint[singles[i][1+l2]][i+1],
-					   dim-nvar+1);
-			    if (l2 > l)
-				value_decrement(M->p[q][dim-nvar+1],
-						M->p[q][dim-nvar+1]);
-			    ConstraintSimplify(M->p[q], M->p[q], 
-					       dim-nvar+2, &g);
+			    smaller_constraint(
+				P->Constraint[singles[i][1+l2]],
+				P->Constraint[singles[i][1+l]],
+				M->p[q], i, nvar, dim+2, l2 > l, &g);
 			}
 			M2 = Matrix_Copy(M);
 			s[nd].D = Constraints2Polyhedron(M2, P->NbRays);
@@ -790,7 +786,6 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	free_singles(singles, nvar);
 
 	value_clear(g);
-	value_clear(tmp);
 
 	free_evalue_refs(&mone); 
 	Polyhedron_Free(C);
