@@ -2901,6 +2901,8 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     if (row)
 	Vector_Free(row);
 
+    reduce_evalue(res);
+
     return res;
 }
 
