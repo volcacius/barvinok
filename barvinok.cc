@@ -1461,7 +1461,7 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
-	eres->x.p = new_enode(partition, 2, -1);
+	eres->x.p = new_enode(partition, 2, C->Dimension);
 	EVALUE_SET_DOMAIN(eres->x.p->arr[0], 
 	    DomainConstraintSimplify(CEq ? CEq : Polyhedron_Copy(C), MaxRays));
 	value_set_si(eres->x.p->arr[1].d, 1);
@@ -1660,7 +1660,7 @@ out:
     if (nd == 0)
 	evalue_set_si(eres, 0, 1);
     else {
-	eres->x.p = new_enode(partition, 2*nd, -1);
+	eres->x.p = new_enode(partition, 2*nd, C->Dimension);
 	for (int j = 0; j < nd; ++j) {
 	    EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
 	    value_clear(eres->x.p->arr[2*j+1].d);
@@ -1949,7 +1949,7 @@ static evalue* enumerate_sum(Polyhedron *P,
 	evalue split;
 	value_init(split.d);
 	value_set_si(split.d, 0);
-	split.x.p = new_enode(partition, 4, -1);
+	split.x.p = new_enode(partition, 4, nparam);
 	value_set_si(C->p[0][1+i], 1);
 	Matrix *C2 = Matrix_Copy(C);
 	EVALUE_SET_DOMAIN(split.x.p->arr[0],
@@ -2188,7 +2188,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 #endif /* DEBUG_ER */
 	nparam -= CT->NbColumns - CT->NbRows;
 	EP = barvinok_enumerate_e(I, exist, nparam, MaxRays);
-	addeliminatedparams_enum(EP, CT, CEq, MaxRays);
+	addeliminatedparams_enum(EP, CT, CEq, MaxRays, nparam);
 	Polyhedron_Free(I);
     }
     if (PR != *PA)

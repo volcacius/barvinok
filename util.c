@@ -772,7 +772,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 
 		value_init(F.d);
 		value_set_si(F.d, 0);
-		F.x.p = new_enode(partition, 2*nd, -1);
+		F.x.p = new_enode(partition, 2*nd, dim-nvar);
 		for (k = 0; k < nd; ++k) {
 		    EVALUE_SET_DOMAIN(F.x.p->arr[2*k], s[k].D);
 		    value_clear(F.x.p->arr[2*k+1].d);

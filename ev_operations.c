@@ -73,7 +73,7 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
 } /* addeliminatedparams_evalue */
 
 void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
-			      unsigned MaxRays)
+			      unsigned MaxRays, unsigned nparam)
 {
     enode *p;
     int i;
@@ -88,7 +88,7 @@ void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
 	evalue res;
 	value_init(res.d);
 	value_set_si(res.d, 0);
-	res.x.p = new_enode(partition, 2, -1);
+	res.x.p = new_enode(partition, 2, nparam);
 	EVALUE_SET_DOMAIN(res.x.p->arr[0], 
 	    DomainConstraintSimplify(Polyhedron_Copy(CEq), MaxRays));
 	value_clear(res.x.p->arr[1].d);
@@ -100,6 +100,7 @@ void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
     p = e->x.p;
     assert(p);
     assert(p->type == partition);
+    p->pos = nparam;
 
     for (i=0; i<p->size/2; i++) {
 	Polyhedron *D = EVALUE_DOMAIN(p->arr[2*i]);
@@ -889,6 +890,8 @@ void eadd_partitions (evalue *e1,evalue *res)
 	    malloc((e1->x.p->size/2+1) * (res->x.p->size/2+1) * 
 		   sizeof(struct section));
     assert(s);
+    assert(e1->x.p->pos == res->x.p->pos);
+    assert(e1->x.p->pos == EVALUE_DOMAIN(e1->x.p->arr[0])->Dimension);
 
     n = 0;
     for (j = 0; j < e1->x.p->size/2; ++j) {
@@ -947,7 +950,7 @@ void eadd_partitions (evalue *e1,evalue *res)
 
     free(res->x.p);
     assert(n > 0);
-    res->x.p = new_enode(partition, 2*n, -1);
+    res->x.p = new_enode(partition, 2*n, e1->x.p->pos);
     for (j = 0; j < n; ++j) {
 	s[j].D = DomainConstraintSimplify(s[j].D, 0);
 	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
@@ -1250,6 +1253,9 @@ void emul_partitions (evalue *e1,evalue *res)
 	    malloc((e1->x.p->size/2) * (res->x.p->size/2) * 
 		   sizeof(struct section));
     assert(s);
+    fprintf(stderr, "%d %d\n", e1->x.p->pos, res->x.p->pos);
+    assert(e1->x.p->pos == res->x.p->pos);
+    assert(e1->x.p->pos == EVALUE_DOMAIN(e1->x.p->arr[0])->Dimension);
 
     n = 0;
     for (i = 0; i < res->x.p->size/2; ++i) {
@@ -1295,7 +1301,7 @@ void emul_partitions (evalue *e1,evalue *res)
     if (n == 0)
 	evalue_set_si(res, 0, 1);
     else {
-	res->x.p = new_enode(partition, 2*n, -1);
+	res->x.p = new_enode(partition, 2*n, e1->x.p->pos);
 	for (j = 0; j < n; ++j) {
 	    s[j].D = DomainConstraintSimplify(s[j].D, 0);
 	    EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
@@ -1539,6 +1545,7 @@ void emask(evalue *mask, evalue *res) {
     Polyhedron *d, *fd;
     struct section *s;
     evalue mone;
+    int pos;
 
     if (EVALUE_IS_ZERO(*res)) {
 	free_evalue_refs(mask); 
@@ -1549,6 +1556,9 @@ void emask(evalue *mask, evalue *res) {
     assert(mask->x.p->type == partition);
     assert(value_zero_p(res->d));
     assert(res->x.p->type == partition);
+    assert(mask->x.p->pos == res->x.p->pos);
+    assert(res->x.p->pos == EVALUE_DOMAIN(res->x.p->arr[0])->Dimension);
+    pos = res->x.p->pos;
 
     s = (struct section *) 
 	    malloc((mask->x.p->size/2+1) * (res->x.p->size/2) * 
@@ -1620,7 +1630,7 @@ void emask(evalue *mask, evalue *res) {
     if (n == 0)
 	evalue_set_si(res, 0, 1);
     else {
-	res->x.p = new_enode(partition, 2*n, -1);
+	res->x.p = new_enode(partition, 2*n, pos);
 	for (j = 0; j < n; ++j) {
 	    EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
 	    value_clear(res->x.p->arr[2*j+1].d);
@@ -2307,7 +2317,7 @@ void evalue_combine(evalue *e)
     for (i = 0; i < e->x.p->size/2; ++i)
 	evs[i] = &e->x.p->arr[2*i+1];
     qsort(evs, e->x.p->size/2, sizeof(evs[0]), evalue_comp);
-    p = new_enode(partition, e->x.p->size, -1);
+    p = new_enode(partition, e->x.p->size, e->x.p->pos);
     for (i = 0, k = 0; i < e->x.p->size/2; ++i) {
 	if (k == 0 || ecmp(&p->arr[2*k-1], evs[i]) != 0) {
 	    value_clear(p->arr[2*k].d);
@@ -2361,7 +2371,7 @@ void evalue_combine(evalue *e)
 		}
 
 		value_init(tmp.d);
-		tmp.x.p = new_enode(partition, 2, -1);
+		tmp.x.p = new_enode(partition, 2, e->x.p->pos);
 		EVALUE_SET_DOMAIN(tmp.x.p->arr[0], Polyhedron_Copy(D));
 		evalue_copy(&tmp.x.p->arr[1], &e->x.p->arr[2*i+1]);
 		reduce_evalue(&tmp);

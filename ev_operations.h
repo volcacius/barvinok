@@ -77,7 +77,7 @@ void reduce_evalue (evalue *e);
 void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
-			      unsigned MaxRays);
+			      unsigned MaxRays, unsigned nparam);
 void eadd(evalue *e1,evalue *res);
 void emul (evalue *e1, evalue *res );
 void emask(evalue *mask, evalue *res);
