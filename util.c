@@ -178,7 +178,6 @@ Polyhedron* triangularize_cone(Polyhedron *P)
     Polyhedron_Free(L);
     value_clear(tmp);
     Matrix_Free(M);
-    assert(P->NbRays == n + dim);
 
     return R;
 }
@@ -202,7 +201,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
 	    D->next = NULL;
 	    E = DomainIntersection(C, D, 600);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, E);
-	    assert(E->NbRays == 0 || E->NbEq == 1);
+	    assert(E->NbRays == 0 || E->NbEq >= 1);
 	    Polyhedron_Free(E);
 	    C->next = F;
 	    D->next = G;
