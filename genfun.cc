@@ -1,7 +1,33 @@
 #include <iostream>
+#include <assert.h>
 #include <genfun.h>
 
 using std::cout;
+
+static int lex_cmp(vec_ZZ& a, vec_ZZ& b)
+{
+    assert(a.length() == b.length());
+
+    for (int j = 0; j < a.length(); ++j)
+	if (a[j] != b[j])
+	    return a[j] < b[j] ? -1 : 1;
+    return 0;
+}
+
+static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
+{
+    assert(a.NumCols() == b.NumCols());
+    int alen = a.NumRows();
+    int blen = b.NumRows();
+    int len = alen < blen ? alen : blen;
+
+    for (int i = 0; i < len; ++i) {
+	int s = lex_cmp(a[i], b[i]);
+	if (s)
+	    return s;
+    }
+    return alen-blen;
+}
 
 void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
 {
@@ -27,6 +53,18 @@ void gen_fun::add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den)
 	    r->n.power[0] += r->d.power[i];
 	}
     }
+
+    for (int i = 0; i < term.size(); ++i)
+	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {
+	    int len = term[i]->n.coeff.NumRows();
+	    int dim = term[i]->n.power.NumCols();
+	    term[i]->n.coeff.SetDims(len+1, 2);
+	    term[i]->n.power.SetDims(len+1, dim);
+	    term[i]->n.coeff[len] = r->n.coeff[0];
+	    term[i]->n.power[len] = r->n.power[0];
+	    delete r;
+	    return;
+	}
 
     term.push_back(r);
 }
