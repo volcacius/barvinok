@@ -48,9 +48,10 @@ if test "$polylib_package" != "yes"; then
     LDFLAGS="-L$polylib_package/lib $LDFLAGS"
 fi
 
-AC_CHECK_LIB(polylibgmp, Enumeration_Free,[],[
+AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
+AC_REPLACE_FUNCS(Enumeration_Free)
 
 AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
