@@ -437,11 +437,23 @@ void eadd(evalue *e1,evalue *res) {
 	    eadd_partitions(e1, res);
 	    return;
 	}
-	if (e1->x.p->type == relation) {
-	    eadd_rev(e1, res);
-	    return;
+	if (e1->x.p->type == relation &&
+	    (res->x.p->type != relation || 
+	     mod_term_smaller(&e1->x.p->arr[0], &res->x.p->arr[0]))) {
+		eadd_rev(e1, res);
+		return;
 	}
 	if (res->x.p->type == relation) {
+	    if (e1->x.p->type == relation &&
+		eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
+		    if (res->x.p->size < 3 && e1->x.p->size == 3)
+			explicit_complement(res);
+		    if (e1->x.p->size < 3 && res->x.p->size == 3)
+			explicit_complement(e1);
+		    for (i = 1; i < res->x.p->size; ++i)
+			eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
+		    return;
+	    }
 	    if (res->x.p->size < 3)
 		explicit_complement(res);
 	    for (i = 1; i < res->x.p->size; ++i)
