@@ -1963,6 +1963,17 @@ static double compute_enode(enode *p, Value *list_args) {
     }
     res +=compute_evalue(&p->arr[1],list_args);
   }
+  else if (p->type == flooring) {
+    double d = compute_evalue(&p->arr[0], list_args);
+    d = floor(d+1e-10);
+    
+    /* Compute the polynomial using Horner's rule */
+    for (i=p->size-1;i>1;i--) {
+      res +=compute_evalue(&p->arr[i],list_args);
+      res *=d;
+    }
+    res +=compute_evalue(&p->arr[1],list_args);
+  }
   else if (p->type == periodic) {
     value_assign(param,list_args[p->pos-1]);
     
