@@ -112,7 +112,7 @@ static void print_power(vec_ZZ& c, vec_ZZ& p,
 void gen_fun::print(unsigned int nparam, char **param_name)
 {
     vec_ZZ mone;
-    mone.SetLength(1);
+    mone.SetLength(2);
     mone[0] = -1;
     mone[1] = 1;
     for (int i = 0; i < term.size(); ++i) {
