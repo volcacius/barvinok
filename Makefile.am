@@ -4,6 +4,7 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest
 pkginclude_HEADERS = barvinok.h util.h ev_operations.h
+LINK = $(CXXLINK)
 
 libbarvinok_la_SOURCES = \
     ev_operations.c \
@@ -14,7 +15,7 @@ libbarvinok_la_SOURCES = \
     barvinok.h
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
-libbarvinok_la_LIBADD = @LTLIBOBJS@ -lstdc++
+libbarvinok_la_LIBADD = @LTLIBOBJS@
 libbarvinok_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbarvinok.la
 
