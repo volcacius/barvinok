@@ -1495,15 +1495,14 @@ out:
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
-	D->Domain = DomainConstraintSimplify(D->Domain, MaxRays);
 	if (!CEq) {
+	    D->Domain = DomainConstraintSimplify(D->Domain, MaxRays);
 	    pVD = rVD = D->Domain;    
 	    D->Domain = NULL;
 	} else {
 	  Polyhedron *Dt;
 	  Dt = CT ? DomainPreimage(D->Domain,CT,MaxRays) : D->Domain;
 	  rVD = DomainIntersection(Dt,CEq,MaxRays);
-	  rVD = DomainConstraintSimplify(rVD, MaxRays);
 	  
 	  /* if rVD is empty or too small in geometric dimension */
 	  if(!rVD || emptyQ(rVD) ||
@@ -1514,15 +1513,21 @@ out:
 		Domain_Free(Dt);
 	    continue;		/* empty validity domain */
 	  }
-	  if (CT)
-	      Domain_Free(Dt);
-	  pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
-	    for (Param_Domain *D2 = D->next; D2; D2=D2->next) {
-		Polyhedron *T = D2->Domain;
-		D2->Domain = DomainDifference(D2->Domain, D->Domain, MaxRays);
-		//D2->Domain = DomainConstraintSimplify(D2->Domain, MaxRays);
+
+	    if (CT)
+	        Domain_Free(Dt);
+
+	    for (int i = 0 ; i < nd; ++i) {
+		Polyhedron *T = rVD;
+		rVD = DomainDifference(rVD, s[i].D, MaxRays);
 		Domain_Free(T);
 	    }
+	    rVD = DomainConstraintSimplify(rVD, MaxRays);
+	    if (emptyQ(rVD)) {
+		Domain_Free(rVD);
+		continue;
+	    }
+	    pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
 	}
 	int ncone = 0;
 	sign.SetLength(ncone);
