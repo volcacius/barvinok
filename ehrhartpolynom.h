@@ -26,6 +26,7 @@
 #undef max
 */
 #include <gmp.h>
+#include <assert.h>
 
 extern "C" {
 #include <polylib/polylibgmp.h>
