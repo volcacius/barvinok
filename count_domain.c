@@ -23,7 +23,8 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     c = value_notzero_p(res->d) ? 0
 	: res->x.p->type == partition ? res->x.p->size/2 : 1;
-    fprintf(stderr, "COUNT: %d %d\n", P->Dimension, c);
+    fprintf(stderr, "COUNT: %d %d %d %d\n", P->Dimension, 
+	    C->Dimension, c, domain_size(P));
 
     return res;
 }
