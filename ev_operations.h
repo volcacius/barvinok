@@ -22,7 +22,7 @@
 #define print_enode _new_print_enode
 #define reduce_evalue _new_reduce
 
-typedef enum { polynomial, periodic, evector } enode_type;
+typedef enum { polynomial, periodic, evector, modulo } enode_type;
 
 typedef struct _evalue {
   Value d;              /* denominator */
