@@ -2471,10 +2471,10 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		    break;
 	    if (i >= nvar)
 		continue;
-	    for (i = nvar; i < nvar + exist; ++i)
+	    for (i = nvar + exist; i < nvar + exist + nparam; ++i)
 		if (value_notzero_p(P->Ray[r][i+1]))
 		    break;
-	    if (i >= nvar + exist)
+	    if (i >= nvar + exist + nparam)
 		break;
 	}
     if (r <  P->NbRays) {
