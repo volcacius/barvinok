@@ -127,7 +127,6 @@ you_lose:   	/* OK, lets not do it */
         /* Try to reduce the degree */
         for (i=p->size-1;i>=2;i--) {
             if (!(value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n)))
-H
 		break;
 	    /* Zero coefficient */
 	    free_evalue_refs(&(p->arr[i]));
