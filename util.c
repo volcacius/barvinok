@@ -539,7 +539,7 @@ static int **find_singles(Polyhedron *P, int dim, int max, int *nsingle)
     }
     *nsingle = 0;
     for (j = 0; j < dim; ++j)
-	if (singles[j][0] == 2)
+	if (singles[j][0] > 0)
 	    ++*nsingle;
     if (!*nsingle) {
 	free_singles(singles, dim);
@@ -606,6 +606,8 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     return P;
 }
 
+struct section { Polyhedron * D; evalue E; };
+
 static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar, 
 					      evalue* factor)
 {
@@ -632,7 +634,12 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 	    if (i >= nvar || singles[i][0] < 2)
 		value_set_si(m->p[j++][i], 1);
 	    else {
+		struct section *s;
+		Matrix *M;
+		int nd = 0;
+		int k, l, k2, l2, q;
 		evalue *L, *U;
+		evalue F;
 		/* put those with positive coefficients first; number: p */
 		for (p = 0, n = singles[i][0]-1; p <= n; ) {
 		    while (value_pos_p(P->Constraint[singles[i][1+p]][i+1]))
@@ -647,26 +654,74 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 			--n;
 		    }
 		}
-		assert (p == 1 && singles[i][0] == 2); // for now
-		L = ceil3(P->Constraint[singles[i][1+0]]+1+nvar, dim-nvar+1,
-			 P->Constraint[singles[i][1+0]][i+1]);
-		U = ceil3(P->Constraint[singles[i][1+1]]+1+nvar, dim-nvar+1,
-			 P->Constraint[singles[i][1+1]][i+1]);
-		/*
-		char * test[] = { "P", "Q", "R" };
-		print_evalue(stdout, L,test);
-		puts("");
-		print_evalue(stdout, U,test);
-		puts("");
-		*/
-		eadd(L, U);
-		eadd(&mone, U);
-		emul(&mone, U);
-		emul(U, factor);
-		free_evalue_refs(L); 
-		free_evalue_refs(U); 
-		free(L);
-		free(U);
+		n = singles[i][0]-p;
+		assert (p >= 1 && n >= 1);
+		s = (struct section *) malloc(p * n * sizeof(struct section));
+		M = Matrix_Alloc((p-1) + (n-1), dim-nvar+2);
+		for (k = 0; k < p; ++k) {
+		    for (k2 = 0; k2 < p; ++k2) {
+			if (k2 == k)
+			    continue;
+			q = k2 - (k2 > k);
+			value_oppose(tmp, P->Constraint[singles[i][1+k2]][i+1]);
+			value_set_si(M->p[q][0], 1);
+			Vector_Combine(P->Constraint[singles[i][1+k]]+1+nvar,
+				       P->Constraint[singles[i][1+k2]]+1+nvar,
+				       M->p[q]+1,
+				       tmp,
+				       P->Constraint[singles[i][1+k]][i+1],
+				       dim-nvar+1);
+		    }
+		    for (l = p; l < p+n; ++l) {
+			value_oppose(tmp, P->Constraint[singles[i][1+l]][i+1]);
+			for (l2 = p; l2 < p+n; ++l2) {
+			    if (l2 == l)
+				continue;
+			    q = l2-1 - (l2 > l);
+			    value_set_si(M->p[q][0], 1);
+			    Vector_Combine(P->Constraint[singles[i][1+l2]]+1+nvar,
+					   P->Constraint[singles[i][1+l]]+1+nvar,
+					   M->p[q]+1,
+					   tmp,
+					   P->Constraint[singles[i][1+l2]][i+1],
+					   dim-nvar+1);
+			}
+			s[nd].D = Constraints2Polyhedron(M, P->NbRays);
+			if (emptyQ(s[nd].D)) {
+			    Polyhedron_Free(s[nd].D);
+			    continue;
+			}
+			L = ceil3(P->Constraint[singles[i][1+k]]+1+nvar, 
+				  dim-nvar+1,
+				  P->Constraint[singles[i][1+k]][i+1]);
+			U = ceil3(P->Constraint[singles[i][1+l]]+1+nvar, 
+				  dim-nvar+1,
+				  P->Constraint[singles[i][1+l]][i+1]);
+			eadd(L, U);
+			eadd(&mone, U);
+			emul(&mone, U);
+			s[nd].E = *U;
+			free_evalue_refs(L); 
+			free(L);
+			free(U);
+			++nd;
+		    }
+		}
+
+		Matrix_Free(M);
+
+		value_init(F.d);
+		value_set_si(F.d, 0);
+		F.x.p = new_enode(partition, 2*nd, -1);
+		for (k = 0; k < nd; ++k) {
+		    EVALUE_SET_DOMAIN(F.x.p->arr[2*k], s[k].D);
+		    value_clear(F.x.p->arr[2*k+1].d);
+		    F.x.p->arr[2*k+1] = s[k].E;
+		}
+		free(s);
+
+		emul(&F, factor);
+		free_evalue_refs(&F); 
 	    }
 	}
 	value_set_si(m->p[dim-nsingle][dim], 1);
