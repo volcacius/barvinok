@@ -6,6 +6,7 @@ extern "C" {
 }
 #include <util.h>
 #include <barvinok.h>
+#include <barvinok2.h>
 
 #include "verif_ehrhart.h"
 
@@ -13,6 +14,17 @@ extern "C" {
 #define MAXRAYS    0
 #else
 #define MAXRAYS  600
+#endif
+
+#include "config.h"
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
+struct option options[] = {
+    { "series",  no_argument,  0,  's' },
+    { 0, 0, 0, 0 }
+};
 #endif
 
 /* RANGE : normal range for evalutations (-RANGE -> RANGE) */
@@ -39,7 +51,9 @@ int main(int argc,char *argv[]) {
   Value *p, tmp;
   int i,j;
   int m,M;
-  
+    int c, ind = 0;
+    int series = 0;
+
 /******* Read the input *********/
   P1 = Matrix_Read();
   C1 = Matrix_Read();
@@ -55,7 +69,7 @@ int main(int argc,char *argv[]) {
   Matrix_Free(C1);
   Matrix_Free(P1);
 
-  /******* Read the options: initialize min and max ********/
+  /******* Read the options: initialize Min and Max ********/
   if(P->Dimension >= VBIGDIM)
     M = VSRANGE;
   else if(P->Dimension >= BIGDIM)
@@ -63,39 +77,33 @@ int main(int argc,char *argv[]) {
   else
     M = RANGE;
   m = -M;
-  if(argc != 1 ) {
-    for(i=1;i<argc;i++) {
-      if(!strncmp(argv[i],"-m",2)) {
-	
-	/* min specified */
-	m = atoi(&argv[i][2]);
-      }
-      else if(!strncmp(argv[i],"-M",2)) {
-	
-	/* max specified */
-	M = atoi(&argv[i][2]);
-      }
-      else if(!strncmp(argv[i], "-r", 2)) {
-	
-	/* range specified */
-	M = atoi(&argv[i][2]);
-	m = -M;
-      }
-      else {
-	fprintf(stderr,"Unknown option: %s\n",argv[i]);
-	fprintf(stderr,"Usage: %s [-m<>][-M<>][-r<>]\n",argv[0]);
-	return(-1);
-      }
+
+    while ((c = getopt_long(argc, argv, "m:M:r:s", options, &ind)) != -1) {
+	switch (c) {
+	case 's':
+	    series = 1;
+	    break;
+	case 'm':
+	    m = atoi(optarg);
+	    break;
+	case 'M':
+	    M = atoi(optarg);
+	    break;
+	case 'r':
+	    M = atoi(optarg);
+	    m = -M;
+	    break;
+	}
     }
-  }
+
   if(m > M) {
-    fprintf(stderr,"Nothing to do: min > max !\n");
+    fprintf(stderr,"Nothing to do: Min > Max !\n");
     return(0);
   }
-  value_init(min);
-  value_init(max);
-  value_set_si(min,m);
-  value_set_si(max,M);
+  value_init(Min);
+  value_init(Max);
+  value_set_si(Min,m);
+  value_set_si(Max,M);
   value_init(tmp);
 
   /******* Compute true context *******/
@@ -114,8 +122,17 @@ int main(int argc,char *argv[]) {
   Domain_Free(C);
   C = CC;
 
-  /******* Compute EP *********/
-  en = barvinok_enumerate(P,C,MAXRAYS);
+    /******* Compute EP *********/
+    if (!series)
+        en = barvinok_enumerate(P,C,MAXRAYS);
+    else {
+	evalue *EP;
+	gen_fun *gf;
+	gf = barvinok_series(P, C, MAXRAYS);
+	gf->print(C->Dimension, params);
+	EP = *gf;
+	en =  partition2enumeration(EP);
+    }
   
   /******* Initializations for check *********/
   p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
@@ -131,12 +148,12 @@ int main(int argc,char *argv[]) {
 
 #ifndef PRINT_ALL_RESULTS
   if(C->Dimension > 0) {
-    value_substract(tmp,max,min);
+    value_substract(tmp,Max,Min);
     if (VALUE_TO_INT(tmp) > 80)
       st = 1+(VALUE_TO_INT(tmp))/80;
     else
       st=1;
-    for(i=VALUE_TO_INT(min);i<=VALUE_TO_INT(max);i+=st)
+    for(i=VALUE_TO_INT(Min);i<=VALUE_TO_INT(Max);i+=st)
       printf(".");
     printf( "\r" );
     fflush(stdout);

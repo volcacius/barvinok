@@ -28,19 +28,9 @@
 	}
 #endif
 
-/* define this to print all the results */
-/* else, only a progress bar is printed */
-/* #define PRINT_ALL_RESULTS	 */
-/* define this to continue the test after first error found */
-/* #define DONT_BREAK_ON_ERROR */
-
-Value min, max;
+Value Min, Max;
 
 char **params;
-
-#ifdef DONT_BREAK_ON_ERROR
-#define PRINT_ALL_RESULTS
-#endif
 
 #ifndef PRINT_ALL_RESULTS
 int st;
@@ -48,7 +38,7 @@ int st;
 
 /****************************************************/
 /* function check_poly :                            */
-/* scans the parameter space from min to max (all   */
+/* scans the parameter space from Min to Max (all   */
 /* directions). Computes the number of points in    */
 /* the polytope using both methods, and compare them*/
 /* returns 1 on success                             */
@@ -135,7 +125,7 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
     }
   }
   else
-    for(value_assign(tmp,min); value_le(tmp,max); value_increment(tmp,tmp)) {
+    for(value_assign(tmp,Min); value_le(tmp,Max); value_increment(tmp,tmp)) {
 
 #ifndef PRINT_ALL_RESULTS
       k = VALUE_TO_INT(tmp);
