@@ -1381,10 +1381,67 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     return R;
 }
 
+static Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
+				 Polyhedron **fVD, int nd, unsigned MaxRays)
+{
+    assert(CEq);
+
+    Polyhedron *Dt;
+    Dt = CT ? DomainPreimage(D, CT, MaxRays) : D;
+    Polyhedron *rVD = DomainIntersection(Dt, CEq, MaxRays);
+
+    /* if rVD is empty or too small in geometric dimension */
+    if(!rVD || emptyQ(rVD) ||
+	    (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
+	if(rVD)
+	    Domain_Free(rVD);
+	if (CT)
+	    Domain_Free(Dt);
+	return 0;		/* empty validity domain */
+    }
+
+    if (CT)
+	Domain_Free(Dt);
+
+    fVD[nd] = Domain_Copy(rVD);
+    for (int i = 0 ; i < nd; ++i) {
+	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], MaxRays);
+	if (emptyQ(I)) {
+	    Domain_Free(I);
+	    continue;
+	}
+	Polyhedron *F = DomainSimplify(I, fVD[nd], MaxRays);
+	if (F->NbEq == 1) {
+	    Polyhedron *T = rVD;
+	    rVD = DomainDifference(rVD, F, MaxRays);
+	    Domain_Free(T);
+	}
+	Domain_Free(F);
+	Domain_Free(I);
+    }
+
+    rVD = DomainConstraintSimplify(rVD, MaxRays);
+    if (emptyQ(rVD)) {
+	Domain_Free(rVD);
+	return 0;
+    }
+
+    Value c;
+    value_init(c);
+    barvinok_count(rVD, &c, MaxRays);
+    if (value_zero_p(c)) {
+	Domain_Free(rVD);
+	rVD = 0;
+    }
+    value_clear(c);
+
+    return rVD;
+}
+
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     //P = unfringe(P, MaxRays);
-    Polyhedron *CEq = NULL, *rVD, *pVD, *fVD, *CA;
+    Polyhedron *CEq = NULL, *rVD, *pVD, *CA;
     Matrix *CT = NULL;
     Param_Polyhedron *PP = NULL;
     Param_Domain *D, *next;
@@ -1493,57 +1550,20 @@ out:
 
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
-    struct section { Polyhedron *D; Polyhedron *full; evalue E; };
+    struct section { Polyhedron *D; evalue E; };
     section *s = new section[nd];
+    Polyhedron **fVD = new (Polyhedron*)[nd];
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
-	if (!CEq) {
-	    fVD = Domain_Copy(D->Domain);
-	    D->Domain = DomainConstraintSimplify(D->Domain, MaxRays);
-	    pVD = rVD = D->Domain;    
-	    D->Domain = NULL;
-	} else {
-	  Polyhedron *Dt;
-	  Dt = CT ? DomainPreimage(D->Domain,CT,MaxRays) : D->Domain;
-	  rVD = DomainIntersection(Dt,CEq,MaxRays);
-	  
-	  /* if rVD is empty or too small in geometric dimension */
-	  if(!rVD || emptyQ(rVD) ||
-	     (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
-	    if(rVD)
-	      Domain_Free(rVD);
-	    if (CT)
-		Domain_Free(Dt);
-	    continue;		/* empty validity domain */
-	  }
 
-	    if (CT)
-	        Domain_Free(Dt);
+	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
+					fVD, nd, MaxRays);
+	if (!rVD)
+	    continue;
 
-	    fVD = Domain_Copy(rVD);
-	    for (int i = 0 ; i < nd; ++i) {
-		Polyhedron *I = DomainIntersection(fVD, s[i].full, MaxRays);
-		if (emptyQ(I)) {
-		    Domain_Free(I);
-		    continue;
-		}
-		Polyhedron *F = DomainSimplify(I, fVD, MaxRays);
-		if (F->NbEq == 1) {
-		    Polyhedron *T = rVD;
-		    rVD = DomainDifference(rVD, F, MaxRays);
-		    Domain_Free(T);
-		}
-		Domain_Free(F);
-		Domain_Free(I);
-	    }
-	    rVD = DomainConstraintSimplify(rVD, MaxRays);
-	    if (emptyQ(rVD)) {
-		Domain_Free(rVD);
-		continue;
-	    }
-	    pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
-	}
+	pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
+
 	int ncone = 0;
 	sign.SetLength(ncone);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
@@ -1634,7 +1654,6 @@ out:
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
 	s[nd].D = rVD;
-	s[nd].full = fVD;
 	++nd;
 	if (rVD != pVD)
 	    Domain_Free(pVD);
@@ -1648,10 +1667,11 @@ out:
 	    EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
 	    value_clear(eres->x.p->arr[2*j+1].d);
 	    eres->x.p->arr[2*j+1] = s[j].E;
-	    Domain_Free(s[j].full);
+	    Domain_Free(fVD[j]);
 	}
     }
     delete [] s;
+    delete [] fVD;
 
     Vector_Free(c);
 
