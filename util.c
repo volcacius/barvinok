@@ -277,6 +277,96 @@ Polyhedron *remove_equalities(Polyhedron *P)
     return p;
 }
 
+struct single {
+    int	nr;
+    int pos[2];
+};
+
+/*
+ * The number of points in P is equal to factor time
+ * the number of points in the polyhedron returned.
+ * The return value is zero if no reduction can be found.
+ */
+Polyhedron* reduce(Polyhedron *P, Value* factor)
+{
+    int i, j, prev, nsingle, k, p;
+    unsigned dim = P->Dimension;
+    struct single *singles;
+    int *bad;
+    Value tmp, pos, neg;
+
+    value_init(tmp);
+    value_init(pos);
+    value_init(neg);
+
+    value_set_si(*factor, 1);
+
+    singles = (struct single *)malloc(dim * sizeof(struct single));
+    assert(singles);
+    for (i = 0; i < dim; ++i)
+	singles[i].nr = 0;
+    bad = (int *)calloc(dim, sizeof(int));
+    assert(bad);
+
+    assert (P->NbEq == 0);
+
+    nsingle = 0;
+    for (i = 0; i < P->NbConstraints; ++i) {
+	for (j = 0, prev = -1; j < dim; ++j) {
+	    if (value_notzero_p(P->Constraint[i][j+1])) {
+		if (prev == -1)
+		    prev = j;
+		else {
+		    if (prev != -2)
+			bad[prev] = 1;
+		    bad[j] = 1;
+		    prev = -2;
+		}
+	    }
+	}
+	if (prev != -2)
+	    singles[prev].pos[singles[prev].nr++] = i;
+    }
+    for (j = 0; j < dim; ++j) {
+	if (bad[j])
+	    singles[j].nr = 0;
+	else if (singles[j].nr == 2)
+	    ++nsingle;
+    }
+    if (nsingle) {
+	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
+	for (i = 0, j = 0; i < dim; ++i) {
+	    if (singles[i].nr != 2)
+		value_set_si(m->p[j++][i], 1);
+	    else {
+		for (k = 0; k <= 1; ++k) {
+		    p = singles[i].pos[k];
+		    value_oppose(tmp, P->Constraint[p][dim+1]);
+		    if (value_pos_p(P->Constraint[p][i+1]))
+			mpz_cdiv_q(pos, tmp, P->Constraint[p][i+1]);
+		    else
+			mpz_fdiv_q(neg, tmp, P->Constraint[p][i+1]);
+		}
+		value_substract(tmp, neg, pos);
+		value_increment(tmp, tmp);
+		value_multiply(*factor, *factor, tmp);
+	    }
+	}
+	value_set_si(m->p[dim-nsingle][dim], 1);
+	P = Polyhedron_Image(P, m, P->NbConstraints);
+	Matrix_Free(m);
+    } else
+	P = NULL;
+    free(singles);
+    free(bad);
+
+    value_clear(tmp);
+    value_clear(pos);
+    value_clear(neg);
+
+    return P;
+}
+
 void manual_count(Polyhedron *P, Value* result)
 {
     Polyhedron *U = Universe_Polyhedron(0);

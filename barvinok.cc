@@ -450,10 +450,28 @@ void count(Polyhedron *P, Value* result)
     sign.SetLength(ncone);
     unsigned dim;
     int allocated = 0;
+    Value factor;
+    Polyhedron *Q;
 
     if (P->NbEq != 0) {
 	P = remove_equalities(P);
 	allocated = 1;
+    }
+    value_init(factor);
+    value_set_si(factor, 1);
+    Q = reduce(P, &factor);
+    if (Q) {
+	if (allocated)
+	    Polyhedron_Free(P);
+	P = Q;
+	allocated = 1;
+    }
+    if (P->Dimension == 0) {
+	value_assign(*result, factor);
+	if (allocated)
+	    Polyhedron_Free(P);
+	value_clear(factor);
+	return;
     }
 
     dim = P->Dimension;
@@ -545,7 +563,7 @@ void count(Polyhedron *P, Value* result)
 	}
     }
     assert(value_one_p(&count[0]._mp_den));
-    value_assign(*result, &count[0]._mp_num);
+    value_multiply(*result, &count[0]._mp_num, factor);
     mpq_clear(count);
 
     for (int j = 0; j < P->NbRays; ++j)
@@ -555,4 +573,5 @@ void count(Polyhedron *P, Value* result)
 
     if (allocated)
 	Polyhedron_Free(P);
+    value_clear(factor);
 }
