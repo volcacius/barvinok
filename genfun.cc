@@ -114,8 +114,8 @@ void gen_fun::print(void)
 	    cout << " + ";
 	cout << "(";
 	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
-	    if (j != 0)
-		cout << " + ";
+	    if (j != 0 && term[i]->n.coeff[j][0] > 0)
+		cout << "+";
 	    print_power(term[i]->n.coeff[j], term[i]->n.power[j]);
 	}
 	cout << ")/(";
