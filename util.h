@@ -24,6 +24,7 @@ Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
 void Enumeration_Print(FILE *Dst, Enumeration *en, char **params);
 void Enumeration_mod2table(Enumeration *en, unsigned nparam);
+size_t Enumeration_size(Enumeration *en);
 void Free_ParamNames(char **params, int m);
 int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2);
 int ConstraintSimplify(Value *old, Value *n, int len, Value* v);

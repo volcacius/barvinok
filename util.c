@@ -882,6 +882,17 @@ void Enumeration_mod2table(Enumeration *en, unsigned nparam)
     }
 }
 
+size_t Enumeration_size(Enumeration *en)
+{
+    size_t s = 0;
+
+    for (; en; en = en->next) {
+	s += domain_size(en->ValidityDomain);
+	s += evalue_size(&en->EP);
+    }
+    return s;
+}
+
 void Free_ParamNames(char **params, int m)
 {
     while (--m >= 0)
