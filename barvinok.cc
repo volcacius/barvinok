@@ -454,6 +454,10 @@ void barvinok_count(Polyhedron *P, Value* result)
     Polyhedron *Q;
     int r = 0;
 
+    if (emptyQ(P)) {
+	value_set_si(*result, 0);
+	return;
+    }
     if (P->NbBid == 0)
 	for (; r < P->NbRays; ++r)
 	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
