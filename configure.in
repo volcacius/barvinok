@@ -169,6 +169,15 @@ if test "x$bv_cv_modulo" != "xno" -o "x$bv_cv_fractional" != "xno"; then
         AC_DEFINE(USE_MODULO,[], [Use fractional representation])
 fi
 
+AC_MSG_CHECKING(whether to use incremental algorithm)
+AC_ARG_ENABLE(incremental,
+            [  --disable-incremental   Disable incremental algorithm],
+	    [bv_cv_incremental=$enableval], [bv_cv_incremental="yes"])
+AC_MSG_RESULT($bv_cv_incremental)
+if test "x$bv_cv_incremental" = "xyes"; then
+        AC_DEFINE(USE_INCREMENTAL,[], [Use incremental algorithm])
+fi
+
 AC_ARG_WITH(ntl,
             [  --with-ntl=DIR          DIR Location of NTL],
             [ echo "Package ntl : $withval" && ntl_package=$withval],  

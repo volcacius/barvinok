@@ -2702,8 +2702,11 @@ out:
 
     unsigned dim = P->Dimension - nparam;
 
-    //enumerator et(P, dim, PP->nbV);
+#ifdef USE_INCREMENTAL
     ienumerator et(P, dim, PP->nbV);
+#else
+    enumerator et(P, dim, PP->nbV);
+#endif
 
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
