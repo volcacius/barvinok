@@ -1390,12 +1390,12 @@ out:
 #ifdef USE_MODULO
     Polyhedron *Q = ParamPolyhedron_Reduce(P, P->Dimension-nparam, &factor);
     if (Q) {
+	Polyhedron_Free(P);
 	if (Q->Dimension == nparam) {
 	    CEq = Q;
 	    P = Universe_Polyhedron(0);
 	    goto constant;
 	}
-	Polyhedron_Free(P);
 	P = Q;
     }
 #endif
