@@ -93,5 +93,6 @@ size_t domain_size(Polyhedron *D);
 Enumeration* partition2enumeration(evalue *EP);
 void evalue_frac2floor(evalue *e);
 evalue *esum(evalue *E, int nvar);
+void eor(evalue *e1, evalue *res);
 
 #endif

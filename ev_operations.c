@@ -3175,3 +3175,22 @@ evalue *esum(evalue *e, int nvar)
 
     return res;
 }
+
+/* Initial silly implementation */
+void eor(evalue *e1, evalue *res)
+{
+    evalue E;
+    evalue mone;
+    value_init(E.d);
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+
+    evalue_copy(&E, res);
+    eadd(e1, &E);
+    emul(e1, res);
+    emul(&mone, res);
+    eadd(&E, res);
+
+    free_evalue_refs(&E); 
+    free_evalue_refs(&mone);
+}
