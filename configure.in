@@ -1,0 +1,5 @@
+AC_INIT
+AM_INIT_AUTOMAKE(barvinok, 0.01)
+AC_PROG_LIBTOOL
+
+AC_OUTPUT(Makefile)
