@@ -1559,8 +1559,7 @@ void counter::start(unsigned MaxRays)
     }
 }
 
-// incremental counter
-struct icounter : public polar_decomposer {
+struct reducer : public polar_decomposer {
     vec_ZZ lambda;
     vec_ZZ vertex;
     //vec_ZZ den;
@@ -1570,18 +1569,16 @@ struct icounter : public polar_decomposer {
     int j;
     Polyhedron *P;
     unsigned dim;
-    mpq_t count;
     mpq_t tcount;
     mpz_t tn;
     mpz_t td;
 
-    icounter(Polyhedron *P) {
+    reducer(Polyhedron *P) {
 	this->P = P;
 	dim = P->Dimension;
 	lambda.SetLength(1);
 	lambda[0] = 1;
 	//den.SetLength(dim);
-	mpq_init(count);
 	mpq_init(tcount);
 	mpz_init(tn);
 	mpz_init(td);
@@ -1590,8 +1587,7 @@ struct icounter : public polar_decomposer {
 
     void start(unsigned MaxRays);
 
-    ~icounter() {
-	mpq_clear(count);
+    ~reducer() {
 	mpq_clear(tcount);
 	mpz_clear(tn);
 	mpz_clear(td);
@@ -1599,37 +1595,10 @@ struct icounter : public polar_decomposer {
 
     virtual void handle_polar(Polyhedron *P, int sign);
     void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
-    void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
+    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f) = 0;
 };
 
-void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
-{
-    int r;
-    unsigned len = den_f.NumRows();  // number of factors in den
-    vec_ZZ den_s;
-    den_s.SetLength(len);
-    ZZ num_s = num[0];
-    for (r = 0; r < len; ++r)
-	den_s[r] = den_f[r][0];
-    normalize(c, num_s, den_s);
-
-    dpoly n(len, num_s);
-    dpoly D(len, den_s[0], 1);
-    for (int k = 1; k < len; ++k) {
-	dpoly fact(len, den_s[k], 1);
-	D *= fact;
-    }
-    mpq_set_si(tcount, 0, 1);
-    n.div(D, tcount, one);
-    zz2value(c, tn);
-    zz2value(cd, td);
-    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
-    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
-    mpq_canonicalize(tcount);
-    mpq_add(count, count, tcount);
-}
-
-void icounter::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
+void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned d = num.length()-1;
@@ -1791,7 +1760,7 @@ void icounter::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     }
 }
 
-void icounter::handle_polar(Polyhedron *C, int s)
+void reducer::handle_polar(Polyhedron *C, int s)
 {
     assert(C->NbRays-1 == dim);
 
@@ -1809,12 +1778,52 @@ void icounter::handle_polar(Polyhedron *C, int s)
     reduce(sgn, one, vertex, den);
 }
 
-void icounter::start(unsigned MaxRays)
+void reducer::start(unsigned MaxRays)
 {
     for (j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j);
 	decompose(C, MaxRays);
     }
+}
+
+// incremental counter
+struct icounter : public reducer {
+    mpq_t count;
+
+    icounter(Polyhedron *P) : reducer(P) {
+	mpq_init(count);
+    }
+    ~icounter() {
+	mpq_clear(count);
+    }
+    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
+};
+
+void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+{
+    int r;
+    unsigned len = den_f.NumRows();  // number of factors in den
+    vec_ZZ den_s;
+    den_s.SetLength(len);
+    ZZ num_s = num[0];
+    for (r = 0; r < len; ++r)
+	den_s[r] = den_f[r][0];
+    normalize(c, num_s, den_s);
+
+    dpoly n(len, num_s);
+    dpoly D(len, den_s[0], 1);
+    for (int k = 1; k < len; ++k) {
+	dpoly fact(len, den_s[k], 1);
+	D *= fact;
+    }
+    mpq_set_si(tcount, 0, 1);
+    n.div(D, tcount, one);
+    zz2value(c, tn);
+    zz2value(cd, td);
+    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
+    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
+    mpq_canonicalize(tcount);
+    mpq_add(count, count, tcount);
 }
 
 typedef Polyhedron * Polyhedron_p;
