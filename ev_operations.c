@@ -145,7 +145,23 @@ you_lose:   	/* OK, lets not do it */
         }
     }
     else if (p->type==modulo) {
-	  
+	if (value_notzero_p(p->arr[0].d)) {
+	    evalue v;
+	    value_init(v.d);
+	    value_set_si(v.d, 1);
+	    value_init(v.x.n);
+	    value_set_si(p->arr[0].d, p->pos);
+	    mpz_fdiv_r(v.x.n, p->arr[0].x.n,  p->arr[0].d);
+
+	    for (i=p->size-1;i>=2;i--) {
+		emul(&v, &p->arr[i]);
+		eadd(&p->arr[i], &p->arr[i-1]);
+		free_evalue_refs(&(p->arr[i]));
+	    }
+	    p->size = 2;
+	    free_evalue_refs(&v);
+	}
+
         /* Try to reduce the degree */
         for (i=p->size-1;i>=2;i--) {
             if (!(value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n)))
