@@ -271,6 +271,80 @@ static void eadd_rev_cst (evalue *e1, evalue *res)
     *res = ev;
 }
 
+struct section { Polyhedron * D; evalue E; };
+
+void eadd_partitions (evalue *e1,evalue *res)
+{
+    int n, i, j, final;
+    Polyhedron *d, *fd;
+    /* put in a separate function ! */
+    struct section *s;
+    s = (struct section *) 
+	    malloc((e1->x.p->size/2+1) * (res->x.p->size/2+1) * 
+		   sizeof(struct section));
+    assert(s);
+
+    n = 0;
+    for (j = 0; j < e1->x.p->size/2; ++j) {
+	assert(res->x.p->size >= 2);
+	fd = DomainDifference(EVALUE_DOMAIN(e1->x.p->arr[2*j]),
+			      EVALUE_DOMAIN(res->x.p->arr[0]), 0);
+	if (!emptyQ(fd))
+	    for (i = 1; i < res->x.p->size/2; ++i) {
+		Polyhedron *t = fd;
+		fd = DomainDifference(fd, EVALUE_DOMAIN(res->x.p->arr[2*i]), 0);
+		Domain_Free(t);
+		if (emptyQ(fd))
+		    break;
+	    }
+	if (emptyQ(fd)) {
+	    Domain_Free(fd);
+	    continue;
+	}
+	value_init(s[n].E.d);
+	evalue_copy(&s[n].E, &e1->x.p->arr[2*j+1]);
+	s[n].D = fd;
+	++n;
+    }
+    for (i = 0; i < res->x.p->size/2; ++i) {
+	fd = EVALUE_DOMAIN(res->x.p->arr[2*i]);
+	for (j = 0; j < e1->x.p->size/2; ++j) {
+	    Polyhedron *t;
+	    d = DomainIntersection(EVALUE_DOMAIN(e1->x.p->arr[2*j]),
+				   EVALUE_DOMAIN(res->x.p->arr[2*i]), 0);
+	    if (emptyQ(d)) {
+		Domain_Free(d);
+		continue;
+	    }
+	    t = fd;
+	    fd = DomainDifference(fd, EVALUE_DOMAIN(e1->x.p->arr[2*j]), 0);
+	    if (t != EVALUE_DOMAIN(res->x.p->arr[2*i]))
+		Domain_Free(t);
+	    value_init(s[n].E.d);
+	    evalue_copy(&s[n].E, &res->x.p->arr[2*i+1]);
+	    eadd(&e1->x.p->arr[2*j+1], &s[n].E);
+	    s[n].D = d;
+	    ++n;
+	}
+	if (!emptyQ(fd)) {
+	    if (fd != EVALUE_DOMAIN(res->x.p->arr[2*i]))
+		Domain_Free(EVALUE_DOMAIN(res->x.p->arr[2*i]));
+	    s[n].E = res->x.p->arr[2*i+1];
+	    s[n].D = fd;
+	    ++n;
+	}
+    }
+
+    free(res->x.p);
+    res->x.p = new_enode(partition, 2*n, -1);
+    for (j = 0; j < n; ++j) {
+	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
+	res->x.p->arr[2*j+1] = s[j].E;
+    }
+
+    free(s);
+}
+
 void eadd(evalue *e1,evalue *res) {
 
  int i; 
@@ -326,6 +400,12 @@ void eadd(evalue *e1,evalue *res) {
 	  return;
      }
      else {   // ((e1->d==0) && (res->d==0)) 
+	assert(!((e1->x.p->type == partition) ^
+	         (res->x.p->type == partition)));
+	if (e1->x.p->type == partition) {
+	    eadd_partitions(e1, res);
+	    return;
+	}
                  if ((e1->x.p->type != res->x.p->type) ) {
 		      /* adding to evalues of different type. two cases are possible  
 		       * res is periodic and e1 is polynomial, you have to exchange
