@@ -1538,6 +1538,21 @@ static void mod2table_r(evalue *e, Vector *periods, Value m, int p,
     }
 }
 
+static void rel2table(evalue *e, int zero)
+{
+    if (value_pos_p(e->d)) {
+	if (value_zero_p(e->x.n) == zero)
+	    value_set_si(e->x.n, 1);
+	else
+	    value_set_si(e->x.n, 0);
+	value_set_si(e->d, 1);
+    } else {
+	int i;
+	for (i = 0; i < e->x.p->size; ++i)
+	    rel2table(&e->x.p->arr[i], zero);
+    }
+}
+
 void evalue_mod2table(evalue *e, int nparam)
 {
   enode *p;
@@ -1549,7 +1564,29 @@ void evalue_mod2table(evalue *e, int nparam)
   for (i=0; i<p->size; i++) {
     evalue_mod2table(&(p->arr[i]), nparam);
   }
-  if (p->type == fractional) {
+  if (p->type == relation) {
+    evalue copy;
+    evalue *ev;
+
+    if (p->size > 2) {
+      value_init(copy.d);
+      evalue_copy(&copy, &p->arr[0]);
+    }
+    rel2table(&p->arr[0], 1);
+    emul(&p->arr[0], &p->arr[1]);
+    if (p->size > 2) {
+      rel2table(&copy, 0);
+      emul(&copy, &p->arr[2]);
+      eadd(&p->arr[2], &p->arr[1]);
+      free_evalue_refs(&p->arr[2]);	  
+      free_evalue_refs(&copy);	  
+    }
+    free_evalue_refs(&p->arr[0]);	  
+    ev = &p->arr[1];
+    free(p);
+    value_clear(e->d);
+    *e = *ev;
+  } else if (p->type == fractional) {
     Vector *periods = Vector_Alloc(nparam);
     Vector *val = Vector_Alloc(nparam);
     Value tmp;
