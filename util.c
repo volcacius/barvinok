@@ -1013,12 +1013,14 @@ each imbriquation
 @param pos index position of current loop index (1..hdim-1)
 @param P loop domain
 @param context context values for fixed indices 
+@param exist	number of existential variables
 @return the number of integer points in this
 polyhedron 
 
 */
-void count_points_e (int pos,Polyhedron *P,Value *context, Value *res) {
-   
+void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
+		     Value *context, Value *res)
+{
     Value LB, UB, k, c;
 
     if (emptyQ(P)) {
@@ -1031,11 +1033,12 @@ void count_points_e (int pos,Polyhedron *P,Value *context, Value *res) {
     value_set_si(UB,0);
 
     if (lower_upper_bounds(pos,P,context,&LB,&UB) !=0) {
-    
         /* Problem if UB or LB is INFINITY */
-        fprintf(stderr, "count_points: ? infinite domain\n");
         value_clear(LB); value_clear(UB); value_clear(k);
-	value_set_si(*res, -1);
+	if (pos >= P->Dimension - nparam - exist)
+	    value_set_si(*res, 1);
+	else 
+	    value_set_si(*res, -1);
 	return;
     }
   
@@ -1061,9 +1064,13 @@ void count_points_e (int pos,Polyhedron *P,Value *context, Value *res) {
 	return;  
     }  
     if (!P->next) {
-        value_substract(k,UB,LB);
-        value_add_int(k,k,1);
-	value_assign(*res, k);
+	if (exist)
+	    value_set_si(*res, 1);
+	else {
+	    value_substract(k,UB,LB);
+	    value_add_int(k,k,1);
+	    value_assign(*res, k);
+	}
         value_clear(LB); value_clear(UB); value_clear(k);
         return;
     } 
@@ -1089,6 +1096,9 @@ void count_points_e (int pos,Polyhedron *P,Value *context, Value *res) {
 	    value_set_si(*res, -1);
 	    break;
         }
+	if (pos >= P->Dimension - nparam - exist &&
+		value_pos_p(*res))
+	    break;
     }
     value_clear(c);
   
