@@ -1,0 +1,7 @@
+# This example Presburger formula has 16000 solutions.
+
+{[In_1,In_2]: Exists(Ex_1,Ex_2: 2 <= Ex_1 <= 499 && 2 <= Ex_2 <= 499 && 16In_1 <= Ex_1-1 < 16In_1 + 16 && In_2=Ex_2)} union
+{[In_1,In_2]: Exists(Ex_1,Ex_2: 2 <= Ex_1 <= 499 && 2 <= Ex_2 <= 499 && 16In_1 <= Ex_1-2 < 16In_1 + 16 && In_2=Ex_2)} union
+{[In_1,In_2]: Exists(Ex_1,Ex_2: 2 <= Ex_1 <= 499 && 2 <= Ex_2 <= 499 && 16In_1 <= Ex_1 < 16In_1 + 16 && In_2=Ex_2)} union
+{[In_1,In_2]: Exists(Ex_1,Ex_2: 2 <= Ex_1 <= 499 && 2 <= Ex_2 <= 499 && 16In_1 <= Ex_1-1 < 16In_1 + 16 && In_2=Ex_2-1)} union
+{[In_1,In_2]: Exists(Ex_1,Ex_2: 2 <= Ex_1 <= 499 && 2 <= Ex_2 <= 499 && 16In_1 <= Ex_1-1 < 16In_1 + 16 && In_2=Ex_2+1)}
