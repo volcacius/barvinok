@@ -2249,6 +2249,7 @@ void evalue_combine(evalue *e)
 		free_evalue_refs(&tmp);
 	    }
 	}
+	Polyhedron_Free(H);
     }
 
     for (i = 0; i < e->x.p->size/2; ++i) {
