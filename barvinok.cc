@@ -2072,8 +2072,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
     Polyhedron *C = Universe_Polyhedron(nparam);
     Polyhedron *CEq;
     Matrix *CT;
-    Polyhedron *O = P;
-    PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
+    Polyhedron *PR = P;
+    PP = Polyhedron2Param_SimplifiedDomain(&PR,C,MaxRays,&CEq,&CT);
     Polyhedron_Free(C);
 
     int nd;
@@ -2103,7 +2103,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     /* This doesn't seem to have any effect */
     if (nd == 1) {
 	Polyhedron *CA = align_context(VD[0], P->Dimension, MaxRays);
-	O = P;
+	Polyhedron *O = P;
 	P = DomainIntersection(P, CA, MaxRays);
 	if (O != *PA)
 	    Polyhedron_Free(O);
@@ -2112,11 +2112,23 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	    EP = new_zero_ep();
     }
 
-    /* We don't handle this yet */
-    if (!EP && P->Dimension != (*PA)->Dimension)
-	assert(0);
+    if (!EP && CT->NbColumns != CT->NbRows) {
+	Polyhedron *CEqr = DomainImage(CEq, CT, MaxRays);
+	Polyhedron *CA = align_context(CEqr, PR->Dimension, MaxRays);
+	Polyhedron *I = DomainIntersection(PR, CA, MaxRays);
+	Polyhedron_Free(CEqr);
+	Polyhedron_Free(CA);
+#ifdef DEBUG_ER
+	fprintf(stderr, "\nER: Eliminate\n");
+#endif /* DEBUG_ER */
+	nparam -= CT->NbColumns - CT->NbRows;
+	EP = barvinok_enumerate_e(I, exist, nparam, MaxRays);
+	addeliminatedparams_enum(EP, CT, CEq, MaxRays);
+	Polyhedron_Free(I);
+    }
+    PR = 0;
 
-    if (nd > 1) {
+    if (!EP && nd > 1) {
 #ifdef DEBUG_ER
 	fprintf(stderr, "\nER: VD\n");
 #endif /* DEBUG_ER */
