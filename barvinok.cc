@@ -675,6 +675,74 @@ static evalue *multi_monom(vec_ZZ& p)
     return X;
 }
 
+/*
+ * Check whether mapping polyhedron P on the affine combination
+ * num yields a range that has a fixed quotient on integer
+ * division by d
+ * If zero is true, then we are only interested in the quotient
+ * for the cases where the remainder is zero.
+ * Returns NULL if false and a newly allocated value if true.
+ */
+static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
+{
+    Value* ret = NULL;
+    int len = num.length();
+    Matrix *T = Matrix_Alloc(2, len);
+    zz2values(num, T->p[0]);
+    value_set_si(T->p[1][len-1], 1);
+    Polyhedron *I = Polyhedron_Image(P, T, P->NbConstraints);
+    Matrix_Free(T);
+
+    int i;
+    for (i = 0; i < I->NbRays; ++i)
+	if (value_zero_p(I->Ray[i][2])) {
+	    Polyhedron_Free(I);
+	    return NULL;
+	}
+
+    Value min, max;
+    value_init(min);
+    value_init(max);
+    for (i = 0; i < I->NbConstraints; ++i) {
+	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+	if (value_pos_p(I->Constraint[i][1]))
+	    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
+	else
+	    mpz_fdiv_q(max, I->Constraint[i][2], I->Constraint[i][1]);
+    }
+    Polyhedron_Free(I);
+
+    if (zero)
+	mpz_cdiv_q(min, min, d);
+    else
+	mpz_fdiv_q(min, min, d);
+    mpz_fdiv_q(max, max, d);
+    if (value_eq(min, max)) {
+	ALLOC(ret);
+	value_assign(*ret, min);
+    } 
+    value_clear(min);
+    value_clear(max);
+    return ret;
+}
+
+/*
+ * Project on final dim dimensions
+ */
+static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
+{
+    if (P->Dimension == dim)
+	return Polyhedron_Copy(P);
+
+    int remove = P->Dimension - dim;
+    Matrix *T = Matrix_Alloc(dim+1, P->Dimension+1);
+    for (int i = 0; i < dim+1; ++i)
+	value_set_si(T->p[i][i+remove], 1);
+    Polyhedron *I = Polyhedron_Image(P, T, P->NbConstraints);
+    Matrix_Free(T);
+    return I;
+}
+
 #ifdef USE_MODULO
 static void mask(Matrix *f, evalue *factor)
 {
@@ -770,48 +838,22 @@ struct term_info {
 
 static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
 {
-    bool ret = true;
-    int len = num.length();
-    Matrix *T = Matrix_Alloc(2, len);
-    zz2values(num, T->p[0]);
-    value_set_si(T->p[1][len-1], 1);
-    Polyhedron *I = Polyhedron_Image(PD, T, PD->NbConstraints);
-    Matrix_Free(T);
+    Value *q = fixed_quotient(PD, num, d, false);
 
-    int i;
-    for (i = 0; i < I->NbRays; ++i)
-	if (value_zero_p(I->Ray[i][2])) {
-	    Polyhedron_Free(I);
-	    return true;
-	}
+    if (!q)
+	return true;
 
-    Value min, max;
-    value_init(min);
-    value_init(max);
-    for (i = 0; i < I->NbConstraints; ++i) {
-	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
-	if (value_pos_p(I->Constraint[i][1]))
-	    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
-	else
-	    mpz_fdiv_q(max, I->Constraint[i][2], I->Constraint[i][1]);
-    }
-    mpz_fdiv_q(min, min, d);
-    mpz_fdiv_q(max, max, d);
-    if (value_eq(min, max)) {
-	ret = false;
-	value_oppose(min, min);
-	evalue EV;
-	value_init(EV.d);
-	value_set_si(EV.d, 1);
-	value_init(EV.x.n);
-	value_multiply(EV.x.n, min, d);
-	eadd(&EV, E);
-	free_evalue_refs(&EV); 
-    }
-    value_clear(min);
-    value_clear(max);
-    Polyhedron_Free(I);
-    return ret;
+    value_oppose(*q, *q);
+    evalue EV;
+    value_init(EV.d);
+    value_set_si(EV.d, 1);
+    value_init(EV.x.n);
+    value_multiply(EV.x.n, *q, d);
+    eadd(&EV, E);
+    free_evalue_refs(&EV); 
+    value_clear(*q);
+    free(q);
+    return false;
 }
 
 static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
