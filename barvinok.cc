@@ -694,14 +694,14 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
 static void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
 {
     Value tmp;
-    int max = 10;
+    int max = 10 * 16;
     unsigned int dim = P->Dimension;
     value_init(tmp);
 
     for (int i = 0; i < P->NbRays; ++i) {
 	for (int j = 1; j <= dim; ++j) {
 	    value_absolute(tmp, P->Ray[i][j]);
-	    int t = VALUE_TO_LONG(tmp);
+	    int t = VALUE_TO_LONG(tmp) * 16;
 	    if (t > max)
 		max = t;
 	}
@@ -709,7 +709,7 @@ static void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
     for (int i = 0; i < P->NbConstraints; ++i) {
 	for (int j = 1; j <= dim; ++j) {
 	    value_absolute(tmp, P->Constraint[i][j]);
-	    int t = VALUE_TO_LONG(tmp);
+	    int t = VALUE_TO_LONG(tmp) * 16;
 	    if (t > max)
 		max = t;
 	}
@@ -718,8 +718,8 @@ static void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
 
     lambda.SetLength(nvar);
     for (int k = 0; k < nvar; ++k) {
-	int r = random_int(8*max*dim)+2;
-	int v = (2*(r%2)-1) * (4*max*dim + (r >> 1));
+	int r = random_int(max*dim)+2;
+	int v = (2*(r%2)-1) * (max/2*dim + (r >> 1));
 	lambda[k] = v;
     }
 }
