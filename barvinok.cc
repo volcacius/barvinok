@@ -7,7 +7,6 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
-#include "ehrhartpolynom.h"
 #include <barvinok.h>
 #include <util.h>
 extern "C" {

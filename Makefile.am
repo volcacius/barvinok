@@ -7,8 +7,6 @@ libbarvinok_la_SOURCES = \
     debug.h \
     ev_operations.c \
     ev_operations.h \
-    ehrhartpolynom.cpp \
-    ehrhartpolynom.h \
     util.c \
     util.h \
     barvinok.cc \
