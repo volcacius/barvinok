@@ -177,10 +177,10 @@ public:
 	matrix2zz(inv, B);
 	long r = LLL(det2, B, U);
 
-	ZZ min = max(U[0]);
+	ZZ min = max(B[0]);
 	int index = 0;
-	for (int i = 1; i < U.NumRows(); ++i) {
-	    ZZ tmp = max(U[1]);
+	for (int i = 1; i < B.NumRows(); ++i) {
+	    ZZ tmp = max(B[i]);
 	    if (tmp < min) {
 		min = tmp;
 		index = i;
