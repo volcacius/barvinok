@@ -452,7 +452,16 @@ void barvinok_count(Polyhedron *P, Value* result)
     int allocated = 0;
     Value factor;
     Polyhedron *Q;
+    int r = 0;
 
+    if (P->NbBid == 0)
+	for (; r < P->NbRays; ++r)
+	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
+		break;
+    if (P->NbBid !=0 || r < P->NbRays) {
+	value_set_si(*result, -1);
+	return;
+    }
     if (P->NbEq != 0) {
 	P = remove_equalities(P);
 	allocated = 1;
@@ -520,7 +529,7 @@ void barvinok_count(Polyhedron *P, Value* result)
 
     mat_ZZ rays;
     rays.SetDims(ncone * dim, dim);
-    int r = 0;
+    r = 0;
     for (int j = 0; j < P->NbRays; ++j) {
 	for (Polyhedron *i = vcone[j]; i; i = i->next)
 	    add_rays(rays, i, &r);
