@@ -75,6 +75,7 @@ you_lose:   /* OK, lets not do it */
 
       /* Try to reduce its strength */
     if (p->size == 1) {
+      value_clear(e->d);
       memcpy(e,&p->arr[0],sizeof(evalue));
       free(p);
     }
@@ -95,6 +96,7 @@ you_lose:   /* OK, lets not do it */
 
     /* Try to reduce its strength */
     if (p->size == 1) {
+      value_clear(e->d);
       memcpy(e,&p->arr[0],sizeof(evalue));
       free(p);
     }

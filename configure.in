@@ -75,6 +75,17 @@ int main()
 AC_MSG_WARN([This version of polylib does not automatically])
 AC_MSG_WARN([enlarge the chernikova table space]))
 
+AC_TRY_RUN([
+#include <polylib/polylibgmp.h>
+
+int main()
+{
+    enode *en = new_enode(polynomial, 1, 1);
+    return !(en->arr[0].x.p == NULL);
+}
+],,
+AC_MSG_WARN([This version of polylib leaks]))
+
 AC_ARG_WITH(ntl,
             [  --with-ntl=DIR          DIR Location of NTL],
             [ echo "Package tnl : $withval" && ntl_package=$withval],  
