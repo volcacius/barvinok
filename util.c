@@ -121,7 +121,6 @@ Polyhedron* triangularize_cone(Polyhedron *P)
     assert(P->NbEq == 0);
 
     R = NULL;
-    n = 0;
     value_init(tmp);
 
     Vector_Set(M->p[0]+1, 0, dim+1);
@@ -151,6 +150,8 @@ Polyhedron* triangularize_cone(Polyhedron *P)
     t = 1;
     if (0) {
 try_again:
+	/* Usually R should still be 0 */
+	Domain_Free(R);
 	Polyhedron_Free(L);
 	for (r = 1; r < P->NbRays; ++r) {
 	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
@@ -159,6 +160,9 @@ try_again:
 	++t;
     }
     assert(t <= MAX_TRY);
+
+    R = NULL;
+    n = 0;
 
     for (i = 0; i < L->NbConstraints; ++i) {
 	if (value_negz_p(L->Constraint[i][dim+1]))
