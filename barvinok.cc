@@ -2749,13 +2749,13 @@ static evalue* enumerate_vd(Polyhedron **PA,
 }
 
 #ifndef HAVE_PIPLIB
-static evalue *enumerate_pip(Polyhedron *P,
+evalue *barvinok_enumerate_pip(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
     return 0;
 }
 #else
-static evalue *enumerate_pip(Polyhedron *P,
+evalue *barvinok_enumerate_pip(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
     int nvar = P->Dimension - exist - nparam;
@@ -3084,7 +3084,7 @@ next:
     if (EP)
 	goto out;
 
-    EP = enumerate_pip(P, exist, nparam, MaxRays);
+    EP = barvinok_enumerate_pip(P, exist, nparam, MaxRays);
     if (EP)
 	goto out;
 
