@@ -2769,6 +2769,37 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     if (EVALUE_IS_ZERO(*e))
 	return 0;
 
+    if (D->next) {
+	Polyhedron *DD = Disjoint_Domain(D, 0, 0);
+	Polyhedron *Q;
+
+	Q = DD;
+	DD = Q->next;
+	Q->next = 0;
+
+	res = esum_over_domain(e, nvar, Q, C);
+	Polyhedron_Free(Q);
+
+	for (Q = DD; Q; Q = DD) {
+	    evalue *t;
+
+	    DD = Q->next;
+	    Q->next = 0;
+
+	    t = esum_over_domain(e, nvar, Q, C);
+	    Polyhedron_Free(Q);
+
+	    if (!res)
+		res = t;
+	    else if (t) {
+		eadd(t, res);
+		free_evalue_refs(t);
+		free(t);
+	    }
+	}
+	return res;
+    }
+
     if (value_notzero_p(e->d)) {
 	evalue *t;
 	int nparam = D->Dimension - nvar;
