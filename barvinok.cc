@@ -1588,6 +1588,7 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	en->next = res;
 	res = en;
 	res->ValidityDomain = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	value_clear(EP->x.p->arr[2*i].d);
 	res->EP = EP->x.p->arr[2*i+1];
     }
     free(EP->x.p);
