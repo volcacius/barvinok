@@ -12,6 +12,7 @@
 #include <util.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
+#include "ev_operations.h"
 }
 
 #ifdef NTL_STD_CXX
@@ -1169,7 +1170,11 @@ constant:
 	for (int j = 0; j < ncone; ++j)
 	    num[j].constant -= min;
 	f = 0;
-	EhrhartPolynom EP;
+	evalue EP;
+	value_init(EP.d);
+	value_init(EP.x.n);
+	value_set_si(EP.d, 1);
+	value_set_si(EP.x.n, 0);
 	mpq_t count;
 	mpq_init(count);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
@@ -1184,21 +1189,24 @@ constant:
 		    dpoly_n d(dim, num[f].constant, one);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *ET = multi_polynom(params, c, *num[f].E);
-		    EP += *ET;
+		    evalue EV = ET->to_evalue(allparams);
+		    eadd(&EV , &EP);
 		    delete ET;
 		    delete num[f].E;
 		} else if (num[f].pos != -1) {
 		    dpoly_n d(dim, num[f].constant, num[f].coeff);
 		    d.div(n, c, sign[f]);
 		    EhrhartPolynom *E = uni_polynom(params[num[f].pos], c);
-		    EP += *E;
+		    evalue EV = E->to_evalue(allparams);
+		    eadd(&EV , &EP);
 		    delete E;
 		} else {
 		    mpq_set_si(count, 0, 1);
 		    dpoly d(dim, num[f].constant);
 		    d.div(n, count, sign[f]);
 		    EhrhartPolynom *E = constant(count);
-		    EP += *E;
+		    evalue EV = E->to_evalue(allparams);
+		    eadd(&EV , &EP);
 		    delete E;
 		} 
 		++f;
@@ -1212,7 +1220,9 @@ constant:
 	en->next = res;
 	res = en;
 	res->ValidityDomain = rVD;
-	res->EP = (factor * EP).to_evalue(allparams);
+	evalue EV = factor.to_evalue(allparams);
+	emul(&EV, &EP);
+	res->EP = EP;
 	reduce_evalue(&res->EP);
     }
 
