@@ -1533,6 +1533,18 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     return res;
 }
 
+static void SwapColumns(Value **V, int n, int i, int j)
+{
+    for (int r = 0; r < n; ++r)
+	value_swap(V[r][i], V[r][j]);
+}
+
+static void SwapColumns(Polyhedron *P, int i, int j)
+{
+    SwapColumns(P->Constraint, P->NbConstraints, i, j);
+    SwapColumns(P->Ray, P->NbConstraints, i, j);
+}
+
 enum constraint { 
 ALL_POS = 1 << 0,
 ONE_NEG = 1 << 1,
@@ -1669,9 +1681,16 @@ next:
 	}
     for (int i = 0; i < exist; ++i)
 	if (info[i] & ONE_NEG) {
-	    assert(i == 0); // for now
 	    value_clear(f);
-	    return barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
+	    if (i == 0)
+		return barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
+	    else {
+		Polyhedron *T = Polyhedron_Copy(P);
+		SwapColumns(T, nvar+1, nvar+1+i);
+		evalue *EP = barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
+		Polyhedron_Free(T);
+		return EP;
+	    }
 	}
     for (int i = 0; i < exist; ++i)
 	if (info[i] & INDEPENDENT) {
