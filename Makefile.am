@@ -20,6 +20,7 @@ barvinok_count_SOURCES = barvinok_count.c
 
 TESTFILES = \
 	$(filter-out $(top_srcdir)/tests/CVS,$(wildcard $(top_srcdir)/tests/*))
+EHRHART_TESTS = $(wildcard $(top_srcdir)/tests/ehrhart/*)
 
 EXTRA_DIST = ChangeLog $(TESTFILES)
 
@@ -29,5 +30,11 @@ check:
 		echo -n $$i; \
 		./test < $$i || echo -n " NOT"; \
 		echo " ok"; \
+	    fi \
+	done
+	@for i in $(top_srcdir)/tests/ehrhart/*; do \
+	    if test -f $$i; then \
+		echo $$i; \
+		./verif_ehrhart < $$i; \
 	    fi \
 	done
