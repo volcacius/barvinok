@@ -5,6 +5,15 @@
 #include <util.h>
 #include <barvinok.h>
 
+/* The input of this example program is a polytope in combined
+ * data and parameter space followed by two lines indicating
+ * the number of existential variables and parameters respectively.
+ * The first lines starts with "E ", followed by a number.
+ * The second lines starts with "P ", followed by a number.
+ * These two lines are (optionally) followed by the names of the parameters.
+ * The polytope is in PolyLib notation.
+ */
+
 int main()
 {
     Polyhedron *A;

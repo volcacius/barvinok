@@ -6,6 +6,13 @@
 #include <util.h>
 #include <barvinok.h>
 
+/* The input of this example program is the same as that of testehrhart
+ * in the PolyLib distribution, i.e., a polytope in combined
+ * data and parameter space, a context polytope in parameter space
+ * and (optionally) the names of the parameters.
+ * Both polytopes are in PolyLib notation.
+ */
+
 struct option options[] = {
     { "convert",   no_argument,  0,  'c' },
     { "size",      no_argument,  0,  's' },
