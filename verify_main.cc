@@ -22,6 +22,7 @@ extern "C" {
 #else
 #include <getopt.h>
 struct option options[] = {
+    { "explicit",  no_argument,  0,  'e' },
     { "series",  no_argument,  0,  's' },
     { "verbose",  no_argument,  0,  'v' },
     { 0, 0, 0, 0 }
@@ -139,6 +140,7 @@ int main(int argc,char *argv[]) {
     int c, ind = 0;
     int series = 0;
     int verbose = 0;
+    int function = 0;
     int result = 0;
 
 /******* Read the input *********/
@@ -165,8 +167,11 @@ int main(int argc,char *argv[]) {
     M = RANGE;
   m = -M;
 
-    while ((c = getopt_long(argc, argv, "m:M:r:s", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "m:M:r:sve", options, &ind)) != -1) {
 	switch (c) {
+	case 'e':
+	    function = 1;
+	    break;
 	case 's':
 	    series = 1;
 	    break;
@@ -224,8 +229,10 @@ int main(int argc,char *argv[]) {
 	    gf->print(C->Dimension, params);
 	    puts("");
 	}
-	EP = *gf;
-	en =  partition2enumeration(EP);
+	if (function) {
+	    EP = *gf;
+	    en =  partition2enumeration(EP);
+	}
     }
   
   /******* Initializations for check *********/
@@ -256,7 +263,7 @@ int main(int argc,char *argv[]) {
 
     /******* CHECK NOW *********/
     if(S) {
-	if (!series) {
+	if (!series || function) {
 	    if (!check_poly(S,C,en,C->Dimension,0,p))
 		result = -1;
 	} else {
@@ -272,6 +279,9 @@ int main(int argc,char *argv[]) {
   printf( "\n" );
 #endif
   
+    if (gf)
+	delete gf;
+
   for(i=0;i<=(P->Dimension+1);i++) 
     value_clear(p[i]);
   value_clear(tmp);
