@@ -138,6 +138,7 @@ you_lose:   	/* OK, lets not do it */
         if (p->size == 2) {
 	    value_clear(e->d);
             memcpy(e,&p->arr[1],sizeof(evalue));
+	    free_evalue_refs(&(p->arr[0]));
             free(p);
         }
     }
