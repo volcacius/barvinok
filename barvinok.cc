@@ -119,11 +119,12 @@ static Matrix * rays(Polyhedron *C)
     assert(M);
 
     int i, c;
-    for (i = 0, c = 0; i < dim; ++i)
+    for (i = 0, c = 0; i <= dim && c < dim; ++i)
 	if (value_zero_p(C->Ray[i][dim+1])) {
 	    Vector_Copy(C->Ray[i] + 1, M->p[c], dim);
 	    value_set_si(M->p[c++][dim], 0);
 	}
+    assert(c == dim);
     value_set_si(M->p[dim][dim], 1);
 
     return M;
@@ -306,6 +307,7 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     vector<cone *> nonuni;
     cone * c = new cone(C);
     ZZ det = c->det;
+    assert(det != 0);
     if (abs(det) > 1) {
 	nonuni.push_back(c);
     } else {
