@@ -1,4 +1,27 @@
 ---
+version: 0.08
+date: Sun Feb 22 21:15:00 CET 2004
+changes:
+    - remove remaining part of Kristof's Ehrhart manipulation code
+    - optimize modulo expression based on validity domain
+    - support partition evalues
+    - factor out 1D polytopes
+    - validity domains can now be unions of polytopes
+    - optionally convert modulo representation to lookup-table
+    - rename indicator to relation
+    - add DomainIncludes
+---
+version: 0.07
+changes:
+    - support "indicator" evalues
+    - support equalities for modulo representation
+---
+version: 0.06
+changes:
+    - remove part of Kristof's Ehrhart manipulation code
+    - partial support for modulo respresentation
+    - support cvs version of PolyLib
+---
 version: 0.05
 date: Thu Nov 27 13:35:59 CET 2003
 changes:
