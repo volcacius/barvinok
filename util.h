@@ -1,5 +1,5 @@
-#ifndef BARVINOK_H
-#define BARVINOK_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <polylib/polylibgmp.h>
 
