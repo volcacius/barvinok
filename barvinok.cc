@@ -370,7 +370,7 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
     int dim = rays.NumCols();
     bool found = false;
     lambda.SetLength(dim);
-    for (int i = 2; !found && i <= 10*dim; i+=2) {
+    for (int i = 2; !found && i <= 50*dim; i+=4) {
 	for (int j = 0; j < MAX_TRY; ++j) {
 	    for (int k = 0; k < dim; ++k) {
 		int r = random_int(i)+2;
