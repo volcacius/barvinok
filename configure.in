@@ -110,7 +110,7 @@ int main()
     return !(i == 10);
 }
 ],,
-AC_MSG_WARN([This version of polylib produces incorrect validity domains.]))
+AC_MSG_WARN([This version of polylib produces incorrect vertices.]))
 
 AC_MSG_CHECKING([number of arguments of Polyhedron_Enumerate])
 AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
