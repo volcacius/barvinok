@@ -1268,6 +1268,8 @@ static double compute_enode(enode *p, Value *list_args) {
   else if (p->type == relation) {
     if (fabs(compute_evalue(&p->arr[0], list_args)) < 0.5)
       res = compute_evalue(&p->arr[1], list_args);
+    else if (p->size > 2)
+      res = compute_evalue(&p->arr[2], list_args);
   }
   value_clear(m);
   value_clear(param);
