@@ -69,6 +69,7 @@ struct fixed_param {
     int	    pos;
     evalue  s;
     Value   d;
+    int	    m;
 };
 
 struct subst {
@@ -76,6 +77,76 @@ struct subst {
     int			n;
     int			max;
 };
+
+static int relations_depth(evalue *e)
+{
+    int d;
+
+    for (d = 0; 
+	 value_zero_p(e->d) && e->x.p->type == relation;
+	 e = &e->x.p->arr[1], ++d);
+    return d;
+}
+
+#define EVALUE_IS_ONE(ev)	(value_pos_p((ev).d) && value_one_p((ev).x.n))
+
+static void add_modulo_substitution(struct subst *s, evalue *r)
+{
+    evalue *p;
+    evalue *f;
+    evalue *m;
+    int neg;
+
+    assert(value_zero_p(r->d) && r->x.p->type == relation);
+    m = &r->x.p->arr[0];
+
+    /* May have been reduced already */
+    if (value_notzero_p(m->d))
+	return;
+
+    if (s->n >= s->max) {
+	struct fixed_param *n;
+	int d = relations_depth(r);
+	int i;
+	NALLOC(n, s->max+d);
+	for (i = 0; i < s->max; ++i)
+	    n[i] = s->fixed[i];
+	free(s->fixed);
+	s->fixed = n;
+	s->max += d;
+    }
+
+    assert(value_zero_p(m->d) && m->x.p->type == modulo);
+    assert(m->x.p->size == 3);
+    assert(EVALUE_IS_ONE(m->x.p->arr[2]));
+    assert(EVALUE_IS_ZERO(m->x.p->arr[1]));
+
+    p = &m->x.p->arr[0];
+    assert(value_zero_p(p->d) && p->x.p->type == polynomial);
+    assert(p->x.p->size == 2);
+    f = &p->x.p->arr[1];
+
+    assert(value_one_p(f->d));
+    neg = value_neg_p(f->x.n);
+
+    s->fixed[s->n].m = m->x.p->pos;
+    s->fixed[s->n].pos = p->x.p->pos;
+    value_init(s->fixed[s->n].d);
+    if (neg)
+	value_oppose(s->fixed[s->n].d, f->x.n);
+    else
+	value_assign(s->fixed[s->n].d, f->x.n);
+    value_init(s->fixed[s->n].s.d);
+    evalue_copy(&s->fixed[s->n].s, &p->x.p->arr[0]);
+    if (!neg) {
+	evalue mone;
+	value_init(mone.d);
+	evalue_set_si(&mone, -1, 1);
+	emul(&mone, &s->fixed[s->n].s);
+	free_evalue_refs(&mone);
+    }
+    ++s->n;
+}
 
 void _reduce_evalue (evalue *e, struct subst *s, int m) {
   
@@ -96,9 +167,20 @@ void _reduce_evalue (evalue *e, struct subst *s, int m) {
         return;	/* hum... an overflow probably occured */
   
     /* First reduce the components of p */
-    for (i=0; i<p->size; i++)
+    for (i=0; i<p->size; i++) {
+	int add = p->type == relation && i == 1;
+	if (add)
+	    add_modulo_substitution(s, e);
+
         _reduce_evalue(&p->arr[i], s, 
 		       (i == 0 && p->type==modulo) ? p->pos : m);
+
+	if (add) {
+	    --s->n;
+	    value_clear(s->fixed[s->n].d);
+	    free_evalue_refs(&s->fixed[s->n].s); 
+	}
+    }
 
     if (p->type==periodic) {
     
@@ -133,6 +215,9 @@ you_lose:   	/* OK, lets not do it */
 	    if (s->fixed[k].pos == p->pos) {
 		int divide = value_notone_p(s->fixed[k].d);
 		evalue d;
+
+		if (s->fixed[k].m != 0 && s->fixed[k].m != m)
+		    continue;
 
 		if (divide && m != 0)
 		    continue;
@@ -259,6 +344,7 @@ static void add_substitution(struct subst *s, Value *row, unsigned dim)
     value_init(s->fixed[s->n].d);
     value_assign(s->fixed[s->n].d, row[k+1]);
     s->fixed[s->n].pos = k+1;
+    s->fixed[s->n].m = 0;
     r = &s->fixed[s->n].s;
     value_init(r->d);
     for (l = k+1; l < dim; ++l)
@@ -297,8 +383,9 @@ void reduce_evalue (evalue *e) {
 	    if (!D->next && D->NbEq) {
 		int j, k;
 		if (s.max == 0) {
-		    s.max = dim;
-		    NALLOC(s.fixed, dim);
+		    int d = relations_depth(&e->x.p->arr[2*i+1]);
+		    s.max = dim+d;
+		    NALLOC(s.fixed, s.max);
 		}
 		for (j = 0; j < D->NbEq; ++j)
 		    add_substitution(&s, D->Constraint[j], dim);
@@ -1092,8 +1179,6 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    
    return ;
 }
-
-#define EVALUE_IS_ONE(ev)	(value_pos_p((ev).d) && value_one_p((ev).x.n))
 
 /* Frees mask ! */
 void emask(evalue *mask, evalue *res) {
