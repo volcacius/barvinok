@@ -557,3 +557,11 @@ void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
     END_FORALL_PVertex_in_ParamPolyhedron;
   }
 }
+
+void Enumeration_Print(FILE *Dst, Enumeration *en, char **params)
+{
+    for (; en; en = en->next) {
+	Print_Domain(Dst, en->ValidityDomain, params);
+	print_evalue(stdout, &en->EP, params);
+    }
+}

@@ -21,6 +21,7 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
 Matrix * unimodular_complete(Vector *row);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
+void Enumeration_Print(FILE *Dst, Enumeration *en, char **params);
 
 #if defined(__cplusplus)
 }

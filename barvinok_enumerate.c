@@ -20,7 +20,7 @@ int main()
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
     en = barvinok_enumerate(A, C, 600);
-    print_evalue(stdout, &en->EP, param_name);
+    Enumeration_Print(stdout, en, param_name);
     Enumeration_Free(en);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
