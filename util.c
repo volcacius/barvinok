@@ -644,7 +644,7 @@ int ConstraintSimplify(Value *old, Value *new, int len, Value* v)
 /*
  * Project on final dim dimensions
  */
-static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
+Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
 {
     int i;
     int remove = P->Dimension - dim;

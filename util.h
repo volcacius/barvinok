@@ -34,6 +34,7 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 		     Value *context, Value *res);
 int DomainContains(Polyhedron *P, Value *list_args, int len, 
 		   unsigned MaxRays, int set);
+Polyhedron* Polyhedron_Project(Polyhedron *P, int dim);
 
 #include "ev_operations.h"
 
