@@ -1,6 +1,8 @@
 #include <iostream>
 #include <assert.h>
 #include <genfun.h>
+#include <barvinok.h>
+#include <barvinok2.h>
 
 using std::cout;
 
@@ -134,4 +136,58 @@ void gen_fun::print(unsigned int nparam, char **param_name)
 	}
 	cout << ")";
     }
+}
+
+gen_fun::operator evalue *()
+{
+    evalue *EP = NULL;
+    evalue factor;
+    value_init(factor.d);
+    value_init(factor.x.n);
+    for (int i = 0; i < term.size(); ++i) {
+	unsigned nvar = term[i]->d.power.NumRows();
+	unsigned nparam = term[i]->d.power.NumCols();
+	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + nparam + 1); 
+	mat_ZZ& d = term[i]->d.power;
+	Polyhedron *U = Universe_Polyhedron(nparam);
+
+	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
+	    for (int r = 0; r < nparam; ++r) {
+		value_set_si(C->p[r][0], 0);
+		for (int c = 0; c < nvar; ++c) {
+		    zz2value(d[c][r], C->p[r][1+c]);
+		}
+		Vector_Set(&C->p[r][1+nvar], 0, nparam);
+		value_set_si(C->p[r][1+nvar+r], -1);
+		zz2value(term[i]->n.power[j][r], C->p[r][1+nvar+nparam]);
+	    }
+	    for (int r = 0; r < nvar; ++r) {
+		value_set_si(C->p[nparam+r][0], 1);
+		Vector_Set(&C->p[nparam+r][1], 0, nvar + nparam + 1);
+		value_set_si(C->p[nparam+r][1+r], 1);
+	    }
+	    Polyhedron *P = Constraints2Polyhedron(C, 0);
+	    evalue *E = barvinok_enumerate_ev(P, U, 0);
+	    Polyhedron_Free(P);
+	    zz2value(term[i]->n.coeff[j][0], factor.x.n);
+	    zz2value(term[i]->n.coeff[j][1], factor.d);
+	    emul(&factor, E);
+	    /*
+	    Matrix_Print(stdout, P_VALUE_FMT, C);
+	    char *test[] = { "A", "B", "C", "D", "E", "F", "G" };
+	    print_evalue(stdout, E, test);
+	    */
+	    if (!EP)
+		EP = E;
+	    else {
+		eadd(E, EP);
+		free_evalue_refs(E);
+	    }
+	}
+	Matrix_Free(C);
+	Polyhedron_Free(U);
+    }
+    value_clear(factor.d);
+    value_clear(factor.x.n);
+    return EP;
 }
