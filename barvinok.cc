@@ -513,9 +513,8 @@ static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r)
     }
 }
 
-void lattice_point(Value* values, Polyhedron *i, vec_ZZ& lambda, ZZ& num)
+void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
 {
-    vec_ZZ vertex;
     unsigned dim = i->Dimension;
     if(!value_one_p(values[dim])) {
 	Matrix* Rays = rays(i);
@@ -538,8 +537,6 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& lambda, ZZ& num)
 	Vector_Free(A);
     } else
 	values2zz(values, vertex, dim);
-
-    num = vertex * lambda;
 }
 
 static evalue *term(int param, ZZ& c, Value *den = NULL)
@@ -570,11 +567,13 @@ static void vertex_period(
     ZZ nump;
 
     if (p == nparam) {
+	vec_ZZ vertex;
 	ZZ num, l;
 	Vector * values = Vector_Alloc(dim + 1);
 	Vector_Matrix_Product(val->p, T, values->p);
 	value_assign(values->p[dim], lcm);
-	lattice_point(values->p, i, lambda, num);
+	lattice_point(values->p, i, vertex);
+	num = vertex * lambda;
 	value2zz(lcm, l);
 	num *= l;
 	num += offset;
