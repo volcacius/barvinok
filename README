@@ -9,4 +9,8 @@ support.
 For NTL this means you have to specify
     NTL_GMP_LIP=on
 
+Note that the modulo representation is currently only
+supported on full-dimensional polytopes and is subject
+to change.
+
 Sven Verdoolaege <skimo@kotnet.org>
