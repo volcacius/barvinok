@@ -263,16 +263,13 @@ Polyhedron *remove_equalities(Polyhedron *P)
 	    Vector_Copy(m1->p[i+1], m2->p[i], dim);
 	    value_set_si(m2->p[i][dim], 0);
 	}
-	Matrix_Print(stdout,P_VALUE_FMT,m1);
 	Vector_Set(m2->p[dim-1], 0, dim);
 	value_set_si(m2->p[dim-1][dim], 1);
-	Matrix_Print(stdout,P_VALUE_FMT,m2);
 	q = Polyhedron_Image(p, m2, p->NbConstraints);
 	Vector_Free(v);
 	Matrix_Free(m1);
 	Matrix_Free(m2);
 	Polyhedron_Free(p);
-	Polyhedron_Print(stderr, P_VALUE_FMT, q);
 	p = q;
 	--dim;
     }
