@@ -109,7 +109,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     return P;
 }
 
-Polyhedron* triangularize_cone(Polyhedron *P)
+Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 {
     const static int MAX_TRY=10;
     int i, j, r, n, t;
@@ -140,7 +140,7 @@ Polyhedron* triangularize_cone(Polyhedron *P)
 	++r;
     }
 
-    L = Rays2Polyhedron(M, 2*P->NbRays+3);
+    L = Rays2Polyhedron(M, NbMaxCons);
 
     M2 = Matrix_Alloc(dim+1, dim+2);
     Vector_Set(M2->p[0]+1, 0, dim);
@@ -156,7 +156,7 @@ try_again:
 	for (r = 1; r < P->NbRays; ++r) {
 	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
 	}
-	L = Rays2Polyhedron(M, 2*P->NbRays+1);
+	L = Rays2Polyhedron(M, NbMaxCons);
 	++t;
     }
     assert(t <= MAX_TRY);
@@ -343,7 +343,7 @@ Polyhedron *remove_equalities(Polyhedron *P)
 	}
 	Vector_Set(m2->p[dim-1], 0, dim);
 	value_set_si(m2->p[dim-1][dim], 1);
-	q = Polyhedron_Image(p, m2, p->NbConstraints);
+	q = Polyhedron_Image(p, m2, p->NbConstraints+1+p->NbRays);
 	Vector_Free(v);
 	Matrix_Free(m1);
 	Matrix_Free(m2);

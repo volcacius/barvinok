@@ -41,7 +41,7 @@ int main()
 	    times(&tms_before);
 	    manual_count(P, &cm);
 	    times(&tms_between);
-	    barvinok_count(P, &cb);
+	    barvinok_count(P, &cb, 100);
 	    times(&tms_after);
 	    printf("manual: ");
 	    value_print(stdout, P_VALUE_FMT, cm);

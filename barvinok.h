@@ -10,7 +10,7 @@ extern "C" {
 #include <polylib/polylibgmp.h>
 
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
-void barvinok_count(Polyhedron *P, Value* result);
+void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons);
 
 #if defined(__cplusplus)
 }

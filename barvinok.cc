@@ -448,7 +448,7 @@ void normalize(Value* values, Polyhedron *i, vec_ZZ& lambda,
 	sign = -sign;
 }
 
-void barvinok_count(Polyhedron *P, Value* result)
+void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
     Polyhedron ** vcone;
     vec_ZZ sign;
@@ -510,7 +510,7 @@ void barvinok_count(Polyhedron *P, Value* result)
 	if (Polar->NbRays - 1 == Polar->Dimension)
 	    Polars = Polar;
 	else {
-	    Polars = triangularize_cone(Polar);
+	    Polars = triangularize_cone(Polar, NbMaxCons);
 	    // check_triangulization(Polar, Polars);
 	    Polyhedron_Free(Polar);
 	}

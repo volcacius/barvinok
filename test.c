@@ -42,7 +42,7 @@ int main()
 	    fgets(s, 128, stdin);
 	    while ((*s=='#') || (value_read(ck, s) != 0))
 		fgets(s, 128, stdin);
-	    barvinok_count(A, &cb);
+	    barvinok_count(A, &cb, 100);
 	    if (value_ne(cb, ck))
 		return -1;
 	    value_clear(cb);
@@ -85,7 +85,7 @@ int main()
 	    times(&tms_before);
 	    manual_count(A, &cm);
 	    times(&tms_between);
-	    barvinok_count(A, &cb);
+	    barvinok_count(A, &cb, 100);
 	    times(&tms_after);
 	    printf("manual: ");
 	    value_print(stdout, P_VALUE_FMT, cm);
@@ -101,7 +101,7 @@ int main()
 	}
 	case 5:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = triangularize_cone(A);
+	    B = triangularize_cone(A, 100);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    check_triangulization(A, B);
 	    Domain_Free(B);
