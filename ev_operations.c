@@ -250,10 +250,16 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     return 1;
 }
 
+static int type_offset(enode *p)
+{
+   return p->type == fractional ? 1 : 
+	  p->type == flooring ? 1 : 0;
+}
+
 static void reorder_terms(enode *p, evalue *v)
 {
     int i;
-    int offset = p->type == fractional;
+    int offset = type_offset(p);
 
     for (i = p->size-1; i >= offset+1; i--) {
 	emul(v, &p->arr[i]);
@@ -802,12 +808,6 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   }
   return;
 } /* print_enode */ 
-
-static int type_offset(enode *p)
-{
-   return p->type == fractional ? 1 : 
-	  p->type == flooring ? 1 : 0;
-}
 
 static void eadd_rev(evalue *e1, evalue *res)
 {
