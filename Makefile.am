@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libbarvinok.la
-noinst_PROGRAMS = test barvinok_count
+noinst_PROGRAMS = test barvinok_count randomtest
 
 libbarvinok_la_SOURCES = \
     util.c \
