@@ -569,6 +569,16 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    return ;
 }
 
+void evalue_copy(evalue *dst, evalue *src)
+{
+    value_assign(dst->d, src->d);
+    if(value_notzero_p(src->d)) {
+	 value_init(dst->x.n);
+	 value_assign(dst->x.n, src->x.n);
+    } else
+	 dst->x.p = ecopy(src->x.p);
+}
+
 enode *new_enode(enode_type type,int size,int pos) {
   
   enode *res;
