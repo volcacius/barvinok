@@ -132,11 +132,10 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
     value_set_si(M2->p[0][0], 1);
     value_set_si(M2->p[0][dim+1], 1);
     for (i = 0; i < L->NbConstraints; ++i) {
-	if (value_neg_p(L->Constraint[i][dim+1]))
+	if (value_negz_p(L->Constraint[i][dim+1]))
 	    continue;
 	if (value_notzero_p(L->Constraint[i][dim+2]))
 	    continue;
-	assert(value_notzero_p(L->Constraint[i][dim+1]));
 	for (j = 1, r = 1; j < M->NbRows; ++j) {
 	    Inner_Product(M->p[j]+1, L->Constraint[i]+1, dim+1, &tmp);
 	    if (value_notzero_p(tmp))
