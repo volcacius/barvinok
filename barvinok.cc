@@ -436,6 +436,39 @@ struct dpoly_r {
 	}
 	//dump();
     }
+    dpoly_r(dpoly_r* num, dpoly& den, int pos, int sign, int dim) {
+	denom = num->denom;
+	len = num->len;
+	c = new vector< dpoly_r_term * > [len];
+	this->dim = dim;
+	int powers[dim];
+	ZZ coeff;
+
+	for (int i = 0 ; i < len; ++i) {
+	    for (int k = 0; k < num->c[i].size(); ++k) {
+		memcpy(powers, num->c[i][k]->powers, dim*sizeof(int));
+		powers[pos] += sign;
+		add_term(i, powers, num->c[i][k]->coeff);
+	    }
+
+	    for (int j = 1; j <= i; ++j) {
+		for (int k = 0; k < c[i-j].size(); ++k) {
+		    memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
+		    powers[pos] += sign;
+		    coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
+		    add_term(i, powers, coeff);
+		}
+	    }
+	}
+    }
+    ~dpoly_r() {
+	for (int i = 0 ; i < len; ++i)
+	    for (int k = 0; k < c[i].size(); ++k) {
+		delete [] c[i][k]->powers;
+		delete c[i][k];
+	    }
+	delete [] c;
+    }
     dpoly_r *div(dpoly& d) {
 	dpoly_r *rc = new dpoly_r(len, dim);
 	rc->denom = power(d.coeff[0], len);
