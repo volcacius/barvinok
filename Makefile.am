@@ -2,6 +2,10 @@ lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate
 
 libbarvinok_la_SOURCES = \
+    debug.cpp \
+    debug.h \
+    ehrhartpolynom.cpp \
+    ehrhartpolynom.h \
     util.c \
     util.h \
     barvinok.cc \

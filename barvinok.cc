@@ -1,9 +1,13 @@
 #include <assert.h>
 #include <iostream>
 #include <vector>
+#include <deque>
+#include <string>
+#include <sstream>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
+#include "ehrhartpolynom.h"
 #include <barvinok.h>
 #include <util.h>
 extern "C" {
@@ -16,6 +20,9 @@ using namespace NTL;
 using std::cout;
 using std::endl;
 using std::vector;
+using std::deque;
+using std::string;
+using std::ostringstream;
 
 #define ALLOC(p) (((long *) (p))[0])
 #define SIZE(p) (((long *) (p))[1])
@@ -339,12 +346,12 @@ public:
 	    zz2value(d.coeff[0], tmp);
 	    value_multiply(c->p[i][len], c->p[i][len], tmp);
 	}
-	value_assign(tmp, count->p[len]);
-	if (sign == -1)
-	    value_oppose(tmp, tmp);
-	Vector_Combine(count->p, c->p[len-1], count->p,
-		       c->p[len-1][len], tmp, len);
-	value_multiply(count->p[len], count->p[len], c->p[len-1][len]);
+	if (sign == -1) {
+	    value_set_si(tmp, -1);
+	    Vector_Scale(c->p[len-1], count->p, tmp, len);
+	    value_assign(count->p[len], c->p[len-1][len]);
+	} else
+	    Vector_Copy(c->p[len-1], count->p, len+1);
 	Vector_Normalize(count->p, len+1);
 	value_clear(tmp);
     }
@@ -668,6 +675,42 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     value_clear(factor);
 }
 
+static void default_params(deque<string>& params, int n)
+{
+    for (int i = 1; i <= n; ++i) {
+	ostringstream s;
+	s << "p" << i;
+	params.push_back(s.str());
+    }
+}
+
+static EhrhartPolynom *uni_polynom(string param, Vector *c)
+{
+    evalue EP;
+    deque<string> params;
+    unsigned dim = c->Size-2;
+    value_init(EP.d);
+    value_set_si(EP.d,0);
+    EP.x.p = new_enode(polynomial, dim+1, 1);
+    for (int j = 0; j <= dim; ++j) {
+	value_assign(EP.x.p->arr[j].d, c->p[dim+1]);
+	value_assign(EP.x.p->arr[j].x.n, c->p[j]);
+    }
+    params.push_back(param);
+    return new EhrhartPolynom(&EP, params);
+}
+
+static EhrhartPolynom *constant(mpq_t c)
+{
+    evalue EP;
+    deque<string> params;
+    value_init(EP.d);
+    value_init(EP.x.n);
+    value_assign(EP.d, &c[0]._mp_den);
+    value_assign(EP.x.n, &c[0]._mp_num);
+    return new EhrhartPolynom(&EP, params);
+}
+
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
     Polyhedron *CEq;
@@ -685,6 +728,8 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     assert(isIdentity(CT)); // assume for now
 
     unsigned nparam = C->Dimension;
+    deque<string> params;
+    default_params(params, nparam);
     unsigned dim = P->Dimension - nparam;
     Polyhedron ** vcone = new (Polyhedron *)[PP->nbV];
     vec_ZZ sign;
@@ -764,33 +809,52 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	f = 0;
 	j = 0;
 	Vector *c = Vector_Alloc(dim+2);
-	value_set_si(c->p[dim+1], 1);
+	EhrhartPolynom EP;
+	mpq_t count;
+	mpq_init(count);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
-		assert(num[f].length() == 2);
-		dpoly_n d(dim, num[f][1], num[f][0]);
 		dpoly n(dim, den[f][0], 1);
 		for (int k = 1; k < dim; ++k) {
 		    dpoly fact(dim, den[f][k], 1);
 		    n *= fact;
 		}
-		d.div(n, c, sign[f]);
+		cout << num[f];
+		int p = -1;
+		int nn = 0;
+		for (int j = 0; j < nparam; ++j)
+		    if (num[f][j] != 0) {
+			++nn;
+			p = j;
+		    }
+		cout << p << " " << nn << endl;
+		assert(num[f].length() == 2);
+		if (nn == 1) {
+		    dpoly_n d(dim, num[f][1], num[f][0]);
+		    d.div(n, c, sign[f]);
+		    EhrhartPolynom *E = uni_polynom(params[0], c);
+		    EP += *E;
+		    delete E;
+		} else if (nn == 0) {
+		    mpq_set_si(count, 0, 1);
+		    dpoly d(dim, num[f][nparam]);
+		    d.div(n, count, sign[f]);
+		    EhrhartPolynom *E = constant(count);
+		    EP += *E;
+		    delete E;
+		}
 		++f;
 	    }
 	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
+	mpq_clear(count);
+
 	assert(nparam == 1);
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->next = res;
 	res = en;
 	res->ValidityDomain = D->Domain;
-	value_init(res->EP.d);
-	value_set_si(res->EP.d,0);
-	res->EP.x.p = new_enode(polynomial, dim+1, 1);
-	for (int j = 0; j <= dim; ++j) {
-	    value_assign(res->EP.x.p->arr[j].d, c->p[dim+1]);
-	    value_assign(res->EP.x.p->arr[j].x.n, c->p[j]);
-	}
+	res->EP = EP.to_evalue(params);
     }
 
     delete [] vcone;
