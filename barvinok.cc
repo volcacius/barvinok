@@ -1599,12 +1599,46 @@ struct icounter : public polar_decomposer {
 
     virtual void handle_polar(Polyhedron *P, int sign);
     void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
+    void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
 };
+
+void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+{
+    int r;
+    unsigned len = den_f.NumRows();  // number of factors in den
+    vec_ZZ den_s;
+    den_s.SetLength(len);
+    ZZ num_s = num[0];
+    for (r = 0; r < len; ++r)
+	den_s[r] = den_f[r][0];
+    normalize(c, num_s, den_s);
+
+    dpoly n(len, num_s);
+    dpoly D(len, den_s[0], 1);
+    for (int k = 1; k < len; ++k) {
+	dpoly fact(len, den_s[k], 1);
+	D *= fact;
+    }
+    mpq_set_si(tcount, 0, 1);
+    n.div(D, tcount, one);
+    zz2value(c, tn);
+    zz2value(cd, td);
+    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
+    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
+    mpq_canonicalize(tcount);
+    mpq_add(count, count, tcount);
+}
 
 void icounter::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned d = num.length()-1;
+
+    if (d == 0) {
+	base(c, cd, num, den_f);
+	return;
+    }
+    assert(num.length() > 1);
 
     vec_ZZ den_s;
     den_s.SetLength(len);
@@ -1620,23 +1654,21 @@ void icounter::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
      */
     int i = 0;
     int r, k;
-    if (d > 0) {
-	for (i = 0; i < d+1; ++i) {
-	    for (r = 0; r < len; ++r) {
-		if (den_f[r][i] != 0) {
-		    for (k = 0; k <= d; ++k)
-			if (i != k && den_f[r][k] != 0)
-			    break;
-		    if (k <= d)
+    for (i = 0; i < d+1; ++i) {
+	for (r = 0; r < len; ++r) {
+	    if (den_f[r][i] != 0) {
+		for (k = 0; k <= d; ++k)
+		    if (i != k && den_f[r][k] != 0)
 			break;
-		}
+		if (k <= d)
+		    break;
 	    }
-	    if (r >= len)
-		break;
 	}
-	if (i > d)
-	    i = 0;
+	if (r >= len)
+	    break;
     }
+    if (i > d)
+	i = 0;
 
     for (r = 0; r < len; ++r) {
 	den_s[r] = den_f[r][i];
@@ -1644,28 +1676,6 @@ void icounter::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 	    if (k != i)
 		den_r[r][k-(k>i)] = den_f[r][k];
     }
-
-    if (d == 0) {
-	ZZ num_s = num[0];
-	normalize(c, num_s, den_s);
-
-	dpoly n(len, num_s);
-	dpoly D(len, den_s[0], 1);
-	for (int k = 1; k < len; ++k) {
-	    dpoly fact(len, den_s[k], 1);
-	    D *= fact;
-	}
-	mpq_set_si(tcount, 0, 1);
-	n.div(D, tcount, one);
-	zz2value(c, tn);
-	zz2value(cd, td);
-	mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
-	mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
-	mpq_canonicalize(tcount);
-	mpq_add(count, count, tcount);
-	return;
-    }
-    assert(num.length() > 1);
 
     ZZ num_s = num[i];
     vec_ZZ num_p;
