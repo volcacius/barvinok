@@ -2141,8 +2141,23 @@ void evalue_mod2relation(evalue *e) {
     if (value_zero_p(e->d) && e->x.p->type == partition) {
 	int i;
 
-	for (i = 0; i < e->x.p->size/2; ++i)
+	for (i = 0; i < e->x.p->size/2; ++i) {
 	    evalue_mod2relation(&e->x.p->arr[2*i+1]);
+	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
+		value_clear(e->x.p->arr[2*i].d);
+		free_evalue_refs(&e->x.p->arr[2*i+1]);
+		e->x.p->size -= 2;
+		if (2*i < e->x.p->size) {
+		    e->x.p->arr[2*i] = e->x.p->arr[e->x.p->size];
+		    e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
+		}
+		--i;
+	    }
+	}
+	if (e->x.p->size == 0) {
+	    free(e->x.p);
+	    evalue_set_si(e, 0, 1);
+	}
 
 	return;
     }
