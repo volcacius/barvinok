@@ -1299,6 +1299,18 @@ out:
 	   
 	return eres;
     }
+    for (r = 0; r < P->NbRays; ++r)
+	if (value_zero_p(P->Ray[r][0]) ||
+		value_zero_p(P->Ray[r][P->Dimension+1])) {
+	    int i;
+	    for (i = P->Dimension - nparam; i < P->Dimension; ++i)
+		if (value_notzero_p(P->Ray[r][i+1]))
+		    break;
+	    if (i >= P->Dimension)
+		break;
+	}
+    if (r <  P->NbRays)
+	goto constant;
 
     if (P->NbEq != 0) {
 	Matrix *f;
