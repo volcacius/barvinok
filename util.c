@@ -541,7 +541,7 @@ static int **find_singles(Polyhedron *P, int dim, int max, int *nsingle)
     for (j = 0; j < dim; ++j)
 	if (singles[j][0] == 2)
 	    ++*nsingle;
-    if (!nsingle) {
+    if (!*nsingle) {
 	free_singles(singles, dim);
 	singles = 0;
     }
