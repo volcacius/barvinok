@@ -323,7 +323,10 @@ void eadd(evalue *e1,evalue *res) {
 			case polynomial: //  res and e1 are polynomials
 			       //  add e1 to the constant term of res
 			       
+			    if(res->x.p->pos < e1->x.p->pos)
 		               eadd(e1,&res->x.p->arr[0]);
+			    else
+				eadd_rev_cst(e1, res);
 		              // value_clear(g); value_clear(m1); value_clear(m2);
 		               return;
 		        case periodic:  // res and e1 are pointers to periodic numbers
