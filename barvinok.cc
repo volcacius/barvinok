@@ -1871,7 +1871,11 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	return;
     }
 
+#ifdef USE_INCREMENTAL
     icounter cnt(P);
+#else
+    counter cnt(P);
+#endif
     cnt.start(NbMaxCons);
 
     assert(value_one_p(&cnt.count[0]._mp_den));
