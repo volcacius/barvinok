@@ -2642,6 +2642,12 @@ static evalue* enumerate_vd(Polyhedron **PA,
     return EP;
 }
 
+static bool is_single(Value *row, int pos, int len)
+{
+    return First_Non_Zero(row, pos) == -1 && 
+	   First_Non_Zero(row+pos+1, len-pos-1) == -1;
+}
+
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 
@@ -2764,9 +2770,12 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 	for (int l = P->NbEq; l < P->NbConstraints; ++l) {
 	    if (value_negz_p(P->Constraint[l][nvar+i+1]))
 		continue;
+	    bool l_parallel = is_single(P->Constraint[l]+nvar+1, i, exist);
 	    for (int u = P->NbEq; u < P->NbConstraints; ++u) {
 		if (value_posz_p(P->Constraint[u][nvar+i+1]))
 		    continue;
+		bool lu_parallel = l_parallel ||
+			    is_single(P->Constraint[u]+nvar+1, i, exist);
 		value_oppose(f, P->Constraint[u][nvar+i+1]);
 		Vector_Combine(P->Constraint[l]+1, P->Constraint[u]+1, row->p+1,
 			       f, P->Constraint[l][nvar+i+1], len-1);
@@ -2805,17 +2814,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		    Polyhedron_Free(T);
 		}
 		if (!(info[i] & ONE_NEG)) {
-		    int j;
-		    for (j = 0; j < exist; ++j)
-			if (j != i && 
-			    value_notzero_p(P->Constraint[l][nvar+j+1]))
-			    break;
-		    if (j != exist)
-			for (j = 0; j < exist; ++j)
-			    if (j != i && 
-				 value_notzero_p(P->Constraint[u][nvar+j+1]))
-				break;
-		    if (j == exist) {
+		    if (lu_parallel) {
 			/* recalculate constant */
 			/* We actually recalculate the whole row for
 			 * now, because it may have already been scaled
