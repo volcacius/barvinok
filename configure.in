@@ -7,9 +7,10 @@ dnl Check for GMP library
 AC_MSG_CHECKING(whether to use GMP)
 AC_ARG_WITH(libgmp, 
         [  --with-libgmp           DIR Location of the GMP Distribution], 
-	gmp_package=$withval, gmp_package=no)
+	gmp_package=$withval, gmp_package=yes)
 if test "x$gmp_package" = "xno"; then
 	AC_MSG_RESULT(no)
+	AC_MSG_ERROR(Need gmp)
 else
 	AC_MSG_RESULT(yes)
 	if test "x$gmp_package" != "xyes"; then
@@ -28,10 +29,6 @@ else
 	if test "$poly_cv_gmpfatal" = "yes"; then
 		AC_MSG_ERROR([GMP not found])
 	fi
-
-	AC_CHECK_LIB(gmp, main,[],[
-	    AC_MSG_ERROR(Need gmp)
-	])
 fi
 
 AC_ARG_WITH(polylib,
