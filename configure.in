@@ -46,12 +46,34 @@ fi
 if test "$polylib_package" != "yes"; then
     CPPFLAGS="-I$polylib_package/include $CPPFLAGS"
     LDFLAGS="-L$polylib_package/lib $LDFLAGS"
+    LD_LIBRARY_PATH="$polylib_package/lib:$LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH
 fi
 
 AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
 AC_REPLACE_FUNCS(Enumeration_Free)
+AC_TRY_RUN([
+#include <polylib/polylibgmp.h>
+
+int main()
+{
+    int i, j;
+    Polyhedron *P;
+    Matrix *M = Matrix_Alloc(6,5);
+    for (i = 0; i < 6; ++i) {
+	value_set_si(M->p[i][0], 1);
+	for (j = 1; j < 4; ++j)
+	    value_set_si(M->p[i][j], (j-1 == i/2) * (1-2*(i%2)));
+	value_set_si(M->p[i][4], i%2);
+    }
+    P = Constraints2Polyhedron(M, 6);
+    return !(P->NbRays == 8);
+}
+],,
+AC_MSG_WARN([This version of polylib does not automatically])
+AC_MSG_WARN([enlarge the chernikova table space]))
 
 AC_ARG_WITH(ntl,
             [  --with-ntl=DIR          DIR Location of NTL],
