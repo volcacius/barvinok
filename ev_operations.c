@@ -6,6 +6,10 @@
 #include "barvinok.h"
 #include "util.h"
 
+#ifndef value_pmodulus
+#define value_pmodulus(ref,val1,val2)  (mpz_fdiv_r((ref),(val1),(val2)))
+#endif
+
 #define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 
@@ -2043,12 +2047,11 @@ static double compute_enode(enode *p, Value *list_args) {
     res +=compute_evalue(&p->arr[1],list_args);
   }
   else if (p->type == periodic) {
-    value_assign(param,list_args[p->pos-1]);
+    value_assign(m,list_args[p->pos-1]);
     
     /* Choose the right element of the periodic */
-    value_absolute(m,param);
     value_set_si(param,p->size);
-    value_modulus(m,m,param);
+    value_pmodulus(m,m,param);
     res = compute_evalue(&p->arr[VALUE_TO_INT(m)],list_args);
   }
   else if (p->type == relation) {
