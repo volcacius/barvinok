@@ -43,7 +43,13 @@ int main()
 	    break;
 	case 3:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = decompose(A);
+	    decompose(A,&B,&C);
+	    puts("Pos:");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
+	    puts("Neg:");
+	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
+	    Domain_Free(B);
+	    Domain_Free(C);
 	    break;
 	}
 	Polyhedron_Free(A);

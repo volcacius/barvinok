@@ -9,7 +9,7 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
-Polyhedron *decompose(Polyhedron *C);
+void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
 
 #if defined(__cplusplus)
 }

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <iostream>
+#include <vector>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
@@ -11,6 +12,7 @@ extern "C" {
 using namespace NTL;
 using std::cout;
 using std::endl;
+using std::vector;
 
 #define ALLOC(p) (((long *) (p))[0])
 #define SIZE(p) (((long *) (p))[1])
@@ -125,10 +127,18 @@ static ZZ max(vec_ZZ& v)
 
 class cone {
 public:
+    cone(Matrix *M) {
+	Cone = 0;
+	Rays = Matrix_Copy(M);
+	set_det();
+    }
     cone(Polyhedron *C) {
 	Cone = Polyhedron_Copy(C);
 	Rays = rays(C);
 	Matrix_Print(stdout, P_VALUE_FMT, Rays);
+	set_det();
+    }
+    void set_det() {
 	mat_ZZ A;
 	matrix2zz(Rays, A);
 	cout << A << endl;
@@ -178,6 +188,22 @@ public:
 	Matrix_Free(Rays);
     }
 
+    Polyhedron *poly() {
+	if (!Cone) {
+	    Matrix *M = Matrix_Alloc(Rays->NbRows+1, Rays->NbColumns+1);
+	    for (int i = 0; i < Rays->NbRows; ++i) {
+		Vector_Copy(Rays->p[i], M->p[i]+1, Rays->NbColumns);
+		value_set_si(M->p[i][0], 1);
+	    }
+	    Vector_Set(M->p[Rays->NbRows]+1, 0, Rays->NbColumns-1);
+	    value_set_si(M->p[Rays->NbRows][0], 1);
+	    value_set_si(M->p[Rays->NbRows][Rays->NbColumns], 1);
+	    Cone = Rays2Polyhedron(M, 600);
+	    Matrix_Free(M);
+	}
+	return Cone;
+    }
+
     ZZ det;
     Polyhedron *Cone;
     Matrix *Rays;
@@ -188,12 +214,55 @@ public:
  *
  * Returns a list of polyhedra
  */
-Polyhedron *decompose(Polyhedron *C)
+void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 {
-    mat_ZZ r;
+    Polyhedron *pos = 0, *neg = 0;
+    vector<cone *> nonuni;
     cone * c = new cone(C);
-    Vector* v = c->short_vector();
-    Vector_Print(stdout, P_VALUE_FMT, v);
-    Vector_Free(v);
-    delete c;
+    ZZ det = c->det;
+    if (abs(det) > 1) {
+	nonuni.push_back(c);
+    } else {
+	if (det > 0) 
+	    pos = Polyhedron_Copy(c->Cone);
+	else
+	    neg = Polyhedron_Copy(c->Cone);
+	delete c;
+    }
+    while (!nonuni.empty()) {
+	c = nonuni.back();
+	nonuni.pop_back();
+	Vector* v = c->short_vector();
+	Vector_Print(stdout, P_VALUE_FMT, v);
+	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
+	    Matrix* M = Matrix_Copy(c->Rays);
+	    Vector_Copy(v->p, M->p[i], v->Size);
+	    Matrix_Print(stdout, P_VALUE_FMT, M);
+	    cone * pc = new cone(M);
+	    if (abs(pc->det) > 1)
+		nonuni.push_back(pc);
+	    else {
+		Polyhedron *p = Polyhedron_Copy(pc->poly());
+		Polyhedron_Print(stdout, P_VALUE_FMT, p);
+		if (pc->det > 0) {
+		    p->next = pos;
+		    pos = p;
+		} else {
+		    p->next = neg;
+		    neg = p;
+		}
+		delete pc;
+	    }
+	    Matrix_Free(M);
+	}
+	Vector_Free(v);
+	delete c;
+    }
+    if (det > 0) {
+	*ppos = pos;
+	*pneg = neg;
+    } else {
+	*ppos = neg;
+	*pneg = pos;
+    }
 }
