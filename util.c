@@ -671,6 +671,9 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 				       tmp,
 				       P->Constraint[singles[i][1+k]][i+1],
 				       dim-nvar+1);
+			if (k2 > k)
+			    value_decrement(M->p[q][dim-nvar+1],
+					    M->p[q][dim-nvar+1]);
 		    }
 		    for (l = p; l < p+n; ++l) {
 			value_oppose(tmp, P->Constraint[singles[i][1+l]][i+1]);
@@ -685,6 +688,9 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 					   tmp,
 					   P->Constraint[singles[i][1+l2]][i+1],
 					   dim-nvar+1);
+			    if (l2 > l)
+				value_decrement(M->p[q][dim-nvar+1],
+						M->p[q][dim-nvar+1]);
 			}
 			s[nd].D = Constraints2Polyhedron(M, P->NbRays);
 			if (emptyQ(s[nd].D)) {
