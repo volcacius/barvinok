@@ -1572,6 +1572,8 @@ struct reducer : public polar_decomposer {
     mpq_t tcount;
     mpz_t tn;
     mpz_t td;
+    int lower;	    // call base when only this many variables is left
+    int untouched;  // keep this many variables untouched
 
     reducer(Polyhedron *P) {
 	this->P = P;
@@ -1603,7 +1605,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned d = num.length()-1;
 
-    if (d == 0) {
+    if (d+1 == lower) {
 	base(c, cd, num, den_f);
 	return;
     }
@@ -1623,7 +1625,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
      */
     int i = 0;
     int r, k;
-    for (i = 0; i < d+1; ++i) {
+    for (i = 0; i < d+1-untouched; ++i) {
 	for (r = 0; r < len; ++r) {
 	    if (den_f[r][i] != 0) {
 		for (k = 0; k <= d; ++k)
@@ -1636,7 +1638,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 	if (r >= len)
 	    break;
     }
-    if (i > d)
+    if (i > d-untouched)
 	i = 0;
 
     for (r = 0; r < len; ++r) {
@@ -1792,6 +1794,8 @@ struct icounter : public reducer {
 
     icounter(Polyhedron *P) : reducer(P) {
 	mpq_init(count);
+	lower = 1;
+	untouched = 0;
     }
     ~icounter() {
 	mpq_clear(count);
@@ -1824,6 +1828,36 @@ void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
     mpq_canonicalize(tcount);
     mpq_add(count, count, tcount);
+}
+
+struct partial_reducer : public reducer {
+    gen_fun * gf;
+
+    partial_reducer(Polyhedron *P, unsigned nparam) : reducer(P) {
+	gf = new gen_fun;
+	lower = nparam;
+	untouched = nparam;
+    }
+    ~partial_reducer() {
+    }
+    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
+    void start(unsigned MaxRays);
+};
+
+void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+{
+    gf->add(c, cd, num, den_f);
+}
+
+void partial_reducer::start(unsigned MaxRays)
+{
+    for (j = 0; j < P->NbRays; ++j) {
+	if (!value_pos_p(P->Ray[j][dim+1]))
+	    continue;
+
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, MaxRays);
+    }
 }
 
 typedef Polyhedron * Polyhedron_p;
@@ -3889,183 +3923,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     assert(Polyhedron_has_positive_rays(P, nparam));
     assert(P->NbEq == 0);
 
-    dim = P->Dimension;
-    nvar = dim - nparam;
-    vcone = new Polyhedron_p[P->NbRays];
-
-    for (int j = 0; j < P->NbRays; ++j) {
-	if (!value_pos_p(P->Ray[j][dim+1]))
-	    continue;
-
-	int npos, nneg;
-	Polyhedron *C = supporting_cone(P, j);
-	decompose(C, &vcone[j], &npos, &nneg, MaxRays);
-	ncone += npos + nneg;
-	sign.SetLength(ncone);
-	for (int k = 0; k < npos; ++k)
-	    sign[ncone-nneg-k-1] = 1;
-	for (int k = 0; k < nneg; ++k)
-	    sign[ncone-k-1] = -1;
-    }
-
-    mat_ZZ rays;
-    rays.SetDims(ncone * dim, nvar);
-    int r = 0;
-    for (int j = 0; j < P->NbRays; ++j) {
-	if (!value_pos_p(P->Ray[j][dim+1]))
-	    continue;
-
-	for (Polyhedron *i = vcone[j]; i; i = i->next) {
-	    add_rays(rays, i, &r, nvar);
-	}
-    }
-    rays.SetDims(r, nvar);
-    vec_ZZ lambda;
-    nonorthog(rays, lambda);
-    //randomvector(P, lambda, nvar);
-
-    /*
-    cout << "rays: " << rays;
-    cout << "lambda: " << lambda;
-    */
-
-    int f = 0;
-    ZZ num_s;
-    vec_ZZ num_p;
-    num_p.SetLength(nparam);
-    vec_ZZ vertex;
-    vec_ZZ den_s;
-    den_s.SetLength(dim);
-    vec_ZZ den_p;
-    den_p.SetLength(dim);
-    mat_ZZ den;
-    den.SetDims(dim, nparam);
-    ZZ one;
-    one = 1;
-    mpq_t count;
-    mpq_init(count);
-
-    gen_fun * gf = new gen_fun;
-
-    rays.SetDims(dim, nvar);
-
-    for (int j = 0; j < P->NbRays; ++j) {
-	if (!value_pos_p(P->Ray[j][dim+1]))
-	    continue;
-
-	for (Polyhedron *i = vcone[j]; i; i = i->next, ++f) {
-	    lattice_point(P->Ray[j]+1, i, vertex);
-	    int k = 0;
-	    num_s = 0;
-	    for ( ; k < nvar; ++k)
-		num_s += vertex[k] * lambda[k];
-	    for ( ; k < dim; ++k)
-		num_p[k-nvar] = vertex[k];
-
-	    int r = 0;
-	    add_rays(rays, i, &r, nvar, true);
-	    for (r = 0; r < dim; ++r)
-		values2zz(i->Ray[r]+1+nvar, den[r], nparam);
-	    den_s = rays * lambda;
-
-	    normalize(sign[f], num_s, num_p, den_s, den_p, den);
-
-	    int only_param = 0;
-	    int no_param = 0;
-	    for (int k = 0; k < dim; ++k) {
-		if (den_p[k] == 0)
-		    ++no_param;
-		else if (den_s[k] == 0)
-		    ++only_param;
-	    }
-	    if (no_param == 0) {
-		for (int k = 0; k < dim; ++k)
-		    if (den_p[k] == -1)
-			den[k] = -den[k];
-		gf->add(sign[f], one, num_p, den);
-	    } else if (no_param + only_param == dim) {
-		int k, l;
-		mat_ZZ pden;
-		pden.SetDims(only_param, nparam);
-
-		for (k = 0, l = 0; k < dim; ++k)
-		    if (den_p[k] != 0)
-			pden[l++] = den[k];
-
-		for (k = 0; k < dim; ++k)
-		    if (den_s[k] != 0)
-			break;
-
-		dpoly n(no_param, num_s);
-		dpoly d(no_param, den_s[k], 1);
-		for ( ; ++k < dim; k)
-		    if (den_s[k] != 0) {
-			dpoly fact(no_param, den_s[k], 1);
-			d *= fact;
-		    }
-
-		mpq_set_si(count, 0, 1);
-		n.div(d, count, sign[f]);
-
-		ZZ qn, qd;
-		value2zz(mpq_numref(count), qn);
-		value2zz(mpq_denref(count), qd);
-
-		gf->add(qn, qd, num_p, pden);
-	    } else {
-		int k, l;
-		dpoly_r * r = 0;
-		mat_ZZ pden;
-		pden.SetDims(only_param, nparam);
-
-		for (k = 0, l = 0; k < dim; ++k)
-		    if (den_s[k] == 0)
-			pden[l++] = den[k];
-
-		for (k = 0; k < dim; ++k)
-		    if (den_p[k] == 0)
-			break;
-
-		dpoly n(no_param, num_s);
-		dpoly d(no_param, den_s[k], 1);
-		for ( ; ++k < dim; )
-		    if (den_p[k] == 0) {
-			dpoly fact(no_param, den_s[k], 1);
-			d *= fact;
-		    }
-
-		for (k = 0; k < dim; ++k) {
-		    if (den_s[k] == 0 || den_p[k] == 0)
-			continue;
-
-		    dpoly pd(no_param-1, den_s[k], 1);
-		    int s = den_p[k] < 0 ? -1 : 1;
-
-		    if (r == 0)
-			r = new dpoly_r(n, pd, k, s, dim);
-		    else
-			assert(0);  // for now
-		}
-
-		r->div(d, sign[f], gf, pden, den, num_p);
-	    }
-
-    /*
-    cout << "sign: " << sign[f];
-    cout << "num_s: " << num_s;
-    cout << "num_p: " << num_p;
-    cout << "den_s: " << den_s;
-    cout << "den_p: " << den_p;
-    cout << "den: " << den;
-    cout << "only_param: " << only_param;
-    cout << "no_param: " << no_param;
-    cout << endl;
-    */
-
-	}
-    }
-
-    mpq_clear(count);
-
-    return gf;
+    partial_reducer red(P, nparam);
+    red.start(MaxRays);
+    return red.gf;
 }
