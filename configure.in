@@ -119,7 +119,7 @@ fi
 
 AC_ARG_WITH(ntl,
             [  --with-ntl=DIR          DIR Location of NTL],
-            [ echo "Package tnl : $withval" && ntl_package=$withval],  
+            [ echo "Package ntl : $withval" && ntl_package=$withval],  
             [ ntl_package=yes ])
 
 if test "$ntl_package" = "no"; then
