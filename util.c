@@ -297,9 +297,16 @@ Polyhedron *remove_equalities(Polyhedron *P)
     value_init(g);
     while (p->NbEq > 0) {
 	assert(dim > 0);
-	v = Vector_Alloc(dim);
+	Vector_Gcd(p->Constraint[0]+1, dim+1, &g);
+	Vector_AntiScale(p->Constraint[0]+1, p->Constraint[0]+1, g, dim+1);
 	Vector_Gcd(p->Constraint[0]+1, dim, &g);
-	Vector_AntiScale(p->Constraint[0]+1, v->p, g, dim);
+	if (value_notone_p(g) && value_notmone_p(g)) {
+	    Polyhedron_Free(p);
+	    p = Empty_Polyhedron(0);
+	    break;
+	}
+	v = Vector_Alloc(dim);
+	Vector_Copy(p->Constraint[0]+1, v->p, dim);
 	m1 = unimodular_complete(v);
 	m2 = Matrix_Alloc(dim, dim+1);
 	for (i = 0; i < dim-1 ; ++i) {

@@ -468,6 +468,11 @@ void barvinok_count(Polyhedron *P, Value* result)
     }
     if (P->NbEq != 0) {
 	P = remove_equalities(P);
+	if (emptyQ(P)) {
+	    Polyhedron_Free(P);
+	    value_set_si(*result, 0);
+	    return;
+	}
 	allocated = 1;
     }
     value_init(factor);
