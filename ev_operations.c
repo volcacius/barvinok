@@ -2363,6 +2363,18 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	free(p);
 	free_evalue_refs(&inc);
 	r = 1;
+    } else if (r == 1) {
+	evalue f;
+	value_init(f.d);
+	value_set_si(f.d, 0);
+	f.x.p = new_enode(fractional, 3, -1);
+	value_clear(f.x.p->arr[0].d);
+	f.x.p->arr[0] = p->arr[0];
+	evalue_set_si(&f.x.p->arr[1], 0, 1);
+	evalue_set_si(&f.x.p->arr[2], 1, 1);
+	reorder_terms(p, &f);
+	*e = p->arr[1];
+	free(p);
     }
 
     Matrix_Free(T);
