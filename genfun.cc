@@ -39,7 +39,7 @@ static void print_power(vec_ZZ& c, vec_ZZ& p)
 	    if (c[0] == -1 && c[1] == 1)
 		cout << "-";
 	    else if (c[0] != 1 || c[1] != 1) {
-		cout << c;
+		cout << c[0];
 		if (c[1] != 1)
 		    cout << " / " << c[1];
 		cout << " * ";
