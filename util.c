@@ -195,7 +195,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
     Value tmp;
     unsigned dim = P->Dimension;
     Matrix *M = Matrix_Alloc(P->NbRays+1, dim+3);
-    Matrix *M2;
+    Matrix *M2, *M3;
     Polyhedron *L, *R, *T;
     assert(P->NbEq == 0);
 
@@ -219,12 +219,11 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	++r;
     }
 
-    L = Rays2Polyhedron(M, NbMaxCons);
+    M3 = Matrix_Copy(M);
+    L = Rays2Polyhedron(M3, NbMaxCons);
+    Matrix_Free(M3);
 
     M2 = Matrix_Alloc(dim+1, dim+2);
-    Vector_Set(M2->p[0]+1, 0, dim);
-    value_set_si(M2->p[0][0], 1);
-    value_set_si(M2->p[0][dim+1], 1);
 
     t = 1;
     if (0) {
@@ -235,7 +234,9 @@ try_again:
 	for (r = 1; r < P->NbRays; ++r) {
 	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
 	}
-	L = Rays2Polyhedron(M, NbMaxCons);
+	M3 = Matrix_Copy(M);
+	L = Rays2Polyhedron(M3, NbMaxCons);
+	Matrix_Free(M3);
 	++t;
     }
     assert(t <= MAX_TRY);
@@ -260,6 +261,9 @@ try_again:
 	    ++r;
 	}
 	assert(r == dim+1);
+	Vector_Set(M2->p[0]+1, 0, dim);
+	value_set_si(M2->p[0][0], 1);
+	value_set_si(M2->p[0][dim+1], 1);
 	T = Rays2Polyhedron(M2, P->NbConstraints+1);
 	T->next = R;
 	R = T;
@@ -677,7 +681,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 		value_set_si(m->p[j++][i], 1);
 	    else {
 		struct section *s;
-		Matrix *M;
+		Matrix *M, *M2;
 		int nd = 0;
 		int k, l, k2, l2, q;
 		evalue *L, *U;
@@ -738,7 +742,9 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 			    ConstraintSimplify(M->p[q], M->p[q], 
 					       dim-nvar+2, &g);
 			}
-			s[nd].D = Constraints2Polyhedron(M, P->NbRays);
+			M2 = Matrix_Copy(M);
+			s[nd].D = Constraints2Polyhedron(M2, P->NbRays);
+			Matrix_Free(M2);
 			if (emptyQ(s[nd].D)) {
 			    Polyhedron_Free(s[nd].D);
 			    continue;
