@@ -30,6 +30,11 @@ static void value2zz(Value v, ZZ& z)
 
 static void zz2value(ZZ& z, Value& v)
 {
+    if (!z.rep) {
+	value_set_si(v, 0);
+	return;
+    }
+
     int sa = SIZE(z.rep);
     int abs_sa = sa < 0 ? -sa : sa;
 
@@ -55,6 +60,21 @@ static void matrix2zz(Matrix *M, mat_ZZ& m)
 	    value2zz(M->p[i][j], m[i][j]);
 	}
     }
+}
+
+/*
+ * We add a 1 at the end, because we need it afterwards
+ */
+static Vector * zz2vector(vec_ZZ& v)
+{
+    Vector *vec = Vector_Alloc(v.length()+1);
+    assert(vec);
+    for (int i = 0; i < v.length(); ++i)
+	zz2value(v[i], vec->p[i]);
+
+    value_set_si(vec->p[v.length()], 1);
+
+    return vec;
 }
 
 static void rays(mat_ZZ& r, Polyhedron *C)
@@ -122,7 +142,7 @@ public:
 	value_clear(v);
     }
 
-    void short_vector() {
+    Vector* short_vector() {
 	Matrix *M = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
@@ -150,6 +170,7 @@ public:
 	cout << index << ": " << min << endl;
 
 	Matrix_Free(inv);
+	return zz2vector(U[index]);
     }
 
     ~cone() {
@@ -171,6 +192,8 @@ Polyhedron *decompose(Polyhedron *C)
 {
     mat_ZZ r;
     cone * c = new cone(C);
-    c->short_vector();
+    Vector* v = c->short_vector();
+    Vector_Print(stdout, P_VALUE_FMT, v);
+    Vector_Free(v);
     delete c;
 }
