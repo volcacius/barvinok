@@ -24,13 +24,33 @@ extern "C" {
 #define MAXRAYS  600
 #endif
 
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
+struct option options[] = {
+    { "explicit",  no_argument,  0,  'e' },
+    { 0, 0, 0, 0 }
+};
+#endif
+
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C;
     Matrix *M;
-    Enumeration *en;
+    evalue *EP;
     char **param_name;
     gen_fun *gf;
+    int c, ind = 0;
+    int function = 0;
+
+    while ((c = getopt_long(argc, argv, "e", options, &ind)) != -1) {
+	switch (c) {
+	case 'e':
+	    function = 1;
+	    break;
+	}
+    }
 
     M = Matrix_Read();
     A = Constraints2Polyhedron(M, MAXRAYS);
@@ -43,6 +63,11 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, C->Dimension);
     gf = barvinok_series(A, C, MAXRAYS);
     gf->print(C->Dimension, param_name);
+    puts("");
+    if (function) {
+	EP = *gf;
+	print_evalue(stdout, EP, param_name);
+    }
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
