@@ -11,6 +11,7 @@ int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
 void Polyhedron_Polarize(Polyhedron *P);
 Polyhedron* supporting_cone(Polyhedron *P, int v);
+Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v);
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons);
 void check_triangulization(Polyhedron *P, Polyhedron *T);
 Polyhedron *remove_equalities(Polyhedron *P);

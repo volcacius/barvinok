@@ -98,6 +98,70 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     return P;
 }
 
+void value_lcm(Value i, Value j, Value* lcm)
+{
+    Value aux;
+    value_init(aux);
+    Gcd(i,j,lcm);
+    value_multiply(aux,i,j);
+    value_division(*lcm,aux,*lcm);
+    value_clear(aux);
+}
+
+Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
+{
+    Matrix *M;
+    Value lcm, tmp;
+    unsigned char *supporting = (unsigned char *)malloc(P->NbConstraints);
+    unsigned dim = P->Dimension + 2;
+    unsigned nparam = v->Vertex->NbColumns - 2;
+    unsigned nvar = dim - nparam - 2;
+    int i, n, j;
+    Vector *row;
+
+    assert(supporting);
+    row = Vector_Alloc(nparam+1);
+    assert(row);
+    value_init(lcm);
+    value_init(tmp);
+    value_set_si(lcm, 1);
+    for (i = 0, n = 0; i < P->NbConstraints; ++i) {
+	Vector_Set(row->p, 0, nparam+1);
+	for (j = 0 ; j < nvar; ++j) {
+	    value_set_si(tmp, 1);
+	    if (value_ne(lcm, v->Vertex->p[j][nparam+1])) {
+		value_assign(tmp, lcm);
+		value_lcm(lcm, v->Vertex->p[j][nparam+1], &lcm);
+		value_division(tmp, lcm, tmp);
+	    }
+	    Vector_Combine(row->p, v->Vertex->p[j], row->p, tmp, P->Constraint[i][j+1], nparam+1);
+	}
+	value_set_si(tmp, 1);
+	Vector_Combine(row->p, P->Constraint[i]+1+nvar, row->p, tmp, lcm, nparam+1);
+	for (j = 0; j < nparam+1; ++j)
+	    if (value_notzero_p(row->p[j]))
+		break;
+	if ((supporting[i] = (j == nparam + 1)))
+	    ++n;
+    }
+    assert(n >= nvar);
+    value_clear(tmp);
+    value_clear(lcm);
+    Vector_Free(row);
+    M = Matrix_Alloc(n, nvar+2);
+    assert(M);
+    for (i = 0, j = 0; i < P->NbConstraints; ++i)
+	if (supporting[i]) {
+	    value_set_si(M->p[j][nvar+1], 0);
+	    Vector_Copy(P->Constraint[i], M->p[j++], nvar+1);
+	}
+    free(supporting);
+    P = Constraints2Polyhedron(M, P->NbRays+1);
+    assert(P);
+    Matrix_Free(M);
+    return P;
+}
+
 Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 {
     const static int MAX_TRY=10;
