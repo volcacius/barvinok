@@ -1831,9 +1831,13 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 		    int j;
 		    for (j = 0; j < exist; ++j)
 			if (j != i && 
-			    (value_notzero_p(P->Constraint[l][nvar+j+1]) ||
-			     value_notzero_p(P->Constraint[u][nvar+j+1])))
+			    value_notzero_p(P->Constraint[l][nvar+j+1]))
 			    break;
+		    if (j != exist)
+			for (j = 0; j < exist; ++j)
+			    if (j != i && 
+				 value_notzero_p(P->Constraint[u][nvar+j+1]))
+				break;
 		    if (j == exist) {
 			/* recalculate constant */
 			/* We actually recalculate the whole row for
