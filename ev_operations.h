@@ -24,7 +24,7 @@
 #define compute_evalue _new_compute_evalue
 #define compute_poly _new_compute_poly
 
-typedef enum { polynomial, periodic, evector, modulo } enode_type;
+typedef enum { polynomial, periodic, evector, modulo, indicator } enode_type;
 
 typedef struct _evalue {
   Value d;              /* denominator */

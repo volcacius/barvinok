@@ -169,7 +169,8 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     fprintf(DST, "NULL");
     return;
   }
-  if (p->type == evector) {
+  switch (p->type) {
+  case evector:
     fprintf(DST, "{ ");
     for (i=0; i<p->size; i++) {
       print_evalue(DST, &p->arr[i], pname);
@@ -177,8 +178,8 @@ void print_enode(FILE *DST,enode *p,char **pname) {
 	fprintf(DST, ", ");
     }
     fprintf(DST, " }\n");
-  }
-  else if (p->type == polynomial) {
+    break;
+  case polynomial:
     fprintf(DST, "( ");
     for (i=p->size-1; i>=0; i--) {
       print_evalue(DST, &p->arr[i], pname);
@@ -187,16 +188,16 @@ void print_enode(FILE *DST,enode *p,char **pname) {
 	fprintf(DST, " * %s^%d + ", pname[p->pos-1], i);
     }
     fprintf(DST, " )\n");
-  }
-  else if (p->type == periodic) {
+    break;
+  case periodic:
     fprintf(DST, "[ ");
     for (i=0; i<p->size; i++) {
       print_evalue(DST, &p->arr[i], pname);
       if (i!=(p->size-1)) fprintf(DST, ", ");
     }
     fprintf(DST," ]_%s", pname[p->pos-1]);
-  }
-  else if (p->type == modulo) {
+    break;
+  case modulo:
     fprintf(DST, "( ");
     for (i=p->size-1; i>=1; i--) {
       print_evalue(DST, &p->arr[i], pname);
@@ -214,6 +215,13 @@ void print_enode(FILE *DST,enode *p,char **pname) {
       }
     }
     fprintf(DST, " )\n");
+    break;
+  case indicator:
+    fprintf(DST, "[ ");
+    print_evalue(DST, &p->arr[0], pname);
+    fprintf(DST, "= 0 ] * \n");
+    print_evalue(DST, &p->arr[1], pname);
+    break;
   }
   return;
 } /* print_enode */ 
@@ -493,6 +501,9 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
     return;
 }
      
+   if (value_zero_p(res->d) && res->x.p->type == indicator)
+	emul(e1, &res->x.p->arr[1]);
+   else
    if(value_zero_p(e1->d)&& value_zero_p(res->d)) {
        switch(e1->x.p->type) {
        case polynomial:
@@ -621,6 +632,12 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 		    return; 
 		}
 	    }
+	    break;
+       case indicator:
+	    emul_rev(e1, res);
+	    break;
+       default:
+	    assert(0);
        }		   
    }
    else {
@@ -816,6 +833,10 @@ static double compute_enode(enode *p, Value *list_args) {
     value_set_si(param,p->size);
     value_modulus(m,m,param);
     res = compute_evalue(&p->arr[VALUE_TO_INT(m)],list_args);
+  }
+  else if (p->type == indicator) {
+    if (fabs(compute_evalue(&p->arr[0], list_args)) < 0.5)
+      res = compute_evalue(&p->arr[1], list_args);
   }
   value_clear(m);
   value_clear(param);
