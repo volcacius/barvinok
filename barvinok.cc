@@ -1418,6 +1418,7 @@ static Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 
     rVD = DomainConstraintSimplify(rVD, MaxRays);
     if (emptyQ(rVD)) {
+	Domain_Free(fVD[nd]);
 	Domain_Free(rVD);
 	return 0;
     }
