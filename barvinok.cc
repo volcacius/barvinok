@@ -1978,6 +1978,8 @@ static evalue* enumerate_sum(Polyhedron *P,
     free(EP);
     EP = sum;
 
+    evalue_range_reduction(EP);
+
     return EP;
 }
 
