@@ -921,6 +921,20 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     res = NULL;
 
+    if (C->Dimension == 0 || emptyQ(P)) {
+	en = (Enumeration *)malloc(sizeof(Enumeration));
+	en->ValidityDomain = Polyhedron_Copy(C);
+	en->next = NULL;
+	value_init(en->EP.d);
+	value_set_si(en->EP.d, 1);
+	value_init(en->EP.x.n);
+	if (emptyQ(P))
+	    value_set_si(en->EP.x.n, 0);
+	else
+	    barvinok_count(P, &en->EP.x.n, MaxRays);
+	return en;
+    }
+
     if (P->NbEq != 0) {
 	Matrix *f;
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
@@ -928,7 +942,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	Matrix_Free(f);
     }
 
-    assert(C->Dimension != 0); // assume that there are parameters for now
     PP = Polyhedron2Param_SimplifiedDomain(&P,C,MaxRays,&CEq,&CT);
     assert(isIdentity(CT)); // assume for now
 
