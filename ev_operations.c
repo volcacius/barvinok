@@ -222,6 +222,12 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     print_evalue(DST, &p->arr[0], pname);
     fprintf(DST, "= 0 ] * \n");
     print_evalue(DST, &p->arr[1], pname);
+    if (p->size > 2) {
+	fprintf(DST, " +\n [ ");
+	print_evalue(DST, &p->arr[0], pname);
+	fprintf(DST, "!= 0 ] * \n");
+	print_evalue(DST, &p->arr[2], pname);
+    }
     break;
   case partition:
     for (i=0; i<p->size/2; i++) {
