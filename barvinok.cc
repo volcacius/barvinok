@@ -2280,6 +2280,9 @@ static evalue* enumerate_vd(Polyhedron **PA,
 			free_evalue_refs(E); 
 			free(E);
 		    }
+		    Polyhedron_Free(para);
+		    Polyhedron_Free(pos);
+		    Polyhedron_Free(neg);
 		    break;
 		}
 		if (EP)
