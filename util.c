@@ -448,11 +448,53 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 void manual_count(Polyhedron *P, Value* result)
 {
     Polyhedron *U = Universe_Polyhedron(0);
-    Enumeration *ee, *en = Polyhedron_Enumerate(P,U,1024);
+    Enumeration *en = Polyhedron_Enumerate(P,U,1024);
     Value *v = compute_poly(en,NULL);
     value_assign(*result, *v);
     value_clear(*v);
     free(v);
     Enumeration_Free(en);
     Polyhedron_Free(U);
+}
+
+Bool isIdentity(Matrix *M)
+{
+    unsigned i, j;
+    if (M->NbRows != M->NbColumns)
+	return False;
+
+    for (i = 0;i < M->NbRows; i ++)
+	for (j = 0; j < M->NbColumns; j ++)
+	    if (i == j) {
+		if(value_notone_p(M->p[i][j]))
+		    return False;
+	    } else {
+		if(value_notzero_p(M->p[i][j]))
+		    return False;
+	    }
+    return True;
+}
+
+void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
+{
+  Param_Domain *P;
+  Param_Vertices *V;
+
+  for(P=PP->D;P;P=P->next) {
+    
+    /* prints current val. dom. */
+    printf( "---------------------------------------\n" );
+    printf( "Domain :\n");
+    Print_Domain( stdout, P->Domain, param_names );
+    
+    /* scan the vertices */
+    printf( "Vertices :\n");
+    FORALL_PVertex_in_ParamPolyhedron(V,P,PP) {
+	
+      /* prints each vertex */
+      Print_Vertex( stdout, V->Vertex, param_names );
+      printf( "\n" );
+    }
+    END_FORALL_PVertex_in_ParamPolyhedron;
+  }
 }

@@ -17,6 +17,8 @@ Polyhedron *remove_equalities(Polyhedron *P);
 void manual_count(Polyhedron *P, Value* result);
 Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
 Matrix * unimodular_complete(Vector *row);
+Bool isIdentity(Matrix *M);
+void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
 
 #if defined(__cplusplus)
 }
