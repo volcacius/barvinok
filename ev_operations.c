@@ -148,7 +148,7 @@ static void add_modulo_substitution(struct subst *s, evalue *r)
     ++s->n;
 }
 
-void _reduce_evalue (evalue *e, struct subst *s, int m) {
+int _reduce_evalue (evalue *e, struct subst *s, int m) {
   
     enode *p;
     int i, j, k;
@@ -172,8 +172,27 @@ void _reduce_evalue (evalue *e, struct subst *s, int m) {
 	if (add)
 	    add_modulo_substitution(s, e);
 
-        _reduce_evalue(&p->arr[i], s, 
-		       (i == 0 && p->type==modulo) ? p->pos : m);
+        if (i == 0 && p->type==modulo) {
+	    int factor;
+	    while ((factor = _reduce_evalue(&p->arr[i], s, p->pos)) != 0) {
+		int j;
+		evalue f;
+		p->pos *= factor;
+		value_init(f.d);
+		evalue_set_si(&f, factor, 1);
+		emul(&f, &p->arr[0]);
+		value_assign(f.d, f.x.n);
+		value_set_si(f.x.n, 1);
+		assert(p->size >= 3);
+		emul(&f, &p->arr[2]);
+		for (j = 3; j < p->size; ++j) {
+		    mpz_mul_si(f.d, f.d, factor);
+		    emul(&f, &p->arr[j]);
+		}
+		free_evalue_refs(&f);
+	    }
+	} else
+	    _reduce_evalue(&p->arr[i], s, m);
 
 	if (add) {
 	    --s->n;
@@ -216,8 +235,11 @@ you_lose:   	/* OK, lets not do it */
 		int divide = value_notone_p(s->fixed[k].d);
 		evalue d;
 
-		if (s->fixed[k].m != 0 && s->fixed[k].m != m)
+		if (s->fixed[k].m != 0 && s->fixed[k].m != m) {
+		    if (!divide && m != 0 && (s->fixed[k].m % m == 0))
+			return s->fixed[k].m / m;
 		    continue;
+		}
 
 		if (divide && m != 0)
 		    continue;
@@ -328,6 +350,7 @@ you_lose:   	/* OK, lets not do it */
 	    free(p);
 	}
     }
+    return 0;
 } /* reduce_evalue */
 
 static void add_substitution(struct subst *s, Value *row, unsigned dim)
