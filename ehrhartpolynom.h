@@ -45,7 +45,7 @@ using namespace std;
 class PeriodicNumber {
   friend class EhrhartPolynom;
   /// parameter_names contains the ordered names of the parameters
-  set<string>     parameter_names;
+  std::set<string>     parameter_names;
   /// period is the period of the variable
   map<string,int> period;
   /** data contains the multi-dimensional matrix containing
@@ -70,7 +70,7 @@ public:
    *  @param period contains the periods of the different
    *  parameters.
    */
-  PeriodicNumber(const set<string>& _parameter_names,
+  PeriodicNumber(const std::set<string>& _parameter_names,
   		 const map<string, int>& _period) 
     : parameter_names(_parameter_names), period(_period) 
   {
@@ -202,8 +202,8 @@ public:
     return (*i).second;
   }
   bool has_param(const string& name) const;
-  set<string> get_params() const {
-    set<string> result;
+  std::set<string> get_params() const {
+    std::set<string> result;
     for(map<string,int>::const_iterator i=period.begin();
 	i!=period.end(); i++)
       result.insert((*i).first);
@@ -388,7 +388,7 @@ public:
    const ::Relation& domain2);
 #endif
 
-  /** struct affine represents an Ehrhart Polynomial as a set of
+  /** struct affine represents an Ehrhart Polynomial as a std::set of
    *  affine functions, if possible. This is only possible if the
    *  polynomial is univariate, with maximum power 1. 
    */
@@ -420,7 +420,7 @@ public:
   };
   
   /**
-   * get_affine_polynomials returns the Ehrhart polynomials as a set
+   * get_affine_polynomials returns the Ehrhart polynomials as a std::set
    * of affine functions when possible. If not possible, it returns
    * the null pointer.
    */
@@ -437,7 +437,7 @@ public:
 private:
   evalue translate_one_term(const deque<string>& parameter_names,
 			    const deque<string>& left_over_var_names,
-			    const set<map<string, int> >& terms) const;
+			    const std::set<map<string, int> >& terms) const;
 };
 
 
