@@ -2340,7 +2340,6 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	value_init(max);
 
 	I = polynomial_projection(p->arr[0].x.p, D, &d, &T);
-	Matrix_Free(T);
 	line_minmax(I, &min, &max); /* frees I */
 	equal = value_eq(min, max);
 	mpz_cdiv_q(min, min, d);
@@ -2358,6 +2357,10 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    free_evalue_refs(&(p->arr[1]));
 	    free_evalue_refs(&(p->arr[0]));
 	    free(p);
+	    value_clear(d);
+	    value_clear(min);
+	    value_clear(max);
+	    Matrix_Free(T);
 	    return r ? r : reduce_in_domain(e, D);
 	} else if (equal) {
 	    /* Always zero */
@@ -2366,12 +2369,36 @@ static int reduce_in_domain(evalue *e, Polyhedron *D)
 	    *e = p->arr[1];
 	    free_evalue_refs(&(p->arr[0]));
 	    free(p);
+	    value_clear(d);
+	    value_clear(min);
+	    value_clear(max);
+	    Matrix_Free(T);
 	    return reduce_in_domain(e, D);
+	} else if (value_eq(min, max)) {
+	    /* zero for a single value */
+	    Polyhedron *E;
+	    Matrix *M = Matrix_Alloc(1, D->Dimension+2);
+	    Vector_Copy(T->p[0], M->p[0]+1, D->Dimension+1);
+	    value_multiply(min, min, d);
+	    value_substract(M->p[0][D->Dimension+1],
+			    M->p[0][D->Dimension+1], min);
+	    E = DomainAddConstraints(D, M, 0);
+	    value_clear(d);
+	    value_clear(min);
+	    value_clear(max);
+	    Matrix_Free(T);
+	    Matrix_Free(M);
+	    r = reduce_in_domain(&p->arr[1], E);
+	    if (p->size == 3)
+		r |= reduce_in_domain(&p->arr[2], D);
+	    Domain_Free(E);
+	    return r;
 	}
 
 	value_clear(d);
 	value_clear(min);
 	value_clear(max);
+	Matrix_Free(T);
     }
 
     i = p->type == relation ? 1 : 
