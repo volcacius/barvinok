@@ -146,18 +146,15 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
     }
 }
 
-static Polyhedron *quast2poly(PipQuast *q, int nvar)
+static Polyhedron *quast2poly(PipQuast *q, int nvar, int nset)
 {
-    int			nset, nparam, nexist;
-    PipQuast*		t;
+    int			nparam, nexist;
     PipList*		l;
     int			i, d, rows;
     Matrix*		M;
     Polyhedron*		D;
 
-    for(t = q; t->condition; t = t->next_then);
-    for(nset = 0, l = t->list; l; ++nset, l = l->next);
-    assert(nset != 0);
+    assert(nset != 0);	/* required ? */
     nparam = q->condition ? q->condition->nb_elements-1 :
 			    q->list->vector->nb_elements-1;
     d = 0;
@@ -201,7 +198,7 @@ Polyhedron *pip_lexmin(Polyhedron *P, int exist, int nparam)
     pip_quast_print(stderr, sol, 0);
     */
 
-    min = quast2poly(sol, nvar);
+    min = quast2poly(sol, nvar, exist);
 
     pip_quast_free(sol);
     pip_matrix_free(context);
