@@ -1,9 +1,9 @@
 AC_INIT
-AM_INIT_AUTOMAKE(barvinok, 0.07)
+AM_INIT_AUTOMAKE(barvinok, 0.08)
 AC_PROG_LIBTOOL
 AC_PROG_CXX
 AC_SUBST(versioninfo)
-versioninfo=3:2:1
+versioninfo=3:3:1
 
 dnl Check for GMP library
 AC_MSG_CHECKING(whether to use GMP)
