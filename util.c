@@ -87,23 +87,12 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     M = Matrix_Alloc(n, dim);
     assert(M);
     for (i = 0, j = 0; i < P->NbConstraints; ++i)
-	if (supporting[i])
-	    Vector_Copy(P->Constraint[i], M->p[j++], dim);
+	if (supporting[i]) {
+	    value_set_si(M->p[j][dim-1], 0);
+	    Vector_Copy(P->Constraint[i], M->p[j++], dim-1);
+	}
     free(supporting);
     P = Constraints2Polyhedron(M, P->NbRays+1);
-    assert(P);
-    Matrix_Free(M);
-    M = Matrix_Alloc(P->NbRays, dim);
-    assert(M);
-    n = P->NbConstraints;
-    Vector_Copy(P->Ray[0], M->p[0], P->NbRays * dim);
-    Polyhedron_Free(P);
-    for (i = 0; i < M->NbRows; ++i)
-	if (value_notzero_p(M->p[i][dim-1])) {
-	    Vector_Set(M->p[i]+1, 0, dim - 2);
-	    break;
-	}
-    P = Rays2Polyhedron(M, n+1);
     assert(P);
     Matrix_Free(M);
     return P;
