@@ -41,9 +41,19 @@ void count_accepting_paths(DFA *dfa, int num_states, int num_freevars)
 
     /* Do while there are remaining edges from state i . . . */
     while (pp[i]) {
-      weight[i][num_edges_from[i]] = 0;
-      edge_from[i][num_edges_from[i]] = pp[i]->to;
-	  
+      int found = 0;
+      
+      for (j = 0; j < num_edges_from[i]; j++)
+	if (edge_from[i][j] == pp[i]->to) {
+	  found = 1;
+	  break;
+	}
+      if (!found) {
+	num_edges_from[i]++;
+	weight[i][j] = 0;
+	edge_from[i][j] = pp[i]->to;
+      }
+      
       /* Check if edge (i,pp[i]->to) leads to a dead state, continue if not */
       if (!dead_state[pp[i]->to]) {
 	    
@@ -58,12 +68,11 @@ void count_accepting_paths(DFA *dfa, int num_states, int num_freevars)
 	  count *= 2;
 	    
 	/* Update weight on edge (i,pp[i]->to) */
-	weight[i][num_edges_from[i]] += count;
+	weight[i][j] += count;
       }
 
       /* Get next edge from state i and repeat */
       pp[i] = pp[i]->next;
-      num_edges_from[i]++;
     }
   }
   
