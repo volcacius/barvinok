@@ -276,3 +276,15 @@ Polyhedron *remove_equalities(Polyhedron *P)
     value_clear(g);
     return p;
 }
+
+void manual_count(Polyhedron *P, Value* result)
+{
+    Polyhedron *U = Universe_Polyhedron(0);
+    Enumeration *ee, *en = Polyhedron_Enumerate(P,U,1024);
+    Value *v = compute_poly(en,NULL);
+    value_assign(*result, *v);
+    value_clear(*v);
+    free(v);
+    Enumeration_Free(en);
+    Polyhedron_Free(U);
+}

@@ -6,18 +6,6 @@
 #include <util.h>
 #include <barvinok.h>
 
-void manual_count(Polyhedron *P, Value* result)
-{
-    Polyhedron *U = Universe_Polyhedron(0);
-    Enumeration *ee, *en = Polyhedron_Enumerate(P,U,1024);
-    Value *v = compute_poly(en,NULL);
-    value_assign(*result, *v);
-    value_clear(*v);
-    free(v);
-    Enumeration_Free(en);
-    Polyhedron_Free(U);
-}
-
 static void time_diff(struct tms *before, struct tms *after)
 {
     long ticks = sysconf(_SC_CLK_TCK);
