@@ -143,6 +143,17 @@ you_lose:   	/* OK, lets not do it */
             free(p);
         }
     }
+    else if (p->type == relation) {
+	if (p->size == 3 && EVALUE_IS_ZERO(p->arr[2])) {
+	    free_evalue_refs(&(p->arr[2]));
+	    p->size = 2;
+	}
+	if (p->size == 2 && EVALUE_IS_ZERO(p->arr[1])) {
+	    free_evalue_refs(&(p->arr[1]));
+	    free_evalue_refs(&(p->arr[0]));
+	    evalue_set_si(e, 0, 1);
+	}
+    }
 } /* reduce_evalue */
 
 void print_evalue(FILE *DST,evalue *e,char **pname) {
