@@ -624,7 +624,7 @@ void Enumeration_Print(FILE *Dst, Enumeration *en, char **params)
 {
     for (; en; en = en->next) {
 	Print_Domain(Dst, en->ValidityDomain, params);
-	print_evalue(stdout, &en->EP, params);
+	print_evalue(Dst, &en->EP, params);
     }
 }
 
