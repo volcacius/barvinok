@@ -245,16 +245,17 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
     return 1;
 }
 
-static void reorder_fractional(enode *p, evalue *v)
+static void reorder_terms(enode *p, evalue *v)
 {
     int i;
+    int offset = p->type == fractional;
 
-    for (i=p->size-1;i>=2;i--) {
+    for (i = p->size-1; i >= offset+1; i--) {
 	emul(v, &p->arr[i]);
 	eadd(&p->arr[i], &p->arr[i-1]);
 	free_evalue_refs(&(p->arr[i]));
     }
-    p->size = 2;
+    p->size = offset+1;
     free_evalue_refs(v);
 }
 
@@ -528,7 +529,7 @@ you_lose:   	/* OK, lets not do it */
 	}
 
 	if (reorder) {
-	    reorder_fractional(p, &v);
+	    reorder_terms(p, &v);
 	    _reduce_evalue(&p->arr[1], s, fract);
 	}
 
@@ -2286,7 +2287,7 @@ void evalue_combine(evalue *e)
     }
 }
 
-static reduce_in_domain(evalue *e, Polyhedron *D)
+static int reduce_in_domain(evalue *e, Polyhedron *D)
 {
     int i;
     enode *p;
@@ -2295,9 +2296,10 @@ static reduce_in_domain(evalue *e, Polyhedron *D)
     unsigned dim;
     evalue *pp;
     Value d, min, max;
+    int r = 0;
 
     if (value_notzero_p(e->d))
-	return;
+	return r;
 
     p = e->x.p;
 
@@ -2305,10 +2307,22 @@ static reduce_in_domain(evalue *e, Polyhedron *D)
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
-	reduce_in_domain(&p->arr[i], D);
+	r |= reduce_in_domain(&p->arr[i], D);
 
-    if (p->type != fractional)
-	return;
+    if (p->type != fractional) {
+	if (r && p->type == polynomial) {
+	    evalue f;
+	    value_init(f.d);
+	    value_set_si(f.d, 0);
+	    f.x.p = new_enode(polynomial, 2, p->pos);
+	    evalue_set_si(&f.x.p->arr[0], 0, 1);
+	    evalue_set_si(&f.x.p->arr[1], 1, 1);
+	    reorder_terms(p, &f);
+	    *e = p->arr[0];
+	    free(p);
+	}
+	return r;
+    }
 
     dim = D->Dimension;
     T = Matrix_Alloc(2, dim+1);
@@ -2343,17 +2357,20 @@ static reduce_in_domain(evalue *e, Polyhedron *D)
 	value_set_si(inc.d, 1);
 	value_oppose(inc.x.n, min);
 	eadd(&inc, &p->arr[0]);
-	reorder_fractional(p, &p->arr[0]); /* frees arr[0] */
+	reorder_terms(p, &p->arr[0]); /* frees arr[0] */
 	value_clear(e->d);
 	*e = p->arr[1];
 	free(p);
 	free_evalue_refs(&inc);
+	r = 1;
     }
 
     Matrix_Free(T);
     value_clear(d);
     value_clear(min);
     value_clear(max);
+
+    return r;
 }
 
 void evalue_range_reduction(evalue *e)
@@ -2363,6 +2380,7 @@ void evalue_range_reduction(evalue *e)
 	return;
 
     for (i = 0; i < e->x.p->size/2; ++i)
-	reduce_in_domain(&e->x.p->arr[2*i+1],
-			 EVALUE_DOMAIN(e->x.p->arr[2*i]));
+	if (reduce_in_domain(&e->x.p->arr[2*i+1],
+			     EVALUE_DOMAIN(e->x.p->arr[2*i])))
+	    reduce_evalue(&e->x.p->arr[2*i+1]);
 }
