@@ -1548,8 +1548,6 @@ out:
 
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
-   	emul(&factor, &s[nd].E); 
-	reduce_evalue(&s[nd].E);
 	s[nd].D = rVD;
 	++nd;
 	if (rVD != pVD)
@@ -1563,6 +1561,9 @@ out:
 	eres->x.p->arr[2*j+1] = s[j].E;
     }
     delete [] s;
+
+    emul(&factor, eres); 
+    reduce_evalue(eres);
 
     Vector_Free(c);
 
