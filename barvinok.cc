@@ -7,12 +7,12 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
-#include <barvinok.h>
 #include <util.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
 #include "ev_operations.h"
 }
+#include <barvinok.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
