@@ -85,14 +85,18 @@ static Matrix * rays(Polyhedron *C)
 class cone {
 public:
     cone(Polyhedron *C) {
-	Cone = C;
-	Matrix *M = rays(C);
-	Matrix_Print(stdout, P_VALUE_FMT, M);
+	Cone = Polyhedron_Copy(C);
+	Rays = rays(C);
+	Matrix_Print(stdout, P_VALUE_FMT, Rays);
 	mat_ZZ A;
-	matrix2zz(M, A);
+	matrix2zz(Rays, A);
 	cout << A << endl;
 	det = determinant(A);
 	cout << "det: " << det << endl;
+    }
+
+    void short_vector() {
+	Matrix *M = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
 	assert(ok);
@@ -110,8 +114,13 @@ public:
 	Matrix_Free(inv);
     }
 
+    ~cone() {
+	Polyhedron_Free(Cone);
+    }
+
     ZZ det;
     Polyhedron *Cone;
+    Matrix *Rays;
 };
 
 /*
@@ -123,4 +132,6 @@ Polyhedron *decompose(Polyhedron *C)
 {
     mat_ZZ r;
     cone * c = new cone(C);
+    c->short_vector();
+    delete c;
 }
