@@ -434,7 +434,7 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
     j = 0;
     *factor = f;
     skip = 0;
-    while (p->NbEq - skip > 0) {
+    while (nvar > 0 && p->NbEq - skip > 0) {
 	assert(dim > 0);
 
 	while (First_Non_Zero(p->Constraint[skip]+1, nvar) == -1)
@@ -467,6 +467,10 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 	--dim;
 	--nvar;
 	++j;
+    }
+    if (nvar == 0) {
+	Polyhedron_Free(p);
+	p = Universe_Polyhedron(0);
     }
     value_clear(g);
     return p;
