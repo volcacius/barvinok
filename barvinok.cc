@@ -1640,12 +1640,16 @@ out:
 	    Domain_Free(pVD);
     }
 
-    eres->x.p = new_enode(partition, 2*nd, -1);
-    for (int j = 0; j < nd; ++j) {
-	EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
-	value_clear(eres->x.p->arr[2*j+1].d);
-	eres->x.p->arr[2*j+1] = s[j].E;
-	Domain_Free(s[j].full);
+    if (nd == 0)
+	evalue_set_si(eres, 0, 1);
+    else {
+	eres->x.p = new_enode(partition, 2*nd, -1);
+	for (int j = 0; j < nd; ++j) {
+	    EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
+	    value_clear(eres->x.p->arr[2*j+1].d);
+	    eres->x.p->arr[2*j+1] = s[j].E;
+	    Domain_Free(s[j].full);
+	}
     }
     delete [] s;
 
