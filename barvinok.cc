@@ -63,7 +63,7 @@ static void matrix2zz(Matrix *M, mat_ZZ& m)
 }
 
 /*
- * We add a 1 at the end, because we need it afterwards
+ * We add a 0 at the end, because we need it afterwards
  */
 static Vector * zz2vector(vec_ZZ& v)
 {
@@ -72,7 +72,7 @@ static Vector * zz2vector(vec_ZZ& v)
     for (int i = 0; i < v.length(); ++i)
 	zz2value(v[i], vec->p[i]);
 
-    value_set_si(vec->p[v.length()], 1);
+    value_set_si(vec->p[v.length()], 0);
 
     return vec;
 }
@@ -107,7 +107,7 @@ static Matrix * rays(Polyhedron *C)
     for (i = 0, c = 0; i < dim; ++i)
 	if (value_zero_p(C->Ray[i][dim+1])) {
 	    Vector_Copy(C->Ray[i] + 1, M->p[c], dim);
-	    value_set_si(M->p[c++][dim], 1);
+	    value_set_si(M->p[c++][dim], 0);
 	}
     value_set_si(M->p[dim][dim], 1);
 
