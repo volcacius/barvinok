@@ -1630,7 +1630,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 		    Vector_Gcd(row->p+1, len - 2, &f);
 		    if (value_notone_p(f)) {
 			Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			mpz_fdiv_r(row->p[len-1], row->p[len-1], f);
+			mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
 		    }
 		    value_set_si(f, -1);
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
@@ -1665,7 +1665,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			Vector_Gcd(row->p+1, len - 2, &f);
 			if (value_notone_p(f)) {
 			    Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			    mpz_fdiv_r(row->p[len-1], row->p[len-1], f);
+			    mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
 			}
 			value_set_si(f, -1);
 			Vector_Scale(row->p+1, row->p+1, f, len-1);
@@ -1745,7 +1745,7 @@ next:
 		    Vector_Gcd(row->p+1, len - 2, &f);
 		    if (value_notone_p(f)) {
 			Vector_AntiScale(row->p+1, row->p+1, f, len-2);
-			mpz_fdiv_r(row->p[len-1], row->p[len-1], f);
+			mpz_fdiv_q(row->p[len-1], row->p[len-1], f);
 		    }
 		    Polyhedron *neg = AddConstraints(row->p, 1, P, MaxRays);
 		    value_set_si(f, -1);
