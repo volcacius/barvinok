@@ -17,6 +17,8 @@ EXTRA_DIST = ChangeLog
 
 check:
 	@for i in $(top_srcdir)/tests/*; do \
-	    echo -n $$i; \
-	    ./test < $$i && echo " ok"; \
+	    if test -f $$i; then \
+		echo -n $$i; \
+		./test < $$i && echo " ok"; \
+	    fi \
 	done
