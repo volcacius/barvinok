@@ -180,10 +180,6 @@ public:
 	mat_ZZ A;
 	matrix2zz(Rays, A, Rays->NbRows - 1, Rays->NbColumns - 1);
 	det = determinant(A);
-	Value v;
-	value_init(v);
-	zz2value(det, v);
-	value_clear(v);
     }
 
     Vector* short_vector(vec_ZZ& lambda) {
