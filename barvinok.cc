@@ -915,33 +915,38 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     default_params(params, nparam);
     unsigned dim = P->Dimension - nparam;
     Polyhedron ** vcone = new (Polyhedron *)[PP->nbV];
+    int * npos = new int[PP->nbV];
+    int * nneg = new int[PP->nbV];
     vec_ZZ sign;
+
+    int i;
+    for (i = 0, V = PP->V; V; ++i, V = V->next) {
+	Polyhedron *C = supporting_cone_p(P, V);
+	decompose(C, &vcone[i], &npos[i], &nneg[i], MaxRays);
+    }
 
     for(D=PP->D;D;D=D->next) {
 	int ncone = 0;
 	sign.SetLength(ncone);
 	int n = 0;
-	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
-	    int npos, nneg;
-	    Polyhedron *C = supporting_cone_p(P, V);
-	    decompose(C, &vcone[n++], &npos, &nneg, MaxRays);
-	    ncone += npos + nneg;
+	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
+	    ncone += npos[_i] + nneg[_i];
 	    sign.SetLength(ncone);
-	    for (int k = 0; k < npos; ++k)
-		sign[ncone-nneg-k-1] = 1;
-	    for (int k = 0; k < nneg; ++k)
+	    for (int k = 0; k < npos[_i]; ++k)
+		sign[ncone-nneg[_i]-k-1] = 1;
+	    for (int k = 0; k < nneg[_i]; ++k)
 		sign[ncone-k-1] = -1;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
 	mat_ZZ rays;
 	rays.SetDims(ncone * dim, dim);
 	r = 0;
-	for (int j = 0; j < n; ++j) {
-	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
+	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
+	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
 		assert(i->NbRays-1 == dim);
 		add_rays(rays, i, &r);
 	    }
-	}
+	END_FORALL_PVertex_in_ParamPolyhedron;
 	vec_ZZ lambda;
 	nonorthog(rays, lambda);
 
@@ -950,14 +955,12 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	term_info *num = new term_info[ncone];
 
 	int f = 0;
-	int j = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
-	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
+	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
 		lattice_point(params, V, i, lambda, &num[f]);
 		normalize(i, lambda, sign[f], num[f].constant, den[f]);
 		++f;
 	    }
-	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 	ZZ min = num[0].constant;
 	for (int j = 1; j < ncone; ++j)
@@ -966,13 +969,12 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	for (int j = 0; j < ncone; ++j)
 	    num[j].constant -= min;
 	f = 0;
-	j = 0;
 	Vector *c = Vector_Alloc(dim+2);
 	EhrhartPolynom EP;
 	mpq_t count;
 	mpq_init(count);
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
-	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
+	    for (Polyhedron *i = vcone[_i]; i; i = i->next) {
 		dpoly n(dim, den[f][0], 1);
 		for (int k = 1; k < dim; ++k) {
 		    dpoly fact(dim, den[f][k], 1);
@@ -1001,7 +1003,6 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		} 
 		++f;
 	    }
-	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 	mpq_clear(count);
 
@@ -1014,6 +1015,8 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     }
 
     delete [] vcone;
+    delete [] npos;
+    delete [] nneg;
 
     return res;
 }
