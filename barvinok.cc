@@ -744,6 +744,36 @@ static Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
     return I;
 }
 
+/*
+ * Normalize linear expression coef modulo m
+ * Removes common factor and reduces coefficients
+ * Returns index of first non-zero coefficient or len
+ */
+static int normal_mod(Value *coef, int len, Value *m)
+{
+    Value gcd;
+    value_init(gcd);
+
+    Vector_Gcd(coef, len, &gcd);
+    Gcd(gcd, *m, &gcd);
+    Vector_AntiScale(coef, coef, gcd, len);
+
+    value_division(*m, *m, gcd);
+    value_clear(gcd);
+
+    if (value_one_p(*m))
+	return len;
+
+    int j;
+    for (j = 0; j < len; ++j)
+	mpz_fdiv_r(coef[j], coef[j], *m);
+    for (j = 0; j < len; ++j)
+	if (value_notzero_p(coef[j]))
+	    break;
+
+    return j;
+}
+
 #ifdef USE_MODULO
 static void mask(Matrix *f, evalue *factor)
 {
@@ -859,35 +889,25 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
 
 static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
 {
-    Value gcd;
-    value_init(gcd);
-    Value mone;
-    value_init(mone);
-    value_set_si(mone, -1);
+    Value m;
+    value_init(m);
+    value_set_si(m, -1);
+
+    Vector_Scale(coef, coef, m, len);
+
+    value_assign(m, d);
+    int j = normal_mod(coef, len, &m);
+
+    if (j == len) {
+	value_clear(m);
+	return;
+    }
 
     vec_ZZ num;
-
-    Vector_Gcd(coef, len, &gcd);
-    Gcd(gcd, d, &gcd);
-    Vector_AntiScale(coef, coef, gcd, len);
-    Vector_Scale(coef, coef, mone, len);
-
-    value_division(gcd, d, gcd);
-    ZZ g;
-    value2zz(gcd, g);
-    if (value_one_p(gcd))
-	goto out;
-
     values2zz(coef, num, len);
 
-    int j;
-    for (j = 0; j < len; ++j)
-	num[j] = num[j] % g;
-    for (j = 0; j < len; ++j)
-	if (num[j] != 0)
-	    break;
-    if (j == len)
-	goto out;
+    ZZ g;
+    value2zz(m, g);
 
     evalue tmp;
     value_init(tmp.d);
@@ -898,7 +918,7 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
 	    if (num[k] != 0)
 		num[k] = g - num[k];
 	num[len-1] = g - 1 - num[len-1];
-	value_assign(tmp.d, gcd);
+	value_assign(tmp.d, m);
 	ZZ t = f*(g-1);
 	zz2value(t, tmp.x.n);
 	eadd(&tmp, EP);
@@ -908,27 +928,27 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
     if (j >= len-1) {
 	ZZ t = num[len-1] * f;
 	zz2value(t, tmp.x.n);
-	value_assign(tmp.d, gcd);
+	value_assign(tmp.d, m);
 	eadd(&tmp, EP);
     } else {
 	evalue *E = multi_monom(num);
 	evalue EV;
 	value_init(EV.d);
 
-	if (PD && !mod_needed(PD, num, gcd, E)) {
+	if (PD && !mod_needed(PD, num, m, E)) {
 	    value_init(EV.x.n);
 	    zz2value(f, EV.x.n);
-	    value_assign(EV.d, gcd);
+	    value_assign(EV.d, m);
 	    emul(&EV, E);
 	    eadd(E, EP);
 	} else {
 	    value_set_si(EV.d, 0);
-	    EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(gcd));
+	    EV.x.p = new_enode(modulo, 3, VALUE_TO_INT(m));
 	    evalue_copy(&EV.x.p->arr[0], E);
 	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
 	    value_init(EV.x.p->arr[2].x.n);
 	    zz2value(f, EV.x.p->arr[2].x.n);
-	    value_assign(EV.x.p->arr[2].d, gcd);
+	    value_assign(EV.x.p->arr[2].d, m);
 
 	    eadd(&EV, EP);
 	}
@@ -941,8 +961,7 @@ static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedro
     free_evalue_refs(&tmp); 
 
 out:
-    value_clear(gcd);
-    value_clear(mone);
+    value_clear(m);
 }
 
 evalue* bv_ceil3(Value *coef, int len, Value d)
