@@ -258,6 +258,11 @@ void decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 
 void count(Polyhedron *P)
 {
+    Polyhedron ** vpos = new (Polyhedron *)[P->NbRays];
+    Polyhedron ** vneg = new (Polyhedron *)[P->NbRays];
+
+    int nrays = 0;
+
     for (int j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j, 600);
 	printf("%d:\n", j);
@@ -281,11 +286,13 @@ void count(Polyhedron *P)
 	    Polyhedron *A = Polyhedron_Polar(i, 600);
 	    A->next = pos;
 	    pos = A;
+	    nrays += A->NbRays - 1;
 	}
 	for (Polyhedron *i = polneg; i; i = i->next) {
 	    Polyhedron *A = Polyhedron_Polar(i, 600);
 	    A->next = neg;
 	    neg = A;
+	    nrays += A->NbRays - 1;
 	}
 	Domain_Free(polpos);
 	Domain_Free(polneg);
@@ -296,7 +303,17 @@ void count(Polyhedron *P)
 	puts("Neg:");
 	Polyhedron_Print(stdout, P_VALUE_FMT, neg);
 
-	Domain_Free(pos);
-	Domain_Free(neg);
+	vpos[j] = pos;
+	vneg[j] = neg;
     }
+
+    cout << nrays << endl;
+
+    for (int j = 0; j < P->NbRays; ++j) {
+	Domain_Free(vpos[j]);
+	Domain_Free(vneg[j]);
+    }
+
+    delete [] vpos;
+    delete [] vneg;
 }
