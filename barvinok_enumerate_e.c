@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, nparam);
     EP = barvinok_enumerate_e(A, exist, nparam, 600);
     reduce_evalue(EP);
+    evalue_combine(EP);
     if (range)
 	evalue_range_reduction(EP);
     print_evalue(stdout, EP, param_name);
