@@ -55,15 +55,16 @@ Polyhedron* supporting_cone(Polyhedron *P, int v, unsigned NbMaxRays)
     assert(supporting);
 
     value_init(tmp);
-    for (i = 0, n = 0; i < P->NbRays; ++i) {
+    for (i = 0, n = 0; i < P->NbConstraints; ++i) {
 	Inner_Product(P->Constraint[i] + 1, P->Ray[v] + 1, dim - 1, &tmp);
 	if ((supporting[i] = value_zero_p(tmp)))
 	    ++n;
     }
+    assert(n >= dim - 2);
     value_clear(tmp);
     M = Matrix_Alloc(n, dim);
     assert(M);
-    for (i = 0, j = 0; i < P->NbRays; ++i)
+    for (i = 0, j = 0; i < P->NbConstraints; ++i)
 	if (supporting[i])
 	    Vector_Copy(P->Constraint[i], M->p[j++], dim);
     free(supporting);
