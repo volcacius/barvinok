@@ -439,6 +439,9 @@ Polyhedron *remove_equalities(Polyhedron *P)
  * nvar specifies the number of variables
  * The remaining dimensions are assumed to be parameters
  * Destroys P
+ * factor is NbEq x (nparam+2) matrix, containing stride constraints
+ * on the parameters; column nparam is the constant;
+ * column nparam+1 is the stride
  */
 Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 {
