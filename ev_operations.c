@@ -847,12 +847,32 @@ void print_enode(FILE *DST,enode *p,char **pname) {
 	print_evalue(DST, &p->arr[2], pname);
     }
     break;
-  case partition:
-    for (i=0; i<p->size/2; i++) {
-	Print_Domain(DST, EVALUE_DOMAIN(p->arr[2*i]), pname);
-	print_evalue(DST, &p->arr[2*i+1], pname);
+  case partition: {
+    char **names = pname;
+    int maxdim = EVALUE_DOMAIN(p->arr[0])->Dimension;
+    if (p->pos < maxdim) {
+	NALLOC(names, maxdim);
+	for (i = 0; i < p->pos; ++i)
+	    names[i] = pname[i];
+	for ( ; i < maxdim; ++i) {
+	    NALLOC(names[i], 10);
+	    snprintf(names[i], 10, "_p%d", i);
+	}
     }
+
+    for (i=0; i<p->size/2; i++) {
+	Print_Domain(DST, EVALUE_DOMAIN(p->arr[2*i]), names);
+	print_evalue(DST, &p->arr[2*i+1], names);
+    }
+
+    if (p->pos < maxdim) {
+	for (i = p->pos ; i < maxdim; ++i)
+	    free(names[i]);
+	free(names);
+    }
+
     break;
+  }
   default:
     assert(0);
   }
@@ -2035,11 +2055,26 @@ static double compute_enode(enode *p, Value *list_args) {
       res = compute_evalue(&p->arr[2], list_args);
   }
   else if (p->type == partition) {
+    int dim = EVALUE_DOMAIN(p->arr[0])->Dimension;
+    Value *vals;
+    if (p->pos < dim) {
+	NALLOC(vals, dim);
+	for (i = 0; i < dim; ++i) {
+	    value_init(vals[i]);
+	    if (i < p->pos)
+		value_assign(vals[i], list_args[i]);
+	}
+    }
     for (i = 0; i < p->size/2; ++i)
-      if (in_domain(EVALUE_DOMAIN(p->arr[2*i]), list_args)) {
-	res = compute_evalue(&p->arr[2*i+1], list_args);
+      if (DomainContains(EVALUE_DOMAIN(p->arr[2*i]), vals, p->pos, 0, 1)) {
+	res = compute_evalue(&p->arr[2*i+1], vals);
 	break;
       }
+    if (p->pos < dim) {
+	for (i = 0; i < dim; ++i)
+	    value_clear(vals[i]);
+	free(vals);
+    }
   }
   else
     assert(0);
@@ -2704,6 +2739,7 @@ Enumeration* partition2enumeration(evalue *EP)
     }
 
     for (i = 0; i < EP->x.p->size/2; ++i) {
+	assert(EP->x.p->pos == EVALUE_DOMAIN(EP->x.p->arr[2*i])->Dimension);
 	en = (Enumeration *)malloc(sizeof(Enumeration));
 	en->next = res;
 	res = en;
