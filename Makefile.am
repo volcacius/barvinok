@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
-		  barvinok_series \
+		  barvinok_series remove_redundant_equalities \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest
 pkginclude_HEADERS = barvinok.h util.h ev_operations.h

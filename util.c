@@ -447,6 +447,9 @@ Polyhedron *remove_equalities(Polyhedron *P)
  * factor is NbEq x (nparam+2) matrix, containing stride constraints
  * on the parameters; column nparam is the constant;
  * column nparam+1 is the stride
+ *
+ * if factor is NULL, only remove equalities that don't affect
+ * the number of points
  */
 Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 {
@@ -458,9 +461,11 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
     int i, j, skip;
 
     value_init(g);
-    f = Matrix_Alloc(p->NbEq, dim-nvar+2);
+    if (factor) {
+	f = Matrix_Alloc(p->NbEq, dim-nvar+2);
+	*factor = f;
+    }
     j = 0;
-    *factor = f;
     skip = 0;
     while (nvar > 0 && p->NbEq - skip > 0) {
 	assert(dim > 0);
@@ -472,10 +477,16 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
 	    break;
 
 	Vector_Gcd(p->Constraint[skip]+1, dim+1, &g);
+	if (!factor && value_notone_p(g) && value_notmone_p(g)) {
+	    ++skip;
+	    continue;
+	}
 	Vector_AntiScale(p->Constraint[skip]+1, p->Constraint[skip]+1, g, dim+1);
 	Vector_Gcd(p->Constraint[skip]+1, nvar, &g);
-	Vector_Copy(p->Constraint[skip]+1+nvar, f->p[j], dim-nvar+1);
-	value_assign(f->p[j][dim-nvar+1], g);
+	if (factor) {
+	    Vector_Copy(p->Constraint[skip]+1+nvar, f->p[j], dim-nvar+1);
+	    value_assign(f->p[j][dim-nvar+1], g);
+	}
 	v = Vector_Alloc(dim);
 	Vector_AntiScale(p->Constraint[skip]+1, v->p, g, nvar);
 	Vector_Set(v->p+nvar, 0, dim-nvar);
