@@ -13,7 +13,7 @@ occ_SOURCES = \
 	Exit.cc \
 	lex.yy.cc \
 	y.tab.cc
-LDADD = -lcode_gen -lomega libparker.la
+LDADD = -lcode_gen -lomega libparker.la -lpdgutil -lpdg
 
 YACC_FLAGS = -d
 

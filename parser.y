@@ -1,5 +1,6 @@
 %{
 
+#include <pdgutil.h>
 #define compilingParser
 #include <basic/Dynamic_Array.h>
 #include <code_gen/code_gen.h>
@@ -80,6 +81,7 @@ reachable_information *reachable_info;
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
 %token COUNT
+%token YAML
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -98,6 +100,7 @@ reachable_information *reachable_info;
 %left OMEGA_P9
 %left '('	OMEGA_P10
 %right COUNT
+%right YAML
 
 
 %type <INT_VALUE> effort 
@@ -447,6 +450,11 @@ printf("was substantially faster on the limited domain it handled.\n");
 	| COUNT relation ';' {
 	    double c = count_solutions(*$2);
 	    fprintf(stdout, "%.0f\n", c); 
+	}
+	| YAML relation ';' {
+	    pdg::OUnionSet os($2);
+	    os.Dump();
+	    os.free();
 	}
 	;
 

@@ -197,6 +197,7 @@ void includeFile(char *s) {
 "assertUnsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "assert_unsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "count"		{ BUFFER;  return COUNT; }
+"yaml"		{ BUFFER;  return YAML; }
 "/"		{ BUFFER;  return RESTRICT_RANGE; }
 "&"		{ BUFFER;  return AND; }
 "|"		{ BUFFER;  return OR; }
