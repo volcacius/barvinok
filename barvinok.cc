@@ -11,7 +11,9 @@ extern "C" {
 #include <polylib/polylibgmp.h>
 }
 
+#ifdef NTL_STD_CXX
 using namespace NTL;
+#endif
 using std::cout;
 using std::endl;
 using std::vector;
