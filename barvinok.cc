@@ -564,9 +564,15 @@ static EhrhartPolynom *multi_mononom(deque<string>& params, vec_ZZ& p)
     return X;
 }
 
+struct term_info {
+    EhrhartPolynom *E;
+    ZZ		    constant;
+    ZZ		    coeff;
+    int		    pos;
+};
+
 void lattice_point(deque<string>& params, 
-    Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, vec_ZZ& num,
-    EhrhartPolynom **E)
+    Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = i->Dimension;
@@ -576,7 +582,6 @@ void lattice_point(deque<string>& params,
     value_init(lcm);
     value_init(tmp);
     value_set_si(lcm, 1);
-    *E = NULL;
     for (int j = 0; j < V->Vertex->NbRows; ++j) {
 	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
     }
@@ -604,19 +609,17 @@ void lattice_point(deque<string>& params,
 
 	*EP += EhrhartPolynom(&ev, params);
 
-	*E = EP;
-
-	num[nparam] = 0;
-	num[0] = 0;
-	// -> degree_0 = 0; degree_1 = 1
+	term->E = EP;
+	term->constant = 0;
 
 	return;
-	//exit(0);
     }
     for (int i = 0; i < V->Vertex->NbRows; ++i) {
 	assert(value_one_p(V->Vertex->p[i][nparam+1]));  // for now
 	values2zz(V->Vertex->p[i], vertex[i], nparam+1);
     }
+
+    vec_ZZ num;
     num = lambda * vertex;
 
     int p = -1;
@@ -627,9 +630,14 @@ void lattice_point(deque<string>& params,
 	    p = j;
 	}
     if (nn >= 2) {
-	*E = multi_mononom(params, num);
-	// num[nparam] unchanged
-	num[0] = 0;
+	term->E = multi_mononom(params, num);
+	term->constant = num[nparam];
+    } else {
+	term->E = NULL;
+	term->constant = num[nparam];
+	term->pos = p;
+	if (p != -1)
+	    term->coeff = num[p];
     }
 
     value_clear(lcm);
@@ -939,28 +947,26 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	vec_ZZ lambda;
 	nonorthog(rays, lambda);
 
-	mat_ZZ num;
 	mat_ZZ den;
-	num.SetDims(ncone,nparam+1);
 	den.SetDims(ncone,dim);
-	EhrhartPolynom **E = new EhrhartPolynom*[ncone];
+	term_info *num = new term_info[ncone];
 
 	int f = 0;
 	int j = 0;
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP)
 	    for (Polyhedron *i = vcone[j]; i; i = i->next) {
-		lattice_point(params, V, i, lambda, num[f], &E[f]);
-		normalize(i, lambda, sign[f], num[f][nparam], den[f]);
+		lattice_point(params, V, i, lambda, &num[f]);
+		normalize(i, lambda, sign[f], num[f].constant, den[f]);
 		++f;
 	    }
 	    ++j;
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	ZZ min = num[0][nparam];
-	for (int j = 1; j < num.NumRows(); ++j)
-	    if (num[j][nparam] < min)
-		min = num[j][nparam];
-	for (int j = 0; j < num.NumRows(); ++j)
-	    num[j][nparam] -= min;
+	ZZ min = num[0].constant;
+	for (int j = 1; j < ncone; ++j)
+	    if (num[j].constant < min)
+		min = num[j].constant;
+	for (int j = 0; j < ncone; ++j)
+	    num[j].constant -= min;
 	f = 0;
 	j = 0;
 	Vector *c = Vector_Alloc(dim+2);
@@ -974,29 +980,22 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 		    dpoly fact(dim, den[f][k], 1);
 		    n *= fact;
 		}
-		int p = -1;
-		int nn = 0;
-		for (int j = 0; j < nparam; ++j)
-		    if (num[f][j] != 0) {
-			++nn;
-			p = j;
-		    }
-		if (E[f] != NULL) {
+		if (num[f].E != NULL) {
 		    ZZ one(INIT_VAL, 1);
-		    dpoly_n d(dim, num[f][nparam], one);
+		    dpoly_n d(dim, num[f].constant, one);
 		    d.div(n, c, sign[f]);
-		    EhrhartPolynom *ET = multi_polynom(params, c, *E[f]);
+		    EhrhartPolynom *ET = multi_polynom(params, c, *num[f].E);
 		    EP += *ET;
 		    delete ET;
-		} else if (nn == 1) {
-		    dpoly_n d(dim, num[f][nparam], num[f][p]);
+		} else if (num[f].pos != -1) {
+		    dpoly_n d(dim, num[f].constant, num[f].coeff);
 		    d.div(n, c, sign[f]);
-		    EhrhartPolynom *E = uni_polynom(params[p], c);
+		    EhrhartPolynom *E = uni_polynom(params[num[f].pos], c);
 		    EP += *E;
 		    delete E;
-		} else if (nn == 0) {
+		} else {
 		    mpq_set_si(count, 0, 1);
-		    dpoly d(dim, num[f][nparam]);
+		    dpoly d(dim, num[f].constant);
 		    d.div(n, count, sign[f]);
 		    EhrhartPolynom *E = constant(count);
 		    EP += *E;
