@@ -154,7 +154,7 @@ static void print_power(vec_ZZ& c, vec_ZZ& p,
     }
 }
 
-void gen_fun::print(unsigned int nparam, char **param_name)
+void gen_fun::print(unsigned int nparam, char **param_name) const
 {
     vec_ZZ mone;
     mone.SetLength(2);
@@ -183,7 +183,7 @@ void gen_fun::print(unsigned int nparam, char **param_name)
     }
 }
 
-gen_fun::operator evalue *()
+gen_fun::operator evalue *() const
 {
     evalue *EP = NULL;
     evalue factor;
@@ -238,4 +238,67 @@ gen_fun::operator evalue *()
     value_clear(factor.d);
     value_clear(factor.x.n);
     return EP;
+}
+
+void gen_fun::coefficient(Value* params, Value* c) const
+{
+    if (context && !in_domain(context, params)) {
+	value_set_si(*c, 0);
+	return;
+    }
+
+    evalue part;
+    value_init(part.d);
+    value_init(part.x.n);
+    evalue sum;
+    value_init(sum.d);
+    evalue_set_si(&sum, 0, 1);
+    Value tmp;
+    value_init(tmp);
+
+    for (int i = 0; i < term.size(); ++i) {
+	unsigned nvar = term[i]->d.power.NumRows();
+	unsigned nparam = term[i]->d.power.NumCols();
+	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + 1); 
+	mat_ZZ& d = term[i]->d.power;
+
+	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
+	    for (int r = 0; r < nparam; ++r) {
+		value_set_si(C->p[r][0], 0);
+		for (int c = 0; c < nvar; ++c) {
+		    zz2value(d[c][r], C->p[r][1+c]);
+		}
+		zz2value(term[i]->n.power[j][r], C->p[r][1+nvar]);
+		value_substract(C->p[r][1+nvar], C->p[r][1+nvar], params[r]);
+	    }
+	    for (int r = 0; r < nvar; ++r) {
+		value_set_si(C->p[nparam+r][0], 1);
+		Vector_Set(&C->p[nparam+r][1], 0, nvar + 1);
+		value_set_si(C->p[nparam+r][1+r], 1);
+	    }
+	    Polyhedron *P = Constraints2Polyhedron(C, 0);
+	    if (emptyQ(P)) {
+		Polyhedron_Free(P);
+		continue;
+	    }
+	    barvinok_count(P, &tmp, 0);
+	    Polyhedron_Free(P);
+	    if (value_zero_p(tmp))
+		continue;
+	    zz2value(term[i]->n.coeff[j][0], part.x.n);
+	    zz2value(term[i]->n.coeff[j][1], part.d);
+	    value_multiply(part.x.n, part.x.n, tmp);
+	    eadd(&part, &sum);
+	}
+	Matrix_Free(C);
+    }
+
+    assert(value_one_p(sum.d));
+    value_assign(*c, sum.x.n);
+
+    value_clear(tmp);
+    value_clear(part.d);
+    value_clear(part.x.n);
+    value_clear(sum.d);
+    value_clear(sum.x.n);
 }
