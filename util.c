@@ -105,9 +105,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	++r;
     }
 
-    Matrix_Print(stdout, P_VALUE_FMT, M);
     L = Rays2Polyhedron(M, NbMaxCons);
-    Polyhedron_Print(stdout, P_VALUE_FMT, L);
 
     if (L->NbEq != 0) {
 	Polyhedron_Free(L);
@@ -115,9 +113,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	Vector_Scale(M->p[1]+1, M->p[1]+1, tmp, dim);
 	Inner_Product(M->p[1]+1, M->p[1]+1, dim, &tmp);
 	value_assign(M->p[1][dim+1], tmp);
-	Matrix_Print(stdout, P_VALUE_FMT, M);
 	L = Rays2Polyhedron(M, NbMaxCons);
-	Polyhedron_Print(stdout, P_VALUE_FMT, L);
 	assert(L->NbEq == 0);
     }
 
@@ -141,9 +137,7 @@ Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
 	    ++r;
 	}
 	assert(r == dim+1);
-	Matrix_Print(stdout, P_VALUE_FMT, M2);
 	T = Rays2Polyhedron(M2, P->NbConstraints);
-	Polyhedron_Print(stdout, P_VALUE_FMT, T);
 	T->next = R;
 	R = T;
     }

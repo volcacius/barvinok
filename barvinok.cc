@@ -398,27 +398,19 @@ void normalize(Value* values, Polyhedron *i, vec_ZZ& lambda,
     vec_ZZ vertex;
     if(!value_one_p(values[dim])) {
 	Matrix* Rays = rays(i);
-	Matrix_Print(stdout, P_VALUE_FMT, Rays);
-	for (int j = 0; j < dim+1; ++j)
-	    value_print(stdout, P_VALUE_FMT, values[j]);
-	puts("");
 	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
 	int ok = Matrix_Inverse(Rays, inv);
 	assert(ok);
 	Matrix_Free(Rays);
 	Rays = rays(i);
-	Matrix_Print(stdout, P_VALUE_FMT, inv);
 	Vector *lambda = Vector_Alloc(dim+1);
 	Vector_Matrix_Product(values, inv, lambda->p);
-	Vector_Print(stdout, P_VALUE_FMT, lambda);
 	Matrix_Free(inv);
 	for (int j = 0; j < dim; ++j)
 	    mpz_cdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
 	value_set_si(lambda->p[dim], 1);
-	Vector_Print(stdout, P_VALUE_FMT, lambda);
 	Vector *A = Vector_Alloc(dim+1);
 	Vector_Matrix_Product(lambda->p, Rays, A->p);
-	Vector_Print(stdout, P_VALUE_FMT, A);
 	Matrix_Free(Rays);
 	values2zz(A->p, vertex, dim);
     } else
@@ -456,11 +448,8 @@ void count(Polyhedron *P, Value* result)
 
     for (int j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j, 600);
-	printf("%d:\n", j);
-	Polyhedron_Print(stdout, P_VALUE_FMT, C);
 	Polyhedron *Polar = Polyhedron_Polar(C, 600);
 	Polyhedron_Free(C);
-	Polyhedron_Print(stdout, P_VALUE_FMT, Polar);
 
 	Polyhedron *Polars;
 	if (Polar->NbRays - 1 == Polar->Dimension)
@@ -475,12 +464,6 @@ void count(Polyhedron *P, Value* result)
 	for (Polar = Polars; Polar; Polar = Polar->next) {
 	    Polyhedron *polpos, *polneg;
 	    decompose(Polar, &polpos, &polneg);
-
-	    puts("Pos:");
-	    Polyhedron_Print(stdout, P_VALUE_FMT, polpos);
-
-	    puts("Neg:");
-	    Polyhedron_Print(stdout, P_VALUE_FMT, polneg);
 
 	    for (Polyhedron *i = polpos; i; i = i->next) {
 		Polyhedron *A = Polyhedron_Polar(i, 600);
@@ -502,12 +485,7 @@ void count(Polyhedron *P, Value* result)
 	    Domain_Free(polneg);
 	}
 	Domain_Free(Polars);
-
-	puts("Cones:");
-	Polyhedron_Print(stdout, P_VALUE_FMT, vcone[j]);
     }
-
-    cout << ncone << endl;
 
     mat_ZZ rays;
     rays.SetDims(ncone * dim, dim);
@@ -516,11 +494,8 @@ void count(Polyhedron *P, Value* result)
 	for (Polyhedron *i = vcone[j]; i; i = i->next)
 	    add_rays(rays, i, &r);
     }
-    cout << rays;
     vec_ZZ lambda;
     nonorthog(rays, lambda);
-    cout << lambda;
-    cout << rays * lambda;
 
     vec_ZZ num;
     mat_ZZ den;
@@ -540,9 +515,6 @@ void count(Polyhedron *P, Value* result)
 	    min = num[j];
     for (int j = 0; j < num.length(); ++j)
 	num[j] -= min;
-    cout << sign;
-    cout << num;
-    cout << den;
 
     f = 0;
     mpq_t count;
@@ -555,9 +527,7 @@ void count(Polyhedron *P, Value* result)
 		dpoly f(dim, den[f][k], 1);
 		n *= f;
 	    }
-	    cout << d.coeff << "/" << n.coeff;
 	    d.div(n, count, sign[f]);
-	    mpq_out_str(stdout, 10, count);
 	    ++f;
 	}
     }
