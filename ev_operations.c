@@ -246,6 +246,15 @@ void reduce_evalue (evalue *e) {
 		}
 	    }
 	    _reduce_evalue(&e->x.p->arr[2*i+1], n, fixed);
+	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
+		free_evalue_refs(&e->x.p->arr[2*i+1]);
+		Domain_Free(EVALUE_DOMAIN(e->x.p->arr[2*i]));
+		value_clear(e->x.p->arr[2*i].d);
+		e->x.p->size -= 2;
+		e->x.p->arr[2*i] = e->x.p->arr[e->x.p->size];
+		e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
+		--i;
+	    }
 	}
 	if (fixed) {
 	    int j;
