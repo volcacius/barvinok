@@ -42,6 +42,9 @@ typedef struct _evalue {
 	value_set_si((ev).d, -1);		\
 	EVALUE_DOMAIN(ev) = D;		    	\
     } while(0)
+#define EVALUE_IS_DOMAIN(ev)	(value_mone_p((ev).d))
+
+#define EVALUE_IS_ZERO(ev)	(value_pos_p((ev).d) && value_zero_p((ev).x.n))
 
 typedef struct _enode {
   enode_type type;      /* polynomial or periodic or evector */

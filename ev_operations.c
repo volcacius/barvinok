@@ -311,6 +311,11 @@ void eadd(evalue *e1,evalue *res) {
 	  case modulo:
 	       eadd(e1, &res->x.p->arr[1]);
 	       return ;
+	  case partition:
+		assert(EVALUE_IS_ZERO(*e1));
+		break;				/* Do nothing */
+	  default:
+		assert(0);
 	  }
      }
      /* add polynomial or periodic to constant 
@@ -727,6 +732,8 @@ enode *ecopy(enode *e) {
     value_assign(res->arr[i].d,e->arr[i].d);
     if(value_zero_p(res->arr[i].d))
       res->arr[i].x.p = ecopy(e->arr[i].x.p);
+    else if (EVALUE_IS_DOMAIN(res->arr[i]))
+      EVALUE_SET_DOMAIN(res->arr[i], Domain_Copy(EVALUE_DOMAIN(e->arr[i])));
     else {
       value_init(res->arr[i].x.n);
       value_assign(res->arr[i].x.n,e->arr[i].x.n);
@@ -769,13 +776,17 @@ void free_evalue_refs(evalue *e) {
   enode *p;
   int i;
   
-  if (value_notzero_p(e->d)) {
+  if (EVALUE_IS_DOMAIN(*e)) {
+    Domain_Free(EVALUE_DOMAIN(*e));
+    return;
+  } else if (value_pos_p(e->d)) {
     
     /* 'e' stores a constant */
     value_clear(e->d);
     value_clear(e->x.n);
     return; 
   }  
+  assert(value_zero_p(e->d));
   value_clear(e->d);
   p = e->x.p;
   if (!p) return;	/* null pointer */
