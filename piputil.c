@@ -155,7 +155,8 @@ static Polyhedron *quast2poly(PipQuast *q, int nvar, int nset)
     Polyhedron*		D;
 
     assert(nset != 0);	/* required ? */
-    nparam = q->condition ? q->condition->nb_elements-1 :
+    nparam = q->newparm ? q->newparm->rank :
+	     q->condition ? q->condition->nb_elements-1 :
 			    q->list->vector->nb_elements-1;
     d = 0;
     nexist = max_new(q, nparam-1, 0, &d) - nparam+1;
