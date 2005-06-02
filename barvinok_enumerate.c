@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <sys/times.h>
 #include <polylib/polylibgmp.h>
 #include "ev_operations.h"
 #include <util.h>
