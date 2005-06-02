@@ -78,7 +78,9 @@ int main()
 [AC_DEFINE(HAVE_GROWING_CHERNIKOVA,[],
 	  [PolyLib automatically grows the Chernikova table space])],
 AC_MSG_WARN([This version of PolyLib does not automatically])
-AC_MSG_WARN([enlarge the Chernikova table space]))
+AC_MSG_WARN([enlarge the Chernikova table space]),
+AC_MSG_WARN([Unable to determine whether PolyLib automatically])
+AC_MSG_WARN([grows the Chernikova table space]))
 
 AC_TRY_RUN([
 #include <polylib/polylibgmp.h>
@@ -89,7 +91,7 @@ int main()
     return !(en->arr[0].x.p == NULL);
 }
 ],,
-AC_MSG_WARN([This version of polylib leaks]))
+AC_MSG_WARN([This version of polylib leaks]),[true])
 
 AC_TRY_RUN([
 #include <stdio.h>
@@ -116,7 +118,8 @@ int main()
 ],
 [AC_DEFINE(HAVE_CORRECT_VERTICES,[],
 	  [PolyLib computes correct vertices])],
-AC_MSG_WARN([This version of polylib produces incorrect vertices.]))
+AC_MSG_WARN([This version of polylib produces incorrect vertices.]),
+AC_MSG_WARN([Unable to determine whether PolyLib computes correct vertices]))
 
 AC_MSG_CHECKING([number of arguments of Polyhedron_Enumerate])
 AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
