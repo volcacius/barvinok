@@ -1,10 +1,21 @@
 AC_INIT
 AM_INIT_AUTOMAKE(barvinok, 0.15)
-AC_LIBTOOL_WIN32_DLL
-AC_PROG_LIBTOOL
 AC_PROG_CXX
 AC_SUBST(versioninfo)
 versioninfo=8:0:4
+
+AC_CANONICAL_HOST
+AC_LIBTOOL_WIN32_DLL
+AC_SUBST(BV_LDFLAGS)
+case $host in
+	*-*-cygwin* | *-*-mingw* | *-*-pw32* | *-*-os2*)
+	if test "$enable_shared" = yes; then
+		BV_LDFLAGS="-no-undefined" 
+	fi
+	;;
+esac
+
+AC_PROG_LIBTOOL
 
 AC_CHECK_HEADERS(getopt.h)
 

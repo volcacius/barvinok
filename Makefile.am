@@ -20,7 +20,7 @@ libbarvinok_la_SOURCES = \
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
 libbarvinok_la_LIBADD = @LTLIBOBJS@
-libbarvinok_la_LDFLAGS = -version-info @versioninfo@
+libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 LDADD = libbarvinok.la
 
 test_SOURCES = test.c
