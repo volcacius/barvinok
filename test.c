@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/times.h>
 #include <polylib/polylibgmp.h>
 #include <util.h>
 #include <barvinok.h>
@@ -14,6 +13,10 @@
 #define MAXRAYS  600
 #endif
 
+#ifdef HAVE_SYS_TIMES_H
+
+#include <sys/times.h>
+
 static void time_diff(struct tms *before, struct tms *after)
 {
     long ticks = sysconf(_SC_CLK_TCK);
@@ -21,6 +24,18 @@ static void time_diff(struct tms *before, struct tms *after)
 	    (0.0 + after->tms_utime - before->tms_utime) / ticks,
 	    (0.0 + after->tms_stime - before->tms_stime) / ticks);
 }
+
+#else
+
+struct tms {};
+static void times(struct tms* time)
+{
+}
+static void time_diff(struct tms *before, struct tms *after)
+{
+}
+
+#endif
 
 int main()
 {

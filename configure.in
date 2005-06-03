@@ -18,6 +18,7 @@ esac
 AC_PROG_LIBTOOL
 
 AC_CHECK_HEADERS(getopt.h)
+AC_CHECK_HEADERS(sys/times.h)
 
 dnl Check for GMP library
 AC_MSG_CHECKING(whether to use GMP)
