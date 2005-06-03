@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <sys/times.h>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 extern "C" {
