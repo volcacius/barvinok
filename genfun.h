@@ -14,12 +14,12 @@ using namespace NTL;
 #endif
 
 struct short_rat {
-    struct {
+    struct __short_rat_n {
 	/* rows: terms in numerator */
 	mat_ZZ	coeff;
 	mat_ZZ	power;
     } n;
-    struct {
+    struct __short_rat_d {
 	/* rows: factors in denominator */
 	mat_ZZ	power;
     } d;
