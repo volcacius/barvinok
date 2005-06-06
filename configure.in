@@ -189,8 +189,8 @@ fi
 
 AC_MSG_CHECKING(whether to use incremental algorithm)
 AC_ARG_ENABLE(incremental,
-            [  --disable-incremental   Disable incremental algorithm],
-	    [bv_cv_incremental=$enableval], [bv_cv_incremental="yes"])
+            [  --enable-incremental    Enable incremental algorithm],
+	    [bv_cv_incremental=$enableval], [bv_cv_incremental="no"])
 AC_MSG_RESULT($bv_cv_incremental)
 if test "x$bv_cv_incremental" = "xyes"; then
         AC_DEFINE(USE_INCREMENTAL,[], [Use incremental algorithm])
