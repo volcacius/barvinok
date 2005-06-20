@@ -20,6 +20,7 @@ extern "C" {
 #ifdef NTL_STD_CXX
 using namespace NTL;
 #endif
+using std::cerr;
 using std::cout;
 using std::endl;
 using std::vector;
@@ -505,16 +506,16 @@ struct dpoly_r {
     }
     void dump(void) {
 	for (int i = 0; i < len; ++i) {
-	    cout << endl;
-	    cout << i << endl;
-	    cout << c[i].size() << endl;
+	    cerr << endl;
+	    cerr << i << endl;
+	    cerr << c[i].size() << endl;
 	    for (int j = 0; j < c[i].size(); ++j) {
 		for (int k = 0; k < dim; ++k) {
-		    cout << c[i][j]->powers[k] << " ";
+		    cerr << c[i][j]->powers[k] << " ";
 		}
-		cout << ": " << c[i][j]->coeff << "/" << denom << endl;
+		cerr << ": " << c[i][j]->coeff << "/" << denom << endl;
 	    }
-	    cout << endl;
+	    cerr << endl;
 	}
     }
 };
