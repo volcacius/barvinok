@@ -1626,8 +1626,8 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 
     normalize(c, num_s, num_p, den_s, den_p, den_r);
 
-    int only_param = 0;
-    int no_param = 0;
+    int only_param = 0;	    // k-r-s from text
+    int no_param = 0;	    // r from text
     for (int k = 0; k < len; ++k) {
 	if (den_p[k] == 0)
 	    ++no_param;
