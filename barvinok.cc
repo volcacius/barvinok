@@ -1822,6 +1822,501 @@ void partial_reducer::start(unsigned MaxRays)
     }
 }
 
+struct bfc_term {
+    // the number of times a given factor appears in the denominator
+    int	    *powers;
+    mat_ZZ   terms;
+    vec_ZZ   cn;
+    vec_ZZ   cd;
+
+    bfc_term(int len) {
+	powers = new int[len];
+    }
+
+    ~bfc_term() {
+	delete [] powers;
+    }
+};
+
+typedef vector< bfc_term * > bfc_vec;
+
+struct bfcounter : public polar_decomposer {
+    Polyhedron *P;
+    unsigned dim;
+    int j;
+    ZZ one;
+    mpq_t tcount;
+    mpq_t count;
+    mpz_t tn;
+    mpz_t td;
+
+    bfcounter(Polyhedron *P) {
+	this->P = P;
+	dim = P->Dimension;
+	mpq_init(tcount);
+	mpq_init(count);
+	mpz_init(tn);
+	mpz_init(td);
+	one = 1;
+    }
+
+    ~bfcounter() {
+	mpq_clear(tcount);
+	mpq_clear(count);
+	mpz_clear(tn);
+	mpz_clear(td);
+    }
+
+    void start(unsigned MaxRays);
+    virtual void handle_polar(Polyhedron *P, int sign);
+    void reduce(mat_ZZ& factors, bfc_vec& v);
+    void base(mat_ZZ& factors, bfc_vec& v);
+};
+
+static void print_int_vector(int *v, int len, char *name)
+{
+    cerr << name << endl;
+    for (int j = 0; j < len; ++j) {
+	cerr << v[j] << " ";
+    }
+    cerr << endl;
+}
+
+static void print_bfc_terms(mat_ZZ& factors, bfc_vec& v)
+{
+    cerr << endl;
+    cerr << "factors" << endl;
+    cerr << factors << endl;
+    for (int i = 0; i < v.size(); ++i) {
+	cerr << "term: " << i << endl;
+	print_int_vector(v[i]->powers, factors.NumRows(), "powers");
+	cerr << "terms" << endl;
+	cerr << v[i]->terms << endl;
+	cerr << v[i]->cn << endl;
+	cerr << v[i]->cd << endl;
+    }
+}
+
+static bfc_term* find_bfc_term(bfc_vec& v, int *powers, int len)
+{
+    bfc_vec::iterator i;
+    for (i = v.begin(); i != v.end(); ++i) {
+	int j;
+	for (j = 0; j < len; ++j)
+	    if ((*i)->powers[j] != powers[j])
+		break;
+	if (j == len)
+	    return (*i);
+	if ((*i)->powers[j] > powers[j])
+	    break;
+    }
+
+    bfc_term* t = new bfc_term(len);
+    v.insert(i, t);
+    memcpy(t->powers, powers, len * sizeof(int));
+    t->cn.SetLength(0);
+    t->cd.SetLength(0);
+
+    return t;
+}
+
+static int lex_cmp(vec_ZZ& a, vec_ZZ& b)
+{
+    assert(a.length() == b.length());
+
+    for (int j = 0; j < a.length(); ++j)
+	if (a[j] != b[j])
+	    return a[j] < b[j] ? -1 : 1;
+    return 0;
+}
+
+static void bfc_add_term(bfc_term* t, ZZ& cn, ZZ& cd, vec_ZZ& num)
+{
+    int len = t->cn.length();
+    int i, r;
+    for (i = 0; i < len; ++i) {
+	r = lex_cmp(t->terms[i], num);
+	if (r >= 0)
+	    break;
+    }
+    if (i == len || r > 0) {
+	t->cn.SetLength(len+1);
+	t->cd.SetLength(len+1);
+	t->terms.SetDims(len+1, num.length());
+	for (int j = len; j > i; --j) {
+	    t->cn[j] = t->cn[j-1];
+	    t->cd[j] = t->cd[j-1];
+	    t->terms[j] = t->terms[j-1];
+	}
+	t->cn[i] = cn;
+	t->cd[i] = cd;
+	t->terms[i] = num;
+    } else {
+	// i < len && r == 0
+	ZZ g = GCD(t->cd[i], cd);
+	ZZ n = cn * t->cd[i]/g + t->cn[i] * cd/g;
+	ZZ d = t->cd[i] * cd / g;
+	t->cn[i] = n;
+	t->cd[i] = d;
+    }
+}
+
+static int reduced_factors(mat_ZZ& factors, mat_ZZ& nfactors, 
+			    int *old2new, int *sign)
+{
+    unsigned nf = factors.NumRows();
+    unsigned d = factors.NumCols();
+    int nnf = 0;
+    nfactors.SetDims(nnf, d-1);
+
+    for (int i = 0; i < nf; ++i) {
+	int j;
+	int s = 1;
+	for (j = 0; j < nnf; ++j) {
+	    int k;
+	    for (k = 1; k < d; ++k)
+		if (factors[i][k] != 0 || nfactors[j][k-1] != 0)
+		    break;
+	    if (k < d && factors[i][k] == -nfactors[j][k-1])
+		s = -1;
+	    for (; k < d; ++k)
+		if (factors[i][k] != s * nfactors[j][k-1])
+		    break;
+	    if (k == d)
+		break;
+	}
+	old2new[i] = j;
+	if (j == nnf) {
+	    int k;
+	    for (k = 1; k < d; ++k)
+		if (factors[i][k] != 0)
+		    break;
+	    if (k < d) {
+		if (factors[i][k] < 0)
+		    s = -1;
+		nfactors.SetDims(++nnf, d-1);
+		for (int k = 1; k < d; ++k)
+		    nfactors[j][k-1] = s * factors[i][k];
+	    } else
+		old2new[i] = -1;
+	}
+	sign[i] = s;
+    }
+    return nnf;
+}
+
+void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
+{
+    unsigned nf = factors.NumRows();
+
+    for (int i = 0; i < v.size(); ++i) {
+	int total_power = 0;
+	// factor is always positive, so we always
+	// change signs
+	for (int k = 0; k < nf; ++k)
+	    total_power += v[i]->powers[k];
+
+	int j;
+	for (j = 0; j < nf; ++j)
+	    if (v[i]->powers[j] > 0)
+		break;
+
+	dpoly D(total_power, factors[j][0], 1);
+	for (int k = 1; k < v[i]->powers[j]; ++k) {
+	    dpoly fact(total_power, factors[j][0], 1);
+	    D *= fact;
+	}
+	for ( ; ++j < nf; )
+	    for (int k = 0; k < v[i]->powers[j]; ++k) {
+		dpoly fact(total_power, factors[j][0], 1);
+		D *= fact;
+	    }
+
+	for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
+	    dpoly n(total_power, v[i]->terms[k][0]);
+	    mpq_set_si(tcount, 0, 1);
+	    n.div(D, tcount, one);
+	    if (total_power % 2)
+		v[i]->cn[k] = -v[i]->cn[k];
+	    zz2value(v[i]->cn[k], tn);
+	    zz2value(v[i]->cd[k], td);
+
+	    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
+	    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
+	    mpq_canonicalize(tcount);
+	    mpq_add(count, count, tcount);
+	}
+	delete v[i];
+    }
+}
+
+void bfcounter::reduce(mat_ZZ& factors, bfc_vec& v)
+{
+    assert(v.size() > 0);
+    unsigned nf = factors.NumRows();
+    unsigned d = factors.NumCols();
+
+    if (d == 1)
+	return base(factors, v);
+
+    assert(d > 1);
+
+    mat_ZZ nfactors;
+    bfc_vec vn;
+    int old2new[nf];
+    int sign[nf];
+
+    int nnf = reduced_factors(factors, nfactors, old2new, sign);
+
+    for (int i = 0; i < v.size(); ++i) {
+	vec_ZZ extra_num;
+	extra_num.SetLength(d-1);
+	int changes = 0;
+	int no_param = 0;	    // r from text
+	int only_param = 0;	    // k-r-s from text
+	int total_power = 0;	    // k from text
+
+	for (int j = 0; j < nf; ++j) {
+	    if (v[i]->powers[j] == 0)
+		continue;
+
+	    total_power += v[i]->powers[j];
+	    if (factors[j][0] == 0) {
+		only_param += v[i]->powers[j];
+		continue;
+	    }
+
+	    if (old2new[j] == -1)
+		no_param += v[i]->powers[j];
+	    else
+		extra_num += -sign[j] * v[i]->powers[j] * nfactors[old2new[j]];
+	    changes += v[i]->powers[j];
+	}
+
+	if (no_param == 0) {
+	    vec_ZZ extra_num;
+	    extra_num.SetLength(d-1);
+	    int changes = 0;
+	    int npowers[nnf];
+	    for (int k = 0; k < nnf; ++k)
+		npowers[k] = 0;
+	    for (int k = 0; k < nf; ++k) {
+		assert(old2new[k] != -1);
+		npowers[old2new[k]] += v[i]->powers[k];
+		if (sign[k] == -1) {
+		    extra_num += v[i]->powers[k] * nfactors[old2new[k]];
+		    changes += v[i]->powers[k];
+		}
+	    }
+
+	    bfc_term * t = find_bfc_term(vn, npowers, nnf);
+	    vec_ZZ num;
+	    num.SetLength(d-1);
+	    ZZ cn;
+	    ZZ cd;
+	    for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
+		cn = v[i]->cn[k];
+		if (changes % 2)
+		    cn = -cn;
+		cd = v[i]->cd[k];
+		for (int l = 0; l < d-1; ++l)
+		    num[l] = v[i]->terms[k][l+1] + extra_num[l];
+		bfc_add_term(t, cn, cd, num);
+	    }
+	} else {
+	    // powers of "constant" part
+	    int bpowers[nnf];
+	    for (int k = 0; k < nnf; ++k)
+		bpowers[k] = 0;
+	    for (int k = 0; k < nf; ++k) {
+		if (factors[k][0] != 0)
+		    continue;
+		assert(old2new[k] != -1);
+		bpowers[old2new[k]] += v[i]->powers[k];
+		if (sign[k] == -1) {
+		    extra_num += v[i]->powers[k] * nfactors[old2new[k]];
+		    changes += v[i]->powers[k];
+		}
+	    }
+
+	    int j;
+	    for (j = 0; j < nf; ++j)
+		if (old2new[j] == -1 && v[i]->powers[j] > 0)
+		    break;
+
+	    dpoly D(no_param, factors[j][0], 1);
+	    for (int k = 1; k < v[i]->powers[j]; ++k) {
+		dpoly fact(no_param, factors[j][0], 1);
+		D *= fact;
+	    }
+	    for ( ; ++j < nf; )
+		if (old2new[j] == -1) 
+		    for (int k = 0; k < v[i]->powers[j]; ++k) {
+			dpoly fact(no_param, factors[j][0], 1);
+			D *= fact;
+		    }
+
+	    if (no_param + only_param == total_power) {
+		bfc_term * t = NULL;
+		vec_ZZ num;
+		num.SetLength(d-1);
+		ZZ cn;
+		ZZ cd;
+		for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
+		    dpoly n(no_param, v[i]->terms[k][0]);
+		    mpq_set_si(tcount, 0, 1);
+		    n.div(D, tcount, one);
+
+		    value2zz(mpq_numref(tcount), cn);
+		    value2zz(mpq_denref(tcount), cd);
+
+		    if (cn == 0)
+			continue;
+
+		    cn *= v[i]->cn[k];
+		    if (changes % 2)
+			cn = -cn;
+		    cd *= v[i]->cd[k];
+		    for (int l = 0; l < d-1; ++l)
+			num[l] = v[i]->terms[k][l+1] + extra_num[l];
+		    if (!t)
+			 t = find_bfc_term(vn, bpowers, nnf);
+		    bfc_add_term(t, cn, cd, num);
+		}
+	    } else {
+		for (int j = 0; j < v[i]->terms.NumRows(); ++j) {
+		    dpoly n(no_param, v[i]->terms[j][0]);
+
+		    dpoly_r * r = 0;
+		    for (int k = 0; k < nf; ++k) {
+			if (v[i]->powers[k] == 0)
+			    continue;
+			if (factors[k][0] == 0 || old2new[k] == -1)
+			    continue;
+
+			dpoly pd(no_param-1, factors[k][0], 1);
+
+			for (int l = 0; l < v[i]->powers[k]; ++l) {
+			    int q;
+			    for (q = 0; q < k; ++q)
+				if (old2new[q] == old2new[k] &&
+				    sign[q] == sign[k])
+					break;
+
+			    if (r == 0)
+				r = new dpoly_r(n, pd, q, nf);
+			    else {
+				dpoly_r *nr = new dpoly_r(r, pd, q, nf);
+				delete r;
+				r = nr;
+			    }
+			}
+		    }
+
+		    dpoly_r *rc = r->div(D);
+		    rc->denom *= v[i]->cd[j];
+
+		    vector< dpoly_r_term * >& final = rc->c[rc->len-1];
+
+		    int npowers[nnf];
+		    vec_ZZ num;
+		    num.SetLength(d-1);
+
+		    for (int k = 0; k < final.size(); ++k) {
+			if (final[k]->coeff == 0)
+			    continue;
+			for (int l = 0; l < nnf; ++l)
+			    npowers[l] = bpowers[l];
+			vec_ZZ l_extra_num = extra_num;
+			int l_changes = changes;
+
+			for (int l = 0; l < rc->dim; ++l) {
+			    int n = final[k]->powers[l];
+			    if (n == 0)
+				continue;
+			    assert(old2new[l] != -1);
+
+			    npowers[old2new[l]] += n;
+			    // interpretation of sign has been inverted
+			    // since we inverted the power for specialization
+			    if (sign[l] == 1) {
+				l_extra_num += n * nfactors[old2new[l]];
+				l_changes += n;
+			    }
+
+			}
+			final[k]->coeff *= v[i]->cn[j];
+			if (l_changes % 2)
+			    final[k]->coeff = - final[k]->coeff;
+			for (int l = 0; l < d-1; ++l)
+			    num[l] = v[i]->terms[j][l+1] + l_extra_num[l];
+
+			bfc_term * t = find_bfc_term(vn, npowers, nnf);
+			bfc_add_term(t, final[k]->coeff, rc->denom, num);
+		    }
+
+		    delete rc;
+		    delete r;
+		}
+	    }
+	}
+	delete v[i];
+    }
+
+    if (vn.size() > 0)
+	reduce(nfactors, vn);
+}
+
+void bfcounter::handle_polar(Polyhedron *C, int s)
+{
+    bfc_term* t = new bfc_term(dim);
+    vector< bfc_term * > v;
+    v.push_back(t);
+
+    assert(C->NbRays-1 == dim);
+
+    t->cn.SetLength(1);
+    t->cd.SetLength(1);
+
+    t->terms.SetDims(1, dim);
+    lattice_point(P->Ray[j]+1, C, t->terms[0]);
+
+    // the elements of factors are always lexpositive
+    mat_ZZ   factors;
+    factors.SetDims(dim, dim);
+
+    int r;
+
+    for (r = 0; r < dim; ++r)
+	t->powers[r] = 1;
+
+    for (r = 0; r < dim; ++r) {
+	values2zz(C->Ray[r]+1, factors[r], dim);
+	int k;
+	for (k = 0; k < dim; ++k)
+	    if (factors[r][k] != 0)
+		break;
+	if (factors[r][k] < 0) {
+	    factors[r] = -factors[r];
+	    t->terms[0] += factors[r];
+	    s = -s;
+	}
+    }
+
+    t->cn[0] = s;
+    t->cd[0] = 1;
+
+    reduce(factors, v);
+}
+
+void bfcounter::start(unsigned MaxRays)
+{
+    for (j = 0; j < P->NbRays; ++j) {
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, MaxRays);
+    }
+}
+
 typedef Polyhedron * Polyhedron_p;
 
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
@@ -1873,7 +2368,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     }
 
 #ifdef USE_INCREMENTAL
-    icounter cnt(P);
+    bfcounter cnt(P);
 #else
     counter cnt(P);
 #endif
