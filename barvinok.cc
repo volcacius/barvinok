@@ -1840,31 +1840,27 @@ struct bfc_term {
 
 typedef vector< bfc_term * > bfc_vec;
 
-struct bfcounter : public polar_decomposer {
+struct bfcounter_base : public polar_decomposer {
     Polyhedron *P;
     unsigned dim;
     int j;
     ZZ one;
     mpq_t tcount;
-    mpq_t count;
     mpz_t tn;
     mpz_t td;
     int lower;	    // call base when only this many variables is left
 
-    bfcounter(Polyhedron *P) {
+    bfcounter_base(Polyhedron *P) {
 	this->P = P;
 	dim = P->Dimension;
 	mpq_init(tcount);
-	mpq_init(count);
 	mpz_init(tn);
 	mpz_init(td);
 	one = 1;
-	lower = 1;
     }
 
-    ~bfcounter() {
+    ~bfcounter_base() {
 	mpq_clear(tcount);
-	mpq_clear(count);
 	mpz_clear(tn);
 	mpz_clear(td);
     }
@@ -1872,7 +1868,7 @@ struct bfcounter : public polar_decomposer {
     void start(unsigned MaxRays);
     virtual void handle_polar(Polyhedron *P, int sign);
     void reduce(mat_ZZ& factors, bfc_vec& v);
-    virtual void base(mat_ZZ& factors, bfc_vec& v);
+    virtual void base(mat_ZZ& factors, bfc_vec& v) = 0;
 };
 
 static void print_int_vector(int *v, int len, char *name)
@@ -2007,52 +2003,7 @@ static int reduced_factors(mat_ZZ& factors, mat_ZZ& nfactors,
     return nnf;
 }
 
-void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
-{
-    unsigned nf = factors.NumRows();
-
-    for (int i = 0; i < v.size(); ++i) {
-	int total_power = 0;
-	// factor is always positive, so we always
-	// change signs
-	for (int k = 0; k < nf; ++k)
-	    total_power += v[i]->powers[k];
-
-	int j;
-	for (j = 0; j < nf; ++j)
-	    if (v[i]->powers[j] > 0)
-		break;
-
-	dpoly D(total_power, factors[j][0], 1);
-	for (int k = 1; k < v[i]->powers[j]; ++k) {
-	    dpoly fact(total_power, factors[j][0], 1);
-	    D *= fact;
-	}
-	for ( ; ++j < nf; )
-	    for (int k = 0; k < v[i]->powers[j]; ++k) {
-		dpoly fact(total_power, factors[j][0], 1);
-		D *= fact;
-	    }
-
-	for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
-	    dpoly n(total_power, v[i]->terms[k][0]);
-	    mpq_set_si(tcount, 0, 1);
-	    n.div(D, tcount, one);
-	    if (total_power % 2)
-		v[i]->cn[k] = -v[i]->cn[k];
-	    zz2value(v[i]->cn[k], tn);
-	    zz2value(v[i]->cd[k], td);
-
-	    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
-	    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
-	    mpq_canonicalize(tcount);
-	    mpq_add(count, count, tcount);
-	}
-	delete v[i];
-    }
-}
-
-void bfcounter::reduce(mat_ZZ& factors, bfc_vec& v)
+void bfcounter_base::reduce(mat_ZZ& factors, bfc_vec& v)
 {
     assert(v.size() > 0);
     unsigned nf = factors.NumRows();
@@ -2269,7 +2220,7 @@ void bfcounter::reduce(mat_ZZ& factors, bfc_vec& v)
 	reduce(nfactors, vn);
 }
 
-void bfcounter::handle_polar(Polyhedron *C, int s)
+void bfcounter_base::handle_polar(Polyhedron *C, int s)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term * > v;
@@ -2311,7 +2262,7 @@ void bfcounter::handle_polar(Polyhedron *C, int s)
     reduce(factors, v);
 }
 
-void bfcounter::start(unsigned MaxRays)
+void bfcounter_base::start(unsigned MaxRays)
 {
     for (j = 0; j < P->NbRays; ++j) {
 	Polyhedron *C = supporting_cone(P, j);
@@ -2319,10 +2270,68 @@ void bfcounter::start(unsigned MaxRays)
     }
 }
 
-struct partial_bfcounter : public bfcounter {
+struct bfcounter : public bfcounter_base {
+    mpq_t count;
+
+    bfcounter(Polyhedron *P) : bfcounter_base(P) {
+	mpq_init(count);
+	lower = 1;
+    }
+    ~bfcounter() {
+	mpq_clear(count);
+    }
+    virtual void base(mat_ZZ& factors, bfc_vec& v);
+};
+
+void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
+{
+    unsigned nf = factors.NumRows();
+
+    for (int i = 0; i < v.size(); ++i) {
+	int total_power = 0;
+	// factor is always positive, so we always
+	// change signs
+	for (int k = 0; k < nf; ++k)
+	    total_power += v[i]->powers[k];
+
+	int j;
+	for (j = 0; j < nf; ++j)
+	    if (v[i]->powers[j] > 0)
+		break;
+
+	dpoly D(total_power, factors[j][0], 1);
+	for (int k = 1; k < v[i]->powers[j]; ++k) {
+	    dpoly fact(total_power, factors[j][0], 1);
+	    D *= fact;
+	}
+	for ( ; ++j < nf; )
+	    for (int k = 0; k < v[i]->powers[j]; ++k) {
+		dpoly fact(total_power, factors[j][0], 1);
+		D *= fact;
+	    }
+
+	for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
+	    dpoly n(total_power, v[i]->terms[k][0]);
+	    mpq_set_si(tcount, 0, 1);
+	    n.div(D, tcount, one);
+	    if (total_power % 2)
+		v[i]->cn[k] = -v[i]->cn[k];
+	    zz2value(v[i]->cn[k], tn);
+	    zz2value(v[i]->cd[k], td);
+
+	    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
+	    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
+	    mpq_canonicalize(tcount);
+	    mpq_add(count, count, tcount);
+	}
+	delete v[i];
+    }
+}
+
+struct partial_bfcounter : public bfcounter_base {
     gen_fun * gf;
 
-    partial_bfcounter(Polyhedron *P, unsigned nparam) : bfcounter(P) {
+    partial_bfcounter(Polyhedron *P, unsigned nparam) : bfcounter_base(P) {
 	gf = new gen_fun(Polyhedron_Project(P, nparam));
 	lower = nparam;
     }
