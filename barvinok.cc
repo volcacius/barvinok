@@ -1849,6 +1849,7 @@ struct bfcounter : public polar_decomposer {
     mpq_t count;
     mpz_t tn;
     mpz_t td;
+    int lower;	    // call base when only this many variables is left
 
     bfcounter(Polyhedron *P) {
 	this->P = P;
@@ -1858,6 +1859,7 @@ struct bfcounter : public polar_decomposer {
 	mpz_init(tn);
 	mpz_init(td);
 	one = 1;
+	lower = 1;
     }
 
     ~bfcounter() {
@@ -1870,7 +1872,7 @@ struct bfcounter : public polar_decomposer {
     void start(unsigned MaxRays);
     virtual void handle_polar(Polyhedron *P, int sign);
     void reduce(mat_ZZ& factors, bfc_vec& v);
-    void base(mat_ZZ& factors, bfc_vec& v);
+    virtual void base(mat_ZZ& factors, bfc_vec& v);
 };
 
 static void print_int_vector(int *v, int len, char *name)
@@ -2056,7 +2058,7 @@ void bfcounter::reduce(mat_ZZ& factors, bfc_vec& v)
     unsigned nf = factors.NumRows();
     unsigned d = factors.NumCols();
 
-    if (d == 1)
+    if (d == lower)
 	return base(factors, v);
 
     assert(d > 1);
@@ -2316,6 +2318,52 @@ void bfcounter::start(unsigned MaxRays)
 	decompose(C, MaxRays);
     }
 }
+
+struct partial_bfcounter : public bfcounter {
+    gen_fun * gf;
+
+    partial_bfcounter(Polyhedron *P, unsigned nparam) : bfcounter(P) {
+	gf = new gen_fun(Polyhedron_Project(P, nparam));
+	lower = nparam;
+    }
+    ~partial_bfcounter() {
+    }
+    virtual void base(mat_ZZ& factors, bfc_vec& v);
+    void start(unsigned MaxRays);
+};
+
+void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
+{
+    mat_ZZ den;
+    unsigned nf = factors.NumRows();
+
+    for (int i = 0; i < v.size(); ++i) {
+	den.SetDims(0, lower);
+	int total_power = 0;
+	int p = 0;
+	for (int j = 0; j < nf; ++j) {
+	    total_power += v[i]->powers[j];
+	    den.SetDims(total_power, lower);
+	    for (int k = 0; k < v[i]->powers[j]; ++k)
+		den[p++] = factors[j];
+	}
+	for (int j = 0; j < v[i]->terms.NumRows(); ++j)
+	    gf->add(v[i]->cn[j], v[i]->cd[j], v[i]->terms[j], den);
+	delete v[i];
+    }
+}
+
+void partial_bfcounter::start(unsigned MaxRays)
+{
+    for (j = 0; j < P->NbRays; ++j) {
+	if (!value_pos_p(P->Ray[j][dim+1]))
+	    continue;
+
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, MaxRays);
+    }
+}
+
 
 typedef Polyhedron * Polyhedron_p;
 
@@ -4912,7 +4960,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	P = remove_equalities_p(P, P->Dimension-nparam, NULL);
     assert(P->NbEq == 0);
 
-    partial_reducer red(P, nparam);
+    partial_bfcounter red(P, nparam);
     red.start(MaxRays);
     Polyhedron_Free(P);
     return red.gf;
