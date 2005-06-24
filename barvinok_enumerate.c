@@ -26,6 +26,7 @@ struct option options[] = {
     { "convert",   no_argument,  0,  'c' },
     { "floor",     no_argument,  0,  'f' },
     { "size",      no_argument,  0,  's' },
+    { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
 #endif
@@ -41,7 +42,7 @@ int main(int argc, char **argv)
     int floor = 0;
     int size = 0;
 
-    while ((c = getopt_long(argc, argv, "fcs", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "fcsV", options, &ind)) != -1) {
 	switch (c) {
 	case 'c':
 	    convert = 1;
@@ -51,6 +52,10 @@ int main(int argc, char **argv)
 	    break;
 	case 's':
 	    size = 1;
+	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
 	    break;
 	}
     }

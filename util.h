@@ -36,6 +36,8 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
 		   unsigned MaxRays, int set);
 Polyhedron* Polyhedron_Project(Polyhedron *P, int dim);
 
+const char *barvinok_version();
+
 #include "ev_operations.h"
 
 Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 

@@ -25,6 +25,7 @@ struct option options[] = {
     { "explicit",  no_argument,  0,  'e' },
     { "series",  no_argument,  0,  's' },
     { "verbose",  no_argument,  0,  'v' },
+    { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
 #endif
@@ -136,38 +137,14 @@ int main(int argc,char *argv[]) {
   Enumeration *en;
   Value *p, tmp;
   int i,j;
-  int m,M;
+    int m = INT_MAX, M = INT_MIN, r;
     int c, ind = 0;
     int series = 0;
     int verbose = 0;
     int function = 0;
     int result = 0;
 
-/******* Read the input *********/
-  P1 = Matrix_Read();
-  C1 = Matrix_Read();
-
-  if(C1->NbColumns < 2) {
-    fprintf(stderr,"Not enough parameters !\n");
-    exit(0);
-  }
-  
-  P = Constraints2Polyhedron(P1,MAXRAYS);
-  C = Constraints2Polyhedron(C1,MAXRAYS);
-  params = Read_ParamNames(stdin, C->Dimension);
-  Matrix_Free(C1);
-  Matrix_Free(P1);
-
-  /******* Read the options: initialize Min and Max ********/
-  if(P->Dimension >= VBIGDIM)
-    M = VSRANGE;
-  else if(P->Dimension >= BIGDIM)
-    M = SRANGE;
-  else
-    M = RANGE;
-  m = -M;
-
-    while ((c = getopt_long(argc, argv, "m:M:r:sve", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "m:M:r:sveV", options, &ind)) != -1) {
 	switch (c) {
 	case 'e':
 	    function = 1;
@@ -188,8 +165,40 @@ int main(int argc,char *argv[]) {
 	    M = atoi(optarg);
 	    m = -M;
 	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
+	    break;
 	}
     }
+
+/******* Read the input *********/
+  P1 = Matrix_Read();
+  C1 = Matrix_Read();
+
+  if(C1->NbColumns < 2) {
+    fprintf(stderr,"Not enough parameters !\n");
+    exit(0);
+  }
+  
+  P = Constraints2Polyhedron(P1,MAXRAYS);
+  C = Constraints2Polyhedron(C1,MAXRAYS);
+  params = Read_ParamNames(stdin, C->Dimension);
+  Matrix_Free(C1);
+  Matrix_Free(P1);
+
+  /******* Read the options: initialize Min and Max ********/
+  if(P->Dimension >= VBIGDIM)
+    r = VSRANGE;
+  else if(P->Dimension >= BIGDIM)
+    r = SRANGE;
+  else
+    r = RANGE;
+  if (M == INT_MIN)
+    M = r;
+  if (m == INT_MAX)
+    m = -r;
+
 
   if(m > M) {
     fprintf(stderr,"Nothing to do: Min > Max !\n");

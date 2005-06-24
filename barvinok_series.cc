@@ -29,6 +29,7 @@ extern "C" {
 #include <getopt.h>
 struct option options[] = {
     { "explicit",  no_argument,  0,  'e' },
+    { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
 #endif
@@ -43,10 +44,14 @@ int main(int argc, char **argv)
     int c, ind = 0;
     int function = 0;
 
-    while ((c = getopt_long(argc, argv, "e", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "eV", options, &ind)) != -1) {
 	switch (c) {
 	case 'e':
 	    function = 1;
+	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
 	    break;
 	}
     }

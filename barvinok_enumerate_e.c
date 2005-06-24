@@ -29,6 +29,7 @@ struct option options[] = {
     { "convert",   no_argument,  0,  'c' },
     { "floor",     no_argument,  0,  'f' },
     { "range",	no_argument,	0,  'r' },
+    { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
 #endif
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
     int pip = 0;
     int floor = 0;
 
-    while ((c = getopt_long(argc, argv, "pfcr", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "pfcrV", options, &ind)) != -1) {
 	switch (c) {
 	case 'p':
 	    pip = 1;
@@ -60,6 +61,10 @@ int main(int argc, char **argv)
 	    break;
 	case 'r':
 	    range = 1;
+	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
 	    break;
 	}
     }

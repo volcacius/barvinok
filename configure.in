@@ -221,5 +221,23 @@ AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
 ])
 
+AC_SUBST(GIT_HEAD_ID)
+if test -f $srcdir/.git/HEAD; then
+    GIT_HEAD_ID=`cat $srcdir/.git/HEAD`
+elif test -f $srcdir/GIT_HEAD_ID; then
+    GIT_HEAD_ID=`cat $srcdir/GIT_HEAD_ID`
+else
+    mysrcdir=`(cd $srcdir; pwd)`
+    head=`basename $mysrcdir | sed -e 's/.*-//'`
+    head2=`echo $head | sed -e 's/[^0-9a-f]//'`
+    head3=`echo $head2 | sed -e 's/........................................//'`
+    if test "x$head3" = "x" -a "x$head" = "x$head2"; then
+	GIT_HEAD_ID="$head"
+    else
+	GIT_HEAD_ID="UNKNOWN"
+    fi
+fi
+AC_DEFINE_UNQUOTED(GIT_HEAD_ID, "$GIT_HEAD_ID", [git HEAD id])
+
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT(Makefile)

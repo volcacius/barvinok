@@ -1157,3 +1157,20 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
 
     return in_domain(P, list_args);
 }
+
+const char *barvinok_version()
+{
+    return 
+	"barvinok " VERSION " (" GIT_HEAD_ID ")\n"
+#ifdef USE_MODULO
+	" +MODULO"
+#else
+	" -MODULO"
+#endif
+#ifdef USE_INCREMENTAL
+	" +INCREMENTAL"
+#else
+	" -INCREMENTAL"
+#endif
+    "\n";
+}

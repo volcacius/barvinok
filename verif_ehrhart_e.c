@@ -38,6 +38,7 @@ struct option options[] = {
     { "max",   no_argument,  0,  'M' },
     { "range",   no_argument,  0,  'r' },
     { "pip",   no_argument,  0,  'p' },
+    { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
 #endif
@@ -178,7 +179,7 @@ int main(int argc,char *argv[])
   Polyhedron *C, *P, *S;
   Value *p, tmp;
   int i,j;
-  int m,M;
+    int m = INT_MAX, M = INT_MIN, r;
   int exist, nparam;
   char s[128];
   evalue *EP;
@@ -186,6 +187,28 @@ int main(int argc,char *argv[])
   int c, ind = 0;
   int pip = 0;
 
+    while ((c = getopt_long(argc, argv, "pm:M:r:V", options, &ind)) != -1) {
+	switch (c) {
+	case 'p':
+	    pip = 1;
+	    break;
+	case 'm':
+	    m = atoi(optarg);
+	    break;
+	case 'M':
+	    M = atoi(optarg);
+	    break;
+	case 'r':
+	    M = atoi(optarg);
+	    m = -M;
+	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
+	    break;
+	}
+    }
+  
 /******* Read the input *********/
   P1 = Matrix_Read();
 
@@ -201,33 +224,18 @@ int main(int argc,char *argv[])
   params = Read_ParamNames(stdin, nparam);
   Matrix_Free(P1);
 
-  /******* Read the options: initialize min and max ********/
+  /******* Read the options: initialize Min and Max ********/
   if(P->Dimension >= VBIGDIM)
-    M = VSRANGE;
+    r = VSRANGE;
   else if(P->Dimension >= BIGDIM)
-    M = SRANGE;
+    r = SRANGE;
   else
-    M = RANGE;
-  m = -M;
+    r = RANGE;
+  if (M == INT_MIN)
+    M = r;
+  if (m == INT_MAX)
+    m = -r;
 
-    while ((c = getopt_long(argc, argv, "pm:M:r:", options, &ind)) != -1) {
-	switch (c) {
-	case 'p':
-	    pip = 1;
-	    break;
-	case 'm':
-	    m = atoi(optarg);
-	    break;
-	case 'M':
-	    M = atoi(optarg);
-	    break;
-	case 'r':
-	    M = atoi(optarg);
-	    m = -M;
-	    break;
-	}
-    }
-  
   if(m > M) {
     fprintf(stderr,"Nothing to do: min > max !\n");
     return(0);
