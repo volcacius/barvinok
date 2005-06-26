@@ -237,7 +237,7 @@ else
 	GIT_HEAD_ID="UNKNOWN"
     fi
 fi
-AC_DEFINE_UNQUOTED(GIT_HEAD_ID, "$GIT_HEAD_ID", [git HEAD id])
+echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT(Makefile)

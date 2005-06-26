@@ -33,7 +33,11 @@ TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl NTL_5_3_2.patch
 
 dist-hook:
-	echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID
+	if test -f $(top_srcdir)/.git/HEAD; then \
+	    cp $(top_srcdir)/.git/HEAD $(distdir)/GIT_HEAD_ID; \
+	else \
+	    echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID; \
+	fi
 
 check-series:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
@@ -56,3 +60,6 @@ check:
 		echo " ok"; \
 	    fi \
 	done
+
+version.h: $(top_srcdir)/.git/HEAD
+	echo '#define GIT_HEAD_ID "'`cat $<`'"' > $@

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "config.h"
+#include "version.h"
 
 #ifndef HAVE_ENUMERATE4
 #define Polyhedron_Enumerate(a,b,c,d) Polyhedron_Enumerate(a,b,c)
