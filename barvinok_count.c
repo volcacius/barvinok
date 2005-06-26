@@ -10,11 +10,31 @@
 #define MAXRAYS  600
 #endif
 
-int main()
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
+struct option options[] = {
+    { "version",   no_argument,  0,  'V' },
+    { 0, 0, 0, 0 }
+};
+#endif
+
+int main(int argc, char **argv)
 {
     Value cb;
     Polyhedron *A;
     Matrix *M;
+    int c, ind = 0;
+
+    while ((c = getopt_long(argc, argv, "V", options, &ind)) != -1) {
+	switch (c) {
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
+	    break;
+	}
+    }
 
     M = Matrix_Read();
     A = Constraints2Polyhedron(M, MAXRAYS);
