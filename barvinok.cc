@@ -2965,6 +2965,8 @@ void ienumerator::reduce(
 	    }
 
 	dpoly_r * r = 0;
+	// if no_param + only_param == len then all powers
+	// below will be all zero
 	if (no_param + only_param == len)
 	    r = new dpoly_r(n, len);
 	else {
