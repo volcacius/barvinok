@@ -3006,7 +3006,6 @@ void ienumerator::reduce(
 		if (final[j]->coeff == 0)
 		    continue;
 		rows = common;
-		pden.SetDims(rows, pden.NumCols());
 		for (int k = 0; k < r->dim; ++k) {
 		    int n = final[j]->powers[k];
 		    if (n == 0)
