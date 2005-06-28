@@ -2715,7 +2715,6 @@ struct ienumerator : public polar_decomposer {
     evalue ** vE;
     int _i;
     Param_Vertices *V;
-    ZZ sgn;
     mat_ZZ den;
     evalue mone;
     evalue ** E_vertex;
@@ -3146,8 +3145,6 @@ static int edegree(evalue *e)
 void ienumerator::handle_polar(Polyhedron *C, int s)
 {
     assert(C->NbRays-1 == dim);
-
-    sgn = s;
 
     lattice_point(V, C, vertex, E_vertex);
 
