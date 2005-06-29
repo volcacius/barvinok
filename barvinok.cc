@@ -1801,6 +1801,65 @@ void partial_ireducer::start(unsigned MaxRays)
     }
 }
 
+struct partial_reducer : public reducer {
+    gen_fun * gf;
+    vec_ZZ lambda;
+    vec_ZZ tmp;
+
+    partial_reducer(Polyhedron *P, unsigned nparam) : reducer(P) {
+	gf = new gen_fun(Polyhedron_Project(P, nparam));
+	lower = nparam;
+
+	tmp.SetLength(dim - nparam);
+	randomvector(P, lambda, dim - nparam);
+    }
+    ~partial_reducer() {
+    }
+    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
+    void start(unsigned MaxRays);
+
+    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
+		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
+	unsigned len = den_f.NumRows();  // number of factors in den
+	unsigned nvar = tmp.length();
+
+	den_s.SetLength(len);
+	den_r.SetDims(len, lower);
+
+	for (int r = 0; r < len; ++r) {
+	    for (int k = 0; k < nvar; ++k)
+		tmp[k] = den_f[r][k];
+	    den_s[r] = tmp * lambda;
+
+	    for (int k = nvar; k < dim; ++k)
+		den_r[r][k-nvar] = den_f[r][k];
+	}
+
+	for (int k = 0; k < nvar; ++k)
+	    tmp[k] = num[k];
+	num_s = tmp *lambda;
+	num_p.SetLength(lower);
+	for (int k = nvar ; k < dim; ++k)
+	    num_p[k-nvar] = num[k];
+    }
+};
+
+void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+{
+    gf->add(c, cd, num, den_f);
+}
+
+void partial_reducer::start(unsigned MaxRays)
+{
+    for (j = 0; j < P->NbRays; ++j) {
+	if (!value_pos_p(P->Ray[j][dim+1]))
+	    continue;
+
+	Polyhedron *C = supporting_cone(P, j);
+	decompose(C, MaxRays);
+    }
+}
+
 struct bfc_term_base {
     // the number of times a given factor appears in the denominator
     int	    *powers;
@@ -5363,8 +5422,10 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
 #ifdef USE_INCREMENTAL_BF
     partial_bfcounter red(P, nparam);
-#else
+#elif defined USE_INCREMENTAL_DF
     partial_ireducer red(P, nparam);
+#else
+    partial_reducer red(P, nparam);
 #endif
     red.start(MaxRays);
     Polyhedron_Free(P);
