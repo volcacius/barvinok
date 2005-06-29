@@ -2854,18 +2854,16 @@ void enumerator::handle_polar(Polyhedron *C, int s)
     } 
 }
 
-struct ienumerator : public polar_decomposer {
-    Polyhedron *P, *pVD;
+struct enumerator_base : public virtual polar_decomposer {
+    Polyhedron *P;
     unsigned dim, nbV;
     evalue ** vE;
     int _i;
     Param_Vertices *V;
-    mat_ZZ den;
-    evalue mone;
     evalue ** E_vertex;
-    vec_ZZ vertex;
+    evalue mone;
 
-    ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) {
+    enumerator_base(Polyhedron *P, unsigned dim, unsigned nbV) {
 	this->P = P;
 	this->dim = dim;
 	this->nbV = nbV;
@@ -2875,9 +2873,7 @@ struct ienumerator : public polar_decomposer {
 	    vE[j] = 0;
 
 	E_vertex = new evalue_p[dim];
-	vertex.SetLength(dim);
 
-	den.SetDims(dim, dim);
 	value_init(mone.d);
 	evalue_set_si(&mone, -1, 1);
     }
@@ -2895,7 +2891,7 @@ struct ienumerator : public polar_decomposer {
 	decompose(C, MaxRays);
     }
 
-    ~ienumerator() {
+    ~enumerator_base() {
     	for (int j = 0; j < nbV; ++j)
 	    if (vE[j]) {
 		free_evalue_refs(vE[j]);
@@ -2908,9 +2904,136 @@ struct ienumerator : public polar_decomposer {
 	free_evalue_refs(&mone);
     }
 
+    evalue *E_num(int i, int d) {
+	return E_vertex[i + (dim-d)];
+    }
+};
+
+struct cumulator {
+    evalue *factor;
+    evalue *v;
+    dpoly_r *r;
+
+    cumulator(evalue *factor, evalue *v, dpoly_r *r) : 
+	factor(factor), v(v), r(r) {}
+
+    void cumulate();
+
+    virtual void add_term(int *powers, int len, evalue *f2) = 0;
+};
+
+void cumulator::cumulate()
+{
+    evalue cum;  // factor * 1 * E_num[0]/1 * (E_num[0]-1)/2 *...
+    evalue f;
+    evalue t;	// E_num[0] - (m-1)
+#ifdef USE_MODULO
+    evalue *cst;
+#endif
+
+    value_init(cum.d);
+    evalue_copy(&cum, factor);
+    value_init(f.d);
+    value_init(f.x.n);
+    value_set_si(f.d, 1);
+    value_set_si(f.x.n, 1);
+    value_init(t.d);
+    evalue_copy(&t, v);
+
+#ifdef USE_MODULO
+    for (cst = &t; value_zero_p(cst->d); ) {
+	if (cst->x.p->type == fractional)
+	    cst = &cst->x.p->arr[1];
+	else
+	    cst = &cst->x.p->arr[0];
+    }
+#endif
+
+    for (int m = 0; m < r->len; ++m) {
+	if (m > 0) {
+	    if (m > 1) {
+		value_set_si(f.d, m);
+		emul(&f, &cum);
+#ifdef USE_MODULO
+		value_substract(cst->x.n, cst->x.n, cst->d);
+#else
+		eadd(&mone, &t);
+#endif
+	    }
+	    emul(&t, &cum);
+	}
+	vector< dpoly_r_term * >& current = r->c[r->len-1-m];
+	for (int j = 0; j < current.size(); ++j) {
+	    if (current[j]->coeff == 0)
+		continue;
+	    evalue *f2 = new evalue;
+	    value_init(f2->d);
+	    value_init(f2->x.n);
+	    zz2value(current[j]->coeff, f2->x.n);
+	    zz2value(r->denom, f2->d);
+	    emul(&cum, f2);
+
+	    add_term(current[j]->powers, r->dim, f2);
+	}
+    }
+    free_evalue_refs(&f);
+    free_evalue_refs(&t);
+    free_evalue_refs(&cum);
+}
+
+struct E_poly_term {
+    int	    *powers;
+    evalue  *E;
+};
+
+struct ie_cum : public cumulator {
+    vector<E_poly_term *> terms;
+
+    ie_cum(evalue *factor, evalue *v, dpoly_r *r) : cumulator(factor, v, r) {}
+
+    virtual void add_term(int *powers, int len, evalue *f2);
+};
+
+void ie_cum::add_term(int *powers, int len, evalue *f2)
+{
+    int k;
+    for (k = 0; k < terms.size(); ++k) {
+	if (memcmp(terms[k]->powers, powers, len * sizeof(int)) == 0) {
+	    eadd(f2, terms[k]->E);
+	    free_evalue_refs(f2); 
+	    delete f2;
+	    break;
+	}
+    }
+    if (k >= terms.size()) {
+	E_poly_term *ET = new E_poly_term;
+	ET->powers = new int[len];
+	memcpy(ET->powers, powers, len * sizeof(int));
+	ET->E = f2;
+	terms.push_back(ET);
+    }
+}
+
+struct ienumerator : public virtual polar_decomposer, public enumerator_base {
+    //Polyhedron *pVD;
+    mat_ZZ den;
+    vec_ZZ vertex;
+    mpq_t tcount;
+
+    ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
+		enumerator_base(P, dim, nbV) {
+	vertex.SetLength(dim);
+
+	den.SetDims(dim, dim);
+	mpq_init(tcount);
+    }
+
+    ~ienumerator() {
+	mpq_clear(tcount);
+    }
+
     virtual void handle_polar(Polyhedron *P, int sign);
-    void reduce(evalue *factor, vec_ZZ& num, evalue ** E_num, 
-	mat_ZZ& den_f);
+    void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f);
 };
 
 static evalue* new_zero_ep()
@@ -3027,14 +3150,8 @@ void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num,
     }
 }
 
-struct E_poly_term {
-    int	    *powers;
-    evalue  *E;
-};
-
 void ienumerator::reduce(
-	evalue *factor, vec_ZZ& num, evalue ** E_num, 
-	mat_ZZ& den_f)
+	evalue *factor, vec_ZZ& num, mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned dim = num.length();
@@ -3049,25 +3166,21 @@ void ienumerator::reduce(
     mat_ZZ den_r;
     den_r.SetDims(len, dim-1);
 
-    int i = 0;
     int r, k;
 
     for (r = 0; r < len; ++r) {
-	den_s[r] = den_f[r][i];
+	den_s[r] = den_f[r][0];
 	for (k = 0; k <= dim-1; ++k)
-	    if (k != i)
-		den_r[r][k-(k>i)] = den_f[r][k];
+	    if (k != 0)
+		den_r[r][k-(k>0)] = den_f[r][k];
     }
 
-    ZZ num_s = num[i];
+    ZZ num_s = num[0];
     vec_ZZ num_p;
     num_p.SetLength(dim-1);
-    evalue * E_num_p[dim-1];
     for (k = 0 ; k <= dim-1; ++k)
-	if (k != i) {
-	    num_p[k-(k>i)] = num[k];
-	    E_num_p[k-(k>i)] = E_num[k];
-	}
+	if (k != 0)
+	    num_p[k-(k>0)] = num[k];
 
     vec_ZZ den_p;
     den_p.SetLength(len);
@@ -3087,7 +3200,7 @@ void ienumerator::reduce(
 	    ++only_param;
     }
     if (no_param == 0) {
-	reduce(factor, num_p, E_num_p, den_r);
+	reduce(factor, num_p, den_r);
     } else {
 	int k, l;
 	mat_ZZ pden;
@@ -3112,9 +3225,27 @@ void ienumerator::reduce(
 	dpoly_r * r = 0;
 	// if no_param + only_param == len then all powers
 	// below will be all zero
-	if (no_param + only_param == len)
-	    r = new dpoly_r(n, len);
-	else {
+	if (no_param + only_param == len) {
+	    if (E_num(0, dim) != 0)
+		r = new dpoly_r(n, len);
+	    else {
+		mpq_set_si(tcount, 0, 1);
+		one = 1;
+		n.div(D, tcount, one);
+
+		if (value_notzero_p(mpq_numref(tcount))) {
+		    evalue f;
+		    value_init(f.d);
+		    value_init(f.x.n);
+		    value_assign(f.x.n, mpq_numref(tcount));
+		    value_assign(f.d, mpq_denref(tcount));
+		    emul(&f, factor);
+		    reduce(factor, num_p, pden);
+		    free_evalue_refs(&f);
+		}
+		return;
+	    }
+	} else {
 	    for (k = 0; k < len; ++k) {
 		if (den_s[k] == 0 || den_p[k] == 0)
 		    continue;
@@ -3138,7 +3269,7 @@ void ienumerator::reduce(
 	dpoly_r *rc = r->div(D);
 	delete r;
 	r = rc;
-	if (E_num[i] == 0) {
+	if (E_num(0, dim) == 0) {
 	    int common = pden.NumRows();
 	    vector< dpoly_r_term * >& final = r->c[r->len-1];
 	    int rows;
@@ -3164,86 +3295,21 @@ void ienumerator::reduce(
 		evalue_copy(&t, factor);
 		zz2value(final[j]->coeff, f.x.n);
 		emul(&f, &t);
-		reduce(&t, num_p, E_num_p, pden);
+		reduce(&t, num_p, pden);
 		free_evalue_refs(&t);
 	    }
 	    free_evalue_refs(&f);
 	} else {
-	    evalue cum;  // factor * 1 * E_num[i]/1 * (E_num[i]-1)/2 *...
-	    value_init(cum.d);
-	    evalue_copy(&cum, factor);
-	    evalue f;
-	    value_init(f.d);
-	    value_init(f.x.n);
-	    value_set_si(f.d, 1);
-	    value_set_si(f.x.n, 1);
-	    evalue t;	// E_num[i] - (m-1)
-	    value_init(t.d);
-	    evalue_copy(&t, E_num[i]);
-#ifdef USE_MODULO
-	    evalue *cst;
-	    for (cst = &t; value_zero_p(cst->d); ) {
-		if (cst->x.p->type == fractional)
-		    cst = &cst->x.p->arr[1];
-		else
-		    cst = &cst->x.p->arr[0];
-	    }
-#endif
-	    vector<E_poly_term *> terms;
-	    for (int m = 0; m < r->len; ++m) {
-		if (m > 0) {
-		    if (m > 1) {
-			value_set_si(f.d, m);
-			emul(&f, &cum);
-#ifdef USE_MODULO
-			value_substract(cst->x.n, cst->x.n, cst->d);
-#else
-			eadd(&mone, &t);
-#endif
-		    }
-		    emul(&t, &cum);
-		}
-		vector< dpoly_r_term * >& current = r->c[r->len-1-m];
-		for (int j = 0; j < current.size(); ++j) {
-		    if (current[j]->coeff == 0)
-			continue;
-		    evalue *f2 = new evalue;
-		    value_init(f2->d);
-		    value_init(f2->x.n);
-		    zz2value(current[j]->coeff, f2->x.n);
-		    zz2value(r->denom, f2->d);
-		    emul(&cum, f2);
-		    int k;
-		    for (k = 0; k < terms.size(); ++k) {
-			if (memcmp(terms[k]->powers, current[j]->powers,
-				    r->dim * sizeof(int)) == 0) {
-			    eadd(f2, terms[k]->E);
-			    free_evalue_refs(f2); 
-			    delete f2;
-			    break;
-			}
-		    }
-		    if (k >= terms.size()) {
-			E_poly_term *ET = new E_poly_term;
-			ET->powers = new int[r->dim];
-			memcpy(ET->powers, current[j]->powers, 
-				r->dim * sizeof(int));
-			ET->E = f2;
-			terms.push_back(ET);
-		    }
-		}
-	    }
-	    free_evalue_refs(&f);
-	    free_evalue_refs(&t);
-	    free_evalue_refs(&cum);
+	    ie_cum cum(factor, E_num(0, dim), r);
+	    cum.cumulate();
 
 	    int common = pden.NumRows();
 	    int rows;
-	    for (int j = 0; j < terms.size(); ++j) {
+	    for (int j = 0; j < cum.terms.size(); ++j) {
 		rows = common;
 		pden.SetDims(rows, pden.NumCols());
 		for (int k = 0; k < r->dim; ++k) {
-		    int n = terms[j]->powers[k];
+		    int n = cum.terms[j]->powers[k];
 		    if (n == 0)
 			continue;
 		    pden.SetDims(rows+n, pden.NumCols());
@@ -3251,11 +3317,11 @@ void ienumerator::reduce(
 			pden[rows+l] = den_r[k];
 		    rows += n;
 		}
-		reduce(terms[j]->E, num_p, E_num_p, pden);
-		free_evalue_refs(terms[j]->E); 
-		delete terms[j]->E;
-		delete [] terms[j]->powers;
-		delete terms[j];
+		reduce(cum.terms[j]->E, num_p, pden);
+		free_evalue_refs(cum.terms[j]->E); 
+		delete cum.terms[j]->E;
+		delete [] cum.terms[j]->powers;
+		delete cum.terms[j];
 	    }
 	}
 	delete r;
@@ -3301,7 +3367,7 @@ void ienumerator::handle_polar(Polyhedron *C, int s)
     evalue one;
     value_init(one.d);
     evalue_set_si(&one, s, 1);
-    reduce(&one, vertex, E_vertex, den);
+    reduce(&one, vertex, den);
     free_evalue_refs(&one);
 
     for (int i = 0; i < dim; ++i)
