@@ -1557,37 +1557,26 @@ struct reducer : public polar_decomposer {
     virtual void handle_polar(Polyhedron *P, int sign);
     void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f) = 0;
+    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
+		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
 };
 
 void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
-    unsigned d = num.length()-1;
 
-    if (d+1 == lower) {
+    if (num.length() == lower) {
 	base(c, cd, num, den_f);
 	return;
     }
     assert(num.length() > 1);
 
     vec_ZZ den_s;
-    den_s.SetLength(len);
     mat_ZZ den_r;
-    den_r.SetDims(len, d);
-
-    int r, k;
-
-    for (r = 0; r < len; ++r) {
-	den_s[r] = den_f[r][0];
-	for (k = 1; k <= d; ++k)
-	    den_r[r][k-1] = den_f[r][k];
-    }
-
-    ZZ num_s = num[0];
+    ZZ num_s;
     vec_ZZ num_p;
-    num_p.SetLength(d);
-    for (k = 1 ; k <= d; ++k)
-	num_p[k-1] = num[k];
+
+    split(num, num_s, num_p, den_f, den_s, den_r);
 
     vec_ZZ den_p;
     den_p.SetLength(len);
@@ -1607,7 +1596,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     } else {
 	int k, l;
 	mat_ZZ pden;
-	pden.SetDims(only_param, d);
+	pden.SetDims(only_param, den_r.NumCols());
 
 	for (k = 0, l = 0; k < len; ++k)
 	    if (den_s[k] == 0)
@@ -1718,11 +1707,35 @@ void reducer::start(unsigned MaxRays)
     }
 }
 
+struct ireducer : public reducer {
+    ireducer(Polyhedron *P) : reducer(P) {}
+
+    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
+		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
+	unsigned len = den_f.NumRows();  // number of factors in den
+	unsigned d = num.length() - 1;
+
+	den_s.SetLength(len);
+	den_r.SetDims(len, d);
+
+	for (int r = 0; r < len; ++r) {
+	    den_s[r] = den_f[r][0];
+	    for (int k = 1; k <= d; ++k)
+		den_r[r][k-1] = den_f[r][k];
+	}
+
+	num_s = num[0];
+	num_p.SetLength(d);
+	for (int k = 1 ; k <= d; ++k)
+	    num_p[k-1] = num[k];
+    }
+};
+
 // incremental counter
-struct icounter : public reducer {
+struct icounter : public ireducer {
     mpq_t count;
 
-    icounter(Polyhedron *P) : reducer(P) {
+    icounter(Polyhedron *P) : ireducer(P) {
 	mpq_init(count);
 	lower = 1;
     }
@@ -1759,10 +1772,10 @@ void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     mpq_add(count, count, tcount);
 }
 
-struct partial_reducer : public reducer {
+struct partial_reducer : public ireducer {
     gen_fun * gf;
 
-    partial_reducer(Polyhedron *P, unsigned nparam) : reducer(P) {
+    partial_reducer(Polyhedron *P, unsigned nparam) : ireducer(P) {
 	gf = new gen_fun(Polyhedron_Project(P, nparam));
 	lower = nparam;
     }
