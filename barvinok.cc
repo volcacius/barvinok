@@ -1576,36 +1576,8 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     mat_ZZ den_r;
     den_r.SetDims(len, d);
 
-    /* Since we're working incrementally, we can look
-     * for the "easiest" parameter first.
-     * In particular we first handle the parameters such
-     * that no_param + only_param == len, since that allows
-     * us to decouple the problem and the split off part
-     * may very well be zero
-     *
-     * Let's just disable this for now
-     * Using this optimization, we can't guarantee that
-     * all the generating functions converge on the same neighbourhood
-     */
     int i = 0;
     int r, k;
-    /*
-    for (i = 0; i < d+1-untouched; ++i) {
-	for (r = 0; r < len; ++r) {
-	    if (den_f[r][i] != 0) {
-		for (k = 0; k <= d; ++k)
-		    if (i != k && den_f[r][k] != 0)
-			break;
-		if (k <= d)
-		    break;
-	    }
-	}
-	if (r >= len)
-	    break;
-    }
-    if (i > d-untouched)
-	i = 0;
-    */
 
     for (r = 0; r < len; ++r) {
 	den_s[r] = den_f[r][i];
