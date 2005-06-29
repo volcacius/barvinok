@@ -1535,7 +1535,6 @@ struct reducer : public polar_decomposer {
     mpz_t tn;
     mpz_t td;
     int lower;	    // call base when only this many variables is left
-    int untouched;  // keep this many variables untouched
 
     reducer(Polyhedron *P) {
 	this->P = P;
@@ -1729,7 +1728,6 @@ struct icounter : public reducer {
     icounter(Polyhedron *P) : reducer(P) {
 	mpq_init(count);
 	lower = 1;
-	untouched = 0;
     }
     ~icounter() {
 	mpq_clear(count);
@@ -1770,7 +1768,6 @@ struct partial_reducer : public reducer {
     partial_reducer(Polyhedron *P, unsigned nparam) : reducer(P) {
 	gf = new gen_fun(Polyhedron_Project(P, nparam));
 	lower = nparam;
-	untouched = nparam;
     }
     ~partial_reducer() {
     }
