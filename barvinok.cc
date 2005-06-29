@@ -1772,25 +1772,25 @@ void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     mpq_add(count, count, tcount);
 }
 
-struct partial_reducer : public ireducer {
+struct partial_ireducer : public ireducer {
     gen_fun * gf;
 
-    partial_reducer(Polyhedron *P, unsigned nparam) : ireducer(P) {
+    partial_ireducer(Polyhedron *P, unsigned nparam) : ireducer(P) {
 	gf = new gen_fun(Polyhedron_Project(P, nparam));
 	lower = nparam;
     }
-    ~partial_reducer() {
+    ~partial_ireducer() {
     }
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
     void start(unsigned MaxRays);
 };
 
-void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     gf->add(c, cd, num, den_f);
 }
 
-void partial_reducer::start(unsigned MaxRays)
+void partial_ireducer::start(unsigned MaxRays)
 {
     for (j = 0; j < P->NbRays; ++j) {
 	if (!value_pos_p(P->Ray[j][dim+1]))
@@ -5364,7 +5364,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 #ifdef USE_INCREMENTAL_BF
     partial_bfcounter red(P, nparam);
 #else
-    partial_reducer red(P, nparam);
+    partial_ireducer red(P, nparam);
 #endif
     red.start(MaxRays);
     Polyhedron_Free(P);
