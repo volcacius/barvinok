@@ -1843,6 +1843,20 @@ struct bfc_term : public bfc_term_base {
     bfc_term(int len) : bfc_term_base(len) {}
 };
 
+struct bfe_term : public bfc_term_base {
+    vector<evalue *> factors;
+
+    bfe_term(int len) : bfc_term_base(len) {
+    }
+
+    ~bfe_term() {
+	for (int i = 0; i < factors.size(); ++i) {
+	    free_evalue_refs(factors[i]);
+	    delete factors[i];
+	}
+    }
+};
+
 typedef vector< bfc_term_base * > bfc_vec;
 
 struct bf_reducer;
@@ -1956,6 +1970,25 @@ static void print_bfc_terms(mat_ZZ& factors, bfc_vec& v)
 	bfc_term* bfct = static_cast<bfc_term *>(v[i]);
 	cerr << bfct->cn << endl;
 	cerr << bfct->cd << endl;
+    }
+}
+
+static void print_bfe_terms(mat_ZZ& factors, bfc_vec& v)
+{
+    cerr << endl;
+    cerr << "factors" << endl;
+    cerr << factors << endl;
+    for (int i = 0; i < v.size(); ++i) {
+	cerr << "term: " << i << endl;
+	print_int_vector(v[i]->powers, factors.NumRows(), "powers");
+	cerr << "terms" << endl;
+	cerr << v[i]->terms << endl;
+	bfe_term* bfet = static_cast<bfe_term *>(v[i]);
+	for (int j = 0; j < v[i]->terms.NumRows(); ++j) {
+           char * test[] = {"a", "b"};
+           print_evalue(stderr, bfet->factors[j], test);
+           fprintf(stderr, "\n");
+	}
     }
 }
 
@@ -3391,6 +3424,173 @@ void ienumerator::handle_polar(Polyhedron *C, int s)
 
 }
 
+struct bfenumerator : public bf_base, public enumerator_base {
+    evalue *factor;
+
+    bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
+		    bf_base(P, dim), enumerator_base(P, dim, nbV) {
+	lower = 0;
+	factor = NULL;
+    }
+
+    ~bfenumerator() {
+    }
+
+    virtual void handle_polar(Polyhedron *P, int sign);
+    virtual void base(mat_ZZ& factors, bfc_vec& v);
+
+    bfc_term_base* new_bf_term(int len) {
+	bfe_term* t = new bfe_term(len);
+	return t;
+    }
+
+    virtual void set_factor(bfc_term_base *t, int k, int change) {
+	bfe_term* bfet = static_cast<bfe_term *>(t);
+	factor = bfet->factors[k];
+	assert(factor != NULL);
+	bfet->factors[k] = NULL;
+	if (change)
+	    emul(&mone, factor);
+    }
+
+    virtual void set_factor(bfc_term_base *t, int k, mpq_t &q, int change) {
+	bfe_term* bfet = static_cast<bfe_term *>(t);
+	factor = bfet->factors[k];
+	assert(factor != NULL);
+	bfet->factors[k] = NULL;
+
+	evalue f;
+	value_init(f.d);
+	value_init(f.x.n);
+	if (change)
+	    value_oppose(f.x.n, mpq_numref(q));
+	else
+	    value_assign(f.x.n, mpq_numref(q));
+	value_assign(f.d, mpq_denref(q));
+	emul(&f, factor);
+    }
+
+    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change) {
+	bfe_term* bfet = static_cast<bfe_term *>(t);
+
+	factor = new evalue;
+
+	evalue f;
+	value_init(f.d);
+	value_init(f.x.n);
+	zz2value(n, f.x.n);
+	if (change)
+	    value_oppose(f.x.n, f.x.n);
+	zz2value(d, f.d);
+
+	value_init(factor->d);
+	evalue_copy(factor, bfet->factors[k]);
+	emul(&f, factor);
+    }
+
+    void set_factor(evalue *f, int change) {
+	if (change)
+	    emul(&mone, f);
+	factor = f;
+    }
+
+    virtual void insert_term(bfc_term_base *t, int i) {
+	bfe_term* bfet = static_cast<bfe_term *>(t);
+	int len = t->terms.NumRows()-1;	// already increased by one
+
+	bfet->factors.resize(len+1);
+	for (int j = len; j > i; --j) {
+	    bfet->factors[j] = bfet->factors[j-1];
+	    t->terms[j] = t->terms[j-1];
+	}
+	bfet->factors[i] = factor;
+	factor = NULL;
+    }
+
+    virtual void update_term(bfc_term_base *t, int i) {
+	bfe_term* bfet = static_cast<bfe_term *>(t);
+
+	eadd(factor, bfet->factors[i]);
+	free_evalue_refs(factor);
+	delete factor;
+    }
+
+    virtual bool constant_vertex(int dim) { return E_num(0, dim) == 0; }
+
+    virtual void cum(bf_reducer *bfr, bfc_term_base *t, int k, dpoly_r *r);
+};
+
+struct bfe_cum : public cumulator {
+    bfenumerator *bfe;
+    bfc_term_base *told;
+    int k;
+    bf_reducer *bfr;
+
+    bfe_cum(evalue *factor, evalue *v, dpoly_r *r, bf_reducer *bfr, 
+	    bfc_term_base *t, int k, bfenumerator *e) :
+	    cumulator(factor, v, r), told(t), k(k),
+	    bfr(bfr), bfe(e) {
+    }
+
+    virtual void add_term(int *powers, int len, evalue *f2);
+};
+
+void bfe_cum::add_term(int *powers, int len, evalue *f2)
+{
+    bfr->update_powers(powers, len);
+
+    bfc_term_base * t = bfe->find_bfc_term(bfr->vn, bfr->npowers, bfr->nnf);
+    bfe->set_factor(f2, bfr->l_changes % 2);
+    bfe->add_term(t, told->terms[k], bfr->l_extra_num);
+}
+
+void bfenumerator::cum(bf_reducer *bfr, bfc_term_base *t, int k,
+		       dpoly_r *r)
+{
+    bfe_term* bfet = static_cast<bfe_term *>(t);
+    bfe_cum cum(bfet->factors[k], E_num(0, bfr->d), r, bfr, t, k, this);
+    cum.cumulate();
+}
+
+void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
+{
+    for (int i = 0; i < v.size(); ++i) {
+	assert(v[i]->terms.NumRows() == 1);
+	evalue *factor = static_cast<bfe_term *>(v[i])->factors[0];
+	eadd(factor, vE[_i]);
+	delete v[i];
+    }
+}
+
+void bfenumerator::handle_polar(Polyhedron *C, int s)
+{
+    assert(C->NbRays-1 == enumerator_base::dim);
+
+    bfe_term* t = new bfe_term(enumerator_base::dim);
+    vector< bfc_term_base * > v;
+    v.push_back(t);
+
+    t->factors.resize(1);
+
+    t->terms.SetDims(1, enumerator_base::dim);
+    lattice_point(V, C, t->terms[0], E_vertex);
+
+    // the elements of factors are always lexpositive
+    mat_ZZ   factors;
+    s = setup_factors(C, factors, t, s);
+
+    t->factors[0] = new evalue;
+    value_init(t->factors[0]->d);
+    evalue_set_si(t->factors[0], s, 1);
+    reduce(factors, v);
+
+    for (int i = 0; i < enumerator_base::dim; ++i)
+	if (E_vertex[i]) {
+	    free_evalue_refs(E_vertex[i]);
+	    delete E_vertex[i];
+	}
+}
+
 #ifdef HAVE_CORRECT_VERTICES
 static inline Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
     Polyhedron *Cin,int WS,Polyhedron **CEq,Matrix **CT)
@@ -3538,7 +3738,7 @@ out:
     unsigned dim = P->Dimension - nparam;
 
 #ifdef USE_INCREMENTAL
-    ienumerator et(P, dim, PP->nbV);
+    bfenumerator et(P, dim, PP->nbV);
 #else
     enumerator et(P, dim, PP->nbV);
 #endif
