@@ -1575,22 +1575,19 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     mat_ZZ den_r;
     den_r.SetDims(len, d);
 
-    int i = 0;
     int r, k;
 
     for (r = 0; r < len; ++r) {
-	den_s[r] = den_f[r][i];
-	for (k = 0; k <= d; ++k)
-	    if (k != i)
-		den_r[r][k-(k>i)] = den_f[r][k];
+	den_s[r] = den_f[r][0];
+	for (k = 1; k <= d; ++k)
+	    den_r[r][k-1] = den_f[r][k];
     }
 
-    ZZ num_s = num[i];
+    ZZ num_s = num[0];
     vec_ZZ num_p;
     num_p.SetLength(d);
-    for (k = 0 ; k <= d; ++k)
-	if (k != i)
-	    num_p[k-(k>i)] = num[k];
+    for (k = 1 ; k <= d; ++k)
+	num_p[k-1] = num[k];
 
     vec_ZZ den_p;
     den_p.SetLength(len);
