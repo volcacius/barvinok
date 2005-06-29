@@ -1168,8 +1168,10 @@ const char *barvinok_version()
 #else
 	" -MODULO"
 #endif
-#ifdef USE_INCREMENTAL
-	" +INCREMENTAL"
+#ifdef USE_INCREMENTAL_BF
+	" INCREMENTAL=BF"
+#elif defined USE_INCREMENTAL_DF
+	" INCREMENTAL=DF"
 #else
 	" -INCREMENTAL"
 #endif

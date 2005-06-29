@@ -2574,8 +2574,10 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	return;
     }
 
-#ifdef USE_INCREMENTAL
+#ifdef USE_INCREMENTAL_BF
     bfcounter cnt(P);
+#elif defined USE_INCREMENTAL_DF
+    icounter cnt(P);
 #else
     counter cnt(P);
 #endif
@@ -3709,8 +3711,10 @@ out:
 
     unsigned dim = P->Dimension - nparam;
 
-#ifdef USE_INCREMENTAL
+#ifdef USE_INCREMENTAL_BF
     bfenumerator et(P, dim, PP->nbV);
+#elif defined USE_INCREMENTAL_DF
+    ienumerator et(P, dim, PP->nbV);
 #else
     enumerator et(P, dim, PP->nbV);
 #endif
@@ -5350,7 +5354,11 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	P = remove_equalities_p(P, P->Dimension-nparam, NULL);
     assert(P->NbEq == 0);
 
+#ifdef USE_INCREMENTAL_BF
     partial_bfcounter red(P, nparam);
+#else
+    partial_reducer red(P, nparam);
+#endif
     red.start(MaxRays);
     Polyhedron_Free(P);
     return red.gf;
