@@ -3002,6 +3002,10 @@ void cumulator::cumulate()
     evalue t;	// E_num[0] - (m-1)
 #ifdef USE_MODULO
     evalue *cst;
+#else
+    evalue mone;
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
 #endif
 
     value_init(cum.d);
@@ -3052,6 +3056,9 @@ void cumulator::cumulate()
     free_evalue_refs(&f);
     free_evalue_refs(&t);
     free_evalue_refs(&cum);
+#ifndef USE_MODULO
+    free_evalue_refs(&mone);
+#endif
 }
 
 struct E_poly_term {
