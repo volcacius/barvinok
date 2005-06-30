@@ -58,4 +58,17 @@ examples in tests/ehrhart/ .
 
 Note that the fractional representation is subject to change.
 
+The library supports three specialization algorithms.
+The first performs a direct specialization using a random vector.
+The second performs a "depth-first" incremental specialization.
+The third performs a "breadth-first" incremental specialization.
+
+The first is usually the fastest, but can fail if the random
+vector happens to be chosen incorrectly.
+The incremental algorithms should never fail, but can be slower,
+in some cases by quite a bit.  The breadth-first version should
+be faster than the depth-first version, especially on polytopes
+of moderate dimension with a lot of "structure", but can require
+more memory.
+
 Sven Verdoolaege <skimo@kotnet.org>
