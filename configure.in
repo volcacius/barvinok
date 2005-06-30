@@ -1,8 +1,8 @@
 AC_INIT
-AM_INIT_AUTOMAKE(barvinok, 0.15)
+AM_INIT_AUTOMAKE(barvinok, 0.16)
 AC_PROG_CXX
 AC_SUBST(versioninfo)
-versioninfo=8:0:4
+versioninfo=9:0:5
 
 AC_CANONICAL_HOST
 AC_LIBTOOL_WIN32_DLL

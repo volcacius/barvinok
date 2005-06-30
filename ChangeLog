@@ -1,4 +1,18 @@
 ---
+version: 0.16
+date: Thu Jun 30 12:10:29 CEST 2005
+changes:
+    - implement "breadth-first" incremental specialization
+    - implement non-incremental version for series computation
+    - make non-incremental specialization the default again
+    - check for bad PolyLib version at runtime
+    - compiles on Windows (mingw32)
+    - add version option
+    - allow crosscompilation
+    - compute the coefficients of an Ehrhart series
+    - fix conversion of PIP output to polyhedra
+    - allow direct verification of Ehrhart series
+---
 version: 0.15
 date: Sun Dec 12 23:00:40 CET 2004
 changes:
