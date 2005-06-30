@@ -1175,5 +1175,17 @@ const char *barvinok_version()
 #else
 	" -INCREMENTAL"
 #endif
-    "\n";
+    "\n"
+#ifdef HAVE_CORRECT_VERTICES
+	" +CORRECT_VERTICES"
+#else
+	" -CORRECT_VERTICES"
+#endif
+#ifdef HAVE_PIPLIB
+	" +PIPLIB"
+#else
+	" -PIPLIB"
+#endif
+    "\n"
+    ;
 }
