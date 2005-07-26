@@ -61,5 +61,5 @@ check:
 	    fi \
 	done
 
-version.h: $(top_srcdir)/.git/HEAD
-	echo '#define GIT_HEAD_ID "'`cat $<`'"' > $@
+version.h: @GIT_HEAD@
+	echo '#define GIT_HEAD_ID "'@GIT_HEAD_VERSION@'"' > $@

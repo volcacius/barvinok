@@ -230,7 +230,10 @@ AC_CHECK_LIB(ntl, main,[],[
 ])
 
 AC_SUBST(GIT_HEAD_ID)
+AC_SUBST(GIT_HEAD)
+AC_SUBST(GIT_HEAD_VERSION)
 if test -f $srcdir/.git/HEAD; then
+    GIT_HEAD="$srcdir/.git/HEAD"
     GIT_HEAD_ID=`cat $srcdir/.git/HEAD`
 elif test -f $srcdir/GIT_HEAD_ID; then
     GIT_HEAD_ID=`cat $srcdir/GIT_HEAD_ID`
@@ -244,6 +247,11 @@ else
     else
 	GIT_HEAD_ID="UNKNOWN"
     fi
+fi
+if test -z "$GIT_HEAD" ; then
+    GIT_HEAD_VERSION="$GIT_HEAD_ID"
+else
+    GIT_HEAD_VERSION='`cat $<`'
 fi
 echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 
