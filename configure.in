@@ -213,17 +213,17 @@ if test "$ntl_package" = "no"; then
     AC_MSG_ERROR(Need ntl)
 fi
 
+if test "$ntl_package" != "yes"; then
+    CPPFLAGS="-I$ntl_package/include $CPPFLAGS"
+    LDFLAGS="-L$ntl_package/lib $LDFLAGS"
+fi
+
 AC_EGREP_CPP(yes, [
     #include <NTL/ZZ.h>
     #ifdef NTL_GMP_LIP
     yes
     #endif
     ],:,AC_MSG_ERROR(ntl not compiled with gmp support))
-
-if test "$ntl_package" != "yes"; then
-    CPPFLAGS="-I$ntl_package/include $CPPFLAGS"
-    LDFLAGS="-L$ntl_package/lib $LDFLAGS"
-fi
 
 AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
