@@ -151,7 +151,7 @@ AC_TRY_COMPILE([#include <polylib/polylibgmp.h>],
 	       [AC_MSG_RESULT(3)])
 
 AC_ARG_WITH(piplib,
-            [  --with-piplib=DIR       DIR Location of PolyLib],
+            [  --with-piplib=DIR       DIR Location of PIP],
             [ echo "Package piplib : $withval" && piplib_package=$withval],  
             [ piplib_package=yes ])
 
