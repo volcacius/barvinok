@@ -32,6 +32,15 @@ TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl NTL_5_3_2.patch
 
+install-data-local:
+	test -z "$(pkgconfig_libdir)" || $(mkdir_p) "$(DESTDIR)$(pkgconfig_libdir)"
+	echo " $(INSTALL_DATA) $(pkgconfig_libfile) $(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
+	$(INSTALL_DATA) $(pkgconfig_libfile) "$(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
+
+uninstall-local:
+	echo " rm -f $(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
+	rm -f "$(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
+
 dist-hook:
 	if test -f $(top_srcdir)/.git/HEAD; then \
 	    cp $(top_srcdir)/.git/HEAD $(distdir)/GIT_HEAD_ID; \
