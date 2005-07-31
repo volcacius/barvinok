@@ -1,4 +1,4 @@
-dnl @* AX_CREATE_PKGCONFIG_INFO [(outputfile, [requires [,libs [,summary]]])]
+dnl @* AX_CREATE_PKGCONFIG_INFO [(outputfile, [requires [,libs [,summary [,cflags]]]])]
 dnl defaults:
 dnl   $1 = $PACKAGE_NAME.pc
 dnl   $2 = (empty)
