@@ -30,7 +30,14 @@ verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
-EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl NTL_5_3_2.patch
+EXTRA_DIST = \
+    ChangeLog \
+    $(TESTFILES) \
+    cdd2polylib.pl \
+    NTL_5_3_2.patch \
+    polymake/Makefile.in \
+    polymake/configure.in \
+    polymake/lattice_points.cc
 
 ACLOCAL_AMFLAGS = -I m4
 
