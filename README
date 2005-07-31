@@ -17,14 +17,14 @@ For NTL this means you have to specify
 Suppose you want to put everyting in /opt,
 Then you configure/compile polylib using
 
-./configure --with-libgmp --prefix=/opt
+./configure --with-libgmp=/path/to/gmp --prefix=/opt
 make
 make install
 
 For NTL,
 
 cd src
-./configure NTL_GMP_LIP=on PREFIX=/opt
+./configure NTL_GMP_LIP=on PREFIX=/opt GMP_PREFIX=/path/to/gmp
 make
 make install
 

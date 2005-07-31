@@ -1,0 +1,26 @@
+AC_INIT
+
+AC_SUBST(bv_cv_polymake)
+AC_ARG_WITH(polymake,
+	AS_HELP_STRING([--with-polymake=DIR], [DIR Location of polymake])],
+	[bv_cv_polymake=$withval], [])
+
+if test -z $bv_cv_polymake; then
+    for pm in /usr /usr/local; do
+	if test -f $pm/polymake/Makefile; then
+	    bv_cv_polymake=$pm/polymake
+	    break;
+	fi
+    done
+else
+    if test ! -f $bv_cv_polymake/Makefile; then
+	bv_cv_polymake=""
+    fi
+fi
+if test -z $bv_cv_polymake; then
+    AC_MSG_ERROR(polymake Makefile not found)
+fi
+
+PKG_CHECK_MODULES([barvinok], [barvinok])
+
+AC_OUTPUT(Makefile)
