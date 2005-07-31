@@ -32,6 +32,8 @@ TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = ChangeLog $(TESTFILES) cdd2polylib.pl NTL_5_3_2.patch
 
+ACLOCAL_AMFLAGS = -I m4
+
 install-data-local:
 	test -z "$(pkgconfig_libdir)" || $(mkdir_p) "$(DESTDIR)$(pkgconfig_libdir)"
 	echo " $(INSTALL_DATA) $(pkgconfig_libfile) $(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
