@@ -36,6 +36,7 @@ EXTRA_DIST = \
     cdd2polylib.pl \
     NTL_5_3_2.patch \
     polymake/Makefile.in \
+    polymake/autogen.sh \
     polymake/configure.in \
     polymake/lattice_points.cc
 
@@ -49,6 +50,8 @@ uninstall-local:
 	rm -f "$(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
 
 dist-hook:
+	(cd $(distdir)/polymake; \
+	    ./autogen.sh; rm -rf autogen.sh autom4te.cache)
 	if test -f $(top_srcdir)/.git/HEAD; then \
 	    cp $(top_srcdir)/.git/HEAD $(distdir)/GIT_HEAD_ID; \
 	else \
