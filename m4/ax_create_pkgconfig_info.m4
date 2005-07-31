@@ -1,10 +1,11 @@
-dnl @* AX_CREATE_PKGCONFIG_INFO [(outputfile, [requires [,libs [,summary [,cflags]]]])]
+dnl @* AX_CREATE_PKGCONFIG_INFO [(outputfile, [requires [,libs [,summary [,cflags [,ldflags]]]]])]
 dnl defaults:
 dnl   $1 = $PACKAGE_NAME.pc
 dnl   $2 = (empty)
 dnl   $3 = $PACKAGE_LIBS $LIBS (as set at that point in configure.ac)
 dnl   $4 = $PACKAGE_SUMMARY (or $1 Library)
 dnl   $5 = $CPPFLAGS $PACKAGE_CFLAGS (as set at the point in configure.ac)
+dnl   $6 = $LDFLAGS $PACKAGE_LDFLAGS (as set at the point in configure.ac)
 dnl
 dnl   PACKAGE_NAME defaults to $PACKAGE if not set.
 dnl   PACKAGE_LIBS defaults to -l$PACKAGE_NAME if not set.
@@ -28,6 +29,7 @@ AS_VAR_PUSHDEF([PKGCONFIG_description],[ax_create_pkgconfig_description])dnl
 AS_VAR_PUSHDEF([PKGCONFIG_requires],[ax_create_pkgconfig_requires])dnl
 AS_VAR_PUSHDEF([PKGCONFIG_pkglibs],[ax_create_pkgconfig_pkglibs])dnl
 AS_VAR_PUSHDEF([PKGCONFIG_libs],[ax_create_pkgconfig_libs])dnl
+AS_VAR_PUSHDEF([PKGCONFIG_ldflags],[ax_create_pkgconfig_ldflags])dnl
 AS_VAR_PUSHDEF([PKGCONFIG_cppflags],[ax_create_pkgconfig_cppflags])dnl
 AS_VAR_PUSHDEF([PKGCONFIG_generate],[ax_create_pkgconfig_generate])dnl
 AS_VAR_PUSHDEF([PKGCONFIG_src_libdir],[ax_create_pkgconfig_src_libdir])dnl
@@ -109,6 +111,12 @@ PKGCONFIG_cppflags=`eval echo "$PKGCONFIG_cppflags"`
 PKGCONFIG_cppflags=`eval echo "$PKGCONFIG_cppflags"`
 AC_MSG_RESULT($PKGCONFIG_cppflags)
 
+AC_MSG_CHECKING(our pkgconfig ldflags)
+PKGCONFIG_ldflags="ifelse($6,,$LDFLAGS $PACKAGE_LDFLAGS,$5)"
+PKGCONFIG_ldflags=`eval echo "$PKGCONFIG_ldflags"`
+PKGCONFIG_ldflags=`eval echo "$PKGCONFIG_ldflags"`
+AC_MSG_RESULT($PKGCONFIG_ldflags)
+
 test ".$PKGCONFIG_generate" != "." || \
 PKGCONFIG_generate="ifelse($1,,$PKGCONFIG_libname.pc,$1)"
 PKGCONFIG_generate=`eval echo "$PKGCONFIG_generate"`
@@ -166,7 +174,7 @@ Name: @PACKAGE_NAME@
 Description: @PACKAGE_DESCRIPTION@
 Version: @PACKAGE_VERSION@
 Requires: @PACKAGE_REQUIRES@
-Libs: -L\${libdir} @LIBS@
+Libs: -L\${libdir} @LDFLAGS@ @LIBS@
 Cflags: -I\${includedir} @CPPFLAGS@
 AXEOF
 fi # DONE generate $pkgconfig_generate.in
@@ -186,6 +194,7 @@ s|@PACKAGE_DESCRIPTION@|${pkgconfig_description}|
 s|@PACKAGE_VERSION@|${pkgconfig_version}|
 s|@PACKAGE_REQUIRES@|${pkgconfig_requires}|
 s|@LIBS@|${pkgconfig_libs}|
+s|@LDFLAGS@|${pkgconfig_ldflags}|
 s|@CPPFLAGS@|${pkgconfig_cppflags}|
 AXEOF
 sed -f conftest.sed  $pkgconfig_generate.in > $pkgconfig_generate
@@ -209,6 +218,7 @@ s|@PACKAGE_DESCRIPTION@|${pkgconfig_description}|
 s|@PACKAGE_VERSION@|${pkgconfig_version}|
 s|@PACKAGE_REQUIRES@|${pkgconfig_requires}|
 s|@LIBS@|${pkgconfig_libs}|
+s|@LDFLAGS@|${pkgconfig_ldflags}|
 s|@CPPFLAGS@|${pkgconfig_cppflags}|
 AXEOF
 sed -f conftest.sed $pkgconfig_generate.in > $pkgconfig_uninstalled
@@ -236,6 +246,7 @@ s|@PACKAGE_DESCRIPTION@|\"${pkgconfig_description}\"|
 s|@PACKAGE_VERSION@|\"${pkgconfig_version}\"|
 s|@PACKAGE_REQUIRES@|\"${pkgconfig_requires}\"|
 s|@LIBS@|\"${pkgconfig_libs}\"|
+s|@LDFLAGS@|\"${pkgconfig_ldflags}\"|
 s|@CPPFLAGS@|\"${pkgconfig_cppflags}\"|
 s>Name:>for option\\; do case \"\$option\" in --list-all|--name) echo >
 s>Description: *>\\;\\; --help) pkg-config --help \\; echo Buildscript Of >
@@ -272,6 +283,7 @@ pkgconfig_description='$ax_create_pkgconfig_description'
 pkgconfig_version='$ax_create_pkgconfig_version'
 pkgconfig_requires='$ax_create_pkgconfig_requires'
 pkgconfig_libs='$ax_create_pkgconfig_libs'
+pkgconfig_ldflags='$ax_create_pkgconfig_ldflags'
 pkgconfig_cppflags='$ax_create_pkgconfig_cppflags'
 pkgconfig_src_libdir='$ax_create_pkgconfig_src_libdir'
 pkgconfig_src_headers='$ax_create_pkgconfig_src_headers'
@@ -285,6 +297,7 @@ AS_VAR_POPDEF([PKGCONFIG_description])dnl
 AS_VAR_POPDEF([PKGCONFIG_requires])dnl
 AS_VAR_POPDEF([PKGCONFIG_pkglibs])dnl
 AS_VAR_POPDEF([PKGCONFIG_libs])dnl
+AS_VAR_POPDEF([PKGCONFIG_ldflags])dnl
 AS_VAR_POPDEF([PKGCONFIG_cppflags])dnl
 AS_VAR_POPDEF([PKGCONFIG_generate])dnl
 AS_VAR_POPDEF([PKGCONFIG_src_libdir])dnl
