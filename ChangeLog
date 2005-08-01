@@ -1,4 +1,10 @@
 ---
+version: 0.17
+date: Mon Aug  1 12:23:50 CEST 2005
+changes:
+    - fix some configuration problems
+    - include minimal polymake client
+---
 version: 0.16
 date: Thu Jun 30 12:10:29 CEST 2005
 changes:
