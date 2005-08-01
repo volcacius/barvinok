@@ -36,6 +36,7 @@ EXTRA_DIST = \
     cdd2polylib.pl \
     NTL_5_3_2.patch \
     polymake/Makefile.in \
+    polymake/README \
     polymake/autogen.sh \
     polymake/configure.in \
     polymake/lattice_points.cc
