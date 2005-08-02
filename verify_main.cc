@@ -223,6 +223,8 @@ int main(int argc,char *argv[]) {
       else
 	value_set_si(C1->p[i][j],0);
   CC = Polyhedron_Image(PP,C1,MAXRAYS);
+  Matrix_Free(C1);
+  Domain_Free(PP);
   Domain_Free(C);
   C = CC;
 
@@ -279,6 +281,7 @@ int main(int argc,char *argv[]) {
 	    if (!check_series(S,C,gf,C->Dimension,0,p))
 		result = -1;
 	}
+	Domain_Free(S);
     }
 
     if (result == -1)
@@ -295,6 +298,8 @@ int main(int argc,char *argv[]) {
     value_clear(p[i]);
   value_clear(tmp);
   Free_ParamNames(params, C->Dimension);
+  Domain_Free(P);
+  Domain_Free(C);
   return result;
 } /* main */
 
