@@ -1902,7 +1902,7 @@ struct bfc_term_base {
 	powers = new int[len];
     }
 
-    ~bfc_term_base() {
+    virtual ~bfc_term_base() {
 	delete [] powers;
     }
 };
