@@ -541,8 +541,13 @@ void decomposer::decompose(Polyhedron *C)
     if (abs(det) > 1) {
 	nonuni.push_back(c);
     } else {
-	handle(C, 1);
-	delete c;
+	try {
+	    handle(C, 1);
+	    delete c;
+	} catch (...) {
+	    delete c;
+	    throw;
+	}
     }
     vec_ZZ lambda;
     while (!nonuni.empty()) {
@@ -560,8 +565,21 @@ void decomposer::decompose(Polyhedron *C)
 		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
 	    } else {
-		handle(pc->poly(), sign(pc->det) * s);
-		delete pc;
+		try {
+		    handle(pc->poly(), sign(pc->det) * s);
+		    delete pc;
+		} catch (...) {
+		    delete c;
+		    delete pc;
+		    while (!nonuni.empty()) {
+			c = nonuni.back();
+			nonuni.pop_back();
+			delete c;
+		    }
+		    Matrix_Free(M);
+		    Vector_Free(v);
+		    throw;
+		}
 	    }
 	    Matrix_Free(M);
 	}
@@ -578,9 +596,14 @@ void polar_decomposer::decompose(Polyhedron *cone, unsigned MaxRays)
 	cone = triangularize_cone(cone, MaxRays);
 	Polyhedron_Free(tmp);
     }
-    for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	decomposer::decompose(Polar);
-    Domain_Free(cone);
+    try {
+	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
+	    decomposer::decompose(Polar);
+	Domain_Free(cone);
+    } catch (...) {
+	Domain_Free(cone);
+	throw;
+    }
 }
 
 void polar_decomposer::handle(Polyhedron *P, int sign)
@@ -1474,7 +1497,6 @@ struct counter : public polar_decomposer {
     counter(Polyhedron *P) {
 	this->P = P;
 	dim = P->Dimension;
-	randomvector(P, lambda, dim);
 	rays.SetDims(dim, dim);
 	den.SetLength(dim);
 	mpq_init(count);
@@ -1489,13 +1511,16 @@ struct counter : public polar_decomposer {
     virtual void handle_polar(Polyhedron *P, int sign);
 };
 
+struct OrthogonalException {} Orthogonal;
+
 void counter::handle_polar(Polyhedron *C, int s)
 {
     int r = 0;
     assert(C->NbRays-1 == dim);
     add_rays(rays, C, &r);
     for (int k = 0; k < dim; ++k) {
-	assert(lambda * rays[k] != 0);
+	if (lambda * rays[k] == 0)
+	    throw Orthogonal;
     }
 
     sign = s;
@@ -1516,9 +1541,17 @@ void counter::handle_polar(Polyhedron *C, int s)
 
 void counter::start(unsigned MaxRays)
 {
-    for (j = 0; j < P->NbRays; ++j) {
-	Polyhedron *C = supporting_cone(P, j);
-	decompose(C, MaxRays);
+    for (;;) {
+	try {
+	    randomvector(P, lambda, dim);
+	    for (j = 0; j < P->NbRays; ++j) {
+		Polyhedron *C = supporting_cone(P, j);
+		decompose(C, MaxRays);
+	    }
+	    break;
+	} catch (OrthogonalException &e) {
+	    mpq_set_si(count, 0, 0);
+	}
     }
 }
 
