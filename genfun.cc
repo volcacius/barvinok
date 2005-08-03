@@ -1,5 +1,6 @@
 #include <iostream>
 #include <assert.h>
+#include "config.h"
 #include <genfun.h>
 #include <barvinok.h>
 #include <barvinok2.h>
@@ -269,7 +270,7 @@ void gen_fun::coefficient(Value* params, Value* c) const
 		    zz2value(d[c][r], C->p[r][1+c]);
 		}
 		zz2value(term[i]->n.power[j][r], C->p[r][1+nvar]);
-		value_substract(C->p[r][1+nvar], C->p[r][1+nvar], params[r]);
+		value_subtract(C->p[r][1+nvar], C->p[r][1+nvar], params[r]);
 	    }
 	    for (int r = 0; r < nvar; ++r) {
 		value_set_si(C->p[nparam+r][0], 1);

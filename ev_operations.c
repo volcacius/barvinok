@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "config.h"
 #include "ev_operations.h"
 #include "barvinok.h"
 #include "util.h"
@@ -2540,7 +2540,7 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
 	value_division(T->p[0][pp->x.p->pos-1], *d, pp->x.p->arr[1].d);
 	mpz_mul_ui(twice, pp->x.p->arr[1].x.n, 2);
 	if (fiddle && value_gt(twice, pp->x.p->arr[1].d))
-	    value_substract(pp->x.p->arr[1].x.n, 
+	    value_subtract(pp->x.p->arr[1].x.n, 
 			    pp->x.p->arr[1].x.n, pp->x.p->arr[1].d);
 	value_multiply(T->p[0][pp->x.p->pos-1], 
 		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
@@ -2621,7 +2621,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    Matrix *M = Matrix_Alloc(1, D->Dimension+2);
 	    Vector_Copy(T->p[0], M->p[0]+1, D->Dimension+1);
 	    value_multiply(min, min, d);
-	    value_substract(M->p[0][D->Dimension+1],
+	    value_subtract(M->p[0][D->Dimension+1],
 			    M->p[0][D->Dimension+1], min);
 	    E = DomainAddConstraints(D, M, 0);
 	    value_clear(d);
@@ -2673,7 +2673,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
     bounded = line_minmax(I, &min, &max); /* frees I */
     mpz_fdiv_q(min, min, d);
     mpz_fdiv_q(max, max, d);
-    value_substract(d, max, min);
+    value_subtract(d, max, min);
 
     if (bounded && value_eq(min, max)) {
 	evalue inc;

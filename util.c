@@ -321,10 +321,10 @@ void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
     while(value_pos_p(d)) {
 	value_division(tmp, c, d);
 	value_multiply(tmp, tmp, f);
-	value_substract(e, e, tmp);
+	value_subtract(e, e, tmp);
 	value_division(tmp, c, d);
 	value_multiply(tmp, tmp, d);
-	value_substract(c, c, tmp);
+	value_subtract(c, c, tmp);
 	value_swap(c, d);
 	value_swap(e, f);
     }
@@ -338,7 +338,7 @@ void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 	value_set_si(*y, 0);
     else {
 	value_multiply(tmp, a, *x);
-	value_substract(tmp, c, tmp);
+	value_subtract(tmp, c, tmp);
 	value_division(*y, tmp, b);
     }
     value_clear(c);
@@ -606,7 +606,7 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 		    else
 			mpz_fdiv_q(neg, tmp, P->Constraint[p][i+1]);
 		}
-		value_substract(tmp, neg, pos);
+		value_subtract(tmp, neg, pos);
 		value_increment(tmp, tmp);
 		value_multiply(*factor, *factor, tmp);
 	    }
@@ -1084,7 +1084,7 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 	if (exist)
 	    value_set_si(*res, 1);
 	else {
-	    value_substract(k,UB,LB);
+	    value_subtract(k,UB,LB);
 	    value_add_int(k,k,1);
 	    value_assign(*res, k);
 	}
