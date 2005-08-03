@@ -305,7 +305,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
     assert(PolyhedronIncludes(P, U));
 }
 
-void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
+static void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 {
     Value c, d, e, f, tmp;
 
@@ -561,7 +561,7 @@ static int **find_singles(Polyhedron *P, int dim, int max, int *nsingle)
 	    ++*nsingle;
     if (!*nsingle) {
 	free_singles(singles, dim);
-	singles = 0;
+	singles = NULL;
     }
     return singles;
 }
@@ -584,7 +584,7 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     singles = find_singles(P, dim, 2, &nsingle);
 
     if (nsingle == 0)
-	return 0;
+	return NULL;
 
     {
 	Value tmp, pos, neg;
@@ -669,7 +669,7 @@ Polyhedron* Polyhedron_Project(Polyhedron *P, int dim)
  * the first constraint is (strictly) smaller than
  * the second.
  */
-void smaller_constraint(Value *a, Value *b, Value *c, int pos, int shift,
+static void smaller_constraint(Value *a, Value *b, Value *c, int pos, int shift,
 			int len, int strict, Value *tmp)
 {
     value_oppose(*tmp, b[pos+1]);
@@ -692,7 +692,7 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
     singles = find_singles(P, nvar, P->NbConstraints, &nsingle);
 
     if (nsingle == 0)
-	return 0;
+	return NULL;
 
     {
 	Polyhedron *C, *T;
@@ -1159,7 +1159,7 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
     return in_domain(P, list_args);
 }
 
-const char *barvinok_version()
+const char *barvinok_version(void)
 {
     return 
 	"barvinok " VERSION " (" GIT_HEAD_ID ")\n"
