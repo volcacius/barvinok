@@ -588,7 +588,7 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 
     {
 	Value tmp, pos, neg;
-	Matrix *m = Matrix_Alloc((dim-nsingle)+1, dim+1);
+	Matrix *m;
 
 	value_init(tmp);
 	value_init(pos);
@@ -596,29 +596,42 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
 
 	for (i = 0, j = 0; i < dim; ++i) {
 	    if (singles[i][0] != 2)
-		value_set_si(m->p[j++][i], 1);
-	    else {
-		for (k = 0; k <= 1; ++k) {
-		    p = singles[i][1+k];
-		    value_oppose(tmp, P->Constraint[p][dim+1]);
-		    if (value_pos_p(P->Constraint[p][i+1]))
-			mpz_cdiv_q(pos, tmp, P->Constraint[p][i+1]);
-		    else
-			mpz_fdiv_q(neg, tmp, P->Constraint[p][i+1]);
-		}
-		value_subtract(tmp, neg, pos);
-		value_increment(tmp, tmp);
-		value_multiply(*factor, *factor, tmp);
+		continue;
+	    for (k = 0; k <= 1; ++k) {
+		p = singles[i][1+k];
+		value_oppose(tmp, P->Constraint[p][dim+1]);
+		if (value_pos_p(P->Constraint[p][i+1]))
+		    mpz_cdiv_q(pos, tmp, P->Constraint[p][i+1]);
+		else
+		    mpz_fdiv_q(neg, tmp, P->Constraint[p][i+1]);
 	    }
+	    value_subtract(tmp, neg, pos);
+	    value_increment(tmp, tmp);
+	    value_multiply(*factor, *factor, tmp);
 	}
-	value_set_si(m->p[dim-nsingle][dim], 1);
-	P = Polyhedron_Image(P, m, P->NbConstraints);
-	Matrix_Free(m);
-	free_singles(singles, dim);
 
 	value_clear(tmp);
 	value_clear(pos);
 	value_clear(neg);
+
+ 	m = Matrix_Alloc(P->NbConstraints - 2*nsingle, 1+dim-nsingle+1);
+ 
+ 	for (i = 0, j = 0; i < P->NbConstraints; ++i) {
+ 	    k = First_Non_Zero(P->Constraint[i]+1, dim);
+ 	    if (singles[k][0] == 2)
+ 		continue;
+ 
+ 	    value_assign(m->p[j][0], P->Constraint[i][0]);
+ 	    value_assign(m->p[j][1+dim-nsingle], P->Constraint[i][1+dim]);
+ 	    for (k = 0, p = 0; k < dim; ++k) {
+ 		if (singles[k][0] != 2)
+ 		    value_assign(m->p[j][1+p++], P->Constraint[i][1+k]);
+ 	    }
+ 	    ++j;
+ 	}
+ 	P = Constraints2Polyhedron(m, (P->NbRays >> nsingle));
+	Matrix_Free(m);
+	free_singles(singles, dim);
     }
 
     return P;
