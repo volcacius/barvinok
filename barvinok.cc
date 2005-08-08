@@ -2635,7 +2635,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     Polyhedron *Q;
     int r = 0;
 
-    if (emptyQ(P)) {
+    if (emptyQ2(P)) {
 	value_set_si(*result, 0);
 	return;
     }
@@ -2672,6 +2672,8 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	value_clear(factor);
 	return;
     }
+
+    POL_ENSURE_VERTICES(P);
 
 #ifdef USE_INCREMENTAL_BF
     bfcounter cnt(P);

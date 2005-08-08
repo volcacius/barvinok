@@ -7,6 +7,16 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
+#ifdef POL_NO_DUAL
+#define emptyQ2(P)							\
+	((F_ISSET(P, POL_INEQUALITIES) && P->NbEq > P->Dimension) ||	\
+	 (F_ISSET(P, POL_POINTS) && P->NbRays == 0))
+#else
+#define POL_NO_DUAL		0
+#define emptyQ2(P)		emptyQ(P)
+#define POL_ENSURE_VERTICES(P)	/* nothing */
+#endif
+
 void value_lcm(Value i, Value j, Value* lcm);
 int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);

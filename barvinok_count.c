@@ -6,7 +6,7 @@
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    0
+#define MAXRAYS    POL_NO_DUAL
 #else
 #define MAXRAYS  600
 #endif

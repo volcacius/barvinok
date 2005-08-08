@@ -629,7 +629,8 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
  	    }
  	    ++j;
  	}
- 	P = Constraints2Polyhedron(m, (P->NbRays >> nsingle));
+ 	P = Constraints2Polyhedron(m, POL_NO_DUAL ?
+				      POL_NO_DUAL : (P->NbRays >> nsingle));
 	Matrix_Free(m);
 	free_singles(singles, dim);
     }
