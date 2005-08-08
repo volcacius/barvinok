@@ -3065,7 +3065,7 @@ void cumulator::cumulate()
 		value_set_si(f.d, m);
 		emul(&f, &cum);
 #ifdef USE_MODULO
-		value_substract(cst->x.n, cst->x.n, cst->d);
+		value_subtract(cst->x.n, cst->x.n, cst->d);
 #else
 		eadd(&mone, &t);
 #endif
@@ -3905,7 +3905,7 @@ static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
     value_oppose(*v, u[pos+1]);
     Vector_Combine(l+1, u+1, c+1, *v, l[pos+1], len-1);
     value_multiply(*v, *v, l[pos+1]);
-    value_substract(c[len-1], c[len-1], *v);
+    value_subtract(c[len-1], c[len-1], *v);
     value_set_si(*v, -1);
     Vector_Scale(c+1, c+1, *v, len-1);
     value_decrement(c[len-1], c[len-1]);
@@ -3942,7 +3942,7 @@ static void negative_test_constraint7(Value *l, Value *u, Value *c, int pos,
     Vector_Gcd(&l[1+pos], exist, &g);
     Vector_Combine(l+1, u+1, c+1, *v, g, len-1);
     value_multiply(*v, *v, g);
-    value_substract(c[len-1], c[len-1], *v);
+    value_subtract(c[len-1], c[len-1], *v);
     value_set_si(*v, -1);
     Vector_Scale(c+1, c+1, *v, len-1);
     value_decrement(c[len-1], c[len-1]);
@@ -4293,7 +4293,7 @@ static evalue* enumerate_sure(Polyhedron *P,
 		continue;
 	    value_division(f, lcm, S->Constraint[j][1+nvar+i]);
 	    Vector_Scale(S->Constraint[j], M->p[c], f, S->Dimension+2);
-	    value_substract(M->p[c][S->Dimension+1], 
+	    value_subtract(M->p[c][S->Dimension+1], 
 			    M->p[c][S->Dimension+1],
 			    lcm);
 	    value_increment(M->p[c][S->Dimension+1], 
@@ -4634,7 +4634,7 @@ static evalue* enumerate_ray(Polyhedron *P,
     // Matrix_Print(stderr, P_VALUE_FMT, M);
     D = AddConstraints(M->p[0], 2, P, MaxRays);
     // Polyhedron_Print(stderr, P_VALUE_FMT, D);
-    value_substract(M->p[0][1+P->Dimension], M->p[0][1+P->Dimension], 
+    value_subtract(M->p[0][1+P->Dimension], M->p[0][1+P->Dimension], 
 		    P->Ray[r][1+nvar+exist+i]);
     // Matrix_Print(stderr, P_VALUE_FMT, M);
     S = AddConstraints(M->p[0], 1, P, MaxRays);
@@ -5025,7 +5025,7 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 	    for (int j = 0; j < P->NbRays; ++j) {
 		if (value_notzero_p(M->p[j][1+P->Dimension])) {
 		    value_multiply(tmp, min, M->p[j][1+P->Dimension]);
-		    value_substract(M->p[j][1+i], M->p[j][1+i], tmp);
+		    value_subtract(M->p[j][1+i], M->p[j][1+i], tmp);
 		}
 	    }
 	    if (T)
@@ -5222,7 +5222,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 			      P->Constraint[l][nvar+i+1]);
 		    value_addto(row->p[len-1], row->p[len-1], f);
 		    value_multiply(f, f, P->Constraint[l][nvar+i+1]);
-		    value_substract(row->p[len-1], row->p[len-1], f);
+		    value_subtract(row->p[len-1], row->p[len-1], f);
 		    value_decrement(row->p[len-1], row->p[len-1]);
 		    ConstraintSimplify(row->p, row->p, len, &f);
 		    value_set_si(f, -1);

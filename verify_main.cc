@@ -260,7 +260,7 @@ int main(int argc,char *argv[]) {
 
 #ifndef PRINT_ALL_RESULTS
   if(C->Dimension > 0) {
-    value_substract(tmp,Max,Min);
+    value_subtract(tmp,Max,Min);
     if (VALUE_TO_INT(tmp) > 80)
       st = 1+(VALUE_TO_INT(tmp))/80;
     else
