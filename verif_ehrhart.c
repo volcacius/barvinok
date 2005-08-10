@@ -56,6 +56,7 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
     
     /* Computes the ehrhart polynomial */
     value_assign(c,*(ctmp=compute_poly(en,&z[S->Dimension-nparam+1])));
+    value_clear(*ctmp);
     free(ctmp);
     /* if c=0 we may be out of context. */
     /* scanning is useless in this case*/
