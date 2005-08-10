@@ -2625,13 +2625,14 @@ void partial_bfcounter::start(unsigned MaxRays)
 
 typedef Polyhedron * Polyhedron_p;
 
+static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons);
+
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
     Polyhedron ** vcone;
     ZZ sign;
     unsigned dim;
     int allocated = 0;
-    Value factor;
     Polyhedron *Q;
     int r = 0;
 
@@ -2664,22 +2665,35 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	    Polyhedron_Free(P);
 	return;
     }
-    value_init(factor);
-    value_set_si(factor, 1);
-    Q = Polyhedron_Reduce(P, &factor);
+    Q = Polyhedron_Factor(P, NbMaxCons);
     if (Q) {
 	if (allocated)
 	    Polyhedron_Free(P);
 	P = Q;
 	allocated = 1;
     }
-    if (P->Dimension == 0) {
-	value_assign(*result, factor);
-	if (allocated)
-	    Polyhedron_Free(P);
+
+    barvinok_count_f(P, result, NbMaxCons);
+    if (P->next) {
+	Value factor;
+	value_init(factor);
+
+	for (Q = P->next; Q; Q = Q->next) {
+	    barvinok_count_f(Q, &factor, NbMaxCons);
+	    value_multiply(*result, *result, factor);
+	}
+
 	value_clear(factor);
-	return;
     }
+
+    if (allocated)
+	Polyhedron_Free(P);
+}
+
+static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
+{
+    if (P->Dimension == 1)
+	return Line_Length(P, result);
 
     POL_ENSURE_VERTICES(P);
 
@@ -2693,11 +2707,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     cnt.start(NbMaxCons);
 
     assert(value_one_p(&cnt.count[0]._mp_den));
-    value_multiply(*result, &cnt.count[0]._mp_num, factor);
-
-    if (allocated)
-	Polyhedron_Free(P);
-    value_clear(factor);
+    value_assign(*result, &cnt.count[0]._mp_num);
 }
 
 static void uni_polynom(int param, Vector *c, evalue *EP)

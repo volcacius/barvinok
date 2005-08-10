@@ -8,6 +8,14 @@
 #define Polyhedron_Enumerate(a,b,c,d) Polyhedron_Enumerate(a,b,c)
 #endif
 
+#ifdef __GNUC__
+#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
+#define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
+#else
+#define ALLOC(p) p = (void *)malloc(sizeof(*p))
+#define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
+#endif
+
 void manual_count(Polyhedron *P, Value* result)
 {
     Polyhedron *U = Universe_Polyhedron(0);
@@ -636,6 +644,164 @@ Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor)
     }
 
     return P;
+}
+
+void Line_Length(Polyhedron *P, Value *len)
+{
+    Value tmp, pos, neg;
+    int p = 0, n = 0;
+    int i;
+
+    assert(P->Dimension == 1);
+
+    value_init(tmp);
+    value_init(pos);
+    value_init(neg);
+
+    for (i = 0; i < P->NbConstraints; ++i) {
+	value_oppose(tmp, P->Constraint[i][2]);
+	if (value_pos_p(P->Constraint[i][1])) {
+	    mpz_cdiv_q(tmp, tmp, P->Constraint[i][1]);
+	    if (!p || value_gt(tmp, pos))
+		value_assign(pos, tmp);
+	    p = 1;
+	} else {
+	    mpz_fdiv_q(tmp, tmp, P->Constraint[i][1]);
+	    if (!n || value_lt(tmp, neg))
+		value_assign(neg, tmp);
+	    n = 1;
+	}
+	if (n && p) {
+	    value_subtract(tmp, neg, pos);
+	    value_increment(*len, tmp);
+	} else
+	    value_set_si(*len, -1);
+    }
+
+    value_clear(tmp);
+    value_clear(pos);
+    value_clear(neg);
+}
+
+/*
+ * Factors the polyhedron P into polyhedra Q_i such that
+ * the number of integer points in P is equal to the product
+ * of the number of integer points in the individual Q_i
+ *
+ * If no factors can be found, NULL is returned.
+ * Otherwise, a linked list of the factors is returned.
+ *
+ * The algorithm works by first computing the Hermite normal form
+ * and then grouping columns linked by one or more constraints together,
+ * where a constraints "links" two or more columns if the constraint
+ * has nonzero coefficients in the columns.
+ */
+Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays)
+{
+    int i, j, k;
+    Matrix *M, *H, *Q, *U;
+    int *pos;		/* for each column: row position of pivot */
+    int *group;		/* group to which a column belongs */
+    int *cnt;		/* number of columns in the group */
+    int *rowgroup;	/* group to which a constraint belongs */
+    Polyhedron *F = NULL;
+
+    if (P->Dimension <= 1)
+	return NULL;
+
+    assert(P->NbEq == 0);
+
+    NALLOC(pos, P->Dimension);
+    NALLOC(group, P->Dimension);
+    NALLOC(cnt, P->Dimension);
+    NALLOC(rowgroup, P->NbConstraints);
+
+    M = Matrix_Alloc(P->NbConstraints, P->Dimension);
+    for (i = 0; i < P->NbConstraints; ++i)
+	Vector_Copy(P->Constraint[i]+1, M->p[i], P->Dimension);
+    left_hermite(M, &H, &Q, &U);
+    Matrix_Free(M);
+    Matrix_Free(Q);
+    Matrix_Free(U);
+
+    for (i = 0; i < P->NbConstraints; ++i)
+	rowgroup[i] = -1;
+    for (i = 0, j = 0; i < H->NbColumns; ++i) {
+	for ( ; j < H->NbRows; ++j)
+	    if (value_notzero_p(H->p[j][i]))
+		break;
+	assert (j < H->NbRows);
+	pos[i] = j;
+	rowgroup[j] = i;
+    }
+    for (i = 0; i < P->Dimension; ++i) {
+	group[i] = i;
+	cnt[i] = 1;
+    }
+    for (i = 0; i < H->NbColumns && cnt[0] < P->Dimension; ++i) {
+	for (j = pos[i]+1; j <  H->NbRows; ++j) {
+	    if (value_zero_p(H->p[j][i]))
+		continue;
+	    if (rowgroup[j] != -1)
+		continue;
+	    rowgroup[j] = group[i];
+	    for (k = i+1; k < H->NbColumns && j >= pos[k]; ++k) {
+		int g = group[k];
+		while (cnt[g] == 0)
+		    g = group[g];
+		group[k] = g;
+		if (group[k] != group[i] && value_notzero_p(H->p[j][k])) {
+		    assert(cnt[group[k]] != 0);
+		    assert(cnt[group[i]] != 0);
+		    if (group[i] < group[k]) {
+			cnt[group[i]] += cnt[group[k]];
+			cnt[group[k]] = 0;
+			group[k] = group[i];
+		    } else {
+			cnt[group[k]] += cnt[group[i]];
+			cnt[group[i]] = 0;
+			group[i] = group[k];
+		    }
+		}
+	    }
+	}
+    }
+    if (cnt[0] != P->Dimension) {
+	for (i = 0; i < P->Dimension; ++i) {
+	    Polyhedron *T;
+	    if (cnt[i] == 0)
+		continue;
+	    for (j = 0, k = 0; j < P->NbConstraints; ++j)
+		if (group[rowgroup[j]] == i) {
+		    rowgroup[j] = i;
+		    ++k;
+		}
+	    M = Matrix_Alloc(k, cnt[i]+2);
+	    for (j = 0, k = 0; j < P->NbConstraints; ++j) {
+		int l, m;
+		if (rowgroup[j] != i)
+		    continue;
+		value_set_si(M->p[k][0], 1);
+		for (l = 0, m = 0; m < cnt[i]; ++l) {
+		    if (group[l] != i)
+			continue;
+		    value_assign(M->p[k][1+m++], H->p[j][l]);
+		}
+		value_assign(M->p[k][1+m], P->Constraint[j][1+P->Dimension]);
+		++k;
+	    }
+	    T = Constraints2Polyhedron(M, NbMaxRays);
+	    Matrix_Free(M);
+	    T->next = F;
+	    F = T;
+	}
+    }
+    Matrix_Free(H);
+    free(pos);
+    free(group);
+    free(cnt);
+    free(rowgroup);
+    return F;
 }
 
 /*
