@@ -2629,8 +2629,6 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons);
 
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
-    Polyhedron ** vcone;
-    ZZ sign;
     unsigned dim;
     int allocated = 0;
     Polyhedron *Q;
@@ -5461,7 +5459,6 @@ out:
 
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
-    Polyhedron ** vcone;
     Polyhedron *CA;
     unsigned nparam = C->Dimension;
     unsigned dim, nvar;
