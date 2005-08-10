@@ -2656,6 +2656,14 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	}
 	allocated = 1;
     }
+    if (P->Dimension == 0) {
+	/* Test whether the constraints are satisfied */
+	POL_ENSURE_VERTICES(P);
+	value_set_si(*result, !emptyQ(P));
+	if (allocated)
+	    Polyhedron_Free(P);
+	return;
+    }
     value_init(factor);
     value_set_si(factor, 1);
     Q = Polyhedron_Reduce(P, &factor);
