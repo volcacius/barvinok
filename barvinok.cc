@@ -1922,6 +1922,8 @@ struct bfe_term : public bfc_term_base {
 
     ~bfe_term() {
 	for (int i = 0; i < factors.size(); ++i) {
+	    if (!factors[i])
+		continue;
 	    free_evalue_refs(factors[i]);
 	    delete factors[i];
 	}
