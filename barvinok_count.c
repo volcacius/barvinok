@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     Matrix_Free(M);
     value_init(cb);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
-    barvinok_count(A, &cb, 100);
+    barvinok_count(A, &cb, MAXRAYS);
     value_print(stdout, P_VALUE_FMT, cb);
     puts("");
     value_clear(cb);
