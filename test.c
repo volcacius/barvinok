@@ -8,7 +8,7 @@
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    0
+#define MAXRAYS    POL_NO_DUAL
 #else
 #define MAXRAYS  600
 #endif
@@ -70,7 +70,7 @@ int main()
 		/* workaround for apparent bug in older gmps */
 		*strchr(s, '\n') = '\0';
 	    }
-	    barvinok_count(A, &cb, 100);
+	    barvinok_count(A, &cb, MAXRAYS);
 	    if (value_ne(cb, ck))
 		return -1;
 	    value_clear(cb);
