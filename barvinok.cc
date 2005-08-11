@@ -2674,7 +2674,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     }
 
     barvinok_count_f(P, result, NbMaxCons);
-    if (P->next) {
+    if (Q && P->next) {
 	Value factor;
 	value_init(factor);
 
