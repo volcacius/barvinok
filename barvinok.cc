@@ -2695,6 +2695,11 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
     if (P->Dimension == 1)
 	return Line_Length(P, result);
 
+    int c = P->NbConstraints;
+    POL_ENSURE_FACETS(P);
+    if (c != P->NbConstraints || P->NbEq != 0)
+	return barvinok_count(P, result, NbMaxCons);
+
     POL_ENSURE_VERTICES(P);
 
 #ifdef USE_INCREMENTAL_BF
