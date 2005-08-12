@@ -732,13 +732,14 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays)
 		break;
 	assert (j < H->NbRows);
 	pos[i] = j;
-	rowgroup[j] = i;
     }
     for (i = 0; i < P->Dimension; ++i) {
 	group[i] = i;
 	cnt[i] = 1;
     }
     for (i = 0; i < H->NbColumns && cnt[0] < P->Dimension; ++i) {
+	if (rowgroup[pos[i]] == -1)
+	    rowgroup[pos[i]] = i;
 	for (j = pos[i]+1; j <  H->NbRows; ++j) {
 	    if (value_zero_p(H->p[j][i]))
 		continue;
