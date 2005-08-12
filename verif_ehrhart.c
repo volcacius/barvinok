@@ -28,8 +28,6 @@
 	}
 #endif
 
-Value Min, Max;
-
 char **params;
 
 #ifndef PRINT_ALL_RESULTS
@@ -44,13 +42,16 @@ int st;
 /* returns 1 on success                             */
 /****************************************************/
 
-int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
+int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
 	       int nparam,int pos,Value *z) {
   
   int k;
   Value c,tmp,*ctmp;
+  Value LB, UB;
   
   value_init(c); value_init(tmp);
+  value_init(LB);
+  value_init(UB);
   
   if(pos == nparam) {
     
@@ -60,12 +61,7 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
     free(ctmp);
     /* if c=0 we may be out of context. */
     /* scanning is useless in this case*/
-    if(!in_domain(C,&z[S->Dimension-nparam+1])) {
-   
-      /* ok */ ;
-    }
-    else {
-      
+
 #ifdef PRINT_ALL_RESULTS
       printf("EP( ");
       value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
@@ -115,6 +111,8 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
         }
 #ifndef DONT_BREAK_ON_ERROR
 	value_clear(c); value_clear(tmp);
+	value_clear(LB);
+	value_clear(UB);
 	return(0);
 #endif
       }
@@ -123,10 +121,12 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
       else
 	printf("OK.\n");
 #endif
-    }
   }
-  else
-    for(value_assign(tmp,Min); value_le(tmp,Max); value_increment(tmp,tmp)) {
+  else {
+    int ok = 
+	!(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
+    assert(ok);
+    for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
 
 #ifndef PRINT_ALL_RESULTS
       k = VALUE_TO_INT(tmp);
@@ -137,12 +137,18 @@ int check_poly(Polyhedron *S,Polyhedron *C,Enumeration *en,
 #endif
       
       value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if(!check_poly(S,C,en,nparam,pos+1,z)) {
+      if(!check_poly(S, CS->next, en, nparam, pos+1, z)) {
 	value_clear(c); value_clear(tmp);
+	value_clear(LB);
+	value_clear(UB);
 	return(0);
       }
     }
+    value_set_si(z[pos+S->Dimension-nparam+1],0);
+  }
   value_clear(c); value_clear(tmp);
+  value_clear(LB);
+  value_clear(UB);
   return(1);
 } /* check_poly */
 

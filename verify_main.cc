@@ -45,13 +45,17 @@ struct option options[] = {
 /* if dimension >= VBIDDIM, use VSRANGE */
 #define VBIGDIM 8
 
-int check_series(Polyhedron *S,Polyhedron *C, gen_fun *gf,
+int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 	         int nparam,int pos,Value *z)
 {
     int k;
     Value c, tmp;
+    Value LB, UB;
+
     value_init(c);
     value_init(tmp);
+    value_init(LB);
+    value_init(UB);
 
     if(pos == nparam) {
 	/* Computes the coefficient */
@@ -59,9 +63,6 @@ int check_series(Polyhedron *S,Polyhedron *C, gen_fun *gf,
 
 	/* if c=0 we may be out of context. */
 	/* scanning is useless in this case*/
-	if(!in_domain(C,&z[S->Dimension-nparam+1])) {
-	    /* ok */ ;
-	} else {
 
 #ifdef PRINT_ALL_RESULTS
 	    printf("EP( ");
@@ -106,10 +107,11 @@ int check_series(Polyhedron *S,Polyhedron *C, gen_fun *gf,
 	    else
 		printf("OK.\n");
 #endif
-	}
-    } else
-	for(value_assign(tmp,Min); value_le(tmp,Max); 
-				   value_increment(tmp,tmp)) {
+    } else {
+        int ok = 
+	  !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
+        assert(ok);
+	for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
 #ifndef PRINT_ALL_RESULTS
 	  k = VALUE_TO_INT(tmp);
 	  if(!pos && !(k%st)) {
@@ -118,24 +120,31 @@ int check_series(Polyhedron *S,Polyhedron *C, gen_fun *gf,
 	  }
 #endif
 	  value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	  if(!check_series(S,C,gf,nparam,pos+1,z)) {
+	  if(!check_series(S, CS, gf, nparam, pos+1, z)) {
 	    value_clear(c); value_clear(tmp);
+	    value_clear(LB);
+	    value_clear(UB);
 	    return(0);
 	  }
 	}
+	value_set_si(z[pos+S->Dimension-nparam+1],0);
+     }
 
     value_clear(c);
     value_clear(tmp);
+    value_clear(LB);
+    value_clear(UB);
     return 1;
 }
 
 int main(int argc,char *argv[]) {
 	
-  Matrix *C1, *P1;
-  Polyhedron *C, *P, *S;
+  Matrix *C1, *P1, *MM;
+  Polyhedron *C, *P, *S, *CS, *U;
   Polyhedron *CC, *PP;
   Enumeration *en;
   Value *p, tmp;
+  Value Min, Max;
   int i,j;
     int m = INT_MAX, M = INT_MIN, r;
     int c, ind = 0;
@@ -228,6 +237,26 @@ int main(int argc,char *argv[]) {
   Domain_Free(C);
   C = CC;
 
+    /* Intersect context with range */
+    if(C->Dimension > 0) {
+	MM = Matrix_Alloc(2*C->Dimension, C->Dimension+2);
+	for (i = 0; i < C->Dimension; ++i) {
+	    value_set_si(MM->p[2*i][0], 1);
+	    value_set_si(MM->p[2*i][1+i], 1);
+	    value_set_si(MM->p[2*i][1+C->Dimension], -m);
+	    value_set_si(MM->p[2*i+1][0], 1);
+	    value_set_si(MM->p[2*i+1][1+i], -1);
+	    value_set_si(MM->p[2*i+1][1+C->Dimension], M);
+	}
+	CC = AddConstraints(MM->p[0], 2*C->Dimension, C, MAXRAYS);
+	U = Universe_Polyhedron(0);
+	CS = Polyhedron_Scan(CC, U, MAXRAYS);
+	Polyhedron_Free(U);
+	Polyhedron_Free(CC);
+	Matrix_Free(MM);
+    } else
+	CS = NULL;
+
     gen_fun *gf = 0;
 
     /******* Compute EP *********/
@@ -275,10 +304,10 @@ int main(int argc,char *argv[]) {
     /******* CHECK NOW *********/
     if(S) {
 	if (!series || function) {
-	    if (!check_poly(S,C,en,C->Dimension,0,p))
+	    if (!check_poly(S, CS,en,C->Dimension,0,p))
 		result = -1;
 	} else {
-	    if (!check_series(S,C,gf,C->Dimension,0,p))
+	    if (!check_series(S, CS,gf,C->Dimension,0,p))
 		result = -1;
 	}
 	Domain_Free(S);
@@ -301,6 +330,8 @@ int main(int argc,char *argv[]) {
   Free_ParamNames(params, C->Dimension);
   Domain_Free(P);
   Domain_Free(C);
+  if (CS)
+    Domain_Free(CS);
   return result;
 } /* main */
 
