@@ -2942,7 +2942,8 @@ void enumerator::handle_polar(Polyhedron *C, int s)
     assert(C->NbRays-1 == dim);
     add_rays(rays, C, &r);
     for (int k = 0; k < dim; ++k) {
-	assert(lambda * rays[k] != 0);
+	if (lambda * rays[k] == 0)
+	    throw Orthogonal;
     }
 
     sign = s;
@@ -3842,6 +3843,13 @@ out:
 
     unsigned dim = P->Dimension - nparam;
 
+    int nd;
+    for (nd = 0, D=PP->D; D; ++nd, D=D->next);
+    struct section { Polyhedron *D; evalue E; };
+    section *s = new section[nd];
+    Polyhedron **fVD = new Polyhedron_p[nd];
+
+try_again:
 #ifdef USE_INCREMENTAL_BF
     bfenumerator et(P, dim, PP->nbV);
 #elif defined USE_INCREMENTAL_DF
@@ -3849,12 +3857,6 @@ out:
 #else
     enumerator et(P, dim, PP->nbV);
 #endif
-
-    int nd;
-    for (nd = 0, D=PP->D; D; ++nd, D=D->next);
-    struct section { Polyhedron *D; evalue E; };
-    section *s = new section[nd];
-    Polyhedron **fVD = new Polyhedron_p[nd];
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
@@ -3868,17 +3870,28 @@ out:
 
 	value_init(s[nd].E.d);
 	evalue_set_si(&s[nd].E, 0, 1);
+	s[nd].D = rVD;
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    if (!et.vE[_i])
-		et.decompose_at(V, _i, MaxRays);
+		try {
+		    et.decompose_at(V, _i, MaxRays);
+		} catch (OrthogonalException &e) {
+		    if (rVD != pVD)
+			Domain_Free(pVD);
+		    for (; nd >= 0; --nd) {
+			free_evalue_refs(&s[nd].E);
+			Domain_Free(s[nd].D);
+			Domain_Free(fVD[nd]);
+		    }
+		    goto try_again;
+		}
 	    eadd(et.vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
 	reduce_in_domain(&s[nd].E, pVD);
 
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
-	s[nd].D = rVD;
 	++nd;
 	if (rVD != pVD)
 	    Domain_Free(pVD);
