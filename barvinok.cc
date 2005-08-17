@@ -2665,7 +2665,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	    Polyhedron_Free(P);
 	return;
     }
-    Q = Polyhedron_Factor(P, NbMaxCons);
+    Q = Polyhedron_Factor(P, 0, NbMaxCons);
     if (Q) {
 	if (allocated)
 	    Polyhedron_Free(P);
@@ -3755,20 +3755,38 @@ static Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
 }
 #endif
 
-evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
+				       unsigned MaxRays);
+
+/* Destroys C */
+static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C, 
+				      unsigned MaxRays)
 {
-    //P = unfringe(P, MaxRays);
-    Polyhedron *CEq = NULL, *rVD, *pVD, *CA;
-    Matrix *CT = NULL;
-    Param_Polyhedron *PP = NULL;
-    Param_Domain *D, *next;
-    Param_Vertices *V;
-    int r = 0;
-    unsigned nparam = C->Dimension;
     evalue *eres;
+
     ALLOC(evalue, eres);
     value_init(eres->d);
     value_set_si(eres->d, 0);
+    eres->x.p = new_enode(partition, 2, C->Dimension);
+    EVALUE_SET_DOMAIN(eres->x.p->arr[0], DomainConstraintSimplify(C, MaxRays));
+    value_set_si(eres->x.p->arr[1].d, 1);
+    value_init(eres->x.p->arr[1].x.n);
+    if (emptyQ(P))
+	value_set_si(eres->x.p->arr[1].x.n, 0);
+    else
+	barvinok_count(P, &eres->x.p->arr[1].x.n, MaxRays);
+
+    return eres;
+}
+
+evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+{
+    //P = unfringe(P, MaxRays);
+    Polyhedron *Corig = C;
+    Polyhedron *CEq = NULL, *rVD, *CA;
+    int r = 0;
+    unsigned nparam = C->Dimension;
+    evalue *eres;
 
     evalue factor;
     value_init(factor.d);
@@ -3780,24 +3798,15 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
-	eres->x.p = new_enode(partition, 2, C->Dimension);
-	EVALUE_SET_DOMAIN(eres->x.p->arr[0], 
-	    DomainConstraintSimplify(CEq ? CEq : Polyhedron_Copy(C), MaxRays));
-	value_set_si(eres->x.p->arr[1].d, 1);
-	value_init(eres->x.p->arr[1].x.n);
-	if (emptyQ(P))
-	    value_set_si(eres->x.p->arr[1].x.n, 0);
-	else
-	    barvinok_count(P, &eres->x.p->arr[1].x.n, MaxRays);
+	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), 
+				      MaxRays);
 out:
 	emul(&factor, eres);
 	reduce_evalue(eres);
 	free_evalue_refs(&factor);
-	Polyhedron_Free(P);
-	if (CT)
-	    Matrix_Free(CT);
-	if (PP)
-	    Param_Polyhedron_Free(PP);
+	Domain_Free(P);
+	if (C != Corig)
+	    Polyhedron_Free(C);
 	   
 	return eres;
     }
@@ -3816,32 +3825,104 @@ out:
 	goto constant;
     }
 
-    Polyhedron *Q = ParamPolyhedron_Reduce(P, P->Dimension-nparam, &factor);
-    if (Q) {
-	Polyhedron_Free(P);
-	if (Q->Dimension == nparam) {
-	    CEq = Q;
-	    P = Universe_Polyhedron(0);
-	    goto constant;
+    Polyhedron *T = Polyhedron_Factor(P, nparam, MaxRays);
+    if (T) {
+	Polyhedron *Q;
+	Polyhedron *C2;
+	for (Q = T; Q; Q = Q->next) {
+	    Polyhedron *next = Q->next;
+	    Q->next = NULL;
+
+	    Polyhedron *QC = Q;
+	    if (Q->Dimension != C->Dimension)
+		QC = Polyhedron_Project(Q, nparam);
+
+	    C2 = C;
+	    C = DomainIntersection(C, QC, MaxRays);
+	    if (C2 != Corig)
+		Polyhedron_Free(C2);
+	    if (QC != Q)
+		Polyhedron_Free(QC);
+
+	    Q->next = next;
 	}
-	P = Q;
+	Polyhedron_Free(P);
+	P = T;
+	if (T->Dimension == C->Dimension) {
+	    P = T->next;
+	    T->next = NULL;
+	    Polyhedron_Free(T);
+	}
     }
-    Polyhedron *oldP = P;
+
+    Polyhedron *next = P->next;
+    P->next = NULL;
+    eres = barvinok_enumerate_ev_f(P, C, MaxRays);
+    P->next = next;
+
+    if (P->next) {
+	Polyhedron *Q;
+	evalue *f;
+
+	for (Q = P->next; Q; Q = Q->next) {
+	    Polyhedron *next = Q->next;
+	    Q->next = NULL;
+
+	    f = barvinok_enumerate_ev_f(Q, C, MaxRays);
+	    emul(f, eres);
+	    free_evalue_refs(f);
+	    free(f);
+
+	    Q->next = next;
+	}
+    }
+
+    goto out;
+}
+
+static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
+				       unsigned MaxRays)
+{
+    unsigned nparam = C->Dimension;
+
+    if (P->Dimension - nparam == 1)
+	return ParamLine_Length(P, C, MaxRays);
+
+    Param_Polyhedron *PP = NULL;
+    Polyhedron *CEq = NULL, *pVD;
+    Matrix *CT = NULL;
+    Param_Domain *D, *next;
+    Param_Vertices *V;
+    evalue *eres;
+    Polyhedron *Porig = P;
+
     PP = Polyhedron2Param_SD(&P,C,MaxRays,&CEq,&CT);
-    if (P != oldP)
-	Polyhedron_Free(oldP);
 
     if (isIdentity(CT)) {
 	Matrix_Free(CT);
 	CT = NULL;
     } else {
 	assert(CT->NbRows != CT->NbColumns);
-	if (CT->NbRows == 1) 		// no more parameters
-	    goto constant;
+	if (CT->NbRows == 1) {		// no more parameters
+	    eres = barvinok_enumerate_cst(P, CEq, MaxRays);
+out:
+	    if (CT)
+		Matrix_Free(CT);
+	    if (PP)
+		Param_Polyhedron_Free(PP);
+	    if (P != Porig)
+		Polyhedron_Free(P);
+
+	    return eres;
+	}
 	nparam = CT->NbRows - 1;
     }
 
     unsigned dim = P->Dimension - nparam;
+
+    ALLOC(evalue, eres);
+    value_init(eres->d);
+    value_set_si(eres->d, 0);
 
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
@@ -3911,10 +3992,8 @@ try_again:
     delete [] s;
     delete [] fVD;
 
-
     if (CEq)
 	Polyhedron_Free(CEq);
-
     goto out;
 }
 

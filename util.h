@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <polylib/polylibgmp.h>
+#include "ev_operations.h"
 
 #ifdef POL_NO_DUAL
 #define emptyQ2(P)							\
@@ -28,8 +29,10 @@ void check_triangulization(Polyhedron *P, Polyhedron *T);
 Polyhedron *remove_equalities(Polyhedron *P);
 Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor);
 void manual_count(Polyhedron *P, Value* result);
-Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays);
+Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, 
+			      unsigned NbMaxRays);
 void Line_Length(Polyhedron *P, Value *len);
+evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays);
 Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
 Matrix * unimodular_complete(Vector *row);
 Bool isIdentity(Matrix *M);

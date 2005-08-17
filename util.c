@@ -696,7 +696,8 @@ void Line_Length(Polyhedron *P, Value *len)
  * where a constraints "links" two or more columns if the constraint
  * has nonzero coefficients in the columns.
  */
-Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays)
+Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, 
+			      unsigned NbMaxRays)
 {
     int i, j, k;
     Matrix *M, *H, *Q, *U;
@@ -704,21 +705,20 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays)
     int *group;		/* group to which a column belongs */
     int *cnt;		/* number of columns in the group */
     int *rowgroup;	/* group to which a constraint belongs */
+    int nvar = P->Dimension - nparam;
     Polyhedron *F = NULL;
 
-    if (P->Dimension <= 1)
+    if (nvar <= 1)
 	return NULL;
 
-    assert(P->NbEq == 0);
-
-    NALLOC(pos, P->Dimension);
-    NALLOC(group, P->Dimension);
-    NALLOC(cnt, P->Dimension);
+    NALLOC(pos, nvar);
+    NALLOC(group, nvar);
+    NALLOC(cnt, nvar);
     NALLOC(rowgroup, P->NbConstraints);
 
-    M = Matrix_Alloc(P->NbConstraints, P->Dimension);
+    M = Matrix_Alloc(P->NbConstraints, nvar);
     for (i = 0; i < P->NbConstraints; ++i)
-	Vector_Copy(P->Constraint[i]+1, M->p[i], P->Dimension);
+	Vector_Copy(P->Constraint[i]+1, M->p[i], nvar);
     left_hermite(M, &H, &Q, &U);
     Matrix_Free(M);
     Matrix_Free(Q);
@@ -733,11 +733,11 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays)
 	assert (j < H->NbRows);
 	pos[i] = j;
     }
-    for (i = 0; i < P->Dimension; ++i) {
+    for (i = 0; i < nvar; ++i) {
 	group[i] = i;
 	cnt[i] = 1;
     }
-    for (i = 0; i < H->NbColumns && cnt[0] < P->Dimension; ++i) {
+    for (i = 0; i < H->NbColumns && cnt[0] < nvar; ++i) {
 	if (rowgroup[pos[i]] == -1)
 	    rowgroup[pos[i]] = i;
 	for (j = pos[i]+1; j <  H->NbRows; ++j) {
@@ -767,34 +767,53 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned NbMaxRays)
 	    }
 	}
     }
-    if (cnt[0] != P->Dimension) {
-	for (i = 0; i < P->Dimension; ++i) {
-	    Polyhedron *T;
-	    if (cnt[i] == 0)
-		continue;
-	    for (j = 0, k = 0; j < P->NbConstraints; ++j)
-		if (group[rowgroup[j]] == i) {
-		    rowgroup[j] = i;
-		    ++k;
-		}
-	    M = Matrix_Alloc(k, cnt[i]+2);
+
+    if (cnt[0] != nvar) {
+	/* Extract out pure context constraints separately */
+	Polyhedron **next = &F;
+	for (i = nparam ? -1 : 0; i < nvar; ++i) {
+	    int d;
+
+	    if (i == -1) {
+		for (j = 0, k = 0; j < P->NbConstraints; ++j)
+		    if (rowgroup[j] == -1) {
+			if (First_Non_Zero(P->Constraint[j]+1+nvar, 
+					   nparam) == -1)
+			    rowgroup[j] = -2;
+			else 
+			    ++k;
+		    }
+		if (k == 0)
+		    continue;
+		d = 0;
+	    } else {
+		if (cnt[i] == 0)
+		    continue;
+		d = cnt[i];
+		for (j = 0, k = 0; j < P->NbConstraints; ++j)
+		    if (rowgroup[j] >= 0 && group[rowgroup[j]] == i) {
+			rowgroup[j] = i;
+			++k;
+		    }
+	    }
+
+	    M = Matrix_Alloc(k, d+nparam+2);
 	    for (j = 0, k = 0; j < P->NbConstraints; ++j) {
 		int l, m;
 		if (rowgroup[j] != i)
 		    continue;
-		value_set_si(M->p[k][0], 1);
-		for (l = 0, m = 0; m < cnt[i]; ++l) {
+		value_assign(M->p[k][0], P->Constraint[j][0]);
+		for (l = 0, m = 0; m < d; ++l) {
 		    if (group[l] != i)
 			continue;
 		    value_assign(M->p[k][1+m++], H->p[j][l]);
 		}
-		value_assign(M->p[k][1+m], P->Constraint[j][1+P->Dimension]);
+		Vector_Copy(P->Constraint[j]+1+nvar, M->p[k]+1+m, nparam+1);
 		++k;
 	    }
-	    T = Constraints2Polyhedron(M, NbMaxRays);
+	    *next = Constraints2Polyhedron(M, NbMaxRays);
+	    next = &(*next)->next;
 	    Matrix_Free(M);
-	    T->next = F;
-	    F = T;
 	}
     }
     Matrix_Free(H);
@@ -992,6 +1011,137 @@ static Polyhedron* ParamPolyhedron_Reduce_mod(Polyhedron *P, unsigned nvar,
 
     return P;
 }
+
+evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
+{
+    unsigned dim = P->Dimension;
+    unsigned nvar = dim - C->Dimension;
+    int *pos;
+    int i, j, p, n, z;
+    struct section *s;
+    Matrix *M, *M2;
+    int nd = 0;
+    int k, l, k2, l2, q;
+    evalue *L, *U;
+    evalue *F;
+    Value g;
+    Polyhedron *T;
+    evalue mone;
+    Polyhedron *Corig = C;
+
+    assert(nvar == 1);
+
+    NALLOC(pos, P->NbConstraints);
+    value_init(g);
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+
+    for (i = 0, z = 0; i < P->NbConstraints; ++i)
+	if (value_zero_p(P->Constraint[i][1]))
+	    ++z;
+    if (z > 1 || 
+	(z > 0 && 
+	 First_Non_Zero(P->Constraint[P->NbConstraints-1]+1, dim) != -1)) {
+	Polyhedron *C2 = Polyhedron_Project(P, C->Dimension);
+	C = DomainIntersection(C, C2, MaxRays);
+	Polyhedron_Free(C2);
+    }
+
+    /* put those with positive coefficients first; number: p */
+    for (i = 0, p = 0, n = P->NbConstraints-z-1; i < P->NbConstraints; ++i)
+	if (value_pos_p(P->Constraint[i][1]))
+	    pos[p++] = i;
+	else if (value_neg_p(P->Constraint[i][1]))
+	    pos[n--] = i;
+    n = P->NbConstraints-z-p;
+    assert (p >= 1 && n >= 1);
+    s = (struct section *) malloc(p * n * sizeof(struct section));
+    M = Matrix_Alloc((p-1) + (n-1), dim-nvar+2);
+    for (k = 0; k < p; ++k) {
+	for (k2 = 0; k2 < p; ++k2) {
+	    if (k2 == k)
+		continue;
+	    q = k2 - (k2 > k);
+	    smaller_constraint(
+		P->Constraint[pos[k]],
+		P->Constraint[pos[k2]],
+		M->p[q], 0, nvar, dim+2, k2 > k, &g);
+	}
+	for (l = p; l < p+n; ++l) {
+	    for (l2 = p; l2 < p+n; ++l2) {
+		if (l2 == l)
+		    continue;
+		q = l2-1 - (l2 > l);
+		smaller_constraint(
+		    P->Constraint[pos[l2]],
+		    P->Constraint[pos[l]],
+		    M->p[q], 0, nvar, dim+2, l2 > l, &g);
+	    }
+	    M2 = Matrix_Copy(M);
+	    T = Constraints2Polyhedron(M2, P->NbRays);
+	    Matrix_Free(M2);
+	    s[nd].D = DomainIntersection(T, C, MaxRays);
+	    Domain_Free(T);
+	    POL_ENSURE_VERTICES(s[nd].D);
+	    if (emptyQ(s[nd].D)) {
+		Polyhedron_Free(s[nd].D);
+		continue;
+	    }
+	    L = bv_ceil3(P->Constraint[pos[k]]+1+nvar, 
+		      dim-nvar+1,
+		      P->Constraint[pos[k]][0+1], s[nd].D);
+	    U = bv_ceil3(P->Constraint[pos[l]]+1+nvar, 
+		      dim-nvar+1,
+		      P->Constraint[pos[l]][0+1], s[nd].D);
+	    eadd(L, U);
+	    eadd(&mone, U);
+	    emul(&mone, U);
+	    s[nd].E = *U;
+	    free_evalue_refs(L); 
+	    free(L);
+	    free(U);
+	    ++nd;
+	}
+    }
+
+    Matrix_Free(M);
+
+    ALLOC(F);
+    value_init(F->d);
+    value_set_si(F->d, 0);
+    F->x.p = new_enode(partition, 2*nd, dim-nvar);
+    for (k = 0; k < nd; ++k) {
+	EVALUE_SET_DOMAIN(F->x.p->arr[2*k], s[k].D);
+	value_clear(F->x.p->arr[2*k+1].d);
+	F->x.p->arr[2*k+1] = s[k].E;
+    }
+    free(s);
+
+    free_evalue_refs(&mone); 
+    value_clear(g);
+    free(pos);
+
+    if (C != Corig)
+	Domain_Free(C);
+
+    return F;
+}
+
+#ifdef USE_MODULO
+evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+{
+    return ParamLine_Length_mod(P, C, MaxRays);
+}
+#else
+evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+{
+    evalue* tmp;
+    tmp = ParamLine_Length_mod(P, C);
+    evalue_mod2table(tmp, C->Dimension);
+    reduce_evalue(tmp);
+    return tmp;
+}
+#endif
 
 #ifdef USE_MODULO
 Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
