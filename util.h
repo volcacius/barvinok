@@ -15,6 +15,7 @@ extern "C" {
 #else
 #define POL_NO_DUAL		0
 #define emptyQ2(P)		emptyQ(P)
+#define POL_ENSURE_FACETS(P)	/* nothing */
 #define POL_ENSURE_VERTICES(P)	/* nothing */
 #endif
 
