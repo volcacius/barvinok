@@ -34,7 +34,6 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam,
 			      unsigned NbMaxRays);
 void Line_Length(Polyhedron *P, Value *len);
 evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays);
-Polyhedron* Polyhedron_Reduce(Polyhedron *P, Value* factor);
 Matrix * unimodular_complete(Vector *row);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
@@ -53,11 +52,6 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
 Polyhedron* Polyhedron_Project(Polyhedron *P, int dim);
 
 const char *barvinok_version();
-
-#include "ev_operations.h"
-
-Polyhedron* ParamPolyhedron_Reduce(Polyhedron *P, unsigned nvar, 
-				   evalue* factor);
 
 #if defined(__cplusplus)
 }

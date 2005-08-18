@@ -141,19 +141,6 @@ int main()
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    Polyhedron_Free(B);
 	    break;
-	case 7: {
-	    Value f;
-	    value_init(f);
-	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = Polyhedron_Reduce(A, &f);
-	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
-	    Polyhedron_Free(B);
-	    printf("factor: ");
-	    value_print(stdout, P_VALUE_FMT, f);
-	    puts("");
-	    value_clear(f);
-	    break;
-	}
 	case 8: {
 	    Enumeration *en;
 	    Matrix *M = Matrix_Read();
