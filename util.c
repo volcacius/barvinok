@@ -197,7 +197,7 @@ Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
     return P;
 }
 
-Polyhedron* triangularize_cone(Polyhedron *P, unsigned NbMaxCons)
+Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons)
 {
     const static int MAX_TRY=10;
     int i, j, r, n, t;

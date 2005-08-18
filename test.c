@@ -130,7 +130,7 @@ int main()
 	}
 	case 5:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = triangularize_cone(A, 100);
+	    B = triangulate_cone(A, 100);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    check_triangulization(A, B);
 	    Domain_Free(B);

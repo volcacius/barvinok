@@ -593,7 +593,7 @@ void polar_decomposer::decompose(Polyhedron *cone, unsigned MaxRays)
     Polyhedron_Polarize(cone);
     if (cone->NbRays - 1 != cone->Dimension) {
 	Polyhedron *tmp = cone;
-	cone = triangularize_cone(cone, MaxRays);
+	cone = triangulate_cone(cone, MaxRays);
 	Polyhedron_Free(tmp);
     }
     try {
