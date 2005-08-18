@@ -1236,6 +1236,52 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
     return in_domain(P, list_args);
 }
 
+#ifdef HAVE_RANKINGPOLYTOPES
+#include <polylib/ranking.h>
+
+evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, Polyhedron *C, 
+			    unsigned MaxRays)
+{
+    evalue *ranking;
+    Polyhedron *RC, *RD, *Q;
+
+    RC = RankingPolytopes(P, D, C, MaxRays);
+    RD = RC->next;
+    RC->next = NULL;
+
+    for (Q = RD; Q; Q = Q->next) {
+	evalue *t;
+	Polyhedron *next = Q->next;
+	Q->next = 0;
+
+	t = barvinok_enumerate_ev(RD, RC, MaxRays);
+
+	if (Q == RD)
+	    ranking = t;
+	else {
+	    eadd(t, ranking);
+	    free_evalue_refs(t);
+	    free(t);
+	}
+
+	Q->next = next;
+    }
+
+    Domain_Free(RD);
+    Polyhedron_Free(RC);
+
+    return ranking;
+}
+
+Enumeration *barvinok_ranking(Polyhedron *P, Polyhedron *D, Polyhedron *C, 
+			      unsigned MaxRays)
+{
+    evalue *EP = barvinok_ranking_ev(P, D, C, MaxRays);
+
+    return partition2enumeration(EP);
+}
+#endif
+
 const char *barvinok_version(void)
 {
     return 
