@@ -142,17 +142,18 @@ int main()
 	    Polyhedron_Free(B);
 	    break;
 	case 8: {
-	    Enumeration *en;
+	    evalue *EP;
 	    Matrix *M = Matrix_Read();
 	    char **param_name;
 	    C = Constraints2Polyhedron(M, MAXRAYS);
 	    Matrix_Free(M);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
-	    en = barvinok_enumerate(A, C, MAXRAYS);
+	    EP = barvinok_enumerate_ev(A, C, MAXRAYS);
 	    param_name = Read_ParamNames(stdin, C->Dimension);
-	    print_evalue(stdout, &en->EP, param_name);
-	    Enumeration_Free(en);
+	    print_evalue(stdout, EP, param_name);
+	    free_evalue_refs(EP);
+	    free(EP);
 	    Polyhedron_Free(C);
 	}
 	case 9:
