@@ -16,6 +16,10 @@
 #define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
 #endif
 
+#ifndef HAVE_ENUMERATION_FREE
+#define Enumeration_Free(en)	/* just leak some memory */
+#endif
+
 void manual_count(Polyhedron *P, Value* result)
 {
     Polyhedron *U = Universe_Polyhedron(0);
@@ -27,6 +31,10 @@ void manual_count(Polyhedron *P, Value* result)
     Enumeration_Free(en);
     Polyhedron_Free(U);
 }
+
+#ifndef HAVE_ENUMERATION_FREE
+#undef Enumeration_Free
+#endif
 
 #include "ev_operations.h"
 #include <util.h>
@@ -938,6 +946,20 @@ void Enumeration_Print(FILE *Dst, Enumeration *en, char **params)
 	Print_Domain(Dst, en->ValidityDomain, params);
 	print_evalue(Dst, &en->EP, params);
     }
+}
+
+void Enumeration_Free(Enumeration *en)
+{
+  Enumeration *ee;
+
+  while( en )
+  {
+	  free_evalue_refs( &(en->EP) );
+	  Polyhedron_Free( en->ValidityDomain );
+	  ee = en ->next;
+	  free( en );
+	  en = ee;
+  }
 }
 
 void Enumeration_mod2table(Enumeration *en, unsigned nparam)

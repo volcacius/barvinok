@@ -24,6 +24,7 @@
 #define compute_evalue _new_compute_evalue
 #define compute_poly _new_compute_poly
 #define in_domain _new_in_domain
+#define Enumeration_Free _new_Enumeration_Free
 
 typedef enum { polynomial, periodic, evector, fractional, relation, 
                partition, flooring } enode_type;
