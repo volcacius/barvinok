@@ -3832,10 +3832,10 @@ out:
     }
 
     Polyhedron *T = Polyhedron_Factor(P, nparam, MaxRays);
-    if (T) {
+    {
 	Polyhedron *Q;
 	Polyhedron *C2;
-	for (Q = T; Q; Q = Q->next) {
+	for (Q = T ? T : P; Q; Q = Q->next) {
 	    Polyhedron *next = Q->next;
 	    Q->next = NULL;
 
@@ -3852,6 +3852,8 @@ out:
 
 	    Q->next = next;
 	}
+    }
+    if (T) {
 	Polyhedron_Free(P);
 	P = T;
 	if (T->Dimension == C->Dimension) {

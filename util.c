@@ -782,7 +782,6 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
     Value g;
     Polyhedron *T;
     evalue mone;
-    Polyhedron *Corig = C;
 
     assert(nvar == 1);
 
@@ -794,14 +793,6 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
     for (i = 0, z = 0; i < P->NbConstraints; ++i)
 	if (value_zero_p(P->Constraint[i][1]))
 	    ++z;
-    if (z > 1 || 
-	(z > 0 && 
-	 First_Non_Zero(P->Constraint[P->NbConstraints-1]+1, dim) != -1)) {
-	Polyhedron *C2 = Polyhedron_Project(P, C->Dimension);
-	C = DomainIntersection(C, C2, MaxRays);
-	Polyhedron_Free(C2);
-    }
-
     /* put those with positive coefficients first; number: p */
     for (i = 0, p = 0, n = P->NbConstraints-z-1; i < P->NbConstraints; ++i)
 	if (value_pos_p(P->Constraint[i][1]))
@@ -875,9 +866,6 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
     free_evalue_refs(&mone); 
     value_clear(g);
     free(pos);
-
-    if (C != Corig)
-	Domain_Free(C);
 
     return F;
 }
