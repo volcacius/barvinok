@@ -7,7 +7,6 @@ extern "C" {
 }
 #include <util.h>
 #include <barvinok.h>
-#include <barvinok2.h>
 #include "config.h"
 
 /* The input of this example program is the same as that of testehrhart

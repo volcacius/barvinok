@@ -6,7 +6,6 @@ extern "C" {
 }
 #include <util.h>
 #include <barvinok.h>
-#include <barvinok2.h>
 
 #include "verif_ehrhart.h"
 

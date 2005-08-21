@@ -15,8 +15,7 @@ libbarvinok_la_SOURCES = \
     util.c \
     util.h \
     barvinok.cc \
-    barvinok.h \
-    barvinok2.h
+    barvinok.h
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
 libbarvinok_la_LIBADD = @LTLIBOBJS@

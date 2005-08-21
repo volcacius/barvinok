@@ -3,7 +3,6 @@
 #include "config.h"
 #include <genfun.h>
 #include <barvinok.h>
-#include <barvinok2.h>
 
 using std::cout;
 
