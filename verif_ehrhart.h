@@ -2,7 +2,7 @@
 #include <NTL/mat_ZZ.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
+#include <barvinok/evalue.h>
 
 /* define this to print all the results */
 /* else, only a progress bar is printed */

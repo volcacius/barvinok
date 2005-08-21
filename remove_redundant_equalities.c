@@ -1,6 +1,6 @@
 #include <polylib/polylibgmp.h>
-#include <evalue.h>
-#include <util.h>
+#include <barvinok/evalue.h>
+#include <barvinok/util.h>
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA

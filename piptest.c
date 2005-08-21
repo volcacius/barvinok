@@ -1,7 +1,7 @@
 #include <polylib/polylibgmp.h>
 #include "piputil.h"
-#include "evalue.h"
-#include <barvinok.h>
+#include <barvinok/evalue.h>
+#include <barvinok/barvinok.h>
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA

@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
-#include "evalue.h"
-#include "barvinok.h"
-#include "util.h"
+#include <barvinok/evalue.h>
+#include <barvinok/barvinok.h>
+#include <barvinok/util.h>
 
 #ifndef value_pmodulus
 #define value_pmodulus(ref,val1,val2)  (mpz_fdiv_r((ref),(val1),(val2)))

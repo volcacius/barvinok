@@ -1,8 +1,8 @@
 #include <iostream>
 #include <assert.h>
 #include "config.h"
-#include <genfun.h>
-#include <barvinok.h>
+#include <barvinok/genfun.h>
+#include <barvinok/barvinok.h>
 
 using std::cout;
 

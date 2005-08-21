@@ -6,7 +6,7 @@
 #include <NTL/mat_ZZ.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
+#include <barvinok/evalue.h>
 }
 
 #ifdef NTL_STD_CXX

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <dlfcn.h>
-#include "evalue.h"
-#include "barvinok.h"
+#include <barvinok/evalue.h>
+#include <barvinok/barvinok.h>
 
 /* gcc -shared  count_domain.c -rdynamic -o libcount.so -ldl -lc */
 

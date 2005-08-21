@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
+#include <barvinok/evalue.h>
 
 #ifdef POL_NO_DUAL
 #define emptyQ2(P)							\

@@ -17,8 +17,8 @@
 #include <stdlib.h>
 
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
-#include <barvinok.h>
+#include <barvinok/evalue.h>
+#include <barvinok/barvinok.h>
 
 #include "config.h"
 #ifndef HAVE_COUNT_POINTS4

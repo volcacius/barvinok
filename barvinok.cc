@@ -7,15 +7,15 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
-#include <util.h>
+#include <barvinok/util.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
+#include <barvinok/evalue.h>
 #include "piputil.h"
 }
 #include "config.h"
-#include <barvinok.h>
-#include <genfun.h>
+#include <barvinok/barvinok.h>
+#include <barvinok/genfun.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;

@@ -36,9 +36,9 @@ void manual_count(Polyhedron *P, Value* result)
 #undef Enumeration_Free
 #endif
 
-#include "evalue.h"
-#include <util.h>
-#include <barvinok.h>
+#include <barvinok/evalue.h>
+#include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 
 /* Return random value between 0 and max-1 inclusive
  */

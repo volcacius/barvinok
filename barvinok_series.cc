@@ -3,10 +3,10 @@
 #include <NTL/mat_ZZ.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
+#include <barvinok/evalue.h>
 }
-#include <util.h>
-#include <barvinok.h>
+#include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 #include "config.h"
 
 /* The input of this example program is the same as that of testehrhart

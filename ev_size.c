@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <string.h>
-#include "evalue.h"
-#include "barvinok.h"
+#include <barvinok/evalue.h>
+#include <barvinok/barvinok.h>
 
 static long long value_bitsize(Value v);
 static long long domain_bitsize(Polyhedron *D);

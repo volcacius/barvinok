@@ -27,7 +27,7 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P);
 
 #if defined(__cplusplus)
 
-#include <genfun.h>
+#include <barvinok/genfun.h>
 
 void zz2value(ZZ& z, Value& v);
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays);

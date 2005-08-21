@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <unistd.h>
 #include <polylib/polylibgmp.h>
-#include <util.h>
-#include <barvinok.h>
+#include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 
 #ifdef HAVE_SYS_TIMES_H
 

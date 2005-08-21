@@ -1,9 +1,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <polylib/polylibgmp.h>
-#include "evalue.h"
-#include <util.h>
-#include <barvinok.h>
+#include <barvinok/evalue.h>
+#include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 #include "config.h"
 
 /* The input of this example program is the same as that of testehrhart
