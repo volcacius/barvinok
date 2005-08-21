@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "ev_operations.h"
+#include "evalue.h"
 #include "barvinok.h"
 
 /* gcc -shared -g collect_nonsimple.c -rdynamic -o libcollect.so -ldl -lc -lgmp */

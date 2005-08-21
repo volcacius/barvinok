@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <dlfcn.h>
-#include "ev_operations.h"
+#include "evalue.h"
 #include "barvinok.h"
 
 /* gcc -shared  count_domain.c -rdynamic -o libcount.so -ldl -lc */

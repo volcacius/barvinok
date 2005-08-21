@@ -10,7 +10,7 @@
 #include <util.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
-#include "ev_operations.h"
+#include "evalue.h"
 #include "piputil.h"
 }
 #include "config.h"

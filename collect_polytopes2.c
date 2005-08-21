@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ev_operations.h"
+#include "evalue.h"
 #include "barvinok.h"
 
 /* gcc -shared -g collect_polytopes2.c -rdynamic -o libcollect2.so -ldl -lc -lgmp */

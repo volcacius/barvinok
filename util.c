@@ -36,7 +36,7 @@ void manual_count(Polyhedron *P, Value* result)
 #undef Enumeration_Free
 #endif
 
-#include "ev_operations.h"
+#include "evalue.h"
 #include <util.h>
 #include <barvinok.h>
 

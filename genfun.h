@@ -6,7 +6,7 @@
 #include <NTL/mat_ZZ.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
-#include "ev_operations.h"
+#include "evalue.h"
 }
 
 #ifdef NTL_STD_CXX

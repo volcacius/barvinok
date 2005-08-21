@@ -1,6 +1,6 @@
 #include <polylib/polylibgmp.h>
 #include "piputil.h"
-#include "ev_operations.h"
+#include "evalue.h"
 #include <barvinok.h>
 #include "config.h"
 

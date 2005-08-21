@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include <polylib/polylibgmp.h>
-#include "ev_operations.h"
+#include "evalue.h"
 
 #ifdef POL_NO_DUAL
 #define emptyQ2(P)							\

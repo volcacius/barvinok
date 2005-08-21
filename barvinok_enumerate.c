@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <polylib/polylibgmp.h>
-#include "ev_operations.h"
+#include "evalue.h"
 #include <util.h>
 #include <barvinok.h>
 #include "config.h"

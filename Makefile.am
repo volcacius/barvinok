@@ -4,12 +4,12 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  barvinok_series remove_redundant_equalities \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest
-pkginclude_HEADERS = barvinok.h util.h ev_operations.h
+pkginclude_HEADERS = barvinok.h util.h evalue.h
 LINK = $(CXXLINK)
 
 libbarvinok_la_SOURCES = \
-    ev_operations.c \
-    ev_operations.h \
+    evalue.c \
+    evalue.h \
     genfun.cc \
     genfun.h \
     util.c \

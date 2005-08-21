@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <string.h>
-#include "ev_operations.h"
+#include "evalue.h"
 #include "barvinok.h"
 
 static long long value_bitsize(Value v);
