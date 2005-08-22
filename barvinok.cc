@@ -3832,7 +3832,7 @@ out:
     }
 
     Polyhedron *T = Polyhedron_Factor(P, nparam, MaxRays);
-    {
+    if (T || (P->Dimension == nparam+1)) {
 	Polyhedron *Q;
 	Polyhedron *C2;
 	for (Q = T ? T : P; Q; Q = Q->next) {
