@@ -1242,7 +1242,7 @@ evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, Polyhedron *C,
 	Polyhedron *next = Q->next;
 	Q->next = 0;
 
-	t = barvinok_enumerate_ev(RD, RC, MaxRays);
+	t = barvinok_enumerate_ev(Q, RC, MaxRays);
 
 	if (Q == RD)
 	    ranking = t;
