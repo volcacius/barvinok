@@ -2687,7 +2687,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     }
 
     if (allocated)
-	Polyhedron_Free(P);
+	Domain_Free(P);
 }
 
 static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
