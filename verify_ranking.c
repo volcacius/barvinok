@@ -175,12 +175,15 @@ int main(int argc,char *argv[])
 
     M = Matrix_Read();
     P = Constraints2Polyhedron(M, MAXRAYS);
+    assert(P != NULL);
     Matrix_Free(M);
     M = Matrix_Read();
     D = Constraints2Polyhedron(M, MAXRAYS);
+    assert(D != NULL);
     Matrix_Free(M);
     M = Matrix_Read();
     C = Constraints2Polyhedron(M, MAXRAYS);
+    assert(C != NULL);
     Matrix_Free(M);
 
     nb_parms = D->Dimension;
