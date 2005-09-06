@@ -2,6 +2,13 @@
 #include <stdio.h>  /* needed for piplib ! */
 #include <piplib/piplibMP.h>
 #include <assert.h>
+#include "config.h"
+
+#ifdef HAVE_GROWING_CHERNIKOVA
+#define MAXRAYS    POL_NO_DUAL
+#else
+#define MAXRAYS  600
+#endif
 
 static PipMatrix *poly2pip(Polyhedron *P, int exist, int nparam)
 {
@@ -139,7 +146,7 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
 	}
 	C = Matrix_Alloc(i, 1+d+1);
 	Vector_Copy(M->p[0], C->p[0], i * (1+d+1));
-	P = Constraints2Polyhedron(C, 0);
+	P = Constraints2Polyhedron(C, MAXRAYS);
 	Matrix_Free(C);
 	P->next = *D;
 	*D = P;
@@ -185,6 +192,8 @@ Polyhedron *pip_lexmin(Polyhedron *P, int exist, int nparam)
     PipMatrix   *context = pip_matrix_alloc(0, nvar+nparam+2);
     PipQuast	*sol;
     Polyhedron  *min;
+
+    POL_ENSURE_INEQUALITIES(P);
 
     domain = poly2pip(P, exist, nparam);
     /*
