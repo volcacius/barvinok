@@ -77,6 +77,12 @@ check:
 		./verif_ehrhart < $$i; \
 	    fi \
 	done
+	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
+	    if test -f $$i; then \
+		echo $$i; \
+		./verif_ehrhart_e < $$i; \
+	    fi \
+	done
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		echo -n $$i; \
