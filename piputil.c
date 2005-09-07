@@ -49,7 +49,7 @@ static int max_new(PipQuast *q, int max, int d, int *maxd)
     return max;
 }
 
-static int vectorpos2cpos(int v, int pos, int n, int e, int d, int j)
+static int vectorpos2cpos(int v, int pos, int n, int e, int d, int j, int max)
 {
     int np = d-v-e;
     int l;
@@ -60,8 +60,10 @@ static int vectorpos2cpos(int v, int pos, int n, int e, int d, int j)
 	l = 1+n+j;
     else if (j < v-n+np)
 	l = 1+n+e+j;
+    else if (max && j == v-n+np)
+	l = -1;
     else
-	l = 1+n+j-np;
+	l = 1+n+j-np-max;
 
     return l;
 }
@@ -79,7 +81,7 @@ static int vectorpos2cpos(int v, int pos, int n, int e, int d, int j)
  *	v n e (d-v-n-e)
  */
 static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q, 
-		      int i, int v, int pos, int n, int e, int d)
+		      int i, int v, int pos, int n, int e, int d, int max)
 {
     PipNewparm *p;
 
@@ -91,10 +93,13 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
 	Vector_Set(M->p[i]+1, 0, d);
 
 	for (j = 0; j < vec->nb_elements-1; ++j) {
-	    l = vectorpos2cpos(v, pos, n, e, d, j);
+	    if ((l = vectorpos2cpos(v, pos, n, e, d, j, max)) == -1) {
+		assert(value_zero_p(vec->the_vector[j]));
+		continue;
+	    }
 	    value_assign(M->p[i][l], vec->the_vector[j]);
 	}
-	l = vectorpos2cpos(v, pos, n, e, d, p->rank);
+	l = vectorpos2cpos(v, pos, n, e, d, p->rank, max);
 	value_oppose(M->p[i][l], p->deno);
 	value_assign(M->p[i][1+d], vec->the_vector[j]);
 	++i;
@@ -103,10 +108,11 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
 	Vector_Set(M->p[i]+1, 0, d);
 
 	for (j = 0; j < vec->nb_elements-1; ++j) {
-	    l = vectorpos2cpos(v, pos, n, e, d, j);
+	    if ((l = vectorpos2cpos(v, pos, n, e, d, j, max)) == -1)
+		continue;
 	    value_oppose(M->p[i][l], vec->the_vector[j]);
 	}
-	l = vectorpos2cpos(v, pos, n, e, d, p->rank);
+	l = vectorpos2cpos(v, pos, n, e, d, p->rank, max);
 	value_assign(M->p[i][l], p->deno);
 	value_oppose(M->p[i][1+d], vec->the_vector[j]);
 	value_addto(M->p[i][1+d], M->p[i][1+d], p->deno);
@@ -120,19 +126,25 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
 	Vector_Set(M->p[i]+1, 0, d);
 
 	for (j = 0; j < q->condition->nb_elements-1; ++j) {
-	    int l = vectorpos2cpos(v, pos, n, e, d, j);
+	    int l = vectorpos2cpos(v, pos, n, e, d, j, max);
+	    if (l == -1) {
+		assert(value_zero_p(q->condition->the_vector[j]));
+		continue;
+	    }
 	    value_assign(M->p[i][l], q->condition->the_vector[j]);
 	}
 	value_assign(M->p[i][1+d], q->condition->the_vector[j]);
-	add_quast(D, M, q->next_then, i+1, v, pos, n, e, d);
+	add_quast(D, M, q->next_then, i+1, v, pos, n, e, d, max);
 
 	for (j = 0; j < q->condition->nb_elements-1; ++j) {
-	    int l = vectorpos2cpos(v, pos, n, e, d, j);
+	    int l = vectorpos2cpos(v, pos, n, e, d, j, max);
+	    if (l == -1)
+		continue;
 	    value_oppose(M->p[i][l], q->condition->the_vector[j]);
 	}
 	value_oppose(M->p[i][1+d], q->condition->the_vector[j]);
 	value_decrement(M->p[i][1+d], M->p[i][1+d]);
-	add_quast(D, M, q->next_else, i+1, v, pos, n, e, d);
+	add_quast(D, M, q->next_else, i+1, v, pos, n, e, d, max);
     } else if (q->list) {
 	PipList *l;
 	Matrix *C;
@@ -140,10 +152,14 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
 	int j, k;
 	for (j = 0, l = q->list; l; ++j, l = l->next) {
 	    Vector_Set(M->p[i], 0, d+1);
-	    value_set_si(M->p[i][1+pos+j], -1);
+	    value_set_si(M->p[i][1+pos+j], max ? 1 : -1);
 
 	    for (k = 0; k < l->vector->nb_elements-1; ++k) {
-		int ll = vectorpos2cpos(v, pos, n, e, d, k);
+		int ll = vectorpos2cpos(v, pos, n, e, d, k, max);
+		if (ll == -1) {
+		    assert(value_one_p(l->vector->the_vector[k]));
+		    continue;
+		}
 		value_assign(M->p[i][ll], l->vector->the_vector[k]);
 	    }
 	    value_assign(M->p[i][1+d], l->vector->the_vector[k]);
@@ -164,8 +180,11 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
  *	 but excluding the parameters
  * pos: position of the first minimized variable
  * n: number of minimized variables
+ * max: 1 if this is the result of a maximization
+ *      in this case, the quast contains an extra position for a "big parameter"
+ *      right after the original parameters
  */
-static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n)
+static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n, int max)
 {
     int			nparam;
     int			nexist;
@@ -180,6 +199,7 @@ static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n)
 			    q->list->vector->nb_elements-1;
     d = 0;
     nexist = max_new(q, nparam-1, 0, &d) - nparam+1;
+    nparam -= max;
     rows = nparam + 2 * nexist + d + n;
 
     /* nparam now refers to the number of parameters in the original polyhedron */
@@ -199,7 +219,7 @@ static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n)
 	value_set_si(M->p[nvar-n+i][1+nvar+nexist+i], 1);
     }
     D = 0;
-    add_quast(&D, M, q, nparam, nvar, pos, n, nexist, nvar+nexist+nparam);
+    add_quast(&D, M, q, nparam, nvar, pos, n, nexist, nvar+nexist+nparam, max);
     Matrix_Free(M);
     return D;
 }
@@ -229,7 +249,7 @@ Polyhedron *pip_lexminmax(Polyhedron *P, int pos, int n, int nparam, int max)
     pip_quast_print(stderr, sol, 0);
 #endif
 
-    min = quast2poly(sol, nvar, pos, n);
+    min = quast2poly(sol, nvar, pos, n, max);
 
     pip_quast_free(sol);
     pip_matrix_free(context);
