@@ -2,6 +2,7 @@
 #include <stdio.h>  /* needed for piplib ! */
 #include <piplib/piplibMP.h>
 #include <assert.h>
+#include "piputil.h"
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
