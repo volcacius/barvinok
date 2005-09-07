@@ -5174,7 +5174,7 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
     value_clear(min);
     value_clear(tmp);
 
-    Polyhedron *D = pip_lexmin(T ? T : P, nvar, exist, nparam);
+    Polyhedron *D = pip_lexminmax(T ? T : P, nvar, exist, nparam, 0);
     for (Q = D; Q; Q = N) {
 	N = Q->next;
 	Q->next = 0;

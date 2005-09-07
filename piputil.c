@@ -204,7 +204,7 @@ static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n)
     return D;
 }
 
-Polyhedron *pip_lexmin(Polyhedron *P, int pos, int n, int nparam)
+Polyhedron *pip_lexminmax(Polyhedron *P, int pos, int n, int nparam, int max)
 {
     PipOptions	*options;
     PipMatrix *	domain;
@@ -222,6 +222,7 @@ Polyhedron *pip_lexmin(Polyhedron *P, int pos, int n, int nparam)
 #endif
 
     options = pip_options_init();
+    options->Max = max;
     sol = pip_solve(domain, context, -1, options);
 
 #ifdef PIP_DEBUG
