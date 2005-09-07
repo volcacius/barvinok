@@ -5248,6 +5248,10 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
     int nvar = P->Dimension - exist - nparam;
     int len = P->Dimension + 2;
 
+    /* for now */
+    POL_ENSURE_FACETS(P);
+    POL_ENSURE_VERTICES(P);
+
     if (emptyQ(P))
 	return new_zero_ep();
 
