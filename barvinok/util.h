@@ -43,8 +43,10 @@ void Enumeration_mod2table(Enumeration *en, unsigned nparam);
 size_t Enumeration_size(Enumeration *en);
 void Free_ParamNames(char **params, int m);
 int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2);
+#ifndef HAVE_DOMAINCONSTRAINTSIMPLIFY
 int ConstraintSimplify(Value *old, Value *n, int len, Value* v);
 Polyhedron *DomainConstraintSimplify(Polyhedron *P, unsigned MaxRays);
+#endif
 int line_minmax(Polyhedron *I, Value *min, Value *max);
 void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 		     Value *context, Value *res);

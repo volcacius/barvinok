@@ -70,6 +70,7 @@ AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
 AC_CHECK_FUNCS(Enumeration_Free LexSmaller)
+AC_REPLACE_FUNCS(DomainConstraintSimplify)
 AC_TRY_RUN([
 #include <polylib/polylibgmp.h>
 
