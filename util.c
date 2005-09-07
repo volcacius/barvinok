@@ -859,7 +859,7 @@ evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 {
     evalue* tmp;
-    tmp = ParamLine_Length_mod(P, C);
+    tmp = ParamLine_Length_mod(P, C, MaxRays);
     evalue_mod2table(tmp, C->Dimension);
     reduce_evalue(tmp);
     return tmp;
