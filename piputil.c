@@ -216,17 +216,17 @@ Polyhedron *pip_lexmin(Polyhedron *P, int pos, int n, int nparam)
     POL_ENSURE_INEQUALITIES(P);
 
     domain = poly2pip(P, pos, n, nparam);
-    /*
+#ifdef PIP_DEBUG
     pip_matrix_print(stderr, domain);
     pip_matrix_print(stderr, context);
-    */
+#endif
 
     options = pip_options_init();
     sol = pip_solve(domain, context, -1, options);
 
-    /*
+#ifdef PIP_DEBUG
     pip_quast_print(stderr, sol, 0);
-    */
+#endif
 
     min = quast2poly(sol, nvar, pos, n);
 
