@@ -1224,7 +1224,7 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
     return in_domain(P, list_args);
 }
 
-#ifdef HAVE_RANKINGPOLYTOPES
+#ifdef HAVE_LEXSMALLER
 #include <polylib/ranking.h>
 
 evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, Polyhedron *C, 
@@ -1233,7 +1233,7 @@ evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, Polyhedron *C,
     evalue *ranking;
     Polyhedron *RC, *RD, *Q;
 
-    RC = RankingPolytopes(P, D, C, MaxRays);
+    RC = LexSmaller(P, D, C, MaxRays);
     RD = RC->next;
     RC->next = NULL;
 
