@@ -26,7 +26,7 @@ static int live = 0;
 static int print_max = 0;
 static int verbose = 0;
 static int keep_going = 0;
-Value max;
+static Value max;
 
 static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 			 int pos, int nvar, Value *zP, Value *zD, Value *zE,
