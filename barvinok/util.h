@@ -55,10 +55,10 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
 Polyhedron* Polyhedron_Project(Polyhedron *P, int dim);
 
 /* only defined if PolyLib has RankingConstraints */
-evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, Polyhedron *C, 
-			    unsigned MaxRays);
-Enumeration *barvinok_ranking(Polyhedron *P, Polyhedron *D, Polyhedron *C, 
-			      unsigned MaxRays);
+evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
+			    Polyhedron *C, unsigned MaxRays);
+Enumeration *barvinok_ranking(Polyhedron *P, Polyhedron *D, unsigned dim,
+				Polyhedron *C, unsigned MaxRays);
 
 const char *barvinok_version();
 

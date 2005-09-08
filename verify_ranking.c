@@ -189,10 +189,11 @@ int main(int argc,char *argv[])
     nb_parms = D->Dimension;
     param_name = Read_ParamNames(stdin, nb_parms);
 
-    EP = barvinok_ranking_ev(P, D, C, MAXRAYS);
+    EP = barvinok_ranking_ev(P, D, D->Dimension-C->Dimension, C, MAXRAYS);
     if (live) {
 	evalue mone;
-	evalue *EC = barvinok_ranking_ev(D, D, C, MAXRAYS);
+	evalue *EC = barvinok_ranking_ev(D, D, D->Dimension-C->Dimension, 
+					 C, MAXRAYS);
 	if (verbose >= 2) {
 	    puts("EP");
 	    print_evalue(stdout, EP, param_name);
