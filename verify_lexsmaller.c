@@ -99,15 +99,15 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 		printf("\n"); 
 		fflush(stdout);
 		fprintf(stderr,"Error !\n");
-		printf("EP( ");
-		value_print(stderr, VALUE_FMT, z[1]);
-		for (i = 2; i <= nvar; ++i) {
-		    printf(", ");
-		    value_print(stderr, VALUE_FMT, z[i]);
+		fprintf(stderr, "EP( ");
+		value_print(stderr, VALUE_FMT, zE[0]);
+		for (i = 1; i < nvar; ++i) {
+		    fprintf(stderr, ", ");
+		    value_print(stderr, VALUE_FMT, zE[i]);
 		}
-		printf(" ) = ");
+		fprintf(stderr, " ) = ");
 		value_print(stderr, VALUE_FMT, c);
-		printf(" but count = ");
+		fprintf(stderr, " but count = ");
 		value_print(stderr, VALUE_FMT, *count);
 		printf("\n");
 		ok = 0;
