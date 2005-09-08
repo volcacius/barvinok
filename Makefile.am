@@ -3,7 +3,7 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
 		  barvinok_series remove_redundant_equalities \
 		  @bv_extra_programs@
-EXTRA_PROGRAMS = piptest verify_ranking
+EXTRA_PROGRAMS = piptest verify_lexsmaller
 pkginclude_HEADERS = \
     barvinok/barvinok.h \
     barvinok/util.h \

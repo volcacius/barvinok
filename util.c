@@ -1137,8 +1137,8 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
 #ifdef HAVE_LEXSMALLER
 #include <polylib/ranking.h>
 
-evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
-			    Polyhedron *C, unsigned MaxRays)
+evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
+			       Polyhedron *C, unsigned MaxRays)
 {
     evalue *ranking;
     Polyhedron *RC, *RD, *Q;
@@ -1171,10 +1171,10 @@ evalue *barvinok_ranking_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
     return ranking;
 }
 
-Enumeration *barvinok_ranking(Polyhedron *P, Polyhedron *D, unsigned dim,
-			      Polyhedron *C, unsigned MaxRays)
+Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
+				 Polyhedron *C, unsigned MaxRays)
 {
-    evalue *EP = barvinok_ranking_ev(P, D, dim, C, MaxRays);
+    evalue *EP = barvinok_lexsmaller_ev(P, D, dim, C, MaxRays);
 
     return partition2enumeration(EP);
 }

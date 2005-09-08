@@ -28,7 +28,7 @@ static int verbose = 0;
 static int keep_going = 0;
 Value max;
 
-static int check_ranking(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
+static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 			 int pos, int nvar, Value *z, Value *count)
 {
     int i;
@@ -70,7 +70,7 @@ static int check_ranking(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 
 	value_assign(z[pos+1], tmp);
 	if (pos < nvar-1)
-	    ok &= check_ranking(inP ? SP->next : NULL, 
+	    ok &= check_lexsmaller(inP ? SP->next : NULL, 
 			        inD ? SD->next : NULL, 
 			        en, pos+1, nvar, z, count);
 
@@ -189,11 +189,11 @@ int main(int argc,char *argv[])
     nb_parms = D->Dimension;
     param_name = Read_ParamNames(stdin, nb_parms);
 
-    EP = barvinok_ranking_ev(P, D, D->Dimension-C->Dimension, C, MAXRAYS);
+    EP = barvinok_lexsmaller_ev(P, D, D->Dimension-C->Dimension, C, MAXRAYS);
     if (live) {
 	evalue mone;
-	evalue *EC = barvinok_ranking_ev(D, D, D->Dimension-C->Dimension, 
-					 C, MAXRAYS);
+	evalue *EC = barvinok_lexsmaller_ev(D, D, D->Dimension-C->Dimension, 
+					    C, MAXRAYS);
 	if (verbose >= 2) {
 	    puts("EP");
 	    print_evalue(stdout, EP, param_name);
@@ -227,7 +227,7 @@ int main(int argc,char *argv[])
     if (print_max)
 	value_init(max);
     value_init(count);
-    check_ranking(SP, SD, en, 0, P->Dimension-C->Dimension, z->p, &count);
+    check_lexsmaller(SP, SD, en, 0, P->Dimension-C->Dimension, z->p, &count);
     value_clear(count);
 
     if (print_max) {
