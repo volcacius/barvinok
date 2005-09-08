@@ -29,13 +29,15 @@ static int keep_going = 0;
 Value max;
 
 static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
-			 int pos, int nvar, Value *z, Value *count)
+			 int pos, int nvar, Value *zP, Value *zD, Value *zE,
+			 Value *count)
 {
     int i;
     int ok;
     Value PLB, PUB, DLB, DUB, LB, UB, tmp, c;
 
-    assert(pos < nvar);
+    if (!SP && !SD)
+	return 1;
 
     value_init(PLB); value_init(PUB);
     value_init(DLB); value_init(DUB);
@@ -43,11 +45,11 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
     value_init(tmp);
 
     if (SP) {
-	ok = !(lower_upper_bounds(1+pos, SP, z, &PLB, &PUB));
+	ok = !(lower_upper_bounds(1+pos, SP, zP, &PLB, &PUB));
 	assert(ok);
     }
     if (SD) {
-	ok = !(lower_upper_bounds(1+pos, SD, z, &DLB, &DUB));
+	ok = !(lower_upper_bounds(1+pos, SD, zD, &DLB, &DUB));
 	assert(ok);
     }
     if (!SD || (SP && value_lt(PLB, DLB)))
@@ -59,34 +61,35 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
     else
 	value_assign(UB, DUB);
 
-    if (pos == nvar-1)
+    if (SD && !SD->next)
 	value_init(c);
 
     for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-	int inP = value_ge(tmp, PLB) && value_le(tmp, PUB);
-	int inD = value_ge(tmp, DLB) && value_le(tmp, DUB);
+	int inP = SP && value_ge(tmp, PLB) && value_le(tmp, PUB);
+	int inD = SD && value_ge(tmp, DLB) && value_le(tmp, DUB);
 	if (!inP && !inD)
 	    continue;
 
-	value_assign(z[pos+1], tmp);
-	if (pos < nvar-1)
-	    ok &= check_lexsmaller(inP ? SP->next : NULL, 
-			        inD ? SD->next : NULL, 
-			        en, pos+1, nvar, z, count);
+	if (inP)
+	    value_assign(zP[pos+1], tmp);
+	if (inD)
+	    value_assign(zD[pos+1], tmp);
+	if (inD && pos < nvar)
+	    value_assign(zE[pos], tmp);
 
-	if (pos == nvar-1 && inD) {
+	if (inD && !SD->next) {
 	    Value *ctmp;
 
-	    value_assign(c,*(ctmp=compute_poly(en, z+1)));
+	    value_assign(c,*(ctmp=compute_poly(en, zE)));
 	    value_clear(*ctmp);
 	    free(ctmp);
 
 	    if (verbose >= 2) {
 		printf("EP( ");
-		value_print(stdout, VALUE_FMT, z[1]);
-		for (i = 2; i <= nvar; ++i) {
+		value_print(stdout, VALUE_FMT, zE[0]);
+		for (i = 1; i < nvar; ++i) {
 		    printf(", ");
-		    value_print(stdout, VALUE_FMT, z[i]);
+		    value_print(stdout, VALUE_FMT, zE[i]);
 		}
 		printf(" ) = ");
 		value_print(stdout, VALUE_FMT, c);
@@ -117,19 +120,32 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 		value_decrement(*count, *count);
 	}
 
+	if (pos < nvar-1)
+	    ok &= check_lexsmaller(inP ? SP->next : NULL, 
+				   inD ? SD->next : NULL, 
+				   en, pos+1, nvar, zP, zD, zE, count);
+	else
+	    ok &= check_lexsmaller(NULL, inD ? SD->next : NULL, 
+				   en, pos+1, nvar, zP, zD, zE, count)
+	       && check_lexsmaller(inP ? SP->next : NULL, NULL, 
+				   en, pos+1, nvar, zP, zD, zE, count);
+
 	if (!ok && !keep_going)
 	    goto end;
 
-	if (pos == nvar-1 && inP) {
+	if (inP && !SP->next) {
 	    value_increment(*count, *count);
 	    if (value_gt(*count, max))
 		value_assign(max, *count);
 	}
     }
-    value_set_si(z[pos+1], 0);
+    if (SP)
+	value_set_si(zP[pos+1], 0);
+    if (SD)
+	value_set_si(zD[pos+1], 0);
 
 end:
-    if (pos == nvar-1)
+    if (SD && !SD->next)
 	value_clear(c);
 
     value_clear(PLB); value_clear(PUB);
@@ -149,9 +165,11 @@ int main(int argc,char *argv[])
     char **param_name = NULL;
     evalue *EP;
     Enumeration *en;
-    Vector *z;
+    Vector *zP, *zD, *zE;
     Value count;
     int c, ind = 0;
+    char s[128];
+    unsigned dim;
 
     while ((c = getopt_long(argc, argv, "klMvV", options, &ind)) != -1) {
 	switch (c) {
@@ -181,6 +199,11 @@ int main(int argc,char *argv[])
     D = Constraints2Polyhedron(M, MAXRAYS);
     assert(D != NULL);
     Matrix_Free(M);
+
+    fgets(s, 128, stdin);
+    while ((*s=='#') || (sscanf(s, "D %u", &dim)<1))
+	fgets(s, 128, stdin);
+
     M = Matrix_Read();
     C = Constraints2Polyhedron(M, MAXRAYS);
     assert(C != NULL);
@@ -189,11 +212,10 @@ int main(int argc,char *argv[])
     nb_parms = D->Dimension;
     param_name = Read_ParamNames(stdin, nb_parms);
 
-    EP = barvinok_lexsmaller_ev(P, D, D->Dimension-C->Dimension, C, MAXRAYS);
+    EP = barvinok_lexsmaller_ev(P, D, dim, C, MAXRAYS);
     if (live) {
 	evalue mone;
-	evalue *EC = barvinok_lexsmaller_ev(D, D, D->Dimension-C->Dimension, 
-					    C, MAXRAYS);
+	evalue *EC = barvinok_lexsmaller_ev(D, D, dim, C, MAXRAYS);
 	if (verbose >= 2) {
 	    puts("EP");
 	    print_evalue(stdout, EP, param_name);
@@ -221,13 +243,16 @@ int main(int argc,char *argv[])
     SP = Polyhedron_Scan(P, C, MAXRAYS);
     SD = Polyhedron_Scan(D, C, MAXRAYS);
 
-    z = Vector_Alloc(P->Dimension+2);
-    value_set_si(z->p[P->Dimension+1], 1);
+    zP = Vector_Alloc(1+P->Dimension+1);
+    value_set_si(zP->p[1+P->Dimension], 1);
+    zD = Vector_Alloc(1+D->Dimension+1);
+    value_set_si(zD->p[1+D->Dimension], 1);
+    zE = Vector_Alloc(dim+C->Dimension);
 
     if (print_max)
 	value_init(max);
     value_init(count);
-    check_lexsmaller(SP, SD, en, 0, P->Dimension-C->Dimension, z->p, &count);
+    check_lexsmaller(SP, SD, en, 0, dim, zP->p, zD->p, zE->p, &count);
     value_clear(count);
 
     if (print_max) {
@@ -244,5 +269,7 @@ int main(int argc,char *argv[])
     Polyhedron_Free(C);
     Domain_Free(SP);
     Domain_Free(SD);
-    Vector_Free(z);
+    Vector_Free(zP);
+    Vector_Free(zD);
+    Vector_Free(zE);
 }
