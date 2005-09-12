@@ -28,6 +28,10 @@ static int verbose = 0;
 static int keep_going = 0;
 static Value max;
 
+#define LS_OK	    1
+#define LS_P	    2	    /* continue searching P */
+#define LS_D	    4	    /* continue searching D */
+
 static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 			 int pos, int nvar, Value *zP, Value *zD, Value *zE,
 			 Value *count)
@@ -37,7 +41,7 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
     Value PLB, PUB, DLB, DUB, LB, UB, tmp, c;
 
     if (!SP && !SD)
-	return 1;
+	return LS_OK | LS_P | LS_D;
 
     value_init(PLB); value_init(PUB);
     value_init(DLB); value_init(DUB);
@@ -63,6 +67,8 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 
     if (SD && !SD->next)
 	value_init(c);
+
+    ok = LS_OK | LS_P | LS_D;
 
     for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
 	int inP = SP && value_ge(tmp, PLB) && value_le(tmp, PUB);
@@ -118,17 +124,24 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 
 	    if (live)
 		value_decrement(*count, *count);
+
+	    ok &= ~LS_D;
 	}
 
 	if (pos < nvar-1)
 	    ok &= check_lexsmaller(inP ? SP->next : NULL, 
 				   inD ? SD->next : NULL, 
 				   en, pos+1, nvar, zP, zD, zE, count);
-	else
+	else {
 	    ok &= check_lexsmaller(NULL, inD ? SD->next : NULL, 
 				   en, pos+1, nvar, zP, zD, zE, count)
-	       && check_lexsmaller(inP ? SP->next : NULL, NULL, 
+	       &  check_lexsmaller(inP ? SP->next : NULL, NULL, 
 				   en, pos+1, nvar, zP, zD, zE, count);
+	    if (pos >= nvar && !(ok & LS_D))
+		break;
+	    if (pos >= nvar && !(ok & LS_P))
+		break;
+	}
 
 	if (!ok && !keep_going)
 	    goto end;
@@ -137,6 +150,7 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 	    value_increment(*count, *count);
 	    if (value_gt(*count, max))
 		value_assign(max, *count);
+	    ok &= ~LS_P;
 	}
     }
     if (SP)

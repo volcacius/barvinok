@@ -1142,17 +1142,28 @@ evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
 {
     evalue *ranking;
     Polyhedron *RC, *RD, *Q;
+    unsigned nparam = dim + C->Dimension;
+    unsigned exist;
+    Polyhedron *CA;
 
     RC = LexSmaller(P, D, dim, C, MaxRays);
     RD = RC->next;
     RC->next = NULL;
+
+    exist = RD->Dimension - nparam - dim;
+    CA = align_context(RC, RD->Dimension, MaxRays);
+    Q = DomainIntersection(RD, CA, MaxRays);
+    Polyhedron_Free(CA);
+    Domain_Free(RD);
+    Polyhedron_Free(RC);
+    RD = Q;
 
     for (Q = RD; Q; Q = Q->next) {
 	evalue *t;
 	Polyhedron *next = Q->next;
 	Q->next = 0;
 
-	t = barvinok_enumerate_ev(Q, RC, MaxRays);
+	t = barvinok_enumerate_e(Q, exist, nparam, MaxRays);
 
 	if (Q == RD)
 	    ranking = t;
@@ -1166,7 +1177,6 @@ evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
     }
 
     Domain_Free(RD);
-    Polyhedron_Free(RC);
 
     return ranking;
 }
