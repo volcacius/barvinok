@@ -1,3 +1,13 @@
+version: 0.18
+date: Thu Sep 15 11:27:19 CEST 2005
+changes:
+    - factor polyhedra into independent parts before enumeration
+    - make "random vector" specialization more robust
+    - speed up verif_ehrhart by only checking inside the context
+    - remove {Param,}Polyhedron_Reduce
+    - rename triangularize_cone to triangulate_cone
+    - generalize computation of lexmin/max using PIP
+    - compute the number of lexsmaller elements using PolyLib's LexSmaller
 ---
 version: 0.17
 date: Mon Aug  1 12:23:50 CEST 2005
