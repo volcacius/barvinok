@@ -34,6 +34,7 @@ verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = \
+    README.Solaris \
     ChangeLog \
     $(TESTFILES) \
     cdd2polylib.pl \
