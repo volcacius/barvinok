@@ -178,15 +178,17 @@ static void add_quast(Polyhedron**D, Matrix* M, PipQuast *q,
 /*
  * nvar: total number of variables, including the minimized variables,
  *	 but excluding the parameters
+ * nparam: the number of parameters in the PIP problem, i.e., the
+ *	 total number of variables minus the minimized variables
  * pos: position of the first minimized variable
  * n: number of minimized variables
  * max: 1 if this is the result of a maximization
  *      in this case, the quast contains an extra position for a "big parameter"
  *      right after the original parameters
  */
-static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n, int max)
+static Polyhedron *quast2poly(PipQuast *q, int nvar, int nparam,
+			      int pos, int n, int max)
 {
-    int			nparam;
     int			nexist;
     PipList*		l;
     int			i, d, rows;
@@ -194,9 +196,6 @@ static Polyhedron *quast2poly(PipQuast *q, int nvar, int pos, int n, int max)
     Polyhedron*		D;
 
     assert(n != 0);	/* required ? */
-    nparam = q->newparm ? q->newparm->rank :
-	     q->condition ? q->condition->nb_elements-1 :
-			    q->list->vector->nb_elements-1;
     d = 0;
     nexist = max_new(q, nparam-1, 0, &d) - nparam+1;
     nparam -= max;
@@ -249,7 +248,7 @@ Polyhedron *pip_lexminmax(Polyhedron *P, int pos, int n, int nparam, int max)
     pip_quast_print(stderr, sol, 0);
 #endif
 
-    min = quast2poly(sol, nvar, pos, n, max);
+    min = quast2poly(sol, nvar, P->Dimension - n, pos, n, max);
 
     pip_quast_free(sol);
     pip_matrix_free(context);
