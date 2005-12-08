@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, nparam);
 
     nvar = A->Dimension - exist - nparam;
-    D = pip_lexminmax(A, nvar, exist, nparam, 0);
+    D = pip_projectout(A, nvar, exist, nparam);
 
     value_init(sum.d);
     evalue_set_si(&sum, 0, 1);
