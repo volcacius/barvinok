@@ -775,6 +775,7 @@ void reduce_evalue (evalue *e) {
 	    /* This shouldn't really happen; 
 	     * Empty domains should not be added.
 	     */
+	    POL_ENSURE_VERTICES(D);
 	    if (emptyQ(D))
 		goto discard;
 
