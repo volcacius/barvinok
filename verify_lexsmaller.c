@@ -1,5 +1,6 @@
 #include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
+#include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    POL_NO_DUAL
