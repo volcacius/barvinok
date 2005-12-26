@@ -3792,15 +3792,15 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     value_init(factor.d);
     evalue_set_si(&factor, 1, 1);
 
+    CA = align_context(C, P->Dimension, MaxRays);
+    P = DomainIntersection(P, CA, MaxRays);
+    Polyhedron_Free(CA);
+
     /* for now */
     POL_ENSURE_FACETS(P);
     POL_ENSURE_VERTICES(P);
     POL_ENSURE_FACETS(C);
     POL_ENSURE_VERTICES(C);
-    
-    CA = align_context(C, P->Dimension, MaxRays);
-    P = DomainIntersection(P, CA, MaxRays);
-    Polyhedron_Free(CA);
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
