@@ -3701,6 +3701,8 @@ void bfenumerator::handle_polar(Polyhedron *C, int s)
 static inline Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
     Polyhedron *Cin,int WS,Polyhedron **CEq,Matrix **CT)
 {
+    if (WS & POL_NO_DUAL)
+	WS = 0;
     return Polyhedron2Param_SimplifiedDomain(Din, Cin, WS, CEq, CT);
 }
 #else
