@@ -963,6 +963,20 @@ static void eadd_rev_cst (evalue *e1, evalue *res)
     *res = ev;
 }
 
+static int is_zero_on(evalue *e, Polyhedron *D)
+{
+    int is_zero;
+    evalue tmp;
+    value_init(tmp.d);
+    tmp.x.p = new_enode(partition, 2, e->x.p->pos);
+    EVALUE_SET_DOMAIN(tmp.x.p->arr[0], Domain_Copy(D));
+    evalue_copy(&tmp.x.p->arr[1], e);
+    reduce_evalue(&tmp);
+    is_zero = EVALUE_IS_ZERO(tmp);
+    free_evalue_refs(&tmp);
+    return is_zero;
+}
+
 struct section { Polyhedron * D; evalue E; };
 
 void eadd_partitions (evalue *e1,evalue *res)
@@ -995,6 +1009,15 @@ void eadd_partitions (evalue *e1,evalue *res)
 	    Domain_Free(fd);
 	    continue;
 	}
+	/* See if we can extend one of the domains in res to cover fd */
+	for (i = 0; i < res->x.p->size/2; ++i)
+	    if (is_zero_on(&res->x.p->arr[2*i+1], fd))
+		break;
+	if (i < res->x.p->size/2) {
+	    EVALUE_SET_DOMAIN(res->x.p->arr[2*i], 
+		      DomainConcat(fd, EVALUE_DOMAIN(res->x.p->arr[2*i])));
+	    continue;
+	}
 	value_init(s[n].E.d);
 	evalue_copy(&s[n].E, &e1->x.p->arr[2*j+1]);
 	s[n].D = fd;
@@ -1017,6 +1040,10 @@ void eadd_partitions (evalue *e1,evalue *res)
 	    value_init(s[n].E.d);
 	    evalue_copy(&s[n].E, &res->x.p->arr[2*i+1]);
 	    eadd(&e1->x.p->arr[2*j+1], &s[n].E);
+	    if (!emptyQ(fd) && is_zero_on(&e1->x.p->arr[2*j+1], fd)) {
+		d = DomainConcat(fd, d);
+		fd = Empty_Polyhedron(fd->Dimension);
+	    }
 	    s[n].D = d;
 	    ++n;
 	}
