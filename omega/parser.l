@@ -4,7 +4,7 @@
 #include <omega/AST.h>
 #include <basic/Dynamic_Array.h>
 #include <code_gen/mmap-codegen.h>
-#include "y.tab.h"
+#include "y.tab.hh"
 #include <omega/calc_debug.h>
 #ifdef WIN32
 #include <io.h>
@@ -131,7 +131,7 @@ void includeFile(char *s) {
 <LATEX>"\\join"	{ BUFFER;  return JOIN; }
 "\." 		{ BUFFER;  return JOIN; }
 "join"		{ BUFFER;  return JOIN; }
-"domain"	{ BUFFER;  return DOMAIN; }
+"domain"	{ BUFFER;  return OMEGA_DOMAIN; }
 "time"		{ BUFFER; return TIME; }
 "timeclosure"	{ BUFFER; return TIMECLOSURE; }
 "range"		{ BUFFER;  return RANGE; }
