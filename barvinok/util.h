@@ -53,6 +53,7 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 int DomainContains(Polyhedron *P, Value *list_args, int len, 
 		   unsigned MaxRays, int set);
 Polyhedron* Polyhedron_Project(Polyhedron *P, int dim);
+Polyhedron *DomainConcat(Polyhedron *head, Polyhedron *tail);
 
 /* only defined if PolyLib has RankingConstraints */
 evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,

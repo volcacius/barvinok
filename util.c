@@ -1134,6 +1134,17 @@ int DomainContains(Polyhedron *P, Value *list_args, int len,
     return in_domain(P, list_args);
 }
 
+Polyhedron *DomainConcat(Polyhedron *head, Polyhedron *tail)
+{
+    Polyhedron *S;
+    if (!head)
+	return tail;
+    for (S = head; S->next; S = S->next)
+	;
+    S->next = tail;
+    return head;
+}
+
 #ifdef HAVE_LEXSMALLER
 #include <polylib/ranking.h>
 
