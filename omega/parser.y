@@ -183,7 +183,7 @@ inputItem :
 			  Relation *r = relationMap((Const_String)$1);
 			  if (r) delete r;
 			  relationMap[(Const_String)$1] = $3; 
-			  delete $1;
+			  free($1);
 			}
 	| relation ';' { 
 			  flushScanBuffer();
