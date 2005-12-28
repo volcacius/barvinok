@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include <polylib/polylibgmp.h>
+#include <barvinok/evalue.h>
 
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons);
