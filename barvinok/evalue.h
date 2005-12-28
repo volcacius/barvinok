@@ -2,6 +2,7 @@
 #define EV_OPERATIONS_H
 
 #include <polylib/polylibgmp.h>
+#undef divide
 
 #define polynomial new_polynomial
 #define periodic new_periodic
