@@ -18,6 +18,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
+#include "count.h"
 
 #define CALC_VERSION_STRING "Omega Calculator v1.2"
 
@@ -78,6 +79,7 @@ reachable_information *reachable_info;
 %token SUPERSETOF SUBSETOF SAMPLE SYM_SAMPLE
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
+%token COUNT
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -95,6 +97,7 @@ reachable_information *reachable_info;
 %nonassoc GIVEN
 %left OMEGA_P9
 %left '('	OMEGA_P10
+%right COUNT
 
 
 %type <INT_VALUE> effort 
@@ -440,6 +443,20 @@ printf("was substantially faster on the limited domain it handled.\n");
 		  fprintf(stdout,"No nodes reachable.\n");
 		delete $1;
 		delete reachable_info;
+	}
+	| COUNT relation ';' {
+	    evalue *EP = count_relation(*$2);
+	    if (EP) {
+		const Variable_ID_Tuple * globals = $2->global_decls();
+		const char **param_names = new (const char *)[globals->size()];
+		for (int i = 0; i < globals->size(); ++i)
+		    param_names[i] = (*globals)[i+1]->char_name();
+		print_evalue(stdout, EP, param_names);
+		puts("");
+		delete [] param_names;
+		free_evalue_refs(EP); 
+		free(EP);
+	    }
 	}
 	;
 
