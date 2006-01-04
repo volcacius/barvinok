@@ -2845,20 +2845,18 @@ static Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
     return rVD;
 }
 
+/* this procedure may have false negatives */
 static bool Polyhedron_is_infinite(Polyhedron *P, unsigned nparam)
 {
     int r;
-    for (r = 0; r < P->NbRays; ++r)
-	if (value_zero_p(P->Ray[r][0]) ||
-		value_zero_p(P->Ray[r][P->Dimension+1])) {
-	    int i;
-	    for (i = P->Dimension - nparam; i < P->Dimension; ++i)
-		if (value_notzero_p(P->Ray[r][i+1]))
-		    break;
-	    if (i >= P->Dimension)
-		break;
-	}
-    return r <  P->NbRays;
+    for (r = 0; r < P->NbRays; ++r) {
+	if (!value_zero_p(P->Ray[r][0]) &&
+		!value_zero_p(P->Ray[r][P->Dimension+1]))
+	    continue;
+	if (First_Non_Zero(P->Ray[r]+1+P->Dimension-nparam, nparam) == -1)
+	    return true;
+    }
+    return false;
 }
 
 /* Check whether all rays point in the positive directions
