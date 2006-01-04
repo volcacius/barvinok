@@ -968,7 +968,7 @@ static int is_zero_on(evalue *e, Polyhedron *D)
     int is_zero;
     evalue tmp;
     value_init(tmp.d);
-    tmp.x.p = new_enode(partition, 2, e->x.p->pos);
+    tmp.x.p = new_enode(partition, 2, D->Dimension);
     EVALUE_SET_DOMAIN(tmp.x.p->arr[0], Domain_Copy(D));
     evalue_copy(&tmp.x.p->arr[1], e);
     reduce_evalue(&tmp);
