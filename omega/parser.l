@@ -196,7 +196,7 @@ void includeFile(char *s) {
 "restrictRange" 	{ BUFFER;  return RESTRICT_RANGE; }
 "assertUnsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "assert_unsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
-"count"     	{ BUFFER;  return COUNT; }
+"card"     	{ BUFFER;  return CARD; }
 "/"		{ BUFFER;  return RESTRICT_RANGE; }
 "&"		{ BUFFER;  return AND; }
 "|"		{ BUFFER;  return OR; }
