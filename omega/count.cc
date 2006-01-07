@@ -50,7 +50,7 @@ evalue *count_relation(Relation& r)
 	for (int j = 1; j <= r.n_out(); ++j)
 	    vv.push_back(r.output_var(j));
     }
-    int dim = vv.size();
+    int dim = vv.size() - params.size();
 
     const Variable_ID_Tuple * globals = r.global_decls();
     for (int i = 0; i < globals->size(); ++i)
