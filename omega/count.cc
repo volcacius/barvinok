@@ -1,4 +1,5 @@
 #include <barvinok/barvinok.h>
+#include <barvinok/util.h>
 #include <omega.h>
 #include <vector>
 #include "count.h"
@@ -34,13 +35,12 @@ static void set_constraint(Matrix *M, int row,
     value_set_si(M->p[row][1+vv.size()], c.get_const());
 }
 
-
-evalue *count_relation(Relation& r)
+Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params)
 {
+    Polyhedron *D = NULL;
+
     r.simplify();
 
-    varvector vv;
-    varvector params;
     if (r.is_set())
 	for (int j = 1; j <= r.n_set(); ++j)
 	    vv.push_back(r.set_var(j));
@@ -50,17 +50,12 @@ evalue *count_relation(Relation& r)
 	for (int j = 1; j <= r.n_out(); ++j)
 	    vv.push_back(r.output_var(j));
     }
-    int dim = vv.size() - params.size();
 
     const Variable_ID_Tuple * globals = r.global_decls();
     for (int i = 0; i < globals->size(); ++i)
 	params.push_back(r.get_local((*globals)[i+1]));
 
-    int d = 0;
-    evalue *EP = NULL;
-    for (DNF_Iterator di(r.query_DNF()); di; ++di, ++d) {
-	assert(d == 0);
-
+    for (DNF_Iterator di(r.query_DNF()); di; ++di) {
 	int c = 0;
 	for (EQ_Iterator ei = (*di)->EQs(); ei; ++ei, ++c)
 	    max_index((*ei), vv, params);
@@ -77,9 +72,43 @@ evalue *count_relation(Relation& r)
 	    set_constraint(M, row++, (*gi), vv, 1);
 	Polyhedron *P = Constraints2Polyhedron(M, MAXRAYS);
 	Matrix_Free(M);
+	D = DomainConcat(P, D);
+    }
+    return D;
+}
+
+evalue *count_relation(Relation& r)
+{
+    varvector vv;
+    varvector params;
+    Polyhedron *D = relation2Domain(r, vv, params);
+    int dim = vv.size() - params.size();
+
+    int d = 0;
+    evalue *EP = NULL;
+    for (Polyhedron *P = D; P; P = P->next, ++d) {
+	assert(d == 0);
 	int exist = P->Dimension - params.size() - dim;
 	EP = barvinok_enumerate_e(P, exist, params.size(), MAXRAYS);
-	Polyhedron_Free(P);
     }
+    Domain_Free(D);
+    return EP;
+}
+
+evalue *rank_relation(Relation& r)
+{
+    varvector vv;
+    varvector params;
+    Polyhedron *D = relation2Domain(r, vv, params);
+    int dim = vv.size() - params.size();
+
+    evalue *EP = NULL;
+    if (D) {
+	assert(D->next == NULL);
+	Polyhedron *C = Universe_Polyhedron(params.size());
+	EP = barvinok_lexsmaller_ev(D, D, dim, C, MAXRAYS);
+	Polyhedron_Free(C);
+    }
+    Domain_Free(D);
     return EP;
 }

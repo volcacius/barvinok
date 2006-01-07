@@ -79,7 +79,7 @@ reachable_information *reachable_info;
 %token SUPERSETOF SUBSETOF SAMPLE SYM_SAMPLE
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
-%token CARD
+%token CARD RANKING
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -97,7 +97,7 @@ reachable_information *reachable_info;
 %nonassoc GIVEN
 %left OMEGA_P9
 %left '('	OMEGA_P10
-%right CARD
+%right CARD RANKING
 
 
 %type <INT_VALUE> effort 
@@ -454,6 +454,26 @@ printf("was substantially faster on the limited domain it handled.\n");
 		print_evalue(stdout, EP, (char**)param_names);
 		puts("");
 		delete [] param_names;
+		free_evalue_refs(EP); 
+		free(EP);
+	    }
+	    delete $2;
+	}
+	| RANKING relation ';' {
+	    evalue *EP = rank_relation(*$2);
+	    if (EP) {
+		const Variable_ID_Tuple * globals = $2->global_decls();
+		int nvar = $2->n_set();
+		int n = nvar + globals->size();
+		const char **names = new (const char *)[n];
+		$2->setup_names();
+		for (int i = 0; i < nvar; ++i)
+		    names[i] = $2->set_var(i+1)->char_name();
+		for (int i = 0; i < globals->size(); ++i)
+		    names[nvar+i] = (*globals)[i+1]->char_name();
+		print_evalue(stdout, EP, (char**)names);
+		puts("");
+		delete [] names;
 		free_evalue_refs(EP); 
 		free(EP);
 	    }
