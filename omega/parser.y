@@ -457,6 +457,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		free_evalue_refs(EP); 
 		free(EP);
 	    }
+	    delete $2;
 	}
 	;
 
