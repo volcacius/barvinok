@@ -914,10 +914,16 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   case partition: {
     char **names = pname;
     int maxdim = EVALUE_DOMAIN(p->arr[0])->Dimension;
-    if (p->pos < maxdim) {
+    if (!pname || p->pos < maxdim) {
 	NALLOC(names, maxdim);
-	for (i = 0; i < p->pos; ++i)
-	    names[i] = pname[i];
+	for (i = 0; i < p->pos; ++i) {
+	    if (pname)
+		names[i] = pname[i];
+	    else {
+		NALLOC(names[i], 10);
+		snprintf(names[i], 10, "%c", 'P'+i);
+	    }
+	}
 	for ( ; i < maxdim; ++i) {
 	    NALLOC(names[i], 10);
 	    snprintf(names[i], 10, "_p%d", i);
@@ -929,8 +935,8 @@ void print_enode(FILE *DST,enode *p,char **pname) {
 	print_evalue(DST, &p->arr[2*i+1], names);
     }
 
-    if (p->pos < maxdim) {
-	for (i = p->pos ; i < maxdim; ++i)
+    if (!pname || p->pos < maxdim) {
+	for (i = pname ? p->pos : 0; i < maxdim; ++i)
 	    free(names[i]);
 	free(names);
     }
