@@ -226,8 +226,6 @@ static void poly_denom(evalue *p, Value *d)
     value_lcm(*d, p->d, d);
 }
 
-#define EVALUE_IS_ONE(ev)	(value_one_p((ev).d) && value_one_p((ev).x.n))
-
 static void realloc_substitution(struct subst *s, int d)
 {
     struct fixed_param *n;
