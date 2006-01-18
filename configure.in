@@ -199,7 +199,7 @@ AC_SUBST(OMEGA_LDFLAGS)
 AC_SUBST(bv_omega_programs)
 if test "$omega_package" != "no"; then
     if test "x$omega_package" != "xyes"; then
-	OMEGA_CPPFLAGS="-I$omega_package/include $CPPFLAGS"
+	OMEGA_CPPFLAGS="-I$omega_package/include/omega $CPPFLAGS"
 	OMEGA_LDFLAGS="-L$omega_package/lib $LDFLAGS"
     else
 	for i in /usr/include /usr/local/include; do
