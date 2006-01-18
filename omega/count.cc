@@ -82,7 +82,7 @@ evalue *count_relation(Relation& r)
     varvector vv;
     varvector params;
     Polyhedron *D = relation2Domain(r, vv, params);
-    int dim = vv.size() - params.size();
+    int dim = r.is_set() ? r.n_set() : r.n_inp() + r.n_out();
 
     int d = 0;
     evalue *EP = NULL;
@@ -100,7 +100,7 @@ evalue *rank_relation(Relation& r)
     varvector vv;
     varvector params;
     Polyhedron *D = relation2Domain(r, vv, params);
-    int dim = vv.size() - params.size();
+    int dim = r.is_set() ? r.n_set() : r.n_inp() + r.n_out();
 
     evalue *EP = NULL;
     if (D) {
