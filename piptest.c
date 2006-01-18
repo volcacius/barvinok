@@ -42,9 +42,9 @@ int main(int argc, char **argv)
     value_init(sum.d);
     evalue_set_si(&sum, 0, 1);
     for (P = D; P; P = N) {
+	evalue *EP;
 	N = P->next;
 	P->next = 0;
-	evalue *EP;
 	exist = P->Dimension - nvar - nparam;
 	EP = barvinok_enumerate_e(P, exist, nparam, MAXRAYS);
 	print_evalue(stderr, EP, param_name);
