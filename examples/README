@@ -1,0 +1,53 @@
+---------------------------------------------------------------------------
+Brief description of examples:
+
+
+basicLinear.matrix			Simple Example with two parameters 
+					and a linear Poly to test linear 
+					coefficient comparison.
+basicLinear.poly			Same as the first, but in 
+					testehrhart like format.
+
+basicLinear2.matrix			Similar to the first but with a 
+					negative Parameter (Q).
+
+basicTest.matrix			Very simple example taken from a 
+					real example from Memory Peak
+					problem.
+
+basicTestParameterPosNeg.matrix		Similar to the basic test but the 
+					parameter can be negative.
+
+linearExample.matrix			A more complicated linear example
+					, with three variables and three 
+					parameters.
+linearExample.poly			Same as last, but in testehrhart 
+					like format.
+
+philippe.matrix				Example from the doc.
+
+philippe3vars.matrix			Example from the doc, with 3 
+					variables.
+
+philippe3vars3pars.matrix		Example from the doc, with 3 
+					variables and with 3 parameters.
+
+philippeNeg.matrix			Example from the doc, with a 
+					negative parameter.
+
+philippePolynomialCoeff.matrix		Example from the doc, modified 
+					with polynomial
+					(on the parameters) coefficients.
+
+philippePolynomialCoeff1P.matrix	Example from the doc, modified 
+					with polynomial
+					(on the parameters) coefficients,
+					but with only one parameter to 
+					test lex-order in coeff..
+
+test3Deg3Var.matrix			Test with polynomial of degree 3, 
+					3 variables.
+
+testDeg3.matrix				Test with polynomial of degree 3.
+
+---------------------------------------------------------------------------
