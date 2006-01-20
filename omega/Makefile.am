@@ -4,11 +4,17 @@ EXTRA_PROGRAMS = occ
 occ_SOURCES = \
 	Exit.cc \
 	count.cc \
+	count.h \
 	lex.yy.cc \
-	y.tab.cc
+	y.tab.cc \
+	omega_calc/yylex.h
 LDADD = -lcode_gen -lomega ../libbarvinok.la
 LDFLAGS = @OMEGA_LDFLAGS@
 CPPFLAGS = -I$(top_srcdir) @OMEGA_CPPFLAGS@
+
+EXTRA_DIST = \
+	parser.l \
+	parser.y
 
 YACC_FLAGS = -d
 
