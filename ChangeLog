@@ -1,3 +1,12 @@
+version: 0.19
+date: Fri Jan 20 22:14:44 CET 2006
+changes:
+    - include Omega Calculator interface occ
+    - print_enode creates parameter names if none are provided
+    - only use PIP to project out some variables
+    - some header file fixes
+    - C89 fixes again
+---
 version: 0.18
 date: Thu Sep 15 11:27:19 CEST 2005
 changes:
