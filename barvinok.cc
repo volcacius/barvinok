@@ -5211,10 +5211,9 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
     fprintf(stderr, "\nER: level %i\n", er_level);
-    int nvar = P->Dimension - exist - nparam;
-    fprintf(stderr, "%d %d %d\n", nvar, exist, nparam);
 
-    Polyhedron_Print(stderr, P_VALUE_FMT, P);
+    Polyhedron_PrintConstraints(stderr, P_VALUE_FMT, P);
+    fprintf(stderr, "\nE %d\nP %d\n", exist, nparam);
     ++er_level;
     P = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
     evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, MaxRays);
