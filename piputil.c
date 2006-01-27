@@ -178,7 +178,7 @@ static void scan_quast(struct scan_data *data, PipQuast *q)
 
     d = 0;
     nexist = max_new(q, nparam-1, 0, &d) - nparam+1;
-    rows = nparam + 2 * nexist + d + data->n;
+    rows = 2 * nexist + d + data->n;
 
     /* nparam now refers to the number of parameters in the original polyhedron */
     nparam -= data->v - data->n;
@@ -187,21 +187,8 @@ static void scan_quast(struct scan_data *data, PipQuast *q)
     data->d = data->v + nexist + nparam;
 
     data->M = Matrix_Alloc(rows, 1+data->d+1);
-    /* All parameters are/should be positive */
-    for (i = 0; i < data->pos; ++i) {
-	value_set_si(data->M->p[i][0], 1);
-	value_set_si(data->M->p[i][1+i], 1);
-    }
-    for (i = data->pos+data->n; i < data->v; ++i) {
-	value_set_si(data->M->p[i-data->n][0], 1);
-	value_set_si(data->M->p[i-data->n][1+i], 1);
-    }
-    for (i = 0; i < nparam; ++i) {
-	value_set_si(data->M->p[data->v-data->n+i][0], 1);
-	value_set_si(data->M->p[data->v-data->n+i][1+data->v+nexist+i], 1);
-    }
 
-    scan_quast_r(data, q, data->d - data->e - data->n);
+    scan_quast_r(data, q, 0);
     Matrix_Free(data->M);
 }
 
@@ -269,6 +256,8 @@ Polyhedron *pip_projectout(Polyhedron *P, int pos, int n, int nparam)
 #endif
 
     options = pip_options_init();
+    options->Urs_unknowns = -1;
+    options->Urs_parms = -1;
     options->Simplify = 1;
     sol = pip_solve(domain, context, -1, options);
 
