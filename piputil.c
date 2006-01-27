@@ -269,6 +269,7 @@ Polyhedron *pip_projectout(Polyhedron *P, int pos, int n, int nparam)
 #endif
 
     options = pip_options_init();
+    options->Simplify = 1;
     sol = pip_solve(domain, context, -1, options);
 
 #ifdef PIP_DEBUG
