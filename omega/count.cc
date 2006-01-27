@@ -91,6 +91,7 @@ evalue *count_relation(Relation& r)
 	int exist = P->Dimension - params.size() - dim;
 	EP = barvinok_enumerate_e(P, exist, params.size(), MAXRAYS);
     }
+    reduce_evalue(EP);
     Domain_Free(D);
     return EP;
 }
