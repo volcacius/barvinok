@@ -68,3 +68,34 @@ Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params)
     }
     return D;
 }
+
+Relation Polyhedron2relation(Polyhedron *P,
+			  unsigned exist, unsigned nparam, char **params)
+{
+    int nvar = P->Dimension - exist - nparam;
+    Relation r(nvar);
+    varvector vars;
+
+    F_Exists *e = r.add_exists();
+    F_And *base = e->add_and();
+
+    for (int j = 1; j <= r.n_set(); ++j)
+	vars.push_back(r.set_var(j));
+    for (int i = 0; i < exist; ++i)
+	vars.push_back(e->declare());
+    for (int i = 0; i < nparam; ++i)
+	vars.push_back(r.get_local(new Global_Var_Decl(params[i])));
+
+    for (int i = 0; i < P->NbConstraints; ++i) {
+	Constraint_Handle h;
+	if (value_notzero_p(P->Constraint[i][0]))
+	    h = base->add_GEQ();
+	else
+	    h = base->add_EQ();
+	for (int j = 1; j <= P->Dimension; ++j)
+	    h.update_coef(vars[j-1], VALUE_TO_INT(P->Constraint[i][j]));
+	h.update_const(VALUE_TO_INT(P->Constraint[i][1+P->Dimension]));
+    }
+    r.finalize();
+    return r;
+}
