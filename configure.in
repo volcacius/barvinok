@@ -199,19 +199,19 @@ AC_SUBST(OMEGA_LDFLAGS)
 AC_SUBST(bv_omega_programs)
 if test "$omega_package" != "no"; then
     if test "x$omega_package" != "xyes"; then
-	OMEGA_CPPFLAGS="-I$omega_package/include/omega $CPPFLAGS"
-	OMEGA_LDFLAGS="-L$omega_package/lib $LDFLAGS"
+	OMEGA_CPPFLAGS="-I$omega_package/include/omega"
+	OMEGA_LDFLAGS="-L$omega_package/lib"
     else
 	for i in /usr/include /usr/local/include; do
 	    if test -f $i/omega/omega.h; then
-		OMEGA_CPPFLAGS="-I$i/omega $CPPFLAGS"
+		OMEGA_CPPFLAGS="-I$i/omega"
 	    fi
 	done
     fi
 
     AC_LANG_PUSH(C++)
     SAVE_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$OMEGA_CPPFLAGS"
+    CPPFLAGS="$OMEGA_CPPFLAGS $CPPFLAGS"
     AC_CHECK_HEADERS([omega.h],[
 	bv_omega_programs="occ $bv_omega_programs"
     ],[AC_MSG_WARN(Omega not found)])
