@@ -2,7 +2,7 @@ SUBDIRS = . omega
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
-		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
+		  verif_ehrhart barvinok_enumerate_e \
 		  barvinok_series remove_redundant_equalities \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller
@@ -91,13 +91,13 @@ check:
 	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		./verif_ehrhart_e < $$i; \
+		./barvinok_enumerate_e --verify < $$i; \
 	    fi \
 	done
 	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		./verif_ehrhart_e --pip < $$i; \
+		./barvinok_enumerate_e --verify --pip < $$i; \
 	    fi \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
