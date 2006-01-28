@@ -3,6 +3,8 @@ EXTRA_PROGRAMS = occ
 
 occ_SOURCES = \
 	Exit.cc \
+	convert.cc \
+	convert.h \
 	count.cc \
 	count.h \
 	lex.yy.cc \
