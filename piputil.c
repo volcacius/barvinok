@@ -85,6 +85,15 @@ static int vectorpos2cpos(struct scan_data *data, int j)
 }
 
 /*
+ * returns true if some solution exist in the whole quast q
+ */
+static int full_quast(PipQuast *q)
+{
+    return q->condition ? full_quast(q->next_then) && full_quast(q->next_else)
+			: q->list != NULL;
+}
+
+/*
  * i: next row
  *
  * Dimensions in the resulting domain are:
@@ -93,8 +102,16 @@ static int vectorpos2cpos(struct scan_data *data, int j)
 static void scan_quast_r(struct scan_data *data, PipQuast *q, int i)
 {
     PipNewparm *p;
+    int skip;
 
-    for (p = q->newparm; p; p = p->next) {
+    /* Skip to a (random) leaf if we are only interested in whether
+     * a solution exists.
+     */
+    skip = data->n == 0 && full_quast(q);
+    while (skip && q->condition)
+	q = q->next_then;
+
+    for (p = q->newparm; !skip && p; p = p->next) {
 	int j, l;
 	PipVector *vec = p->vector;
 
