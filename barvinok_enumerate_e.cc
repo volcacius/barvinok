@@ -34,7 +34,7 @@ struct option options[] = {
     { "pip",   no_argument,  0,  'p' },
     { "convert",   no_argument,  0,  'c' },
     { "floor",     no_argument,  0,  'f' },
-    { "range",	no_argument,	0,  'r' },
+    { "range-reduction",	no_argument,	0,  'R' },
     { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     int pip = 0;
     int floor = 0;
 
-    while ((c = getopt_long(argc, argv, OMEGA_OPT"pfcrV", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, OMEGA_OPT"pfcRV", options, &ind)) != -1) {
 	switch (c) {
 	case 'o':
 	    omega = 1;
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
 	case 'c':
 	    convert = 1;
 	    break;
-	case 'r':
+	case 'R':
 	    range = 1;
 	    break;
 	case 'V':
