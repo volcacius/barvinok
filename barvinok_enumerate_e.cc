@@ -1,10 +1,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <polylib/polylibgmp.h>
-#include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"
+#ifdef HAVE_OMEGA
+#include "omega/convert.h"
+#endif
 
 /* The input of this example program is a polytope in combined
  * data and parameter space followed by two lines indicating
@@ -26,6 +28,9 @@
 #else
 #include <getopt.h>
 struct option options[] = {
+#ifdef HAVE_OMEGA
+    { "omega",   no_argument,  0,  'o' },
+#endif
     { "pip",   no_argument,  0,  'p' },
     { "convert",   no_argument,  0,  'c' },
     { "floor",     no_argument,  0,  'f' },
@@ -35,22 +40,47 @@ struct option options[] = {
 };
 #endif
 
+#ifdef HAVE_OMEGA
+#define OMEGA_OPT "o"
+
+Polyhedron *Omega_simplify(Polyhedron *P, 
+			    unsigned exist, unsigned nparam, char **parms)
+{
+    varvector varv;
+    varvector paramv;
+    Relation r = Polyhedron2relation(P, exist, nparam, parms);
+    Polyhedron_Free(P);
+    return relation2Domain(r, varv, paramv);
+}
+#else
+#define OMEGA_OPT ""
+Polyhedron *Omega_simplify(Polyhedron *P, 
+			    unsigned exist, unsigned nparam, char **parms)
+{
+    return P;
+}
+#endif
+
 int main(int argc, char **argv)
 {
     Polyhedron *A;
     Matrix *M;
     char **param_name;
-    int exist, nparam;
+    int exist, nparam, nvar;
     char s[128];
     evalue *EP;
     int c, ind = 0;
     int range = 0;
     int convert = 0;
+    int omega = 0;
     int pip = 0;
     int floor = 0;
 
-    while ((c = getopt_long(argc, argv, "pfcrV", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, OMEGA_OPT"pfcrV", options, &ind)) != -1) {
 	switch (c) {
+	case 'o':
+	    omega = 1;
+	    break;
 	case 'p':
 	    pip = 1;
 	    break;
@@ -85,6 +115,12 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     printf("exist: %d, nparam: %d\n", exist, nparam);
     param_name = Read_ParamNames(stdin, nparam);
+    nvar = A->Dimension - exist - nparam;
+    if (omega) {
+	A = Omega_simplify(A, exist, nparam, param_name);
+	assert(!A->next);
+	exist = A->Dimension - nvar - nparam;
+    }
     if (pip && exist > 0)
 	EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
     else
