@@ -31,7 +31,9 @@ struct option options[] = {
 #ifdef HAVE_OMEGA
     { "omega",      no_argument,  0,  'o' },
 #endif
+#ifdef HAVE_PIPLIB
     { "pip",   	    no_argument,  0,  'p' },
+#endif
     { "convert",    no_argument,  0,  'c' },
     { "floor",      no_argument,  0,  'f' },
     { "range-reduction",	no_argument,	0,  'R' },
@@ -42,6 +44,12 @@ struct option options[] = {
     { "version",    no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
 };
+#endif
+
+#ifdef HAVE_PIPLIB
+#define PIPLIB_OPT "p"
+#else
+#define PIPLIB_OPT ""
 #endif
 
 #ifdef HAVE_OMEGA
@@ -121,7 +129,8 @@ int main(int argc, char **argv)
     int m = INT_MAX, M = INT_MIN, r;
     int print_solution = 1;
 
-    while ((c = getopt_long(argc, argv, OMEGA_OPT"pfcRTm:M:r:V", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, 
+		    OMEGA_OPT PIPLIB_OPT "fcRTm:M:r:V", options, &ind)) != -1) {
 	switch (c) {
 	case 'o':
 	    omega = 1;
