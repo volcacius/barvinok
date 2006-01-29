@@ -100,6 +100,12 @@ check:
 		./barvinok_enumerate_e --verify --pip < $$i; \
 	    fi \
 	done
+	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
+	    if test -f $$i; then \
+		echo $$i; \
+		./barvinok_enumerate_e --verify --omega < $$i; \
+	    fi \
+	done
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		echo -n $$i; \
