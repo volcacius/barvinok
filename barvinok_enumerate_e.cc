@@ -285,7 +285,7 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int
       value_clear(p[i]);
     free(p);
     value_clear(tmp);
-    Polyhedron_Free(S);
+    Domain_Free(S);
     Polyhedron_Free(C);
 }
 
