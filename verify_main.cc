@@ -119,7 +119,7 @@ int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 	  }
 #endif
 	  value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	  if(!check_series(S, CS, gf, nparam, pos+1, z)) {
+	  if(!check_series(S, CS->next, gf, nparam, pos+1, z)) {
 	    value_clear(c); value_clear(tmp);
 	    value_clear(LB);
 	    value_clear(UB);
