@@ -39,8 +39,9 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
 
     short_rat * r = new short_rat;
     r->n.coeff.SetDims(1, 2);
-    r->n.coeff[0][0] = cn;
-    r->n.coeff[0][1] = cd;
+    ZZ g = GCD(cn, cd);
+    r->n.coeff[0][0] = cn/g;
+    r->n.coeff[0][1] = cd/g;
     r->n.power.SetDims(1, num.length());
     r->n.power[0] = num;
     r->d.power = den;
@@ -84,8 +85,9 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
 			   (term[i]->n.coeff[j][1] / g) * r->n.coeff[0][0];
 		ZZ d = term[i]->n.coeff[j][1] / g * r->n.coeff[0][1];
 		if (n != 0) {
-		    term[i]->n.coeff[j][0] = n;
-		    term[i]->n.coeff[j][1] = d;
+		    g = GCD(n,d);
+		    term[i]->n.coeff[j][0] = n/g;
+		    term[i]->n.coeff[j][1] = d/g;
 		} else {
 		    if (len > 1) {
 			if (j < len-1) {
