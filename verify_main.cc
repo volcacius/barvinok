@@ -259,9 +259,11 @@ int main(int argc,char *argv[]) {
     gen_fun *gf = 0;
 
     /******* Compute EP *********/
-    if (!series)
+    if (!series) {
         en = barvinok_enumerate(P,C,MAXRAYS);
-    else {
+	if (verbose)
+	    Enumeration_Print(stdout, en, params);
+    } else {
 	evalue *EP;
 	gf = barvinok_series(P, C, MAXRAYS);
 	if (verbose) {
@@ -271,6 +273,8 @@ int main(int argc,char *argv[]) {
 	if (function) {
 	    EP = *gf;
 	    en =  partition2enumeration(EP);
+	    if (verbose)
+		Enumeration_Print(stdout, en, params);
 	}
     }
   
