@@ -5567,8 +5567,65 @@ out:
     return EP;
 }
 
+/* "align" matrix to have nrows by inserting
+ * the necessary number of rows and an equal number of columns in front
+ */
+static Matrix *align_matrix(Matrix *M, int nrows)
+{
+    int newrows = nrows - M->NbRows;
+    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
+    for (int i = 0; i < newrows; ++i)
+	value_set_si(M2->p[i][i], 1);
+    for (int i = 0; i < M->NbRows; ++i)
+	Vector_Copy(M->p[i], M2->p[newrows+i]+newrows, M->NbColumns);
+    return M2;
+}
+
+static void split_param_compression(Matrix *CP, mat_ZZ& map, vec_ZZ& offset)
+{
+    Matrix *T = Transpose(CP);
+    matrix2zz(T, map, T->NbRows-1, T->NbColumns-1);
+    values2zz(T->p[T->NbRows-1], offset, T->NbColumns-1);
+    Matrix_Free(T);
+}
+
+/*
+ * remove equalities that require a "compression" of the parameters
+ */
+#ifndef HAVE_COMPRESS_PARMS
+static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
+					  Matrix **CP, unsigned MaxRays)
+{
+    return P;
+}
+#else
+static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
+					  Matrix **CP, unsigned MaxRays)
+{
+    Matrix *M, *T;
+    Polyhedron *Q;
+
+    /* compress_parms doesn't like equalities that only involve parameters */
+    for (int i = 0; i < P->NbEq; ++i)
+	assert(First_Non_Zero(P->Constraint[i]+1, P->Dimension-nparam) != -1);
+
+    M = Matrix_Alloc(P->NbEq, P->Dimension+2);
+    Vector_Copy(P->Constraint[0], M->p[0], P->NbEq * (P->Dimension+2));
+    *CP = compress_parms(M, nparam);
+    T = align_matrix(*CP, P->Dimension+1);
+    Q = Polyhedron_Preimage(P, T, MaxRays);
+    Polyhedron_Free(P);
+    P = Q;
+    P = remove_equalities_p(P, P->Dimension-nparam, NULL);
+    Matrix_Free(T);
+    Matrix_Free(M);
+    return P;
+}
+#endif
+
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 {
+    Matrix *CP = NULL;
     Polyhedron *CA;
     unsigned nparam = C->Dimension;
     unsigned dim, nvar;
@@ -5585,6 +5642,8 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     assert(Polyhedron_has_positive_rays(P, nparam));
     if (P->NbEq != 0)
 	P = remove_equalities_p(P, P->Dimension-nparam, NULL);
+    if (P->NbEq != 0)
+	P = remove_more_equalities(P, nparam, &CP, MaxRays);
     assert(P->NbEq == 0);
 
 #ifdef USE_INCREMENTAL_BF
@@ -5596,5 +5655,12 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 #endif
     red.start(MaxRays);
     Polyhedron_Free(P);
+    if (CP) {
+	mat_ZZ map;
+	vec_ZZ offset;
+	split_param_compression(CP, map, offset);
+	red.gf->substitute(CP, map, offset);
+	Matrix_Free(CP);
+    }
     return red.gf;
 }
