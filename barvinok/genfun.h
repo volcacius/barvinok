@@ -32,6 +32,7 @@ struct gen_fun {
 
     void add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
 	     const mat_ZZ& den);
+    void substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset);
     void print(unsigned int nparam, char **param_name) const;
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;

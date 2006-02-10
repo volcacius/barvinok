@@ -118,6 +118,31 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     term.push_back(r);
 }
 
+/*
+ * Perform the substitution specified by CP and (map, offset)
+ *
+ * CP is a homogeneous matrix that maps a set of "compressed parameters"
+ * to the original set of parameters.
+ *
+ * This function is applied to a gen_fun computed with the compressed parameters
+ * and adapts it to refer to the original parameters.
+ *
+ * The pair (map, offset) contains the same information as CP.
+ * map is the transpose of the linear part of CP, while offset is the constant part.
+ */
+void gen_fun::substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset)
+{
+    Polyhedron *C = Polyhedron_Image(context, CP, 0);
+    Polyhedron_Free(context);
+    context = C;
+    for (int i = 0; i < term.size(); ++i) {
+	term[i]->d.power *= map;
+	term[i]->n.power *= map;
+	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
+	    term[i]->n.power[j] += offset;
+    }
+}
+
 static void print_power(vec_ZZ& c, vec_ZZ& p,
 			unsigned int nparam, char **param_name)
 {
