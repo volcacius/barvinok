@@ -1555,23 +1555,30 @@ void counter::start(unsigned MaxRays)
     }
 }
 
-struct reducer : public polar_decomposer {
+/* base for non-parametric counting */
+struct np_base : public polar_decomposer {
+    int current_vertex;
+    Polyhedron *P;
+    unsigned dim;
+
+    np_base(Polyhedron *P, unsigned dim) {
+	this->P = P;
+	this->dim = dim;
+    }
+};
+
+struct reducer : public np_base {
     vec_ZZ vertex;
     //vec_ZZ den;
     ZZ sgn;
     ZZ num;
     ZZ one;
-    int j;
-    Polyhedron *P;
-    unsigned dim;
     mpq_t tcount;
     mpz_t tn;
     mpz_t td;
     int lower;	    // call base when only this many variables is left
 
-    reducer(Polyhedron *P) {
-	this->P = P;
-	dim = P->Dimension;
+    reducer(Polyhedron *P) : np_base(P, P->Dimension) {
 	//den.SetLength(dim);
 	mpq_init(tcount);
 	mpz_init(tn);
@@ -1720,7 +1727,7 @@ void reducer::handle_polar(Polyhedron *C, int s)
 
     sgn = s;
 
-    lattice_point(P->Ray[j]+1, C, vertex);
+    lattice_point(P->Ray[current_vertex]+1, C, vertex);
 
     mat_ZZ den;
     den.SetDims(dim, dim);
@@ -1734,8 +1741,8 @@ void reducer::handle_polar(Polyhedron *C, int s)
 
 void reducer::start(unsigned MaxRays)
 {
-    for (j = 0; j < P->NbRays; ++j) {
-	Polyhedron *C = supporting_cone(P, j);
+    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
+	Polyhedron *C = supporting_cone(P, current_vertex);
 	decompose(C, MaxRays);
     }
 }
@@ -1825,11 +1832,11 @@ void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 
 void partial_ireducer::start(unsigned MaxRays)
 {
-    for (j = 0; j < P->NbRays; ++j) {
-	if (!value_pos_p(P->Ray[j][dim+1]))
+    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
+	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
 	    continue;
 
-	Polyhedron *C = supporting_cone(P, j);
+	Polyhedron *C = supporting_cone(P, current_vertex);
 	decompose(C, MaxRays);
     }
 }
@@ -1884,11 +1891,11 @@ void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 
 void partial_reducer::start(unsigned MaxRays)
 {
-    for (j = 0; j < P->NbRays; ++j) {
-	if (!value_pos_p(P->Ray[j][dim+1]))
+    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
+	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
 	    continue;
 
-	Polyhedron *C = supporting_cone(P, j);
+	Polyhedron *C = supporting_cone(P, current_vertex);
 	decompose(C, MaxRays);
     }
 }
@@ -1934,19 +1941,14 @@ typedef vector< bfc_term_base * > bfc_vec;
 
 struct bf_reducer;
 
-struct bf_base : public polar_decomposer {
-    Polyhedron *P;
-    unsigned dim;
-    int j;
+struct bf_base : public np_base {
     ZZ one;
     mpq_t tcount;
     mpz_t tn;
     mpz_t td;
     int lower;	    // call base when only this many variables is left
 
-    bf_base(Polyhedron *P, unsigned dim) {
-	this->P = P;
-	this->dim = dim;
+    bf_base(Polyhedron *P, unsigned dim) : np_base(P, dim) {
 	mpq_init(tcount);
 	mpz_init(tn);
 	mpz_init(td);
@@ -2428,7 +2430,7 @@ void bf_base::handle_polar(Polyhedron *C, int s)
     t->cd.SetLength(1);
 
     t->terms.SetDims(1, dim);
-    lattice_point(P->Ray[j]+1, C, t->terms[0]);
+    lattice_point(P->Ray[current_vertex]+1, C, t->terms[0]);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;
@@ -2442,8 +2444,8 @@ void bf_base::handle_polar(Polyhedron *C, int s)
 
 void bf_base::start(unsigned MaxRays)
 {
-    for (j = 0; j < P->NbRays; ++j) {
-	Polyhedron *C = supporting_cone(P, j);
+    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
+	Polyhedron *C = supporting_cone(P, current_vertex);
 	decompose(C, MaxRays);
     }
 }
@@ -2615,11 +2617,11 @@ void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 
 void partial_bfcounter::start(unsigned MaxRays)
 {
-    for (j = 0; j < P->NbRays; ++j) {
-	if (!value_pos_p(P->Ray[j][dim+1]))
+    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
+	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
 	    continue;
 
-	Polyhedron *C = supporting_cone(P, j);
+	Polyhedron *C = supporting_cone(P, current_vertex);
 	decompose(C, MaxRays);
     }
 }
