@@ -5627,10 +5627,6 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Matrix *CP = NULL;
     Polyhedron *CA;
     unsigned nparam = C->Dimension;
-    unsigned dim, nvar;
-    vec_ZZ sign;
-    int ncone = 0;
-    sign.SetLength(ncone);
 
     CA = align_context(C, P->Dimension, MaxRays);
     P = DomainIntersection(P, CA, MaxRays);
