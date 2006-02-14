@@ -1812,17 +1812,41 @@ void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     mpq_add(count, count, tcount);
 }
 
-struct partial_ireducer : public ireducer {
-    gen_fun * gf;
+/* base for generating function counting */
+struct gf_base {
+    np_base *base;
+    gen_fun *gf;
 
-    partial_ireducer(Polyhedron *P, unsigned nparam) : ireducer(P) {
-	gf = new gen_fun(Polyhedron_Project(P, nparam));
+    gf_base(np_base *npb, unsigned nparam) : base(npb) {
+	gf = new gen_fun(Polyhedron_Project(base->P, nparam));
+    }
+    void start(unsigned MaxRays);
+};
+
+void gf_base::start(unsigned MaxRays)
+{
+    for (int i = 0; i < base->P->NbRays; ++i) {
+	if (!value_pos_p(base->P->Ray[i][base->dim+1]))
+	    continue;
+
+	Polyhedron *C = supporting_cone(base->P, i);
+	base->current_vertex = i;
+	base->decompose(C, MaxRays);
+    }
+}
+
+struct partial_ireducer : public ireducer, public gf_base {
+    partial_ireducer(Polyhedron *P, unsigned nparam) : 
+	    ireducer(P), gf_base(this, nparam) {
 	lower = nparam;
     }
     ~partial_ireducer() {
     }
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    void start(unsigned MaxRays);
+    /* we want to override the start method from reducer with the one from gf_base */
+    void start(unsigned MaxRays) {
+	gf_base::start(MaxRays);
+    }
 };
 
 void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
@@ -1830,24 +1854,12 @@ void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     gf->add(c, cd, num, den_f);
 }
 
-void partial_ireducer::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
-	    continue;
-
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
-    }
-}
-
-struct partial_reducer : public reducer {
-    gen_fun * gf;
+struct partial_reducer : public reducer, public gf_base {
     vec_ZZ lambda;
     vec_ZZ tmp;
 
-    partial_reducer(Polyhedron *P, unsigned nparam) : reducer(P) {
-	gf = new gen_fun(Polyhedron_Project(P, nparam));
+    partial_reducer(Polyhedron *P, unsigned nparam) : 
+	    reducer(P), gf_base(this, nparam) {
 	lower = nparam;
 
 	tmp.SetLength(dim - nparam);
@@ -1856,7 +1868,10 @@ struct partial_reducer : public reducer {
     ~partial_reducer() {
     }
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    void start(unsigned MaxRays);
+    /* we want to override the start method from reducer with the one from gf_base */
+    void start(unsigned MaxRays) {
+	gf_base::start(MaxRays);
+    }
 
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
@@ -1887,17 +1902,6 @@ struct partial_reducer : public reducer {
 void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     gf->add(c, cd, num, den_f);
-}
-
-void partial_reducer::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
-	    continue;
-
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
-    }
 }
 
 struct bfc_term_base {
@@ -2580,17 +2584,18 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
-struct partial_bfcounter : public bfcounter_base {
-    gen_fun * gf;
-
-    partial_bfcounter(Polyhedron *P, unsigned nparam) : bfcounter_base(P) {
-	gf = new gen_fun(Polyhedron_Project(P, nparam));
+struct partial_bfcounter : public bfcounter_base, public gf_base {
+    partial_bfcounter(Polyhedron *P, unsigned nparam) : 
+	    bfcounter_base(P), gf_base(this, nparam) {
 	lower = nparam;
     }
     ~partial_bfcounter() {
     }
     virtual void base(mat_ZZ& factors, bfc_vec& v);
-    void start(unsigned MaxRays);
+    /* we want to override the start method from bf_base with the one from gf_base */
+    void start(unsigned MaxRays) {
+	gf_base::start(MaxRays);
+    }
 };
 
 void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
@@ -2612,17 +2617,6 @@ void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 	for (int j = 0; j < v[i]->terms.NumRows(); ++j)
 	    gf->add(bfct->cn[j], bfct->cd[j], v[i]->terms[j], den);
 	delete v[i];
-    }
-}
-
-void partial_bfcounter::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
-	    continue;
-
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
     }
 }
 
