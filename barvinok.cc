@@ -1934,7 +1934,7 @@ typedef vector< bfc_term_base * > bfc_vec;
 
 struct bf_reducer;
 
-struct bf_base : public virtual polar_decomposer {
+struct bf_base : public polar_decomposer {
     Polyhedron *P;
     unsigned dim;
     int j;
@@ -2984,7 +2984,7 @@ void enumerator::handle_polar(Polyhedron *C, int s)
     } 
 }
 
-struct enumerator_base : public virtual polar_decomposer {
+struct enumerator_base {
     Polyhedron *P;
     unsigned dim, nbV;
     evalue ** vE;
@@ -2992,11 +2992,14 @@ struct enumerator_base : public virtual polar_decomposer {
     Param_Vertices *V;
     evalue ** E_vertex;
     evalue mone;
+    polar_decomposer *pd;
 
-    enumerator_base(Polyhedron *P, unsigned dim, unsigned nbV) {
+    enumerator_base(Polyhedron *P, unsigned dim, unsigned nbV, polar_decomposer *pd)
+    {
 	this->P = P;
 	this->dim = dim;
 	this->nbV = nbV;
+	this->pd = pd;
 
 	vE = new evalue_p[nbV];
 	for (int j = 0; j < nbV; ++j)
@@ -3018,7 +3021,7 @@ struct enumerator_base : public virtual polar_decomposer {
 	value_init(vE[_i]->d);
 	evalue_set_si(vE[_i], 0, 1);
 
-	decompose(C, MaxRays);
+	pd->decompose(C, MaxRays);
     }
 
     ~enumerator_base() {
@@ -3151,14 +3154,14 @@ void ie_cum::add_term(int *powers, int len, evalue *f2)
     }
 }
 
-struct ienumerator : public virtual polar_decomposer, public enumerator_base {
+struct ienumerator : public polar_decomposer, public enumerator_base {
     //Polyhedron *pVD;
     mat_ZZ den;
     vec_ZZ vertex;
     mpq_t tcount;
 
     ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
-		enumerator_base(P, dim, nbV) {
+		enumerator_base(P, dim, nbV, this) {
 	vertex.SetLength(dim);
 
 	den.SetDims(dim, dim);
@@ -3532,7 +3535,7 @@ struct bfenumerator : public bf_base, public enumerator_base {
     evalue *factor;
 
     bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
-		    bf_base(P, dim), enumerator_base(P, dim, nbV) {
+		    bf_base(P, dim), enumerator_base(P, dim, nbV, this) {
 	lower = 0;
 	factor = NULL;
     }
