@@ -10,7 +10,7 @@
 
 #include <gmp.h>
 
-#include <polylib/polylib.h>
+#include <polylib/polylibgmp.h>
 
 #include "bernstein.h"
 
