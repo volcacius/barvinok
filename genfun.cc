@@ -118,6 +118,18 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     term.push_back(r);
 }
 
+void gen_fun::add(const ZZ& cn, const ZZ& cd, gen_fun *gf)
+{
+    ZZ n, d;
+    for (int i = 0; i < gf->term.size(); ++i) {
+	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
+	    n = cn * gf->term[i]->n.coeff[j][0];
+	    d = cd * gf->term[i]->n.coeff[j][1];
+	    add(n, d, gf->term[i]->n.power[j], gf->term[i]->d.power);
+	}
+    }
+}
+
 /*
  * Perform the substitution specified by CP and (map, offset)
  *
@@ -141,6 +153,57 @@ void gen_fun::substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset)
 	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
 	    term[i]->n.power[j] += offset;
     }
+}
+
+gen_fun *gen_fun::Hadamard_product(gen_fun *gf, unsigned MaxRays)
+{
+    Polyhedron *C = DomainIntersection(context, gf->context, MaxRays);
+    Polyhedron *U = Universe_Polyhedron(C->Dimension);
+    gen_fun *sum = new gen_fun(C);
+    for (int i = 0; i < term.size(); ++i) {
+	for (int i2 = 0; i2 < gf->term.size(); ++i2) {
+	    int d = term[i]->d.power.NumCols();
+	    int k1 = term[i]->d.power.NumRows();
+	    int k2 = gf->term[i2]->d.power.NumRows();
+	    assert(term[i]->d.power.NumCols() == gf->term[i2]->d.power.NumCols());
+	    for (int j = 0; j < term[i]->n.power.NumRows(); ++j) {
+		for (int j2 = 0; j2 < gf->term[i2]->n.power.NumRows(); ++j2) {
+		    Matrix *M = Matrix_Alloc(k1+k2+d+d, 1+k1+k2+d+1);
+		    for (int k = 0; k < k1+k2; ++k) {
+			value_set_si(M->p[k][0], 1);
+			value_set_si(M->p[k][1+k], 1);
+		    }
+		    for (int k = 0; k < d; ++k) {
+			value_set_si(M->p[k1+k2+k][1+k1+k2+k], -1);
+			zz2value(term[i]->n.power[j][k], M->p[k1+k2+k][1+k1+k2+d]);
+			for (int l = 0; l < k1; ++l)
+			    zz2value(term[i]->d.power[l][k], M->p[k1+k2+k][1+l]);
+		    }
+		    for (int k = 0; k < d; ++k) {
+			value_set_si(M->p[k1+k2+d+k][1+k1+k2+k], -1);
+			zz2value(gf->term[i2]->n.power[j2][k], 
+				 M->p[k1+k2+d+k][1+k1+k2+d]);
+			for (int l = 0; l < k2; ++l)
+			    zz2value(gf->term[i2]->d.power[l][k], 
+				     M->p[k1+k2+d+k][1+k1+l]);
+		    }
+		    Polyhedron *P = Constraints2Polyhedron(M, MaxRays);
+		    Matrix_Free(M);
+
+		    gen_fun *t = barvinok_series(P, U, MaxRays);
+
+		    ZZ cn = term[i]->n.coeff[j][0] * gf->term[i2]->n.coeff[j2][0];
+		    ZZ cd = term[i]->n.coeff[j][1] * gf->term[i2]->n.coeff[j2][1];
+		    sum->add(cn, cd, t);
+		    delete t;
+
+		    Polyhedron_Free(P);
+		}
+	    }
+	}
+    }
+    Polyhedron_Free(U);
+    return sum;
 }
 
 static void print_power(vec_ZZ& c, vec_ZZ& p,
