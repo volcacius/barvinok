@@ -1,0 +1,59 @@
+AC_INIT
+AM_INIT_AUTOMAKE(bernstein, 0.01)
+AC_SUBST(versioninfo)
+versioninfo=0:0:0
+
+AC_CANONICAL_HOST
+AC_PROG_LIBTOOL
+
+dnl Check for GMP library
+AC_MSG_CHECKING(whether to use GMP)
+AC_ARG_WITH(libgmp, 
+        [  --with-libgmp           DIR Location of the GMP Distribution], 
+	gmp_package=$withval, gmp_package=yes)
+if test "x$gmp_package" = "xno"; then
+	AC_MSG_RESULT(no)
+	AC_MSG_ERROR(Need gmp)
+else
+	AC_MSG_RESULT(yes)
+	if test "x$gmp_package" != "xyes"; then
+	    GMP_DIR=$gmp_package
+	    if test ! -d "$GMP_DIR"; then
+	    	AC_ERROR(Directory given for GMP Distribution is not a directory)
+	    fi
+	    CPPFLAGS="-I$GMP_DIR/include $CPPFLAGS"
+	    LDFLAGS="-L$GMP_DIR/lib $LDFLAGS"
+	fi
+	poly_cv_gmpfatal="no"
+	AC_CHECK_HEADER(gmp.h,
+		[AC_CHECK_LIB(gmp,main,
+		    [],
+		    [poly_cv_gmpfatal="yes"])],
+		[poly_cv_gmpfatal="yes"])
+	if test "$poly_cv_gmpfatal" = "yes"; then
+		AC_MSG_ERROR([GMP not found])
+	fi
+fi
+
+AC_ARG_WITH(polylib,
+            [  --with-polylib=DIR      DIR Location of PolyLib],
+            [ echo "Package polylib : $withval" && polylib_package=$withval],  
+            [ polylib_package=yes ])
+
+if test "$polylib_package" = "no"; then
+    AC_MSG_ERROR(Need polylib)
+fi
+
+if test "$polylib_package" != "yes"; then
+    CPPFLAGS="-I$polylib_package/include $CPPFLAGS"
+    LDFLAGS="-L$polylib_package/lib $LDFLAGS"
+    LD_LIBRARY_PATH="$polylib_package/lib:$LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH
+fi
+
+AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
+    AC_MSG_ERROR(Need polylib)
+])
+
+AC_CONFIG_HEADERS(config.h)
+AC_OUTPUT(Makefile)
