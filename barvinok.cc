@@ -5632,6 +5632,11 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     P = DomainIntersection(P, CA, MaxRays);
     Polyhedron_Free(CA);
 
+    if (emptyQ2(P)) {
+	Polyhedron_Free(P);
+	return new gen_fun;
+    }
+
     assert(!Polyhedron_is_infinite(P, nparam));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_positive_rays(P, nparam));
