@@ -241,8 +241,11 @@ gen_fun::operator evalue *() const
 	    Polyhedron *P = Constraints2Polyhedron(C, 0);
 	    evalue *E = barvinok_enumerate_ev(P, U, 0);
 	    Polyhedron_Free(P);
-	    if (EVALUE_IS_ZERO(*E))
+	    if (EVALUE_IS_ZERO(*E)) {
+		free_evalue_refs(E);
+		free(E);
 		continue;
+	    }
 	    zz2value(term[i]->n.coeff[j][0], factor.x.n);
 	    zz2value(term[i]->n.coeff[j][1], factor.d);
 	    emul(&factor, E);
@@ -256,6 +259,7 @@ gen_fun::operator evalue *() const
 	    else {
 		eadd(E, EP);
 		free_evalue_refs(E);
+		free(E);
 	    }
 	}
 	Matrix_Free(C);
