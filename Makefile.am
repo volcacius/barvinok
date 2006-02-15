@@ -4,6 +4,7 @@ lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
 		  barvinok_series remove_redundant_equalities \
+		  barvinok_union \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller
 pkginclude_HEADERS = \
