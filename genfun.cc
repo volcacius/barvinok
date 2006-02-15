@@ -158,11 +158,11 @@ static void print_power(vec_ZZ& c, vec_ZZ& p,
 		cout << c[0];
 		if (c[1] != 1)
 		    cout << " / " << c[1];
-		cout << " * ";
+		cout << "*";
 	    }
 	    first = false;
 	} else
-	    cout << " * ";
+	    cout << "*";
 	if (i < nparam)
 	    cout << param_name[i];
 	else
