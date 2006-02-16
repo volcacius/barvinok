@@ -173,6 +173,7 @@ AC_ARG_WITH(piplib,
             [ echo "Package piplib : $withval" && piplib_package=$withval],  
             [ piplib_package=yes ])
 
+have_piplib=false
 if test "$piplib_package" != "no"; then
     SAVE_CPPFLAGS="$CPPFLAGS"
     SAVE_LDFLAGS="$LDFLAGS"
@@ -197,11 +198,13 @@ if test "$piplib_package" != "no"; then
 	LIBS="-lpiplibMP $LIBS"
 	AC_LIBOBJ(piputil)
 	bv_extra_programs="piptest $bv_extra_programs"
+	have_piplib=true
     else
 	CPPFLAGS="$SAVE_CPPFLAGS"
 	LDFLAGS="$SAVE_LDFLAGS"
     fi
 fi
+AM_CONDITIONAL(HAVE_PIPLIB, test x$have_piplib = xtrue)
 
 AC_MSG_CHECKING(whether to use Omega)
 AC_ARG_WITH(omega, [AS_HELP_STRING([--with-omega=DIR],[DIR Location of Omega])],

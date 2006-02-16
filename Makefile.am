@@ -74,6 +74,12 @@ dist-hook:
 	    echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID; \
 	fi
 
+if HAVE_PIPLIB
+BEE_TESTDIRS = ehrhart_e ehrhart_e/piplib
+else
+BEE_TESTDIRS = ehrhart_e
+endif
+
 check-series:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
@@ -88,23 +94,15 @@ check:
 		./verif_ehrhart < $$i; \
 	    fi \
 	done
-	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./barvinok_enumerate_e --verify < $$i; \
-	    fi \
-	done
-	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./barvinok_enumerate_e --verify --pip < $$i; \
-	    fi \
-	done
-	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./barvinok_enumerate_e --verify --omega < $$i; \
-	    fi \
+	@for dir in $(BEE_TESTDIRS); do \
+	    for options in '' '--pip' '--pip --omega'; do \
+		for i in $(top_srcdir)/tests/$$dir/*; do \
+		    if test -f $$i; then \
+			echo $$i $$options; \
+			./barvinok_enumerate_e --verify $$options < $$i; \
+		    fi \
+		done \
+	    done \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
