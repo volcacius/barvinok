@@ -210,6 +210,7 @@ AC_MSG_RESULT($omega_package)
 
 AC_SUBST(OMEGA_CPPFLAGS)
 AC_SUBST(OMEGA_LDFLAGS)
+AC_SUBST(OMEGA_LIBS)
 AC_SUBST(bv_omega_programs)
 have_omega=false
 if test "$omega_package" != "no"; then
@@ -230,6 +231,7 @@ if test "$omega_package" != "no"; then
     AC_CHECK_HEADERS([omega.h],[
 	bv_omega_programs="occ $bv_omega_programs"
 	AC_DEFINE(HAVE_OMEGA,[],[use omega])
+	OMEGA_LIBS="-lcode_gen -lomega"
 	have_omega=true
     ],[AC_MSG_WARN(Omega not found)])
     CPPFLAGS="$SAVE_CPPFLAGS"

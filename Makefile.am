@@ -39,7 +39,7 @@ endif
 barvinok_enumerate_e_SOURCES = barvinok_enumerate_e.cc $(BEEO_SOURCES)
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ @CPPFLAGS@
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
-barvinok_enumerate_e_LDADD = -lcode_gen -lomega libbarvinok.la
+barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
