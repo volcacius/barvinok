@@ -174,19 +174,33 @@ AC_ARG_WITH(piplib,
             [ piplib_package=yes ])
 
 if test "$piplib_package" != "no"; then
+    SAVE_CPPFLAGS="$CPPFLAGS"
+    SAVE_LDFLAGS="$LDFLAGS"
     if test "$piplib_package" != "yes"; then
 	CPPFLAGS="-I$piplib_package/include $CPPFLAGS"
 	LDFLAGS="-L$piplib_package/lib $LDFLAGS"
     fi
 
+    bv_cv_piplibfatal="no"
     AC_CHECK_LIB(piplibMP, pip_solve,[
+	AC_CHECK_MEMBER(PipOptions.Urs_parms, [], [
+	    AC_MSG_WARN([Piplib too old; please install version 1.3.6 or newer])
+	    bv_cv_piplibfatal="yes"
+	],[#include <stdio.h>
+	   #include <piplib/piplibMP.h>])
+    ],[
+	AC_MSG_WARN([Piplib not found])
+	bv_cv_piplibfatal="yes"
+    ])
+    if test "$bv_cv_piplibfatal" = "no"; then
 	AC_DEFINE(HAVE_PIPLIB,[],[use piplib])
 	LIBS="-lpiplibMP $LIBS"
 	AC_LIBOBJ(piputil)
 	bv_extra_programs="piptest $bv_extra_programs"
-    ],[
-	AC_MSG_WARN([Piplib not found])
-    ])
+    else
+	CPPFLAGS="$SAVE_CPPFLAGS"
+	LDFLAGS="$SAVE_LDFLAGS"
+    fi
 fi
 
 AC_MSG_CHECKING(whether to use Omega)
