@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <gmp.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

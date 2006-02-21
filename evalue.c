@@ -2730,6 +2730,8 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	value_set_si(rem.d, 0);
 	rem.x.p = new_enode(fractional, 3, -1);
 	evalue_copy(&rem.x.p->arr[0], &p->arr[0]);
+	value_clear(rem.x.p->arr[1].d);
+	value_clear(rem.x.p->arr[2].d);
 	rem.x.p->arr[1] = p->arr[1];
 	rem.x.p->arr[2] = p->arr[2];
 	for (i = 3; i < p->size; ++i)
@@ -2759,6 +2761,8 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	eadd(&f, &factor);
 	emul(&t, &factor);
 
+	value_clear(f.x.p->arr[1].x.n);
+	value_clear(f.x.p->arr[2].x.n);
 	evalue_set_si(&f.x.p->arr[1], 0, 1);
 	evalue_set_si(&f.x.p->arr[2], -1, 1);
 	eadd(&f, &factor);

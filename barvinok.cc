@@ -5107,73 +5107,13 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 {
     int nvar = P->Dimension - exist - nparam;
     evalue *EP = new_zero_ep();
-    Polyhedron *Q, *N, *T = 0;
-    Value min, tmp;
-    value_init(min);
-    value_init(tmp);
+    Polyhedron *Q, *N;
 
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: PIP\n");
 #endif /* DEBUG_ER */
 
-    for (int i = 0; i < P->Dimension; ++i) {
-	bool pos = false;
-	bool neg = false;
-	bool posray = false;
-	bool negray = false;
-	value_set_si(min, 0);
-	for (int j = 0; j < P->NbRays; ++j) {
-	    if (value_pos_p(P->Ray[j][1+i])) {
-		pos = true;
-		if (value_zero_p(P->Ray[j][1+P->Dimension]))
-		    posray = true;
-	    } else if (value_neg_p(P->Ray[j][1+i])) {
-		neg = true;
-		if (value_zero_p(P->Ray[j][1+P->Dimension]))
-		    negray = true;
-		else {
-		    mpz_fdiv_q(tmp, 
-			       P->Ray[j][1+i], P->Ray[j][1+P->Dimension]);
-		    if (value_lt(tmp, min))
-			value_assign(min, tmp);
-		}
-	    }
-	}
-	if (pos && neg) {
-	    assert(!(posray && negray));
-	    assert(!negray);		// for now
-	    Polyhedron *O = T ? T : P;
-	    /* shift by a safe amount */
-	    Matrix *M = Matrix_Alloc(O->NbRays, O->Dimension+2);
-	    Vector_Copy(O->Ray[0], M->p[0], O->NbRays * (O->Dimension+2));
-	    for (int j = 0; j < P->NbRays; ++j) {
-		if (value_notzero_p(M->p[j][1+P->Dimension])) {
-		    value_multiply(tmp, min, M->p[j][1+P->Dimension]);
-		    value_subtract(M->p[j][1+i], M->p[j][1+i], tmp);
-		}
-	    }
-	    if (T)
-		Polyhedron_Free(T);
-	    T = Rays2Polyhedron(M, MaxRays);
-	    Matrix_Free(M);
-	} else if (neg) {
-	    /* negating a parameter requires that we substitute in the
-	     * sign again afterwards.
-	     * Disallow for now.
-	     */
-	    assert(i < nvar+exist);
-	    if (!T)
-		T = Polyhedron_Copy(P);
-	    for (int j = 0; j < T->NbRays; ++j)
-		value_oppose(T->Ray[j][1+i], T->Ray[j][1+i]);
-	    for (int j = 0; j < T->NbConstraints; ++j)
-		value_oppose(T->Constraint[j][1+i], T->Constraint[j][1+i]);
-	}
-    }
-    value_clear(min);
-    value_clear(tmp);
-
-    Polyhedron *D = pip_projectout(T ? T : P, nvar, exist, nparam);
+    Polyhedron *D = pip_projectout(P, nvar, exist, nparam);
     for (Q = D; Q; Q = N) {
 	N = Q->next;
 	Q->next = 0;
@@ -5185,9 +5125,6 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 	free_evalue_refs(E); 
 	free(E);
     }
-
-    if (T)
-	Polyhedron_Free(T);
 
     return EP;
 }

@@ -2,7 +2,7 @@ SUBDIRS = . omega
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
-		  verif_ehrhart barvinok_enumerate_e verif_ehrhart_e \
+		  verif_ehrhart barvinok_enumerate_e \
 		  barvinok_series remove_redundant_equalities \
 		  barvinok_union \
 		  @bv_extra_programs@
@@ -32,6 +32,15 @@ LDADD = libbarvinok.la
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
 barvinok_series_SOURCES = barvinok_series.cc
+if HAVE_OMEGA
+BEEO_SOURCES = omega/Exit.cc omega/convert.cc
+else
+BEEO_SOURCES = 
+endif
+barvinok_enumerate_e_SOURCES = barvinok_enumerate_e.cc $(BEEO_SOURCES)
+barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ @CPPFLAGS@
+barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
+barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
@@ -66,6 +75,12 @@ dist-hook:
 	    echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID; \
 	fi
 
+if HAVE_PIPLIB
+BEE_TESTDIRS = ehrhart_e ehrhart_e/piplib
+else
+BEE_TESTDIRS = ehrhart_e
+endif
+
 check-series:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
@@ -80,17 +95,15 @@ check:
 		./verif_ehrhart < $$i; \
 	    fi \
 	done
-	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./verif_ehrhart_e < $$i; \
-	    fi \
-	done
-	@for i in $(top_srcdir)/tests/ehrhart_e/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./verif_ehrhart_e --pip < $$i; \
-	    fi \
+	@for dir in $(BEE_TESTDIRS); do \
+	    for options in '' '--pip' '--pip --omega'; do \
+		for i in $(top_srcdir)/tests/$$dir/*; do \
+		    if test -f $$i; then \
+			echo $$i $$options; \
+			./barvinok_enumerate_e --verify $$options < $$i; \
+		    fi \
+		done \
+	    done \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
