@@ -70,7 +70,7 @@ dist-hook:
 	(cd $(distdir)/polymake; \
 	    ./autogen.sh; rm -rf autogen.sh autom4te.cache)
 	if test -f $(top_srcdir)/.git/HEAD; then \
-	    cp $(top_srcdir)/.git/HEAD $(distdir)/GIT_HEAD_ID; \
+	    echo @GIT_HEAD_VERSION@ > $(distdir)/GIT_HEAD_ID; \
 	else \
 	    echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID; \
 	fi
