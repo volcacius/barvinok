@@ -1,3 +1,14 @@
+version: 0.20
+date: Wed Feb 22 12:01:23 CET 2006
+changes:
+    - fix PIP-based reduction by removing some code and assuming a recent PIP
+    - some memory leaks plugged
+    - optionally use Omega as a preprocessor in barvinok_enumerate_e
+    - integrate verif_ehrhart_e into barvinok_enumerate_e
+    - barvinok_series handles more problem with equalities
+    - add gen_fun::Hadamard_product
+    - experimental support for enumerating unions of polytopes
+---
 version: 0.19
 date: Fri Jan 20 22:14:44 CET 2006
 changes:
