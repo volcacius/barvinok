@@ -2,6 +2,15 @@
 #include <barvinok/util.h>
 #include "config.h"
 
+/* The input of this example program is similar to that of ehrhart_union
+ * in the PolyLib distribution, the difference being that the number of
+ * polytopes in the union needs to specified explicitly.
+ * The input starts with this number, followed by this number of
+ * polytopes in combined data and parameter space, a context polytope
+ * in parameter space and (optionally) the names of the parameters.
+ * All polytopes are in PolyLib notation.
+ */
+
 #ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    POL_NO_DUAL
 #else
