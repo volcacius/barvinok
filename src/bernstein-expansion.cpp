@@ -11,6 +11,7 @@
 
 #include "bernstein-expansion.h"
 
+static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 
 /*
  * Do the Bernstein Expansion 
@@ -23,9 +24,9 @@
  *	maxDegree: max multi-degree of the polynomial
  */
 int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
-		       unsigned int nbVert, unsigned int maxDegree,
-		       const exvector& Params)
+		       unsigned int nbVert, const exvector& Params)
 {
+	unsigned maxDegree = findMaxDegree(poly, V);
 	matrix A = getAiMatrix(nbVert);
 
 #ifdef DEBUG
@@ -579,4 +580,25 @@ string int2String(int n)
 	string nroV(numeroVariable);
 
 	return nroV;
+}
+
+
+/* 
+ * Find the maximum multi-degree of the polinomial
+ *
+ *	polynomial: polynomial
+ *	Vars: variables matrix
+ *	nbVar: number of variables
+ */
+unsigned int findMaxDegree(ex polynomial, const exvector& Vars)
+{
+	unsigned int max = polynomial.degree(Vars[0]);
+
+	for(unsigned int i = 0; i < Vars.size(); i++) {
+		unsigned int degree = polynomial.degree(Vars[i]);
+		if(max < degree) {
+			max = degree;
+		}
+	}
+	return max;
 }

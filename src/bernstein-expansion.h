@@ -14,8 +14,7 @@ ex replaceVariablesInPolynomial(ex &poly, const GiNaC::exvector& V, ex &variable
 ex getBasis(unsigned int nbVert, matrix &A);
 matrix getAiMatrix(unsigned int nbVert);
 int bernsteinExpansion(matrix &P, ex &poly, const GiNaC::exvector& V,
-		       unsigned int nbVert, unsigned int maxDegree,
-		       const GiNaC::exvector& params);
+		       unsigned int nbVert, const GiNaC::exvector& params);
 bool linearCoefficients(lst coeffs, const GiNaC::exvector &Params);
 void generateMaxConstraints(lst coeffs, const GiNaC::exvector& Params);
 ex constantTerm(ex poly, const GiNaC::exvector &Params);

@@ -75,28 +75,7 @@ void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, exvector params)
 		++v;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	bernsteinExpansion(VM, polynomial, Vars, nbVertices, findMaxDegree(polynomial, Vars), params);
-}
-
-
-/* 
- * Find the maximum multi-degree of the polinomial
- *
- *	polynomial: polynomial
- *	Vars: variables matrix
- *	nbVar: number of variables
- */
-unsigned int findMaxDegree(ex &polynomial, exvector Vars)
-{
-	unsigned int max = polynomial.degree(Vars[0]);
-
-	for(unsigned int i = 0; i < Vars.size(); i++) {
-		unsigned int degree = polynomial.degree(Vars[i]);
-		if(max < degree) {
-			max = degree;
-		}
-	}
-	return max;
+	bernsteinExpansion(VM, polynomial, Vars, nbVertices, params);
 }
 
 
