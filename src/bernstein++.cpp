@@ -14,15 +14,14 @@ using namespace std;
 using namespace GiNaC;
 
 #include "bernstein++.h"
+#include "bernstein.h"
+#include "bernstein-expansion.h"
 
 
 /* Global variables to send to bernstein_expansion */
 ex polynomial;		// polynomial
 
-matrix Vars;		// variables matrix
-unsigned int nbVar;		// number of variables
-
-matrix P;			// parameters matrix
+exvector Vars;		// variables matrix
 
 
 /*
@@ -47,12 +46,23 @@ matrix getParameterMatrix(unsigned int nbParams, char **param_values)
 	return P;
 }
 
+exvector constructParameterVector(char **param_names, unsigned nbParams)
+{
+	exvector P(nbParams);
+	for (int i = 0; i < nbParams; ++i) {
+		P[i] = symbol(param_names[i]);
+#ifdef DEBUG
+		cout << "P: " << P[i] << endl;
+#endif
+	}
+	return P;
+}
+
 
 
 /* Given a domain, converts the vertices matrix to an long long matrix and then
    sends it to ginac functions */
-void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, unsigned int nb_param,
-		 char **param_name)
+void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, exvector params)
 {
 	Param_Vertices *V;
 	unsigned nbVertices = 0;
@@ -75,7 +85,7 @@ void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, unsigned int nb_param,
 			ex t;
 			for (unsigned j = 0; j < nbColumns-2; j++) {
 				// TODO: losing precision to long int
-				t += VALUE_TO_LONG(V->Vertex->p[i][j]) * P(0, j);
+				t += VALUE_TO_LONG(V->Vertex->p[i][j]) * params[j];
 			}
 			t += VALUE_TO_LONG(V->Vertex->p[i][nbColumns-2]);
 			t /= VALUE_TO_LONG(V->Vertex->p[i][nbColumns-1]);
@@ -87,7 +97,7 @@ void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, unsigned int nb_param,
 		++v;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	bernsteinExpansion(VM, polynomial, Vars, nbVar, nbVertices, findMaxDegree(polynomial, Vars, nbVar), P, nb_param);
+	bernsteinExpansion(VM, polynomial, Vars, nbVertices, findMaxDegree(polynomial, Vars), params);
 }
 
 
@@ -98,12 +108,12 @@ void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, unsigned int nb_param,
  *	Vars: variables matrix
  *	nbVar: number of variables
  */
-unsigned int findMaxDegree(ex &polynomial, matrix &Vars, unsigned int nbVar)
+unsigned int findMaxDegree(ex &polynomial, exvector Vars)
 {
-	unsigned int max = polynomial.degree(Vars(0, 0));
+	unsigned int max = polynomial.degree(Vars[0]);
 
-	for(unsigned int i = 0; i < nbVar; i++) {
-		unsigned int degree = polynomial.degree(Vars(0,i));
+	for(unsigned int i = 0; i < Vars.size(); i++) {
+		unsigned int degree = polynomial.degree(Vars[i]);
 		if(max < degree) {
 			max = degree;
 		}
@@ -112,23 +122,16 @@ unsigned int findMaxDegree(ex &polynomial, matrix &Vars, unsigned int nbVar)
 }
 
 
-/*
- * Construct Variables matrix
- *
- *	nbVariables: number of variables
- */
-void getVariablesMatrix(unsigned int nbVariables)
+exvector constructVariableVector(unsigned nbVariables, const char *prefix)
 {
-	symbol *pSym;
-
-	for(unsigned int i = 0; i < nbVariables; i++) {
-		pSym = new symbol("v" + int2String(i));
+	exvector V(nbVariables);
+	for (int i = 0; i < nbVariables; ++i) {
+		V[i] = symbol(prefix + i);
 #ifdef DEBUG
-		cout << "V: " << *pSym << endl;
+		cout << "V: " << V[i] << endl;
 #endif
-		Vars(0,i) = *pSym;
-		delete pSym;
 	}
+	return V;
 }
 
 
@@ -138,20 +141,15 @@ void getVariablesMatrix(unsigned int nbVariables)
  *	m: polynomial matrix
  *	nbRows, nbColumns: number of rows, columns
  */
-extern "C" int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns, unsigned int nbParams, char **param_values)
+int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns) 
 {
 	unsigned int nbVariables = nbColumns - 2;
 	ex p;
 
-	P = getParameterMatrix(nbParams, param_values);	// parameters matrix
-
 	// setting global variables
-	Vars = matrix(1, nbVariables); 		// variables matrix
-	nbVar = nbVariables;
-
-	getVariablesMatrix(nbVariables);
+	Vars = constructVariableVector(nbVariables, "v");
        
-	p = convertPolynomial(m, nbRows, nbColumns, Vars, nbVar);
+	p = convertPolynomial(m, nbRows, nbColumns, Vars);
 	polynomial = p;
 	return 0;
 }
@@ -165,17 +163,18 @@ extern "C" int polyConvert(long long *m, unsigned int nbRows, unsigned int nbCol
  *	Vars: variables of the polynomial
  *	nbVar: number of variables
  */
-ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns, matrix &Vars, unsigned int nbVariables)
+ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns, 
+		     const exvector& Vars)
 {
 	ex p;
 
 	for(unsigned int i = 0; i < nbRows; i++) {
 		ex t;
-		for(unsigned int j = 0; j < nbVariables; j++) {
+		for(unsigned int j = 0; j < Vars.size(); j++) {
 			// TODO: loosing precision to long int
 			long int val = (long int) m[i*nbColumns+j];
 			if(val != 0) {
-				t += pow(Vars(0, j), (long int) m[i*nbColumns+j]);
+				t += pow(Vars[j], (long int) m[i*nbColumns+j]);
 #ifdef DEBUG
 				cout << "T: " << t << endl;
 #endif
@@ -209,20 +208,16 @@ ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns, 
  *	llRows: coefficients number of rows
  *	llColumns: coefficients number of columns
  */
-extern "C" int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns
-				     , long long **llPolynomialCoefficients, unsigned int *llRows, unsigned int *llColumns
-				     , unsigned int nbParams, char **param_values)
+int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns,
+			  long long **llPolynomialCoefficients, unsigned int *llRows, unsigned int *llColumns,
+			  const exvector& params)
 {
 	unsigned int nbVariables = nbColumns;
 	unsigned int nbCoefficients = nbRows;
 	ex p;
 
-	P = getParameterMatrix(nbParams, param_values);	// parameters matrix
-
 	// setting global variables
-	Vars = matrix(1, nbVariables); 		// variables matrix
-	nbVar = nbVariables;
-	getVariablesMatrix(nbVariables);
+	Vars = constructVariableVector(nbVariables, "v");
        
 	for(unsigned int i = 0; i < nbCoefficients; i++) {
 #ifdef DEBUG
@@ -231,7 +226,7 @@ extern "C" int polyConvertParameters(long long *m, unsigned int nbRows, unsigned
 		ex c;
 		ex t;
 
-		c = convertPolynomial(llPolynomialCoefficients[i], llRows[i], llColumns[i], P, nbParams);
+		c = convertPolynomial(llPolynomialCoefficients[i], llRows[i], llColumns[i], params);
 #ifdef DEBUG
 		cout << "Coeff[i]: " << c << endl;
 #endif
@@ -240,7 +235,7 @@ extern "C" int polyConvertParameters(long long *m, unsigned int nbRows, unsigned
 			// TODO: loosing precision to long int
 			long int val = (long int) m[i*nbColumns+j];
 			if(val != 0) {
-				t += pow(Vars(0, j), (long int) m[i*nbColumns+j]);
+				t += pow(Vars[j], (long int) m[i*nbColumns+j]);
 #ifdef DEBUG
 				cout << "T: " << t << endl;
 #endif
@@ -258,4 +253,65 @@ extern "C" int polyConvertParameters(long long *m, unsigned int nbRows, unsigned
 #endif
 
 	return 0;
+}
+
+
+/* Reads the polynomial matrix, converts it to long long precision and calls ginac functions */
+Matrix *readPolynomial(unsigned int nbVariables, const exvector& params)
+{
+	Matrix *polynomial;
+
+	polynomial = Matrix_Read();
+
+#ifdef DEBUG
+	/* Print the polynomial matrix */
+	printf("================================\n");
+	printf("Polynomial: \n");
+	Matrix_Print(stdout, P_VALUE_FMT, polynomial);
+	printf("================================\n");
+#endif
+
+	long long *matrix = matrix2longlong(polynomial);
+	// parameters in the polynomial coefficients
+	if(polynomial->NbColumns == nbVariables) {
+		unsigned int nbCoefficients = polynomial->NbRows;;
+		unsigned int i;
+
+		// FIXME: free
+		long long **llPolynomialCoefficients = (long long **) calloc(sizeof(long *), nbCoefficients);
+		Matrix **mPolynomialCoefficients = (Matrix **) calloc(sizeof(Matrix *), nbCoefficients);
+		unsigned int *llRows = (unsigned int *) calloc(sizeof(unsigned int), nbCoefficients);
+		unsigned int *llColumns = (unsigned int *) calloc(sizeof(unsigned int), nbCoefficients);;
+
+		for(i = 0; i < nbCoefficients; i++) {
+			// read the matrix and set rows and columns number.
+			mPolynomialCoefficients[i] = Matrix_Read();
+			llRows[i] = mPolynomialCoefficients[i]->NbRows;
+			llColumns[i] = mPolynomialCoefficients[i]->NbColumns;
+#ifdef DEBUG
+			/* Print the i coefficient matrix */
+			printf("================================\n");
+			printf("Coefficient i: \n");
+			Matrix_Print(stdout, P_VALUE_FMT, mPolynomialCoefficients[i]);
+			printf("================================\n");
+#endif
+			llPolynomialCoefficients[i] = matrix2longlong(mPolynomialCoefficients[i]);
+			Matrix_Free(mPolynomialCoefficients[i]);
+		}
+		free(mPolynomialCoefficients);
+		polyConvertParameters(matrix, polynomial->NbRows, polynomial->NbColumns, llPolynomialCoefficients
+				      , llRows, llColumns, params);
+		for(i = 0; i < nbCoefficients; i++) {
+			free(llPolynomialCoefficients[i]);
+		}
+		free(llRows);
+		free(llColumns);
+		free(llPolynomialCoefficients);
+
+	} else {
+		polyConvert(matrix, polynomial->NbRows, polynomial->NbColumns);
+	}
+	free(matrix);
+
+	return polynomial;
 }

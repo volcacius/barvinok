@@ -15,27 +15,24 @@ extern "C" {
 #undef polynomial
 }
 
-unsigned int findMaxDegree(GiNaC::ex &polynomial, GiNaC::matrix &Vars, 
-			   unsigned int nbVar);
+unsigned int findMaxDegree(GiNaC::ex &polynomial, GiNaC::exvector Vars);
 
-int bernsteinExpansion(GiNaC::matrix &P, GiNaC::ex &poly, GiNaC::matrix &V, 
-		       unsigned int nbVar, unsigned int nbVert, 
-		       unsigned int maxDegree, GiNaC::matrix &Params, 
-		       unsigned int nbParams);
 matrix getParameterMatrix(unsigned int nbParams, char **param_values);
+GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
 void getVariablesMatrix(unsigned int nbVariables);
+GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 std::string int2String(int n);
-GiNaC::ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns, matrix &Vars, unsigned int nbVariables);
-
-extern "C" {
+GiNaC::ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
+			    const GiNaC::exvector& params);
+Matrix *readPolynomial(unsigned int nbVariables, const GiNaC::exvector& params);
 
 int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns, 
 			  long long **llPolynomialCoefficients, unsigned int *llRows, 
-			  unsigned int *llColumns, unsigned int nbParams, 
-			  char **param_values);
-int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns, 
-	        unsigned int nbParams, char **param_values);
-void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, unsigned int nb_param, 
-		 char **param_name);
+			  unsigned int *llColumns, const GiNaC::exvector& params);
+int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns);
+
+extern "C" {
+
+void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, GiNaC::exvector params);
 
 }

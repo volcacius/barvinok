@@ -22,9 +22,9 @@
  *	nbVert: number of vertices
  *	maxDegree: max multi-degree of the polynomial
  */
-int bernsteinExpansion(matrix &P, ex &poly, matrix &V, unsigned int nbVar
-		       , unsigned int nbVert, unsigned int maxDegree
-		       , matrix &Params, unsigned int nbParams)
+int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
+		       unsigned int nbVert, unsigned int maxDegree,
+		       const exvector& Params)
 {
 	matrix A = getAiMatrix(nbVert);
 
@@ -36,7 +36,7 @@ int bernsteinExpansion(matrix &P, ex &poly, matrix &V, unsigned int nbVar
 
 	// obtain the variables value on the basis and replace
 	ex variables = evalm(A * P);
-	ex polynom = replaceVariablesInPolynomial(poly, V, nbVar, variables);
+	ex polynom = replaceVariablesInPolynomial(poly, V, variables);
 
 #ifdef DEBUG
 	cout << variables << endl << endl;
@@ -60,25 +60,25 @@ int bernsteinExpansion(matrix &P, ex &poly, matrix &V, unsigned int nbVar
 
 	// get the coefficients
 	lst coeffs = getCoefficients(maxDegreePolynomial, expandedBasis, nbVert, A);
-	if(nbParams == 1) {
+	if(Params.size() == 1) {
 		// check if the parameter is positive
-		if(generatePositiveNegativeConstraints(Params, true)) {
-			cout << endl << Params(0,0) << " >= 0" << endl;
-			ex m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params, true, true);
+		if(generatePositiveNegativeConstraints(true)) {
+			cout << endl << Params[0] << " >= 0" << endl;
+			ex m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params[0], true, true);
 			cout << "\tMaximum coefficient: " << m << endl;
-			m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params, false, true);
+			m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params[0], false, true);
 			cout << "\tMinimum coefficient: " << m << endl;
 		}
 		// check if the parameter is negative
-		if(generatePositiveNegativeConstraints(Params, false)) {
-			cout << endl << Params(0,0) << " < 0" << endl;
-			ex m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params, true, false);
+		if(generatePositiveNegativeConstraints(false)) {
+			cout << endl << Params[0] << " < 0" << endl;
+			ex m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params[0], true, false);
 			cout << "\tMaximum coefficient: " << m << endl;
-			m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params, false, false);
+			m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params[0], false, false);
 			cout << "\tMinimum coefficient: " << m << endl;
 		}
 	}
-	if(nbParams > 1 && linearCoefficients(coeffs, Params, nbParams)) {
+	if(Params.size() > 1 && linearCoefficients(coeffs, Params)) {
 #ifdef DEBUG
 		cout << "=================================================" << endl;
 		cout << "Linear coefficients:" << endl << endl;
@@ -88,7 +88,7 @@ int bernsteinExpansion(matrix &P, ex &poly, matrix &V, unsigned int nbVar
 			cout << "#################################################" << endl;
 			cout << "Proposing max: " << coeffs[k] << endl << endl;
 #endif
-			if(generateMaxConstraints(coeffs, Params, nbParams, k)) {
+			if(generateMaxConstraints(coeffs, Params, k)) {
 
 				cout << "\tMaximum coefficient: " << coeffs[k] << endl;
 			}
@@ -97,7 +97,7 @@ int bernsteinExpansion(matrix &P, ex &poly, matrix &V, unsigned int nbVar
 			cout << "Proposing min: " << coeffs[k] << endl << endl;
 #endif
 
-			if(generateMinConstraints(coeffs, Params, nbParams, k)) {
+			if(generateMinConstraints(coeffs, Params, k)) {
 				cout << "\tMinimum coefficient: " << coeffs[k] << endl;
 			}
 
@@ -114,7 +114,7 @@ int bernsteinExpansion(matrix &P, ex &poly, matrix &V, unsigned int nbVar
  *	Params: parameters matrix
  *	nbParams: number of parameters
  */
-ex constantTerm(ex p, matrix &Params, unsigned int nbParams)
+ex constantTerm(ex p, const exvector &Params)
 {
 	ex constants;
 	polynomial poly(p);
@@ -129,8 +129,8 @@ ex constantTerm(ex p, matrix &Params, unsigned int nbParams)
 #endif
 		bool cnt = true;	// is this term constant?
 
-		for(unsigned int j = 0; j < nbParams; j++) {
-			if(poly.term(i).degree(Params(0,j)) == 1) {
+		for(unsigned int j = 0; j < Params.size(); j++) {
+			if(poly.term(i).degree(Params[j]) == 1) {
 				cnt = false;
 			}
 		}
@@ -154,15 +154,15 @@ ex constantTerm(ex p, matrix &Params, unsigned int nbParams)
  *	nbParams: number of parameters
  *	cte: constant term
  */
-ex calculateLCM(ex p, matrix &Params, unsigned int nbParams, ex &cte)
+ex calculateLCM(ex p, const exvector &Params, ex &cte)
 {
 	ex retval = 1;
 	polynomial poly(p);
 
 	for (size_t i = 0; i < poly.nbTerms(); ++i) {
-		for(unsigned int j = 0; j < nbParams; j++) {
-			if(poly.term(i).degree(Params(0,j)) == 1) {
-				retval = lcm(retval, poly.coeff(Params(0,j)).denom());
+		for(unsigned int j = 0; j < Params.size(); j++) {
+			if(poly.term(i).degree(Params[j]) == 1) {
+				retval = lcm(retval, poly.coeff(Params[j]).denom());
 			}
 		}
 	}
@@ -184,11 +184,12 @@ ex calculateLCM(ex p, matrix &Params, unsigned int nbParams, ex &cte)
  *	Params: parameters matrix
  *	nbParams: number of parameters
  */
-void ex2longlongRow(long long *M, unsigned int row, polynomial &difference, matrix &Params, unsigned int nbParams)
+void ex2longlongRow(long long *M, unsigned int row, polynomial &difference, 
+		    const exvector& Params)
 {
-	unsigned int columns = nbParams+2;
-	ex cte = constantTerm(difference, Params, nbParams);
-	ex lcm = calculateLCM(difference, Params, nbParams, cte);
+	unsigned int columns = Params.size()+2;
+	ex cte = constantTerm(difference, Params);
+	ex lcm = calculateLCM(difference, Params, cte);
 
 	M[row*columns] = 1;		// greater or equal
 
@@ -201,13 +202,13 @@ void ex2longlongRow(long long *M, unsigned int row, polynomial &difference, matr
 
 	// now, fill the matrix row
 	for (size_t i = 0; i < intDifference.nbTerms(); ++i) {
-		for(unsigned int j = 0; j < nbParams; j++) {
-			if(intDifference.term(i).degree(Params(0,j)) == 1) {
+		for(unsigned int j = 0; j < Params.size(); j++) {
+			if(intDifference.term(i).degree(Params[j]) == 1) {
 #ifdef DEBUG
 				cout << "difference.term(" << i << "): " << (intDifference.term(i)).coeff(Params(0,j)) << endl;
 #endif
 				// TODO: losing precision
-				long val = (ex_to<numeric>(intDifference.term(i).coeff(Params(0,j)))).to_long();
+				long val = (ex_to<numeric>(intDifference.term(i).coeff(Params[j]))).to_long();
 #ifdef DEBUG
 				cout << "(i,j): " << row << "," << j+1 << ": " << val << endl;
 #endif
@@ -227,12 +228,13 @@ void ex2longlongRow(long long *M, unsigned int row, polynomial &difference, matr
  *	nbParams: number of parameters
  *	max: proposed maximum
  */
-bool generateMaxConstraints(lst coeffs, matrix &Params, unsigned int nbParams, unsigned int max)
+bool generateMaxConstraints(lst coeffs, const exvector &Params, unsigned int max)
 {
 	lst differences;
 
 	long long *M; // diferences matrix
-	M = (long long *) calloc(sizeof(long long), (coeffs.nops()-1) * (nbParams+2));		
+	M = (long long *) calloc(sizeof(long long), 
+				 (coeffs.nops()-1) * (Params.size()+2));		
 
 	unsigned int row = 0;
 	for (size_t i = 0; i < coeffs.nops(); ++i) {
@@ -242,11 +244,11 @@ bool generateMaxConstraints(lst coeffs, matrix &Params, unsigned int nbParams, u
 			cout << "Diff(0): " << difference.term(0) << endl;
 			cout << "C_max - C_i -1: " << difference << endl << endl;
 #endif
-			ex2longlongRow(M, row, difference, Params, nbParams);
+			ex2longlongRow(M, row, difference, Params);
 			row++;
 		}
 	}
-	bool retval = checkConstraint(M, coeffs.nops()-1, nbParams+2);
+	bool retval = checkConstraint(M, coeffs.nops()-1, Params.size()+2);
 	free(M);
 	return retval;
 }
@@ -256,7 +258,7 @@ bool generateMaxConstraints(lst coeffs, matrix &Params, unsigned int nbParams, u
  *
  *	coeffs: coefficients list
  */
-bool generatePositiveNegativeConstraints(matrix &Params, bool positive)
+bool generatePositiveNegativeConstraints(bool positive)
 {
 	long long *M;
 	M = (long long *) calloc(sizeof(long long), 1 * 3);
@@ -286,12 +288,13 @@ bool generatePositiveNegativeConstraints(matrix &Params, bool positive)
  *	nbParams: number of parameters
  *	max: proposed maximum
  */
-bool generateMinConstraints(lst coeffs, matrix &Params, unsigned int nbParams, unsigned int min)
+bool generateMinConstraints(lst coeffs, const exvector &Params, unsigned int min)
 {
 	lst differences;
 
 	long long *M; // diferences matrix
-	M = (long long *) calloc(sizeof(long long), (coeffs.nops()-1) * (nbParams+2));		
+	M = (long long *) calloc(sizeof(long long), 
+				 (coeffs.nops()-1) * (Params.size()+2));		
 
 	unsigned int row = 0;
 	for (size_t i = 0; i < coeffs.nops(); ++i) {
@@ -300,11 +303,11 @@ bool generateMinConstraints(lst coeffs, matrix &Params, unsigned int nbParams, u
 #ifdef DEBUG
 			cout << "C_max - C_i -1: " << difference << endl << endl;
 #endif
-			ex2longlongRow(M, row, difference, Params, nbParams);
+			ex2longlongRow(M, row, difference, Params);
 			row++;
 		}
 	}
-	bool retval = checkConstraint(M, coeffs.nops()-1, nbParams+2);
+	bool retval = checkConstraint(M, coeffs.nops()-1, Params.size()+2);
 	free(M);
 	return retval;
 }
@@ -318,13 +321,13 @@ bool generateMinConstraints(lst coeffs, matrix &Params, unsigned int nbParams, u
  *	Params: parameters matrix
  *	nbParams: number of parameters
  */
-bool linearCoefficients(lst coeffs, matrix &Params, unsigned int nbParams)
+bool linearCoefficients(lst coeffs, const exvector &Params)
 {
 	bool retval = true;
 
 	for (size_t i = 0; i < coeffs.nops(); ++i) {
-		for(unsigned int j = 0; j < nbParams; j++) {
-			retval = retval && (coeffs[i].degree(Params(0,j)) <= 1);
+		for(unsigned int j = 0; j < Params.size(); j++) {
+			retval = retval && (coeffs[i].degree(Params[j]) <= 1);
 		}
 	}
 	return retval;
@@ -341,7 +344,7 @@ bool linearCoefficients(lst coeffs, matrix &Params, unsigned int nbParams)
  *	max: flag that indicates if we are searching for max or min
  *	positive: flag that indicates if the parameter is negative or positive
  */
-ex getMaxMinCoefficient1Param(lst coeffs, unsigned int maxDegree, matrix &Params, bool max, bool positive)
+ex getMaxMinCoefficient1Param(lst coeffs, unsigned int maxDegree, ex Param, bool max, bool positive)
 {
 	bool reverse;		// indicates the direction of the coeff comparation
 	int d = maxDegree;
@@ -360,21 +363,21 @@ ex getMaxMinCoefficient1Param(lst coeffs, unsigned int maxDegree, matrix &Params
 
 #endif
 	for (size_t i = 1; i < coeffs.nops(); ++i) {
-		ex degreeDCoeff = coeffs[i].coeff(Params(0,0), d);
+		ex degreeDCoeff = coeffs[i].coeff(Param, d);
 #ifdef DEBUG
 		cout << "Coef: " << coeffs[i] << " -> " << degreeDCoeff << endl;
 #endif
 		reverse = calculateDirection(max, positive, even);
 		if(!reverse) {
-			if(degreeDCoeff >= m[0].coeff(Params(0,0), d)) {
-				if(degreeDCoeff > m[0].coeff(Params(0,0), d)) {
+			if(degreeDCoeff >= m[0].coeff(Param, d)) {
+				if(degreeDCoeff > m[0].coeff(Param, d)) {
 					m.remove_all();
 				}
 				m.append(coeffs[i]);
 			}
 		} else {
-			if(degreeDCoeff <= m[0].coeff(Params(0,0), d)) {
-				if(degreeDCoeff < m[0].coeff(Params(0,0), d)) {
+			if(degreeDCoeff <= m[0].coeff(Param, d)) {
+				if(degreeDCoeff < m[0].coeff(Param, d)) {
 					m.remove_all();
 				}
 				m.append(coeffs[i]);
@@ -386,7 +389,7 @@ ex getMaxMinCoefficient1Param(lst coeffs, unsigned int maxDegree, matrix &Params
 #endif
 	}
 	if(m.nops() > 1 && d > 0) {
-		return getMaxMinCoefficient1Param(m, d-1, Params, max, positive);
+		return getMaxMinCoefficient1Param(m, d-1, Param, max, positive);
 	} else {
 		return m[0];
 	}
@@ -552,15 +555,15 @@ lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis
 
 
 // replace the variables in the polynomial
-ex replaceVariablesInPolynomial(ex &poly, matrix &V, unsigned int nbVar, ex &variables)
+ex replaceVariablesInPolynomial(ex &poly, const exvector &V, ex &variables)
 {
 	lst replace;
 
-	for(unsigned int i = 0; i < nbVar; i++) {
+	for(unsigned int i = 0; i < V.size(); i++) {
 #ifdef DEBUG
 		cout << "Replacing: " << V(0,i) << " by " << variables[i] << endl;
 #endif
-		replace.append(V(0,i) == variables[i]);
+		replace.append(V[i] == variables[i]);
 	}
 	ex polyRepl = poly.subs(replace);
 

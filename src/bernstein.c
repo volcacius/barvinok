@@ -46,67 +46,6 @@ void printDomain(Param_Domain *Q, Polyhedron *B, char **param_name)
 }
 
 
-/* Reads the polynomial matrix, converts it to long long precision and calls ginac functions */
-Matrix *readPolynomial(unsigned int nbVariables, unsigned int nbParams, char **param_name)
-{
-	Matrix *polynomial;
-
-	polynomial = Matrix_Read();
-
-#ifdef DEBUG
-	/* Print the polynomial matrix */
-	printf("================================\n");
-	printf("Polynomial: \n");
-	Matrix_Print(stdout, P_VALUE_FMT, polynomial);
-	printf("================================\n");
-#endif
-
-	long long *matrix = matrix2longlong(polynomial);
-	// parameters in the polynomial coefficients
-	if(polynomial->NbColumns == nbVariables) {
-		unsigned int nbCoefficients = polynomial->NbRows;;
-		unsigned int i;
-
-		// FIXME: free
-		long long **llPolynomialCoefficients = (long long **) calloc(sizeof(long *), nbCoefficients);
-		Matrix **mPolynomialCoefficients = (Matrix **) calloc(sizeof(Matrix *), nbCoefficients);
-		unsigned int *llRows = (unsigned int *) calloc(sizeof(unsigned int), nbCoefficients);
-		unsigned int *llColumns = (unsigned int *) calloc(sizeof(unsigned int), nbCoefficients);;
-
-		for(i = 0; i < nbCoefficients; i++) {
-			// read the matrix and set rows and columns number.
-			mPolynomialCoefficients[i] = Matrix_Read();
-			llRows[i] = mPolynomialCoefficients[i]->NbRows;
-			llColumns[i] = mPolynomialCoefficients[i]->NbColumns;
-#ifdef DEBUG
-			/* Print the i coefficient matrix */
-			printf("================================\n");
-			printf("Coefficient i: \n");
-			Matrix_Print(stdout, P_VALUE_FMT, mPolynomialCoefficients[i]);
-			printf("================================\n");
-#endif
-			llPolynomialCoefficients[i] = matrix2longlong(mPolynomialCoefficients[i]);
-			Matrix_Free(mPolynomialCoefficients[i]);
-		}
-		free(mPolynomialCoefficients);
-		polyConvertParameters(matrix, polynomial->NbRows, polynomial->NbColumns, llPolynomialCoefficients
-				      , llRows, llColumns, nbParams, param_name);
-		for(i = 0; i < nbCoefficients; i++) {
-			free(llPolynomialCoefficients[i]);
-		}
-		free(llRows);
-		free(llColumns);
-		free(llPolynomialCoefficients);
-
-	} else {
-		polyConvert(matrix, polynomial->NbRows, polynomial->NbColumns, nbParams, param_name);
-	}
-	free(matrix);
-
-	return polynomial;
-}
-
-
 /* Converts a Matrix from the polylib format to long long* format */
 long long *matrix2longlong(Matrix *M)
 {

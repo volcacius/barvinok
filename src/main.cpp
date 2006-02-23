@@ -10,6 +10,8 @@
 #include "bernstein.h"
 #include "bernstein++.h"
 
+using namespace GiNaC;
+
 // global to be used on the coefficient max
 Polyhedron *VD = NULL;	// current validity domain
 
@@ -18,6 +20,7 @@ int main(void) {
 	Matrix *a, *b, *polynomial;
 	Polyhedron *A, *B;		// initial matrices
 	char **param_name;	// name of the parameters
+	exvector params;
 
 	Param_Polyhedron *PP;
 	Param_Domain   *Q;
@@ -37,8 +40,9 @@ int main(void) {
 
 	/* Read the name of the parameters */
 	param_name = Read_ParamNames(stdin, nb_param);
+	params = constructParameterVector(param_name, nb_param);
 
-	polynomial = readPolynomial(a->NbColumns-b->NbColumns, nb_param, param_name);
+	polynomial = readPolynomial(a->NbColumns-b->NbColumns, params);
 
 	Matrix_Free(a);
 	Matrix_Free(b);
@@ -47,7 +51,7 @@ int main(void) {
 	PP = Polyhedron2Param_SimplifiedDomain(&A,B,MAXRAYS,NULL,NULL);
 	for(Q=PP->D;Q;Q=Q->next) {
 		printDomain(Q, B, param_name);
-		doExpansion(PP, Q, nb_param, param_name);
+		doExpansion(PP, Q, params);
 		printf("\n\n===============================================\n");
 	}
 
