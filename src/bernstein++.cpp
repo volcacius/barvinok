@@ -83,7 +83,7 @@ exvector constructVariableVector(unsigned nbVariables, const char *prefix)
 {
 	exvector V(nbVariables);
 	for (int i = 0; i < nbVariables; ++i) {
-		V[i] = symbol(prefix + i);
+		V[i] = symbol(prefix + int2String(i));
 #ifdef DEBUG
 		cout << "V: " << V[i] << endl;
 #endif
