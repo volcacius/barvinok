@@ -4,8 +4,11 @@
 #include <gmp.h>
 
 #include <polylib/polylibgmp.h>
+#undef value_compare
+#undef divide
 
 #include "bernstein.h"
+#include "bernstein++.h"
 
 // global to be used on the coefficient max
 Polyhedron *VD = NULL;	// current validity domain

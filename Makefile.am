@@ -14,7 +14,7 @@ libbernstein_la_LIBADD = -lginac -lcln
 libbernstein_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbernstein.la
 
-bernstein_SOURCES = src/main.c
+bernstein_SOURCES = src/main.cpp
 
 check:
 	@for i in $(top_srcdir)/examples/*.matrix; do \
