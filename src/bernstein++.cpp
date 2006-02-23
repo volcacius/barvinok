@@ -49,53 +49,45 @@ matrix getParameterMatrix(unsigned int nbParams, char **param_values)
 
 
 
-/* 
- * Convert vertices from long long C-style matrix to Ginac-style matrix 
- *
- *	m: vertex matrix
- *	nbRows, nbColumns: number of rows, columns
- *	nbVertices: number of vertices in the matrix
- *	param_values: parameters names
- *	nbParams: number of parameters
- *
- */
-extern "C" int verticesConvert(long long *m, unsigned int nbRows, unsigned int nbColumns
-			       , unsigned int nbVertices, char **param_values, unsigned int nbParams)
+/* Given a domain, converts the vertices matrix to an long long matrix and then
+   sends it to ginac functions */
+void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, unsigned int nb_param,
+		 char **param_name)
 {
-	matrix V(nbVertices, nbRows);		// vertices matrix
+	Param_Vertices *V;
+	unsigned nbVertices = 0;
+	unsigned nbRows, nbColumns;
+	int v;
 
-#ifdef DEBUG
-	cout << "polynomial: " << polynomial << endl;
-	cout << "Vertices: " << nbVertices << endl;
-	cout << "Col: " << nbColumns << endl;
-	cout << "Row per vertice: " << nbRows << endl;
-	cout << "Size: " << nbVertices * nbColumns * nbRows<<endl;
-	cout << "P: " << P << endl;
-#endif
+	assert(PP->nbV > 0);
+	nbRows = PP->V->Vertex->NbRows;
+	nbColumns = PP->V->Vertex->NbColumns;
 
-	for(unsigned int v = 0; v < nbVertices; v++) {
-		for(unsigned int i = 0; i < nbRows; i++) {
+	FORALL_PVertex_in_ParamPolyhedron(V, Q, PP)
+		++nbVertices;
+	END_FORALL_PVertex_in_ParamPolyhedron;
+
+	matrix VM(nbVertices, nbRows);		// vertices matrix
+
+	v = 0;
+	FORALL_PVertex_in_ParamPolyhedron(V, Q, PP)
+		for (unsigned i = 0; i < nbRows; i++) {
 			ex t;
-			for(unsigned int j = 0; j < nbColumns-2; j++) {
-				// TODO: loosing precision to long int
-				t += P(0, j) *  (long int) m[v*nbColumns*nbRows+i*nbColumns+j];
+			for (unsigned j = 0; j < nbColumns-2; j++) {
+				// TODO: losing precision to long int
+				t += VALUE_TO_LONG(V->Vertex->p[i][j]) * P(0, j);
 			}
-			t += (long int) m[v*nbColumns*nbRows+i*nbColumns+nbColumns-2];
-			t /= (long int) m[v*nbColumns*nbRows+i*nbColumns+nbColumns-1];
+			t += VALUE_TO_LONG(V->Vertex->p[i][nbColumns-2]);
+			t /= VALUE_TO_LONG(V->Vertex->p[i][nbColumns-1]);
 #ifdef DEBUG
 			cout << "T: " << t << endl;
 #endif
-			V(v, i) = t;
+			VM(v, i) = t;
 		}
-	}
-#ifdef DEBUG
-	cout << "Matrix V: " << V << endl;
-#endif
+		++v;
+	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	// do the expansion
-	bernsteinExpansion(V, polynomial, Vars, nbVar, nbVertices, findMaxDegree(polynomial, Vars, nbVar), P, nbParams);
-
-	return 0;
+	bernsteinExpansion(VM, polynomial, Vars, nbVar, nbVertices, findMaxDegree(polynomial, Vars, nbVar), P, nb_param);
 }
 
 
