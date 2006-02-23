@@ -15,3 +15,12 @@ libbernstein_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbernstein.la
 
 bernstein_SOURCES = src/main.c
+
+check:
+	@for i in $(top_srcdir)/examples/*.matrix; do \
+	    if ./bernstein < $$i | diff - $${i%.matrix}.out; then \
+		echo "$$i passed"; \
+	    else \
+		echo "$$i failed"; \
+	    fi \
+	done
