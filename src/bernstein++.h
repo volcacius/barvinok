@@ -29,8 +29,4 @@ int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColu
 			  unsigned int *llColumns, const GiNaC::exvector& params);
 int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns);
 
-extern "C" {
-
 void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, GiNaC::exvector params);
-
-}
