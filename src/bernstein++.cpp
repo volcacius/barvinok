@@ -24,28 +24,6 @@ ex polynomial;		// polynomial
 exvector Vars;		// variables matrix
 
 
-/*
- * Construct Parameter matrix
- *
- *	nbParams: number of parameters
- *	params_values: names of the parameters
- */
-matrix getParameterMatrix(unsigned int nbParams, char **param_values)
-{
-	matrix P(1, nbParams); 		// parameters matrix
-	symbol *pSym;
-
-	for(unsigned int i = 0; i < nbParams; i++) {
-		pSym = new symbol(param_values[i]);
-#ifdef DEBUG
-		cout << "P: " << *pSym << endl;
-#endif
-		P(0,i) = *pSym;
-		delete pSym;
-	}
-	return P;
-}
-
 exvector constructParameterVector(char **param_names, unsigned nbParams)
 {
 	exvector P(nbParams);
