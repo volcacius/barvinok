@@ -27,7 +27,6 @@ GiNaC::lst bernsteinExpansion(const GiNaC::matrix &vert, GiNaC::ex poly,
 			      const GiNaC::exvector& params);
 int getMaxMinCoefficient(Polyhedron *VD, GiNaC::lst coeffs, 
 			const GiNaC::exvector& Params);
-bool linearCoefficients(GiNaC::lst coeffs, const GiNaC::exvector &Params);
 void generateMaxConstraints(GiNaC::lst coeffs, const GiNaC::exvector& Params);
 GiNaC::ex constantTerm(GiNaC::ex poly, const GiNaC::exvector &Params);
 GiNaC::ex calculateLCM(GiNaC::ex poly, const GiNaC::exvector &Params, GiNaC::ex &cte);

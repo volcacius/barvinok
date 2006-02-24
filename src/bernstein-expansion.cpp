@@ -18,6 +18,7 @@ using namespace GiNaC;
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static unsigned int findMaxDegree(lst polynomials, ex var);
 static matrix getAiMatrix(unsigned int nbVert);
+static bool linearCoefficients(lst coeffs, const exvector &Params);
 
 /*
  * Do the Bernstein Expansion 
@@ -334,14 +335,11 @@ bool generateMinConstraints(Polyhedron *VD, lst coeffs, const exvector &Params,
  */
 bool linearCoefficients(lst coeffs, const exvector &Params)
 {
-	bool retval = true;
-
-	for (size_t i = 0; i < coeffs.nops(); ++i) {
-		for(unsigned int j = 0; j < Params.size(); j++) {
-			retval = retval && (coeffs[i].degree(Params[j]) <= 1);
-		}
-	}
-	return retval;
+	for (size_t i = 0; i < coeffs.nops(); ++i)
+		for (unsigned int j = 0; j < Params.size(); j++)
+			if (coeffs[i].degree(Params[j]) > 1)
+				return false;
+	return true;
 }
 
 
