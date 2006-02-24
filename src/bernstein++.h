@@ -15,8 +15,6 @@ extern "C" {
 #undef polynomial
 }
 
-unsigned int findMaxDegree(GiNaC::ex &polynomial, GiNaC::exvector Vars);
-
 GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 std::string int2String(int n);
