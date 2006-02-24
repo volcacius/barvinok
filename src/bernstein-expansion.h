@@ -23,9 +23,9 @@ GiNaC::ex replaceVariablesInPolynomial(GiNaC::ex &poly, const GiNaC::exvector& V
 				       GiNaC::ex &variables);
 GiNaC::ex getBasis(unsigned int nbVert, GiNaC::matrix &A);
 GiNaC::matrix getAiMatrix(unsigned int nbVert);
-GiNaC::lst bernsteinExpansion(GiNaC::matrix &P, GiNaC::ex &poly, 
-			      const GiNaC::exvector& V,
-			      unsigned int nbVert, const GiNaC::exvector& params);
+GiNaC::lst bernsteinExpansion(const GiNaC::matrix &vert, GiNaC::ex poly, 
+			      const GiNaC::exvector& vars,
+			      const GiNaC::exvector& params);
 int getMaxMinCoefficient(Polyhedron *VD, GiNaC::lst coeffs, 
 			const GiNaC::exvector& Params);
 bool linearCoefficients(GiNaC::lst coeffs, const GiNaC::exvector &Params);

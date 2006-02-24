@@ -70,7 +70,7 @@ lst doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial,
 		++v;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	return bernsteinExpansion(VM, polynomial, vars, nbVertices, params);
+	return bernsteinExpansion(VM, polynomial, vars, params);
 }
 
 

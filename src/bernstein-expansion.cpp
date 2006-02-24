@@ -21,27 +21,25 @@ static unsigned int findMaxDegree(lst polynomials, ex var);
 /*
  * Do the Bernstein Expansion 
  *
- *	P: parameters matrix
+ *	vert: vertices matrix
  *	poly: polynomial expression
  *	vars: vector of variables
- *	nbVar: number of variables
- *	nbVert: number of vertices
- *	maxDegree: max multi-degree of the polynomial
+ *	Params: vector of parameter
  */
-lst bernsteinExpansion(matrix &P, ex &poly, const exvector& vars,
-		       unsigned int nbVert, const exvector& Params)
+lst bernsteinExpansion(const matrix &vert, ex poly, const exvector& vars,
+		       const exvector& Params)
 {
 	unsigned maxDegree = findMaxDegree(poly, vars);
-	matrix A = getAiMatrix(nbVert);
+	matrix A = getAiMatrix(vert.rows());
 
 #ifdef DEBUG
 	cout << endl << "Polynomial: " << poly << endl << endl;
-	cout << P << endl << endl;
+	cout << vert << endl << endl;
 	cout << A << endl << endl;
 #endif
 
 	// obtain the variables value on the basis and replace
-	ex substitutions = evalm(A * P);
+	ex substitutions = evalm(A * vert);
 	ex polynom = replaceVariablesInPolynomial(poly, vars, substitutions);
 
 #ifdef DEBUG
@@ -49,7 +47,7 @@ lst bernsteinExpansion(matrix &P, ex &poly, const exvector& vars,
 	cout << "Preliminar Expansion: " << polynom << endl << endl;
 #endif
 
-	ex basis = getBasis(nbVert, A);
+	ex basis = getBasis(vert.rows(), A);
 	ex basisPowered = pow(basis, maxDegree);
 	polynomial expandedBasis = basisPowered.expand();
 
@@ -61,11 +59,10 @@ lst bernsteinExpansion(matrix &P, ex &poly, const exvector& vars,
 
 	// monomials to n degree
 	polynomial p(polynom);
-	ex maxDegreePolynomial = powerMonomials(p, A, nbVert
-						, maxDegree, basis);
+	ex maxDegreePolynomial = powerMonomials(p, A, vert.rows(), maxDegree, basis);
 
 	// get the coefficients
-	return getCoefficients(maxDegreePolynomial, expandedBasis, nbVert, A);
+	return getCoefficients(maxDegreePolynomial, expandedBasis, vert.rows(), A);
 }
 
 int getMaxMinCoefficient(Polyhedron *VD, lst coeffs, const exvector& Params)
