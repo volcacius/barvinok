@@ -19,15 +19,15 @@ static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
  *
  *	P: parameters matrix
  *	poly: polynomial expression
- *	V: variables matrix
+ *	vars: vector of variables
  *	nbVar: number of variables
  *	nbVert: number of vertices
  *	maxDegree: max multi-degree of the polynomial
  */
-int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const exvector& V,
+int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const exvector& vars,
 		       unsigned int nbVert, const exvector& Params)
 {
-	unsigned maxDegree = findMaxDegree(poly, V);
+	unsigned maxDegree = findMaxDegree(poly, vars);
 	matrix A = getAiMatrix(nbVert);
 
 #ifdef DEBUG
@@ -37,8 +37,8 @@ int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const exvector& V,
 #endif
 
 	// obtain the variables value on the basis and replace
-	ex variables = evalm(A * P);
-	ex polynom = replaceVariablesInPolynomial(poly, V, variables);
+	ex substitutions = evalm(A * P);
+	ex polynom = replaceVariablesInPolynomial(poly, vars, substitutions);
 
 #ifdef DEBUG
 	cout << variables << endl << endl;
@@ -559,15 +559,15 @@ lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis
 
 
 // replace the variables in the polynomial
-ex replaceVariablesInPolynomial(ex &poly, const exvector &V, ex &variables)
+ex replaceVariablesInPolynomial(ex &poly, const exvector &vars, ex &substitutions)
 {
 	lst replace;
 
-	for(unsigned int i = 0; i < V.size(); i++) {
+	for(unsigned int i = 0; i < vars.size(); i++) {
 #ifdef DEBUG
-		cout << "Replacing: " << V(0,i) << " by " << variables[i] << endl;
+		cout << "Replacing: " << vars[i] << " by " << substitutions[i] << endl;
 #endif
-		replace.append(V[i] == variables[i]);
+		replace.append(vars[i] == substitutions[i]);
 	}
 	ex polyRepl = poly.subs(replace);
 
