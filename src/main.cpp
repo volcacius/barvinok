@@ -10,11 +10,11 @@
 #undef value_compare
 #undef divide
 
-using namespace GiNaC;
-
 #include "bernstein.h"
 #include "bernstein++.h"
 #include "bernstein-expansion.h"
+
+using namespace GiNaC;
 
 static ex readPolynomial(const exvector& vars, const exvector& params);
 

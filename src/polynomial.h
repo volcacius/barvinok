@@ -7,18 +7,15 @@
 
 #include <ginac/ginac.h>
 
-using namespace std;
-using namespace GiNaC;
 
-
-class polynomial : public ex
+class polynomial : public GiNaC::ex
 {
 public:
 	polynomial::polynomial(void);
-	polynomial::polynomial(ex &);
-	polynomial::polynomial(const ex &);
+	polynomial::polynomial(GiNaC::ex &);
+	polynomial::polynomial(const GiNaC::ex &);
 
 	unsigned int nbTerms(void);
-	ex term(unsigned int i);
-	polynomial& polynomial::operator=(ex &);
+	GiNaC::ex term(unsigned int i);
+	polynomial& polynomial::operator=(GiNaC::ex &);
 };

@@ -18,30 +18,32 @@ extern "C" {
 
 #define DIGITS 10
 
-string int2String(int n);
-ex replaceVariablesInPolynomial(ex &poly, const GiNaC::exvector& V, ex &variables);
-ex getBasis(unsigned int nbVert, matrix &A);
-matrix getAiMatrix(unsigned int nbVert);
-bool linearCoefficients(lst coeffs, const GiNaC::exvector &Params);
-void generateMaxConstraints(lst coeffs, const GiNaC::exvector& Params);
-ex constantTerm(ex poly, const GiNaC::exvector &Params);
-ex calculateLCM(ex poly, const GiNaC::exvector &Params, ex &cte);
-bool generateMaxConstraints(Polyhedron *VD, lst coeffs, 
+std::string int2String(int n);
+GiNaC::ex replaceVariablesInPolynomial(GiNaC::ex &poly, const GiNaC::exvector& V, 
+				       GiNaC::ex &variables);
+GiNaC::ex getBasis(unsigned int nbVert, GiNaC::matrix &A);
+GiNaC::matrix getAiMatrix(unsigned int nbVert);
 GiNaC::lst bernsteinExpansion(GiNaC::matrix &P, GiNaC::ex &poly, 
 			      const GiNaC::exvector& V,
 			      unsigned int nbVert, const GiNaC::exvector& params);
 int getMaxMinCoefficient(Polyhedron *VD, GiNaC::lst coeffs, 
 			const GiNaC::exvector& Params);
+bool linearCoefficients(GiNaC::lst coeffs, const GiNaC::exvector &Params);
+void generateMaxConstraints(GiNaC::lst coeffs, const GiNaC::exvector& Params);
+GiNaC::ex constantTerm(GiNaC::ex poly, const GiNaC::exvector &Params);
+GiNaC::ex calculateLCM(GiNaC::ex poly, const GiNaC::exvector &Params, GiNaC::ex &cte);
+bool generateMaxConstraints(Polyhedron *VD, GiNaC::lst coeffs, 
 			    const GiNaC::exvector &Params, unsigned int max);
-bool generateMinConstraints(Polyhedron *VD, lst coeffs, 
+bool generateMinConstraints(Polyhedron *VD, GiNaC::lst coeffs, 
 			    const GiNaC::exvector &Params, unsigned int min);
 bool generatePositiveNegativeConstraints(Polyhedron *VD, bool positive);
-ex getMaxMinCoefficient1Param(lst coeffs, unsigned int maxDegree, ex Param, bool max, bool positive);
+GiNaC::ex getMaxMinCoefficient1Param(GiNaC::lst coeffs, unsigned int maxDegree, 
+				     GiNaC::ex Param, bool max, bool positive);
 bool calculateDirection(bool max, bool positive, bool even);
 void ex2longlongRow(long long *M, unsigned int row, polynomial &difference,
 		    const GiNaC::exvector& Params);
 
-ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert
-		  , unsigned int maxDegree, ex &basis);
-lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis
-		    , unsigned int nbVert, matrix &A);
+GiNaC::ex powerMonomials(polynomial &poly, GiNaC::matrix &A, unsigned int nbVert,
+			 unsigned int maxDegree, GiNaC::ex &basis);
+GiNaC::lst getCoefficients(GiNaC::ex &maxDegreePolynomial, polynomial &expandedBasis
+		    , unsigned int nbVert, GiNaC::matrix &A);
