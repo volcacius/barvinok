@@ -12,6 +12,9 @@
 #include "bernstein.h"
 #include "bernstein-expansion.h"
 
+using namespace std;
+using namespace GiNaC;
+
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 
 /*
