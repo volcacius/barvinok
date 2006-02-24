@@ -22,8 +22,6 @@ GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix
 std::string int2String(int n);
 GiNaC::ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
 			    const GiNaC::exvector& params);
-GiNaC::ex readPolynomial(unsigned int nbVariables, const GiNaC::exvector& vars, 
-			 const GiNaC::exvector& params);
 
 GiNaC::ex polyConvertParameters(long long *m, unsigned int nbRows, 
 			  unsigned int nbColumns, 

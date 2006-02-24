@@ -12,6 +12,8 @@
 
 using namespace GiNaC;
 
+static ex readPolynomial(const exvector& vars, const exvector& params);
+
 /* main function */
 int main(void) {
 	Matrix *a, *b;
@@ -42,7 +44,7 @@ int main(void) {
 	params = constructParameterVector(param_name, nb_param);
 	vars = constructVariableVector(nb_var, "v");
 
-	polynomial = readPolynomial(nb_var, vars, params);
+	polynomial = readPolynomial(vars, params);
 
 	Matrix_Free(a);
 	Matrix_Free(b);
@@ -66,3 +68,69 @@ int main(void) {
 
 	return 0;
 } /* main */
+
+
+/* Reads the polynomial matrix, converts it to long long precision and calls ginac functions */
+ex readPolynomial(const exvector& vars, const exvector& params)
+{
+	ex p;
+	Matrix *polynomial;
+
+	polynomial = Matrix_Read();
+
+#ifdef DEBUG
+	/* Print the polynomial matrix */
+	printf("================================\n");
+	printf("Polynomial: \n");
+	Matrix_Print(stdout, P_VALUE_FMT, polynomial);
+	printf("================================\n");
+#endif
+
+	long long *matrix = matrix2longlong(polynomial);
+	// parameters in the polynomial coefficients
+	if(polynomial->NbColumns == vars.size()) {
+		unsigned int nbCoefficients = polynomial->NbRows;;
+		unsigned int i;
+
+		// FIXME: free
+		long long **llPolynomialCoefficients = (long long **) calloc(sizeof(long *), nbCoefficients);
+		Matrix **mPolynomialCoefficients = (Matrix **) calloc(sizeof(Matrix *), nbCoefficients);
+		unsigned int *llRows = (unsigned int *) calloc(sizeof(unsigned int), nbCoefficients);
+		unsigned int *llColumns = (unsigned int *) calloc(sizeof(unsigned int), nbCoefficients);;
+
+		for(i = 0; i < nbCoefficients; i++) {
+			// read the matrix and set rows and columns number.
+			mPolynomialCoefficients[i] = Matrix_Read();
+			llRows[i] = mPolynomialCoefficients[i]->NbRows;
+			llColumns[i] = mPolynomialCoefficients[i]->NbColumns;
+#ifdef DEBUG
+			/* Print the i coefficient matrix */
+			printf("================================\n");
+			printf("Coefficient i: \n");
+			Matrix_Print(stdout, P_VALUE_FMT, mPolynomialCoefficients[i]);
+			printf("================================\n");
+#endif
+			llPolynomialCoefficients[i] = matrix2longlong(mPolynomialCoefficients[i]);
+			Matrix_Free(mPolynomialCoefficients[i]);
+		}
+		free(mPolynomialCoefficients);
+		p = polyConvertParameters(matrix, polynomial->NbRows, 
+					  polynomial->NbColumns,
+					  llPolynomialCoefficients,
+					  llRows, llColumns, vars, params);
+		for(i = 0; i < nbCoefficients; i++) {
+			free(llPolynomialCoefficients[i]);
+		}
+		free(llRows);
+		free(llColumns);
+		free(llPolynomialCoefficients);
+
+	} else {
+		p = convertPolynomial(matrix, polynomial->NbRows, 
+				      polynomial->NbColumns, vars);
+	}
+	free(matrix);
+	Matrix_Free(polynomial);
+
+	return p;
+}
