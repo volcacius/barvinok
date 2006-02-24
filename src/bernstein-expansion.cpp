@@ -17,6 +17,7 @@ using namespace GiNaC;
 
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static unsigned int findMaxDegree(lst polynomials, ex var);
+static matrix getAiMatrix(unsigned int nbVert);
 
 /*
  * Do the Bernstein Expansion 
@@ -453,14 +454,11 @@ bool calculateDirection(bool max, bool positive, bool even)
 matrix getAiMatrix(unsigned int nbVert)
 {
 	matrix A(1, nbVert); 		// a_i matrix
-	symbol *pSym;		// pointer to a_i
 	for(unsigned int i = 0; i < nbVert; i++) {
-		pSym = new symbol("a" + int2String(i));
+		A(0,i) = symbol("a" + int2String(i));
 #ifdef DEBUG
-		cout << "A: " << *pSym << endl;
+		cout << "A: " << A(0,i) << endl;
 #endif
-		A(0,i) = *pSym;
-		delete pSym;
 	}
 	return A;
 }

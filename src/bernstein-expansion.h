@@ -22,7 +22,6 @@ std::string int2String(int n);
 GiNaC::ex replaceVariablesInPolynomial(GiNaC::ex &poly, const GiNaC::exvector& V, 
 				       GiNaC::ex &variables);
 GiNaC::ex getBasis(unsigned int nbVert, GiNaC::matrix &A);
-GiNaC::matrix getAiMatrix(unsigned int nbVert);
 GiNaC::lst bernsteinExpansion(const GiNaC::matrix &vert, GiNaC::ex poly, 
 			      const GiNaC::exvector& vars,
 			      const GiNaC::exvector& params);
