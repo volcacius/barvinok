@@ -22,11 +22,13 @@ GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix
 std::string int2String(int n);
 GiNaC::ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
 			    const GiNaC::exvector& params);
-Matrix *readPolynomial(unsigned int nbVariables, const GiNaC::exvector& params);
+GiNaC::ex readPolynomial(unsigned int nbVariables, const GiNaC::exvector& params);
 
-int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns, 
+GiNaC::ex polyConvertParameters(long long *m, unsigned int nbRows, 
+			  unsigned int nbColumns, 
 			  long long **llPolynomialCoefficients, unsigned int *llRows, 
 			  unsigned int *llColumns, const GiNaC::exvector& params);
-int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns);
+GiNaC::ex polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns);
 
-void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, GiNaC::exvector params);
+void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, GiNaC::ex polynomial,
+		 const GiNaC::exvector& params);

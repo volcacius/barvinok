@@ -14,10 +14,11 @@ using namespace GiNaC;
 
 /* main function */
 int main(void) {
-	Matrix *a, *b, *polynomial;
+	Matrix *a, *b;
 	Polyhedron *A, *B;		// initial matrices
 	char **param_name;	// name of the parameters
 	exvector params;
+	ex polynomial;
 
 	Param_Polyhedron *PP;
 	Param_Domain   *Q;
@@ -51,7 +52,7 @@ int main(void) {
 		printf("\nDomain: \n");
 		VD = DomainSimplify(Q->Domain, B, MAXRAYS);
 		Print_Domain(stdout, VD, param_name);
-		doExpansion(PP, Q, params);
+		doExpansion(PP, Q, polynomial, params);
 		Domain_Free(VD);
 		printf("\n\n===============================================\n");
 	}
@@ -60,8 +61,6 @@ int main(void) {
 	Domain_Free(B);
 	Param_Polyhedron_Free(PP);
 	free(param_name);
-
-	Matrix_Free(polynomial);
 
 	return 0;
 } /* main */
