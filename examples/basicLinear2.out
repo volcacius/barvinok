@@ -9,10 +9,8 @@ Domain:
 -----------------------------------------------
 Coefficients: 
 
-	a0		--> 1
-
-	a1		--> P
-
+	1
+	P
 	Minimum coefficient: 1
 	Maximum coefficient: P
 

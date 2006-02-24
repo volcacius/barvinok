@@ -9,12 +9,10 @@ Domain:
 -----------------------------------------------
 Coefficients: 
 
-	a2		--> 1
-
-	a1		--> 1
-
-	a0		--> Q
-
+	1
+	Q
+	Minimum coefficient: 1
+	Maximum coefficient: Q
 
 
 ===============================================
@@ -27,15 +25,10 @@ Domain:
 -----------------------------------------------
 Coefficients: 
 
-	a0		--> P
-
-	a2		--> 1
-
-	a1		--> 1
-
+	1
+	P
+	Minimum coefficient: 1
 	Maximum coefficient: P
-	Minimum coefficient: 1
-	Minimum coefficient: 1
 
 
 ===============================================

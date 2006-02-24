@@ -546,9 +546,6 @@ lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis
 {
 	lst coefficients;
 
-	cout << "-----------------------------------------------" << endl;
-	cout << "Coefficients: " << endl << endl;
-
 	for (size_t i = 0; i != expandedBasis.nbTerms(); ++i) {
 		ex coeff = maxDegreePolynomial;
 		ex vars = 1;
@@ -559,11 +556,9 @@ lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis
 				vars *= pow(A(0,j), deg);
 			}
 		}
-		cout << "\t" << vars << "\t\t--> " << coeff / (expandedBasis.term(i)/vars);
 		coefficients.append(coeff / (expandedBasis.term(i)/vars));
-		cout << endl << endl;
 	}
-	return coefficients;
+	return coefficients.sort().unique();
 }
 
 

@@ -16,9 +16,11 @@ extern "C" {
 #include "bernstein++.h"
 #include "bernstein-expansion.h"
 
+using namespace std;
 using namespace GiNaC;
 
 static ex readPolynomial(const exvector& vars, const exvector& params);
+static void printCoefficients(lst coeffs);
 
 /* main function */
 int main(void) {
@@ -65,6 +67,7 @@ int main(void) {
 		VD = DomainSimplify(Q->Domain, B, MAXRAYS);
 		Print_Domain(stdout, VD, param_name);
 		coeffs = doExpansion(PP, Q, polynomial, vars, params);
+		printCoefficients(coeffs);
 		getMaxMinCoefficient(Q->Domain, coeffs, params);
 		Domain_Free(VD);
 		printf("\n\n===============================================\n");
@@ -77,6 +80,16 @@ int main(void) {
 
 	return 0;
 } /* main */
+
+
+void printCoefficients(lst coeffs)
+{
+	cout << "-----------------------------------------------" << endl;
+	cout << "Coefficients: " << endl << endl;
+
+	for (lst::const_iterator i = coeffs.begin(); i != coeffs.end(); ++i)
+	    cout << "\t" << *i << endl;
+}
 
 
 /* Reads the polynomial matrix, converts it to long long precision and calls ginac functions */
