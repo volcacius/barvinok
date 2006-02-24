@@ -4,11 +4,13 @@
 #include <ginac/ginac.h>
 #include <gmp.h>
 
+extern "C" {
 #define polynomial polylib_polynomial
 #include <polylib/polylibgmp.h>
 #undef polynomial
 #undef value_compare
 #undef divide
+}
 
 #include "bernstein.h"
 #include "bernstein++.h"
