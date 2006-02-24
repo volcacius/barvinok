@@ -1,16 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ginac/ginac.h>
 #include <gmp.h>
 
+#define polynomial polylib_polynomial
 #include <polylib/polylibgmp.h>
+#undef polynomial
 #undef value_compare
 #undef divide
 
+using namespace GiNaC;
+
 #include "bernstein.h"
 #include "bernstein++.h"
-
-using namespace GiNaC;
+#include "bernstein-expansion.h"
 
 static ex readPolynomial(const exvector& vars, const exvector& params);
 
@@ -53,10 +57,13 @@ int main(void) {
 	PP = Polyhedron2Param_SimplifiedDomain(&A,B,MAXRAYS,NULL,NULL);
 	for(Q=PP->D;Q;Q=Q->next) {
 		Polyhedron *VD;
+		lst coeffs;
+
 		printf("\nDomain: \n");
 		VD = DomainSimplify(Q->Domain, B, MAXRAYS);
 		Print_Domain(stdout, VD, param_name);
-		doExpansion(PP, Q, polynomial, vars, params);
+		coeffs = doExpansion(PP, Q, polynomial, vars, params);
+		getMaxMinCoefficient(Q->Domain, coeffs, params);
 		Domain_Free(VD);
 		printf("\n\n===============================================\n");
 	}

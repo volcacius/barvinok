@@ -34,8 +34,8 @@ exvector constructParameterVector(char **param_names, unsigned nbParams)
 
 /* Given a domain, converts the vertices matrix to an long long matrix and then
    sends it to ginac functions */
-void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial, 
-		 const exvector& vars, const exvector& params)
+lst doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial, 
+		const exvector& vars, const exvector& params)
 {
 	Param_Vertices *V;
 	unsigned nbVertices = 0;
@@ -70,7 +70,7 @@ void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial,
 		++v;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	bernsteinExpansion(Q->Domain, VM, polynomial, vars, nbVertices, params);
+	return bernsteinExpansion(VM, polynomial, vars, nbVertices, params);
 }
 
 

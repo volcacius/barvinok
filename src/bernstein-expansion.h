@@ -22,13 +22,16 @@ string int2String(int n);
 ex replaceVariablesInPolynomial(ex &poly, const GiNaC::exvector& V, ex &variables);
 ex getBasis(unsigned int nbVert, matrix &A);
 matrix getAiMatrix(unsigned int nbVert);
-int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const GiNaC::exvector& V,
-		       unsigned int nbVert, const GiNaC::exvector& params);
 bool linearCoefficients(lst coeffs, const GiNaC::exvector &Params);
 void generateMaxConstraints(lst coeffs, const GiNaC::exvector& Params);
 ex constantTerm(ex poly, const GiNaC::exvector &Params);
 ex calculateLCM(ex poly, const GiNaC::exvector &Params, ex &cte);
 bool generateMaxConstraints(Polyhedron *VD, lst coeffs, 
+GiNaC::lst bernsteinExpansion(GiNaC::matrix &P, GiNaC::ex &poly, 
+			      const GiNaC::exvector& V,
+			      unsigned int nbVert, const GiNaC::exvector& params);
+int getMaxMinCoefficient(Polyhedron *VD, GiNaC::lst coeffs, 
+			const GiNaC::exvector& Params);
 			    const GiNaC::exvector &Params, unsigned int max);
 bool generateMinConstraints(Polyhedron *VD, lst coeffs, 
 			    const GiNaC::exvector &Params, unsigned int min);

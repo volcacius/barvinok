@@ -16,6 +16,7 @@ using namespace std;
 using namespace GiNaC;
 
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
+static unsigned int findMaxDegree(lst polynomials, ex var);
 
 /*
  * Do the Bernstein Expansion 
@@ -27,7 +28,7 @@ static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
  *	nbVert: number of vertices
  *	maxDegree: max multi-degree of the polynomial
  */
-int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const exvector& vars,
+lst bernsteinExpansion(matrix &P, ex &poly, const exvector& vars,
 		       unsigned int nbVert, const exvector& Params)
 {
 	unsigned maxDegree = findMaxDegree(poly, vars);
@@ -64,8 +65,13 @@ int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const exvector& vars
 						, maxDegree, basis);
 
 	// get the coefficients
-	lst coeffs = getCoefficients(maxDegreePolynomial, expandedBasis, nbVert, A);
+	return getCoefficients(maxDegreePolynomial, expandedBasis, nbVert, A);
+}
+
+int getMaxMinCoefficient(Polyhedron *VD, lst coeffs, const exvector& Params)
+{
 	if(Params.size() == 1) {
+		unsigned maxDegree = findMaxDegree(coeffs, Params[0]);
 		// check if the parameter is positive
 		if(generatePositiveNegativeConstraints(VD, true)) {
 			cout << endl << Params[0] << " >= 0" << endl;
@@ -605,6 +611,17 @@ unsigned int findMaxDegree(ex polynomial, const exvector& Vars)
 		if(max < degree) {
 			max = degree;
 		}
+	}
+	return max;
+}
+
+unsigned int findMaxDegree(lst polylst, ex var)
+{
+	unsigned max = 0;
+	for (lst::const_iterator i = polylst.begin(); i != polylst.end(); ++i) {
+		unsigned degree = i->degree(var);
+		if (degree > max)
+		    max = degree;
 	}
 	return max;
 }

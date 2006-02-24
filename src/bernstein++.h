@@ -29,5 +29,5 @@ GiNaC::ex polyConvertParameters(long long *m, unsigned int nbRows,
 			  unsigned int *llColumns, const GiNaC::exvector& vars,
 			  const GiNaC::exvector& params);
 
-void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, GiNaC::ex polynomial,
-		 const GiNaC::exvector& vars, const GiNaC::exvector& params);
+GiNaC::lst doExpansion(Param_Polyhedron *PP, Param_Domain *Q, GiNaC::ex polynomial,
+		       const GiNaC::exvector& vars, const GiNaC::exvector& params);
