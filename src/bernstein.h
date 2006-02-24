@@ -28,8 +28,6 @@ unsigned  checkConstraint(Polyhedron *VD, long long *M,
 Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns);
 void Matrix_Set(int r, int c, int v, Matrix * A);
 
-void printDomain(Param_Domain *Q, Polyhedron *B, char **param_name);
-
 #if defined(__cplusplus)
 }
 #endif
