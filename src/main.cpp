@@ -12,9 +12,6 @@
 
 using namespace GiNaC;
 
-// global to be used on the coefficient max
-Polyhedron *VD = NULL;	// current validity domain
-
 /* main function */
 int main(void) {
 	Matrix *a, *b, *polynomial;
@@ -50,8 +47,12 @@ int main(void) {
 	/* Find the parametrized domains */
 	PP = Polyhedron2Param_SimplifiedDomain(&A,B,MAXRAYS,NULL,NULL);
 	for(Q=PP->D;Q;Q=Q->next) {
-		printDomain(Q, B, param_name);
+		Polyhedron *VD;
+		printf("\nDomain: \n");
+		VD = DomainSimplify(Q->Domain, B, MAXRAYS);
+		Print_Domain(stdout, VD, param_name);
 		doExpansion(PP, Q, params);
+		Domain_Free(VD);
 		printf("\n\n===============================================\n");
 	}
 
@@ -61,8 +62,6 @@ int main(void) {
 	free(param_name);
 
 	Matrix_Free(polynomial);
-
-	Domain_Free(VD);
 
 	return 0;
 } /* main */

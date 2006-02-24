@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "bernstein.h"
 #include "bernstein-expansion.h"
 
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
@@ -23,7 +24,7 @@ static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
  *	nbVert: number of vertices
  *	maxDegree: max multi-degree of the polynomial
  */
-int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
+int bernsteinExpansion(Polyhedron *VD, matrix &P, ex &poly, const exvector& V,
 		       unsigned int nbVert, const exvector& Params)
 {
 	unsigned maxDegree = findMaxDegree(poly, V);
@@ -63,7 +64,7 @@ int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
 	lst coeffs = getCoefficients(maxDegreePolynomial, expandedBasis, nbVert, A);
 	if(Params.size() == 1) {
 		// check if the parameter is positive
-		if(generatePositiveNegativeConstraints(true)) {
+		if(generatePositiveNegativeConstraints(VD, true)) {
 			cout << endl << Params[0] << " >= 0" << endl;
 			ex m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params[0], true, true);
 			cout << "\tMaximum coefficient: " << m << endl;
@@ -71,7 +72,7 @@ int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
 			cout << "\tMinimum coefficient: " << m << endl;
 		}
 		// check if the parameter is negative
-		if(generatePositiveNegativeConstraints(false)) {
+		if(generatePositiveNegativeConstraints(VD, false)) {
 			cout << endl << Params[0] << " < 0" << endl;
 			ex m = getMaxMinCoefficient1Param(coeffs, maxDegree, Params[0], true, false);
 			cout << "\tMaximum coefficient: " << m << endl;
@@ -89,7 +90,7 @@ int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
 			cout << "#################################################" << endl;
 			cout << "Proposing max: " << coeffs[k] << endl << endl;
 #endif
-			if(generateMaxConstraints(coeffs, Params, k)) {
+			if(generateMaxConstraints(VD, coeffs, Params, k)) {
 
 				cout << "\tMaximum coefficient: " << coeffs[k] << endl;
 			}
@@ -98,7 +99,7 @@ int bernsteinExpansion(matrix &P, ex &poly, const exvector& V,
 			cout << "Proposing min: " << coeffs[k] << endl << endl;
 #endif
 
-			if(generateMinConstraints(coeffs, Params, k)) {
+			if(generateMinConstraints(VD, coeffs, Params, k)) {
 				cout << "\tMinimum coefficient: " << coeffs[k] << endl;
 			}
 
@@ -229,7 +230,8 @@ void ex2longlongRow(long long *M, unsigned int row, polynomial &difference,
  *	nbParams: number of parameters
  *	max: proposed maximum
  */
-bool generateMaxConstraints(lst coeffs, const exvector &Params, unsigned int max)
+bool generateMaxConstraints(Polyhedron *VD, lst coeffs, const exvector &Params, 
+			    unsigned int max)
 {
 	lst differences;
 
@@ -249,7 +251,7 @@ bool generateMaxConstraints(lst coeffs, const exvector &Params, unsigned int max
 			row++;
 		}
 	}
-	bool retval = checkConstraint(M, coeffs.nops()-1, Params.size()+2);
+	bool retval = checkConstraint(VD, M, coeffs.nops()-1, Params.size()+2);
 	free(M);
 	return retval;
 }
@@ -259,7 +261,7 @@ bool generateMaxConstraints(lst coeffs, const exvector &Params, unsigned int max
  *
  *	coeffs: coefficients list
  */
-bool generatePositiveNegativeConstraints(bool positive)
+bool generatePositiveNegativeConstraints(Polyhedron *VD, bool positive)
 {
 	long long *M;
 	M = (long long *) calloc(sizeof(long long), 1 * 3);
@@ -273,7 +275,7 @@ bool generatePositiveNegativeConstraints(bool positive)
 		M[2] = -1;
 	}
 
-	bool retval = checkConstraint(M, 1, 3);
+	bool retval = checkConstraint(VD, M, 1, 3);
 	free(M);
 	return retval;
 }
@@ -289,7 +291,8 @@ bool generatePositiveNegativeConstraints(bool positive)
  *	nbParams: number of parameters
  *	max: proposed maximum
  */
-bool generateMinConstraints(lst coeffs, const exvector &Params, unsigned int min)
+bool generateMinConstraints(Polyhedron *VD, lst coeffs, const exvector &Params, 
+			    unsigned int min)
 {
 	lst differences;
 
@@ -308,7 +311,7 @@ bool generateMinConstraints(lst coeffs, const exvector &Params, unsigned int min
 			row++;
 		}
 	}
-	bool retval = checkConstraint(M, coeffs.nops()-1, Params.size()+2);
+	bool retval = checkConstraint(VD, M, coeffs.nops()-1, Params.size()+2);
 	free(M);
 	return retval;
 }

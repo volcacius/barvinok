@@ -14,9 +14,6 @@
 
 #include "bernstein.h"
 
-// global to be used on the coefficient max
-extern Polyhedron *VD = NULL;	// current validity domain
-
 /* Converts a value (p) to a long long integer */
 long long value2longlong(Value p)
 {
@@ -30,20 +27,6 @@ long long value2longlong(Value p)
 	return l;
 }
 
-
-
-/* Prints the domain corresponding to Q */
-void printDomain(Param_Domain *Q, Polyhedron *B, char **param_name)
-{
-
-	printf("\nDomain: \n");
-
-	if(VD != NULL) {
-		Domain_Free(VD);
-	}
-	VD = DomainSimplify(Q->Domain, B, MAXRAYS);
-	Print_Domain(stdout, VD, param_name);
-}
 
 
 /* Converts a Matrix from the polylib format to long long* format */
@@ -99,7 +82,8 @@ Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns)
 
 
 /* Check  if a given set of constraints (M matrix) holds or not in the validity domain */
-unsigned  checkConstraint(long long *M, unsigned int rows, unsigned int columns)
+unsigned  checkConstraint(Polyhedron *VD, long long *M, 
+			  unsigned int rows, unsigned int columns)
 {
 	Matrix *maxConstraints;
 	Polyhedron *mC, *newB;

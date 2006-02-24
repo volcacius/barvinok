@@ -5,11 +5,21 @@
  */
 
 
-#define MAXRAYS 1000
+#include <gmp.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#define matrix polylib_matrix
+#define polynomial polylib_polynomial
+#include <polylib/polylibgmp.h>
+#undef matrix
+#undef polynomial
+#undef value_compare
+#undef divide
+
+#define MAXRAYS 1000
 
 extern int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns
 				     , long long **llPolynomialCoefficients, unsigned int *llRows, unsigned int *llColumns
@@ -18,7 +28,8 @@ extern int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns
 
 long long *matrix2longlong(Matrix *M);
 
-unsigned  checkConstraint(long long *M, unsigned int rows, unsigned int columns);
+unsigned  checkConstraint(Polyhedron *VD, long long *M, 
+			  unsigned int rows, unsigned int columns);
 Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns);
 void Matrix_Set(int r, int c, int v, Matrix * A);
 
