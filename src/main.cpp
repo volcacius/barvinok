@@ -17,13 +17,13 @@ int main(void) {
 	Matrix *a, *b;
 	Polyhedron *A, *B;		// initial matrices
 	char **param_name;	// name of the parameters
-	exvector params;
+	exvector params, vars;
 	ex polynomial;
 
 	Param_Polyhedron *PP;
 	Param_Domain   *Q;
 
-	unsigned int nb_param;
+	unsigned int nb_param, nb_var;
 
 	printf("\n===============================================\n");
 
@@ -35,12 +35,14 @@ int main(void) {
 
 	/* Set the number of parameters */
 	nb_param	= B->Dimension;
+	nb_var		= A->Dimension - B->Dimension;
 
 	/* Read the name of the parameters */
 	param_name = Read_ParamNames(stdin, nb_param);
 	params = constructParameterVector(param_name, nb_param);
+	vars = constructVariableVector(nb_var, "v");
 
-	polynomial = readPolynomial(a->NbColumns-b->NbColumns, params);
+	polynomial = readPolynomial(nb_var, vars, params);
 
 	Matrix_Free(a);
 	Matrix_Free(b);
@@ -52,7 +54,7 @@ int main(void) {
 		printf("\nDomain: \n");
 		VD = DomainSimplify(Q->Domain, B, MAXRAYS);
 		Print_Domain(stdout, VD, param_name);
-		doExpansion(PP, Q, polynomial, params);
+		doExpansion(PP, Q, polynomial, vars, params);
 		Domain_Free(VD);
 		printf("\n\n===============================================\n");
 	}

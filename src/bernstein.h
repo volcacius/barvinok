@@ -21,11 +21,6 @@ extern "C" {
 
 #define MAXRAYS 1000
 
-extern int polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns
-				     , long long **llPolynomialCoefficients, unsigned int *llRows, unsigned int *llColumns
-				     , unsigned int nbParams, char **param_values);
-extern int polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns, unsigned int nbParams, char **param_values);
-
 long long *matrix2longlong(Matrix *M);
 
 unsigned  checkConstraint(Polyhedron *VD, long long *M, 

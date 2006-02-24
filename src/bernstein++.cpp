@@ -18,10 +18,6 @@ using namespace GiNaC;
 #include "bernstein-expansion.h"
 
 
-/* Global variables to send to bernstein_expansion */
-exvector Vars;		// variables matrix
-
-
 exvector constructParameterVector(char **param_names, unsigned nbParams)
 {
 	exvector P(nbParams);
@@ -39,7 +35,7 @@ exvector constructParameterVector(char **param_names, unsigned nbParams)
 /* Given a domain, converts the vertices matrix to an long long matrix and then
    sends it to ginac functions */
 void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial, 
-		 const exvector& params)
+		 const exvector& vars, const exvector& params)
 {
 	Param_Vertices *V;
 	unsigned nbVertices = 0;
@@ -74,7 +70,7 @@ void doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial,
 		++v;
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	bernsteinExpansion(Q->Domain, VM, polynomial, Vars, nbVertices, params);
+	bernsteinExpansion(Q->Domain, VM, polynomial, vars, nbVertices, params);
 }
 
 
@@ -88,24 +84,6 @@ exvector constructVariableVector(unsigned nbVariables, const char *prefix)
 #endif
 	}
 	return V;
-}
-
-
-/* 
- * Convert polynomial from long long C-style matrix to Ginac expression
- *
- *	m: polynomial matrix
- *	nbRows, nbColumns: number of rows, columns
- */
-ex polyConvert(long long *m, unsigned int nbRows, unsigned int nbColumns) 
-{
-	unsigned int nbVariables = nbColumns - 2;
-	ex p;
-
-	// setting global variables
-	Vars = constructVariableVector(nbVariables, "v");
-       
-	return convertPolynomial(m, nbRows, nbColumns, Vars);
 }
 
 
@@ -164,15 +142,12 @@ ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
  */
 ex polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColumns,
 			  long long **llPolynomialCoefficients, unsigned int *llRows, unsigned int *llColumns,
-			  const exvector& params)
+			  const exvector& vars, const exvector& params)
 {
 	unsigned int nbVariables = nbColumns;
 	unsigned int nbCoefficients = nbRows;
 	ex p;
 
-	// setting global variables
-	Vars = constructVariableVector(nbVariables, "v");
-       
 	for(unsigned int i = 0; i < nbCoefficients; i++) {
 #ifdef DEBUG
 		cout << "-----------------------" << endl;
@@ -189,7 +164,7 @@ ex polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColum
 			// TODO: loosing precision to long int
 			long int val = (long int) m[i*nbColumns+j];
 			if(val != 0) {
-				t += pow(Vars[j], (long int) m[i*nbColumns+j]);
+				t += pow(vars[j], (long int) m[i*nbColumns+j]);
 #ifdef DEBUG
 				cout << "T: " << t << endl;
 #endif
@@ -210,7 +185,8 @@ ex polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColum
 
 
 /* Reads the polynomial matrix, converts it to long long precision and calls ginac functions */
-ex readPolynomial(unsigned int nbVariables, const exvector& params)
+ex readPolynomial(unsigned int nbVariables, const exvector& vars,
+		  const exvector& params)
 {
 	ex p;
 	Matrix *polynomial;
@@ -256,7 +232,7 @@ ex readPolynomial(unsigned int nbVariables, const exvector& params)
 		p = polyConvertParameters(matrix, polynomial->NbRows, 
 					  polynomial->NbColumns,
 					  llPolynomialCoefficients,
-					  llRows, llColumns, params);
+					  llRows, llColumns, vars, params);
 		for(i = 0; i < nbCoefficients; i++) {
 			free(llPolynomialCoefficients[i]);
 		}
@@ -265,7 +241,8 @@ ex readPolynomial(unsigned int nbVariables, const exvector& params)
 		free(llPolynomialCoefficients);
 
 	} else {
-		p = polyConvert(matrix, polynomial->NbRows, polynomial->NbColumns);
+		p = convertPolynomial(matrix, polynomial->NbRows, 
+				      polynomial->NbColumns, vars);
 	}
 	free(matrix);
 	Matrix_Free(polynomial);
