@@ -301,7 +301,7 @@ bool generateMaxConstraints(Polyhedron *VD, lst coeffs, const exvector &Params,
 	unsigned int row = 0;
 	for (size_t i = 0; i < coeffs.nops(); ++i) {
 		if(i != max) {
-			polynomial difference(coeffs[max] - coeffs[i] -1);
+			polynomial difference(coeffs[max] - coeffs[i]);
 #ifdef DEBUG
 			cout << "Diff(0): " << difference.term(0) << endl;
 			cout << "C_max - C_i -1: " << difference << endl << endl;
@@ -362,7 +362,7 @@ bool generateMinConstraints(Polyhedron *VD, lst coeffs, const exvector &Params,
 	unsigned int row = 0;
 	for (size_t i = 0; i < coeffs.nops(); ++i) {
 		if(i != min) {
-			polynomial difference(coeffs[i] - coeffs[min] -1);
+			polynomial difference(coeffs[i] - coeffs[min]);
 #ifdef DEBUG
 			cout << "C_max - C_i -1: " << difference << endl << endl;
 #endif
