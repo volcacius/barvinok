@@ -74,7 +74,7 @@ Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns)
 	retval = Matrix_Alloc(rows, columns);
 	for(i = 0; i < rows; i++) {
 		for(j = 0; j < columns; j++) {
-			Matrix_Set(i, j, (int) M[i*rows+j], retval);
+			Matrix_Set(i, j, (int) M[i*columns+j], retval);
 		}
 	}
 	return retval;
