@@ -8,7 +8,6 @@
 
 #include <iostream>
 #include <string>
-#include <cln/cln.h>
 #include <ginac/ginac.h>
 
 using namespace std;
@@ -17,21 +16,6 @@ using namespace GiNaC;
 #include "bernstein++.h"
 #include "bernstein.h"
 #include "bernstein-expansion.h"
-
-
-static numeric value2numeric(Value v)
-{
-    int sa = v[0]._mp_size;
-    if (!sa)
-	return 0;
-    int abs_sa = sa < 0 ? -sa : sa;
-    cln::cl_I res = 0;
-    for (int i = abs_sa-1; i >= 0; --i) {
-	res = res << GMP_LIMB_BITS;
-	res = res + v[0]._mp_d[i];
-    }
-    return numeric(sa < 0 ? -res : res);
-}
 
 
 exvector constructParameterVector(char **param_names, unsigned nbParams)
@@ -44,47 +28,6 @@ exvector constructParameterVector(char **param_names, unsigned nbParams)
 #endif
 	}
 	return P;
-}
-
-
-
-/* Given a domain, converts the vertices matrix to an long long matrix and then
-   sends it to ginac functions */
-lst doExpansion(Param_Polyhedron *PP, Param_Domain *Q, ex polynomial, 
-		const exvector& vars, const exvector& params)
-{
-	Param_Vertices *V;
-	unsigned nbVertices = 0;
-	unsigned nbRows, nbColumns;
-	int v;
-
-	assert(PP->nbV > 0);
-	nbRows = PP->V->Vertex->NbRows;
-	nbColumns = PP->V->Vertex->NbColumns;
-
-	FORALL_PVertex_in_ParamPolyhedron(V, Q, PP)
-		++nbVertices;
-	END_FORALL_PVertex_in_ParamPolyhedron;
-
-	matrix VM(nbVertices, nbRows);		// vertices matrix
-
-	v = 0;
-	FORALL_PVertex_in_ParamPolyhedron(V, Q, PP)
-		for (unsigned i = 0; i < nbRows; i++) {
-			ex t;
-			for (unsigned j = 0; j < nbColumns-2; j++)
-				t += value2numeric(V->Vertex->p[i][j]) * params[j];
-			t += value2numeric(V->Vertex->p[i][nbColumns-2]);
-			t /= value2numeric(V->Vertex->p[i][nbColumns-1]);
-#ifdef DEBUG
-			cout << "T: " << t << endl;
-#endif
-			VM(v, i) = t;
-		}
-		++v;
-	END_FORALL_PVertex_in_ParamPolyhedron;
-
-	return bernsteinExpansion(VM, polynomial, vars, params);
 }
 
 

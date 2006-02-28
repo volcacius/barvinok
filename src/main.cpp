@@ -5,8 +5,10 @@
 #include <gmp.h>
 
 extern "C" {
+#define matrix polylib_matrix
 #define polynomial polylib_polynomial
 #include <polylib/polylibgmp.h>
+#undef matrix
 #undef polynomial
 #undef value_compare
 #undef divide
@@ -66,7 +68,8 @@ int main(void) {
 		printf("\nDomain: \n");
 		VD = DomainSimplify(Q->Domain, B, MAXRAYS);
 		Print_Domain(stdout, VD, param_name);
-		coeffs = doExpansion(PP, Q, polynomial, vars, params);
+		matrix VM = domainVertices(PP, Q, params);
+		coeffs = bernsteinExpansion(VM, polynomial, vars, params);
 		printCoefficients(coeffs);
 		getMaxMinCoefficient(Q->Domain, coeffs, params);
 		Domain_Free(VD);
