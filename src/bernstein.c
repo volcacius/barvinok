@@ -101,14 +101,8 @@ unsigned  checkConstraint(Polyhedron *VD, long long *M,
 #endif
 
 	mC =Constraints2Polyhedron(maxConstraints, MAXRAYS);
-	newB = DomainIntersection(VD, mC, MAXRAYS);
 
-#ifdef DEBUG
-	printf("Intersection betwenn Max/Min/Pos/Neg Constraints and \nOriginal Validity Domain: \n");
-	Print_Domain(stdout, newB, param_name);
-#endif
-
-	if(emptyQ(newB)) {
+	if(!PolyhedronIncludes(mC, VD)) {
 #ifdef DEBUG
 		printf("Proposed Coefficient is not the max/min/pos/neg.\n");
 #endif
