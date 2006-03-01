@@ -6,6 +6,8 @@
 
 #include "polynomial.h"
 
+using namespace GiNaC;
+
 polynomial::polynomial(void)
 {
 }
