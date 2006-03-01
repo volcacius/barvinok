@@ -21,8 +21,6 @@ extern "C" {
 
 #define MAXRAYS 1000
 
-long long *matrix2longlong(Matrix *M);
-
 unsigned  checkConstraint(Polyhedron *VD, long long *M, 
 			  unsigned int rows, unsigned int columns);
 Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns);

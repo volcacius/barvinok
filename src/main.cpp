@@ -23,6 +23,8 @@ using namespace GiNaC;
 
 static ex readPolynomial(const exvector& vars, const exvector& params);
 static void printCoefficients(lst coeffs);
+static long long value2longlong(Value p);
+static long long *matrix2longlong(Matrix *M);
 
 /* main function */
 int main(void) {
@@ -154,8 +156,46 @@ ex readPolynomial(const exvector& vars, const exvector& params)
 		p = convertPolynomial(matrix, polynomial->NbRows, 
 				      polynomial->NbColumns, vars);
 	}
-	free(matrix);
+	delete [] matrix;
 	Matrix_Free(polynomial);
 
 	return p;
+}
+
+
+/* Converts a value (p) to a long long integer */
+long long value2longlong(Value p)
+{
+	char *str; 
+	long long l;
+
+	str = mpz_get_str(0,10, p);
+	l = atoll(str);
+	free(str);
+
+	return l;
+}
+
+
+/* Converts a Matrix from the polylib format to long long* format */
+long long *matrix2longlong(Matrix *M)
+{
+ 	long long *matrix = new (long long)[M->NbRows * M->NbColumns];
+	unsigned int nr,nc;
+	unsigned int j,k;
+	Value *p;
+
+	p=*(M->p);
+	nr = M->NbRows;
+	nc = M->NbColumns;
+
+	/* Copy matrix to long long */
+	for(j = 0; j < nc; j++) {
+		for(k = 0; k < nr; k++) {
+			// TODO: loosing precision to long long
+			long long l = value2longlong(*p++);
+			matrix[nr*j+k] = l;
+		}
+	}
+	return matrix;
 }

@@ -14,48 +14,6 @@
 
 #include "bernstein.h"
 
-/* Converts a value (p) to a long long integer */
-long long value2longlong(Value p)
-{
-	char *str; 
-	long long l;
-
-	str = mpz_get_str(0,10, p);
-	l = atoll(str);
-	free(str);
-
-	return l;
-}
-
-
-
-/* Converts a Matrix from the polylib format to long long* format */
-long long *matrix2longlong(Matrix *M)
-{
- 	long long *matrix = calloc(sizeof(long long), M->NbRows * M->NbColumns);
-	unsigned int nr,nc;
-	unsigned int j,k;
-	Value *p;
-
-	p=*(M->p);
-	nr = M->NbRows;
-	nc = M->NbColumns;
-
-	/* Copy matrix to long long */
-	for(j = 0; j < nc; j++) {
-		for(k = 0; k < nr; k++) {
-			// TODO: loosing precision to long long
-			long long l = value2longlong(*p++);
-			matrix[nr*j+k] = l;
-		}
-	}
-	return matrix;
-}
-
-
-
-
-
 /* Sets a value on the Matrix A, A(r, c) = v */
 void Matrix_Set(int r, int c, int v, Matrix * A)
 {
