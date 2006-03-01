@@ -19,6 +19,12 @@ static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static unsigned int findMaxDegree(lst polynomials, ex var);
 static matrix getAiMatrix(unsigned int nbVert);
 static bool linearCoefficients(lst coeffs, const exvector &Params);
+static ex getBasis(unsigned int nbVert, matrix &A);
+static ex replaceVariablesInPolynomial(ex &poly, const exvector& V, ex &variables);
+static ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert,
+			 unsigned int maxDegree, ex &basis);
+static lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis,
+			   unsigned int nbVert, matrix &A);
 
 static numeric value2numeric(Value v)
 {
