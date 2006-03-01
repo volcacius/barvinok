@@ -2,8 +2,6 @@ lib_LTLIBRARIES = libbernstein.la
 bin_PROGRAMS = bernstein
 
 libbernstein_la_SOURCES = \
-    src/bernstein++.cpp \
-    src/bernstein++.h \
     src/bernstein-expansion.cpp \
     src/bernstein-expansion.h \
     src/bernstein.c \
