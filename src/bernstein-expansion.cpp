@@ -9,7 +9,6 @@
 #include <cln/cln.h>
 #include <string>
 
-#include "bernstein.h"
 #include "bernstein-expansion.h"
 
 using namespace std;

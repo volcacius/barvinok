@@ -5,8 +5,9 @@
 #include <gmp.h>
 #include "polylib++.h"
 
-#include "bernstein.h"
 #include "bernstein-expansion.h"
+
+#define MAXRAYS 1000
 
 using namespace std;
 using namespace GiNaC;
@@ -37,6 +38,9 @@ static ex getMaxMinCoefficient1Param(lst coeffs, unsigned int maxDegree,
 				     ex Param, bool max, bool positive);
 static bool calculateDirection(bool max, bool positive, bool even);
 static int getMaxMinCoefficient(Polyhedron *VD, lst coeffs, const exvector& Params);
+static unsigned  checkConstraint(Polyhedron *VD, long long *M, 
+			  unsigned int rows, unsigned int columns);
+static Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns);
 
 /* main function */
 int main(void) {
@@ -695,4 +699,62 @@ unsigned int findMaxDegree(lst polylst, ex var)
 		    max = degree;
 	}
 	return max;
+}
+
+
+/* Converts a *longlong matrix to polylib format */
+Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns)
+{
+	Matrix *retval;
+	unsigned int i, j;
+
+	retval = Matrix_Alloc(rows, columns);
+	for(i = 0; i < rows; i++) {
+		for(j = 0; j < columns; j++) {
+			value_set_si(retval->p[i][j], (int) M[i*columns+j]);
+		}
+	}
+	return retval;
+}
+
+
+/* Check  if a given set of constraints (M matrix) holds or not in the validity domain */
+unsigned  checkConstraint(Polyhedron *VD, long long *M, 
+			  unsigned int rows, unsigned int columns)
+{
+	Matrix *maxConstraints;
+	Polyhedron *mC, *newB;
+
+	maxConstraints = longlong2polylib(M, rows, columns);
+
+#ifdef DEBUG
+	printf("Max/Min Constraints (polylib Format): \n");
+	Matrix_Print(stdout, P_VALUE_FMT, maxConstraints);
+	printf("\n");
+
+	printf("Original Validity Domain: \n");
+	Print_Domain(stdout, VD, param_name);
+	printf("\n");
+#endif
+
+	mC =Constraints2Polyhedron(maxConstraints, MAXRAYS);
+
+	if(!PolyhedronIncludes(mC, VD)) {
+#ifdef DEBUG
+		printf("Proposed Coefficient is not the max/min/pos/neg.\n");
+#endif
+		return 0;
+	} else {
+#ifdef DEBUG
+		printf("Proposed Coefficient is the max/min/pos/neg.\n");
+#endif
+		return 1;
+	}
+
+	/* free */
+	Matrix_Free(maxConstraints);
+	Domain_Free(mC);
+	Domain_Free(newB);
+
+	return 0;
 }
