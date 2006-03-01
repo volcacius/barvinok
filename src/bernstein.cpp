@@ -10,6 +10,7 @@
 #include <string>
 
 #include "bernstein.h"
+#include "polynomial.h"
 
 using namespace std;
 using namespace GiNaC;

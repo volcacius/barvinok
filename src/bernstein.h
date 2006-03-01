@@ -7,8 +7,15 @@
 
 #include <ginac/ginac.h>
 #include <gmp.h>
-#include "polylib++.h"
-#include "polynomial.h"
+extern "C" {
+#define matrix polylib_matrix
+#define polynomial polylib_polynomial
+#include <polylib/polylibgmp.h>
+#undef matrix
+#undef polynomial
+#undef value_compare
+#undef divide
+}
 
 namespace bernstein {
 

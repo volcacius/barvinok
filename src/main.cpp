@@ -6,6 +6,7 @@
 #include "polylib++.h"
 
 #include "bernstein.h"
+#include "polynomial.h"
 
 #define MAXRAYS 1000
 
