@@ -7,13 +7,7 @@
 
 #include <ginac/ginac.h>
 #include <gmp.h>
-extern "C" {
-#define matrix polylib_matrix
-#define polynomial polylib_polynomial
-#include <polylib/polylibgmp.h>
-#undef matrix
-#undef polynomial
-}
+#include "polylib++.h"
 #include "polynomial.h"
 
 #define DIGITS 10

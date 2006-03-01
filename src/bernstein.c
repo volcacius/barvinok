@@ -9,8 +9,7 @@
 #include <stdlib.h>
 
 #include <gmp.h>
-
-#include <polylib/polylibgmp.h>
+#include "polylib++.h"
 
 #include "bernstein.h"
 

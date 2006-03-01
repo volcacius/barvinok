@@ -6,18 +6,11 @@
 
 
 #include <gmp.h>
+#include "polylib++.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#define matrix polylib_matrix
-#define polynomial polylib_polynomial
-#include <polylib/polylibgmp.h>
-#undef matrix
-#undef polynomial
-#undef value_compare
-#undef divide
 
 #define MAXRAYS 1000
 

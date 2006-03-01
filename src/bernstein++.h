@@ -7,13 +7,7 @@
 #include <string.h>
 #include <ginac/ginac.h>
 #include <gmp.h>
-extern "C" {
-#define matrix polylib_matrix
-#define polynomial polylib_polynomial
-#include <polylib/polylibgmp.h>
-#undef matrix
-#undef polynomial
-}
+#include "polylib++.h"
 
 GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
