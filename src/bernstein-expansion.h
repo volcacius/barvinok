@@ -10,6 +10,8 @@
 #include "polylib++.h"
 #include "polynomial.h"
 
+namespace bernstein {
+
 GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 GiNaC::matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, 
@@ -17,3 +19,5 @@ GiNaC::matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q,
 GiNaC::lst bernsteinExpansion(const GiNaC::matrix &vert, GiNaC::ex poly, 
 			      const GiNaC::exvector& vars,
 			      const GiNaC::exvector& params);
+
+}

@@ -16,6 +16,8 @@ using namespace GiNaC;
 
 #define DIGITS 10
 
+namespace bernstein {
+
 static std::string int2String(int n);
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static matrix getAiMatrix(unsigned int nbVert);
@@ -307,4 +309,6 @@ unsigned int findMaxDegree(ex polynomial, const exvector& Vars)
 		}
 	}
 	return max;
+}
+
 }

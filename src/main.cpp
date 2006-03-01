@@ -11,6 +11,7 @@
 
 using namespace std;
 using namespace GiNaC;
+using namespace bernstein;
 
 static ex readPolynomial(const exvector& vars, const exvector& params);
 static void printCoefficients(lst coeffs);
