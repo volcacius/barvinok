@@ -19,6 +19,7 @@ extern "C" {
 
 namespace bernstein {
 
+GiNaC::numeric value2numeric(Value v);
 GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 GiNaC::matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, 
