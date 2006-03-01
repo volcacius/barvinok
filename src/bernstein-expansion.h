@@ -10,8 +10,6 @@
 #include "polylib++.h"
 #include "polynomial.h"
 
-#define DIGITS 10
-
 GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 GiNaC::matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, 
