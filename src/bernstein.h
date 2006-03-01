@@ -24,7 +24,6 @@ extern "C" {
 unsigned  checkConstraint(Polyhedron *VD, long long *M, 
 			  unsigned int rows, unsigned int columns);
 Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns);
-void Matrix_Set(int r, int c, int v, Matrix * A);
 
 #if defined(__cplusplus)
 }

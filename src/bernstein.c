@@ -14,15 +14,6 @@
 
 #include "bernstein.h"
 
-/* Sets a value on the Matrix A, A(r, c) = v */
-void Matrix_Set(int r, int c, int v, Matrix * A)
-{
-        Value val;
-        value_init(val);
-        value_set_si(val,v);
-        value_assign(A->p[r][c] , val);
-}
-
 /* Converts a *longlong matrix to polylib format */
 Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns)
 {
@@ -32,7 +23,7 @@ Matrix *longlong2polylib(long long *M, unsigned int rows, unsigned int columns)
 	retval = Matrix_Alloc(rows, columns);
 	for(i = 0; i < rows; i++) {
 		for(j = 0; j < columns; j++) {
-			Matrix_Set(i, j, (int) M[i*columns+j], retval);
+			value_set_si(retval->p[i][j], (int) M[i*columns+j]);
 		}
 	}
 	return retval;
