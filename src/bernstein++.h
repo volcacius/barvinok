@@ -9,7 +9,6 @@
 #include <gmp.h>
 #include "polylib++.h"
 
-std::string int2String(int n);
 GiNaC::ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
 			    const GiNaC::exvector& params);
 

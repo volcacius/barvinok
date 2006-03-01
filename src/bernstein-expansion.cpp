@@ -15,6 +15,7 @@
 using namespace std;
 using namespace GiNaC;
 
+static std::string int2String(int n);
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static unsigned int findMaxDegree(lst polynomials, ex var);
 static matrix getAiMatrix(unsigned int nbVert);
