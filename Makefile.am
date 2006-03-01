@@ -1,5 +1,6 @@
 lib_LTLIBRARIES = libbernstein.la
 bin_PROGRAMS = bernstein
+include_HEADERS = src/bernstein.h
 
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
