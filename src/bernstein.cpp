@@ -9,7 +9,7 @@
 #include <cln/cln.h>
 #include <string>
 
-#include "bernstein-expansion.h"
+#include "bernstein.h"
 
 using namespace std;
 using namespace GiNaC;
