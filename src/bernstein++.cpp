@@ -18,32 +18,6 @@ using namespace GiNaC;
 #include "bernstein-expansion.h"
 
 
-exvector constructParameterVector(char **param_names, unsigned nbParams)
-{
-	exvector P(nbParams);
-	for (int i = 0; i < nbParams; ++i) {
-		P[i] = symbol(param_names[i]);
-#ifdef DEBUG
-		cout << "P: " << P[i] << endl;
-#endif
-	}
-	return P;
-}
-
-
-exvector constructVariableVector(unsigned nbVariables, const char *prefix)
-{
-	exvector V(nbVariables);
-	for (int i = 0; i < nbVariables; ++i) {
-		V[i] = symbol(prefix + int2String(i));
-#ifdef DEBUG
-		cout << "V: " << V[i] << endl;
-#endif
-	}
-	return V;
-}
-
-
 /* 
  * Convert a matrix from long long C-style matrix to Ginac expression
  *

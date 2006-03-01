@@ -9,8 +9,6 @@
 #include <gmp.h>
 #include "polylib++.h"
 
-GiNaC::exvector constructParameterVector(char **param_names, unsigned nbParams);
-GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 std::string int2String(int n);
 GiNaC::ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
 			    const GiNaC::exvector& params);
