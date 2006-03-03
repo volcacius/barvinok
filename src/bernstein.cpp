@@ -29,7 +29,7 @@ static ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert,
 static lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis,
 			   unsigned int nbVert, matrix &A);
 
-exvector constructParameterVector(char **param_names, unsigned nbParams)
+exvector constructParameterVector(const char * const *param_names, unsigned nbParams)
 {
 	exvector P(nbParams);
 	for (int i = 0; i < nbParams; ++i) {
