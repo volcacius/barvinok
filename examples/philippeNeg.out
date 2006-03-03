@@ -15,13 +15,5 @@ Coefficients:
 	-1
 	-1+1/2*N^2+1/2*N
 
-N >= 0
-	Maximum coefficient: 1/2*N^2+3/2*N
-	Minimum coefficient: -5/4-1/4*N
-
-N < 0
-	Maximum coefficient: -1+1/2*N^2+1/2*N
-	Minimum coefficient: -3/4+1/4*N
-
 
 ===============================================
