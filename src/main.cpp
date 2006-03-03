@@ -510,7 +510,7 @@ void ex2longlongRow(long long *M, unsigned int row, polynomial &difference,
 		for(unsigned int j = 0; j < Params.size(); j++) {
 			if(intDifference.term(i).degree(Params[j]) == 1) {
 #ifdef DEBUG
-				cout << "difference.term(" << i << "): " << (intDifference.term(i)).coeff(Params(0,j)) << endl;
+				cout << "difference.term(" << i << "): " << (intDifference.term(i)).coeff(Params[j]) << endl;
 #endif
 				// TODO: losing precision
 				long val = (ex_to<numeric>(intDifference.term(i).coeff(Params[j]))).to_long();
