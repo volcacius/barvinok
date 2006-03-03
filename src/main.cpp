@@ -233,22 +233,15 @@ ex convertPolynomial(long long *m, unsigned int nbRows, unsigned int nbColumns,
 	ex p;
 
 	for(unsigned int i = 0; i < nbRows; i++) {
-		ex t;
+		ex t = 1;
 		for(unsigned int j = 0; j < Vars.size(); j++) {
 			// TODO: loosing precision to long int
-			long int val = (long int) m[i*nbColumns+j];
-			if(val != 0) {
-				t += pow(Vars[j], (long int) m[i*nbColumns+j]);
+			t *= pow(Vars[j], (long int) m[i*nbColumns+j]);
 #ifdef DEBUG
-				cout << "T: " << t << endl;
+			cout << "T: " << t << endl;
 #endif
-			}
 		}
-		if(t == 0) {
-			t += (long int) m[i*nbColumns+nbColumns-2];
-		} else {
-			t *= (long int) m[i*nbColumns+nbColumns-2];
-		}
+		t *= (long int) m[i*nbColumns+nbColumns-2];
 #ifdef DEBUG
 		cout << "T: " << t << endl;
 #endif
@@ -285,7 +278,7 @@ ex polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColum
 		cout << "-----------------------" << endl;
 #endif
 		ex c;
-		ex t;
+		ex t = 1;
 
 		c = convertPolynomial(llPolynomialCoefficients[i], llRows[i], llColumns[i], params);
 #ifdef DEBUG
@@ -294,13 +287,10 @@ ex polyConvertParameters(long long *m, unsigned int nbRows, unsigned int nbColum
 
 		for(unsigned int j = 0; j < nbVariables; j++) {
 			// TODO: loosing precision to long int
-			long int val = (long int) m[i*nbColumns+j];
-			if(val != 0) {
-				t += pow(vars[j], (long int) m[i*nbColumns+j]);
+			t *= pow(vars[j], (long int) m[i*nbColumns+j]);
 #ifdef DEBUG
-				cout << "T: " << t << endl;
+			cout << "T: " << t << endl;
 #endif
-			}
 		}
 #ifdef DEBUG
 		cout << "T: " << t << endl;
