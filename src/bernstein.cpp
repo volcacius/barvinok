@@ -299,17 +299,24 @@ string int2String(int n)
  *	Vars: variables matrix
  *	nbVar: number of variables
  */
-unsigned int findMaxDegree(ex polynomial, const exvector& Vars)
+static unsigned int findMaxDegree(ex polynomial, const exvector& Vars, int pos)
 {
-	unsigned int max = polynomial.degree(Vars[0]);
+	if (pos >= Vars.size())
+		return 0;
 
-	for(unsigned int i = 0; i < Vars.size(); i++) {
-		unsigned int degree = polynomial.degree(Vars[i]);
-		if(max < degree) {
+	unsigned max = 0;
+	for (int i = 0; i <= polynomial.degree(Vars[pos]); ++i) {
+		unsigned degree = i + findMaxDegree(polynomial.coeff(Vars[pos], i), 
+						    Vars, pos+1);
+		if (degree > max)
 			max = degree;
-		}
 	}
 	return max;
+}
+
+unsigned int findMaxDegree(ex polynomial, const exvector& Vars)
+{
+    return findMaxDegree(polynomial, Vars, 0);
 }
 
 }
