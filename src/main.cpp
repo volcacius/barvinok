@@ -198,7 +198,7 @@ long long value2longlong(Value p)
 /* Converts a Matrix from the polylib format to long long* format */
 long long *matrix2longlong(Matrix *M)
 {
- 	long long *matrix = new (long long)[M->NbRows * M->NbColumns];
+ 	long long *matrix = new long long[M->NbRows * M->NbColumns];
 	unsigned int nr,nc;
 	unsigned int j,k;
 	Value *p;
