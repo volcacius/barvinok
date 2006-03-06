@@ -80,7 +80,7 @@ int main(void) {
 	Matrix_Free(b);
 
 	/* Find the parametrized domains */
-	PP = Polyhedron2Param_SimplifiedDomain(&A,B,MAXRAYS,NULL,NULL);
+	PP = Polyhedron2Param_Domain(A,B,MAXRAYS);
 	for(Q=PP->D;Q;Q=Q->next) {
 		Polyhedron *VD;
 		lst coeffs;
