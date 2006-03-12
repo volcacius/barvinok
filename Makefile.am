@@ -1,4 +1,7 @@
-SUBDIRS = . omega
+if HAVE_GINAC
+    MAYBE_BERNSTEIN = bernstein
+endif
+SUBDIRS = $(MAYBE_BERNSTEIN) . omega
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
