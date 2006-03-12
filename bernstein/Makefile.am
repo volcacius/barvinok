@@ -5,6 +5,7 @@ include_HEADERS = src/bernstein.h
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
     src/bernstein.h \
+    src/polylib++.h \
     src/polynomial.cpp \
     src/polynomial.h
 libbernstein_la_LIBADD = -lginac -lcln
@@ -12,6 +13,8 @@ libbernstein_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbernstein.la
 
 bernstein_SOURCES = src/main.cpp
+
+EXTRA_DIST = examples
 
 check:
 	@for i in $(top_srcdir)/examples/*.matrix; do \
