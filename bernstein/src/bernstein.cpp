@@ -26,8 +26,7 @@ static ex getBasis(unsigned int nbVert, matrix &A);
 static ex replaceVariablesInPolynomial(ex &poly, const exvector& V, ex &variables);
 static ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert,
 			 unsigned int maxDegree, ex &basis);
-static lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis,
-			   unsigned int nbVert, matrix &A);
+static lst getCoefficients(ex hom, unsigned d, const matrix& A);
 
 exvector constructParameterVector(const char * const *param_names, unsigned nbParams)
 {
@@ -136,21 +135,16 @@ lst bernsteinExpansion(const matrix &vert, ex poly, const exvector& vars,
 #endif
 
 	ex basis = getBasis(vert.rows(), A);
-	ex basisPowered = pow(basis, maxDegree);
-	polynomial expandedBasis = basisPowered.expand();
 
 #ifdef DEBUG
 	cout << "Basis: " << basis << endl<< endl;
-	cout << "Powered Basis: " << basisPowered << endl;
-	cout << "Expanded Basis: " << expandedBasis << endl << endl;
 #endif
 
 	// monomials to n degree
 	polynomial p(polynom);
 	ex maxDegreePolynomial = powerMonomials(p, A, vert.rows(), maxDegree, basis);
 
-	// get the coefficients
-	return getCoefficients(maxDegreePolynomial, expandedBasis, vert.rows(), A);
+	return getCoefficients(maxDegreePolynomial, maxDegree, A);
 }
 
 /*
@@ -236,31 +230,74 @@ ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert
 
 
 /*
- * Finds and prints the coefficients of the polynomial
+ * Finds the coefficients of the polynomial in terms of the Bernstein basis
  *
- *	maxDegreePolynomial: polynomial with monomials of degree n
- *	expandedBasis: basis powered n
- *	nbVert: number of vertices
+ *	hom: homogeneous polynomial of degree d
  *	A: a_i matrix
+ *
+ *	For each monomial of multi-degree (k[0], k[1], ..., k[n-1])
+ *	we divide the corresponding coefficient by the multinomial
+ *	coefficient d!/k[0]! k[1]! ... k[n-1]!
+ *
+ *	The code looks a bit complicated because it's an iterative
+ *	implementation of a recursive procedure.
+ *	For each variable from 0 to n-1, we loop over the possible
+ *	powers: 0..d for the first; 0..d-k[0]=left[0] for the second; ...
+ *	Just for fun, we loop through these in the opposite direction
+ *	only for the first variable.
+ *
+ *	c[i] contains the coefficient of the selected powers of the first i+1 vars
+ *	multinom[i] contains the partial multinomial coefficient.
  */
-lst getCoefficients(ex &maxDegreePolynomial, polynomial &expandedBasis
-		       , unsigned int nbVert, matrix &A)
+lst getCoefficients(ex hom, unsigned d, const matrix& A)
 {
-	lst coefficients;
+	lst coeff;
+	int n = A.cols();
 
-	for (size_t i = 0; i != expandedBasis.nbTerms(); ++i) {
-		ex coeff = maxDegreePolynomial;
-		ex vars = 1;
-		for(unsigned int j = 0; j < nbVert; j++) {
-			unsigned int deg = expandedBasis.term(i).degree(A(0,j));
-			if(deg > 0) {
-				coeff = coeff.coeff(A(0,j), deg);
-				vars *= pow(A(0,j), deg);
-			}
-		}
-		coefficients.append(coeff / (expandedBasis.term(i)/vars));
+	/* we should probably notice sooner that there is just one vertex */
+	if (n == 1) {
+	    coeff.append(hom.coeff(A(0, 0), d));
+	    return coeff;
 	}
-	return coefficients.sort().unique();
+
+	ex c[n];
+	int left[n];
+	int k[n];
+	numeric multinom[n];
+	assert(n >= 2);
+
+	multinom[0] = 1;
+	for (k[0] = d; k[0] >= 0; --k[0]) {
+		c[0] = hom.coeff(A(0, 0), k[0]);
+		left[0] = d - k[0];
+		int i = 1;
+		k[i] = -1;
+		multinom[i] = multinom[0];
+		while (i > 0) {
+			if (i == n-1) {
+				for (int j = 2; j <= left[i-1]; ++j)
+					multinom[i] /= j;
+				coeff.append(c[i-1].coeff(A(0, i), left[i-1]) /
+						multinom[i]);
+				--i;
+				continue;
+			}
+			if (k[i] >= left[i-1]) {
+				--i;
+				continue;
+			}
+			++k[i];
+			if (k[i])
+				multinom[i] /= k[i];
+			c[i] = c[i-1].coeff(A(0, i), k[i]);
+			left[i] = left[i-1] - k[i];
+			k[i+1] = -1;
+			multinom[i+1] = multinom[i];
+			++i;
+		}
+		multinom[0] *= k[0];
+	}
+	return coeff.sort().unique();
 }
 
 
