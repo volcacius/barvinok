@@ -6,6 +6,8 @@ AM_CPPFLAGS = -I$(srcdir)/include
 
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
+    src/piecewise_lst.cpp \
+    src/piecewise_lst.h \
     src/polylib++.h \
     src/polynomial.cpp \
     src/polynomial.h
