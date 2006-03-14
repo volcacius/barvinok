@@ -1,3 +1,6 @@
+#ifndef BERNSTEIN_PIECWISE_LST_H
+#define BERNSTEIN_PIECWISE_LST_H
+
 #include <iostream>
 #include <vector>
 #include <gmp.h>
@@ -38,3 +41,5 @@ std::ostream & operator<< (std::ostream & os, const piecewise_lst_s & pl);
 // typedef GiNaC::structure<piecewise_lst_s> piecewise_lst;
 
 }
+
+#endif
