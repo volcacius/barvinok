@@ -9,7 +9,7 @@
 #include <cln/cln.h>
 #include <string>
 
-#include "bernstein.h"
+#include <bernstein/bernstein.h>
 #include "polynomial.h"
 
 using namespace std;

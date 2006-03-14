@@ -5,7 +5,7 @@
 #include <gmp.h>
 #include "polylib++.h"
 
-#include "bernstein.h"
+#include <bernstein/bernstein.h>
 #include "polynomial.h"
 
 #define MAXRAYS 1000

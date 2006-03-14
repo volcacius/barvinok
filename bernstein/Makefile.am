@@ -1,10 +1,11 @@
 lib_LTLIBRARIES = libbernstein.la
 bin_PROGRAMS = bernstein
-include_HEADERS = src/bernstein.h
+pkginclude_HEADERS = include/bernstein/bernstein.h
+
+AM_CPPFLAGS = -I$(srcdir)/include
 
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
-    src/bernstein.h \
     src/polylib++.h \
     src/polynomial.cpp \
     src/polynomial.h
