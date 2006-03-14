@@ -3,6 +3,8 @@ if HAVE_GINAC
 endif
 SUBDIRS = $(MAYBE_BERNSTEIN) . omega
 
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include
+
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  verif_ehrhart barvinok_enumerate_e \
@@ -14,9 +16,13 @@ pkginclude_HEADERS = \
     barvinok/barvinok.h \
     barvinok/util.h \
     barvinok/evalue.h \
-    barvinok/genfun.h
+    barvinok/genfun.h \
+    barvinok/bernstein.h
 LINK = $(CXXLINK)
 
+if HAVE_GINAC
+    BERNSTEIN_CC = bernstein.cc
+endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
@@ -25,10 +31,15 @@ libbarvinok_la_SOURCES = \
     evalue.c \
     genfun.cc \
     util.c \
-    barvinok.cc
+    barvinok.cc \
+    $(BERNSTEIN_CC)
 EXTRA_libbarvinok_la_SOURCES = \
+    bernstein.cc \
     piputil.h
-libbarvinok_la_LIBADD = @LTLIBOBJS@
+if HAVE_GINAC
+    BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
+endif
+libbarvinok_la_LIBADD = @LTLIBOBJS@ $(BERNSTEIN_LA)
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 LDADD = libbarvinok.la
 
