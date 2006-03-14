@@ -1,13 +1,14 @@
 lib_LTLIBRARIES = libbernstein.la
 bin_PROGRAMS = bernstein
-pkginclude_HEADERS = include/bernstein/bernstein.h
+pkginclude_HEADERS = \
+	include/bernstein/bernstein.h \
+	include/bernstein/piecewise_lst.h
 
 AM_CPPFLAGS = -I$(srcdir)/include
 
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
     src/piecewise_lst.cpp \
-    src/piecewise_lst.h \
     src/polylib++.h \
     src/polynomial.cpp \
     src/polynomial.h

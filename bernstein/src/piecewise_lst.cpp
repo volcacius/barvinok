@@ -1,5 +1,5 @@
 #include <bernstein/bernstein.h>
-#include "piecewise_lst.h"
+#include <bernstein/piecewise_lst.h>
 
 #define MAXRAYS    POL_NO_DUAL
 
