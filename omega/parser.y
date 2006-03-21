@@ -449,6 +449,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    if (EP) {
 		const Variable_ID_Tuple * globals = $2->global_decls();
 		const char **param_names = new (const char *)[globals->size()];
+		$2->setup_names();
 		for (int i = 0; i < globals->size(); ++i)
 		    param_names[i] = (*globals)[i+1]->char_name();
 		print_evalue(stdout, EP, (char**)param_names);
