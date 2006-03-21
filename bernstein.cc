@@ -19,11 +19,15 @@ static ex evalue2ex(evalue *e, const exvector& vars)
 {
     if (value_notzero_p(e->d))
 	return value2numeric(e->x.n)/value2numeric(e->d);
-    assert(e->x.p->type == polynomial);
+    if (e->x.p->type != polynomial)
+	return fail();
     ex poly = 0;
     for (int i = e->x.p->size-1; i >= 0; --i) {
 	poly *= vars[e->x.p->pos-1];
-	poly += evalue2ex(&e->x.p->arr[i], vars);
+	ex t = evalue2ex(&e->x.p->arr[i], vars);
+	if (is_exactly_a<fail>(t))
+	    return t;
+	poly += t;
     }
     return poly;
 }
@@ -109,6 +113,12 @@ piecewise_lst_s *evalue_bernstein_coefficients(piecewise_lst_s *pl_all, evalue *
 	evalue *EP;
 	evalue_extract_poly(e, i, &E, &EP);
 	ex poly = evalue2ex(EP, allvars);
+	if (is_exactly_a<fail>(poly)) {
+	    if (E != EVALUE_DOMAIN(e->x.p->arr[2*i]))
+		Domain_Free(E);
+	    delete pl_all;
+	    return NULL;
+	}
 	for (Polyhedron *P = E; P; P = P->next) {
 	    Polyhedron *next = P->next;
 	    piecewise_lst_s *pl = new piecewise_lst_s(params);
