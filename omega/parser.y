@@ -684,12 +684,13 @@ relation : OPEN_BRACE
 		}
 	 | VAR {
 		Const_String s = $1;
-		free($1);
 		if (relationMap(s) == 0) {
 			fprintf(stderr,"Variable %s not declared\n",$1);
+			free($1);
 			YYERROR;
 			assert(0);
 			};
+		free($1);
 		$$ = new Relation(*relationMap(s));
 		}
 	 | '(' relation ')'	{$$ = $2;}
