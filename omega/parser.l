@@ -1,9 +1,11 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include <ginac/ginac.h>
 #include <omega/AST.h>
 #include <basic/Dynamic_Array.h>
 #include <code_gen/mmap-codegen.h>
+#include "polyfunc.h"
 #include "y.tab.hh"
 #include <omega/calc_debug.h>
 #ifdef WIN32
@@ -149,6 +151,7 @@ void includeFile(char *s) {
 "ConicHull"		{ BUFFER;  return CONIC_HULL; }
 "LinearHull"		{ BUFFER;  return LINEAR_HULL; }
 "hull"		{ BUFFER;  return HULL; }
+"bmax"		{ BUFFER;  return BMAX; }
 "minimize"		{ BUFFER;  return MINIMIZE; }
 "maximize"		{ BUFFER;  return MAXIMIZE; }
 "minimize-range"		{ BUFFER;  return MINIMIZE_RANGE; }
@@ -198,7 +201,6 @@ void includeFile(char *s) {
 "assert_unsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "card"     	{ BUFFER;  return CARD; }
 "ranking"     	{ BUFFER;  return RANKING; }
-"/"		{ BUFFER;  return RESTRICT_RANGE; }
 "&"		{ BUFFER;  return AND; }
 "|"		{ BUFFER;  return OR; }
 "&&"		{ BUFFER;  return AND; }

@@ -18,7 +18,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
+#include <barvinok/bernstein.h>
 #include "count.h"
+#include "polyfunc.h"
 
 #define CALC_VERSION_STRING "Omega Calculator v1.2"
 
@@ -47,6 +49,28 @@ Relation LexForward(int n);
 
 
 reachable_information *reachable_info;
+
+Relation *build_relation(tupleDescriptor *tuple, AST* ast)
+{
+    Relation * r = new Relation(tuple->size);
+    resetGlobals();
+    F_And *f = r->add_and();
+    int i;
+    for(i=1;i<=tuple->size;i++) {	
+	    tuple->vars[i]->vid = r->set_var(i);
+	    if (!tuple->vars[i]->anonymous) 
+		    r->name_set_var(i,tuple->vars[i]->stripped_name);
+	    };
+    foreach(e,Exp*,tuple->eq_constraints, install_eq(f,e,0)); 
+    foreach(e,Exp*,tuple->geq_constraints, install_geq(f,e,0));
+    foreach(c,strideConstraint*,tuple->stride_constraints, install_stride(f,c));
+    if (ast) ast->install(f);
+    delete tuple;
+    delete ast;
+    return r;
+}
+
+Map<Variable_Ref *, GiNaC::ex>	variableMap(0);
 
 
 %}
@@ -80,6 +104,7 @@ reachable_information *reachable_info;
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
 %token CARD RANKING
+%token BMAX
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -88,6 +113,7 @@ reachable_information *reachable_info;
 %nonassoc  SUPERSETOF SUBSETOF
 %left 		OMEGA_P2 RESTRICT_DOMAIN RESTRICT_RANGE
 %left INTERSECTION OMEGA_P3 '*' '@' 
+%left '/'
 %left 		OMEGA_P4
 %left OR    	OMEGA_P5
 %left AND   	OMEGA_P6 
@@ -122,6 +148,8 @@ reachable_information *reachable_info;
 %type <PREAD> partial
 %type <MMAP>  partialwrites
 %type <PMMAP> partialwrite
+%type <POLYFUNC> polyfunc
+%type <POLYNOMIAL> polynomial
 
 %union {
 	int INT_VALUE;
@@ -148,6 +176,8 @@ reachable_information *reachable_info;
 	PartialRead *PREAD;
 	MMap *MMAP;
 	PartialMMap *PMMAP;
+	PolyFunc *POLYFUNC;
+	GiNaC::ex *POLYNOMIAL;
 	};
 
 
@@ -480,6 +510,14 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    }
 	    delete $2;
 	}
+	| BMAX 
+	    { relationDecl = new Declaration_Site(); }
+		polyfunc ';' {
+	    maximize($3, variableMap);
+	    delete $3;
+	    current_Declaration_Site = globalDecls;
+	    delete relationDecl;
+	}
 	;
 
 relTripList: relTripList ',' relation ':' relation ':' relation
@@ -669,6 +707,44 @@ globVar:  VAR '(' INT ')'
 	| VAR
 		{ globalDecls->extend($1); free($1); }
 	;
+
+polynomial : INT { $$ = new GiNaC::ex($1); }
+	| VAR {
+		Variable_Ref *v = lookupScalar($1);
+		free($1);
+		if (!v) YYERROR;
+		if (variableMap(v) == 0)
+		    variableMap[v] = GiNaC::symbol(std::string(v->name));
+		$$ = new GiNaC::ex(variableMap[v]);
+	}
+	| '(' polynomial ')' { $$ = $2; }
+	| polynomial '+' polynomial {
+	    $$ = new GiNaC::ex(*$1 + *$3);
+	    delete $1;
+	    delete $3;
+	}
+	| polynomial '/' polynomial {
+	    $$ = new GiNaC::ex(*$1 / *$3);
+	    delete $1;
+	    delete $3;
+	}
+	| polynomial '*' polynomial {
+	    $$ = new GiNaC::ex(*$1 * *$3);
+	    delete $1;
+	    delete $3;
+	}
+	;
+
+polyfunc : OPEN_BRACE 
+	    tupleDeclaration GOES_TO polynomial optionalFormula CLOSE_BRACE {
+		Relation *r = build_relation($2, $5);
+		$$ = new PolyFunc();
+		$$->poly = *$4;
+		$$->domain = *r;
+		delete $4;
+		delete r;
+	   }
+	   ;
 
 relation : OPEN_BRACE 
 		{ relationDecl = new Declaration_Site(); }
@@ -1031,22 +1107,8 @@ builtRelation :
 		delete $6;
 		$$ = r; }
 	| tupleDeclaration optionalFormula {
-	        Relation * r = new Relation($1->size);
-		resetGlobals();
-		F_And *f = r->add_and();
-		int i;
-		for(i=1;i<=$1->size;i++) {	
-			$1->vars[i]->vid = r->set_var(i);
-			if (!$1->vars[i]->anonymous) 
-				r->name_set_var(i,$1->vars[i]->stripped_name);
-			};
-                foreach(e,Exp*,$1->eq_constraints, install_eq(f,e,0)); 
-		foreach(e,Exp*,$1->geq_constraints, install_geq(f,e,0));
-		foreach(c,strideConstraint*,$1->stride_constraints, install_stride(f,c));
-		if ($2) $2->install(f);
-		delete $1;
-		delete $2;
-		$$ = r; }
+	        $$ = build_relation($1, $2);
+		}
 	| formula {
 		Relation * r = new Relation(0,0);
 		F_And *f = r->add_and();
