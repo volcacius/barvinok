@@ -8,12 +8,12 @@ Domain:
 -----------------------------------------------
 Coefficients: 
 
-	1/2+3/2*p
-	p^2+p
+	p+p^2
 	2
+	1/2+3/2*p
 
 p >= 0
-	Maximum coefficient: p^2+p
+	Maximum coefficient: p+p^2
 	Minimum coefficient: 2
 
 

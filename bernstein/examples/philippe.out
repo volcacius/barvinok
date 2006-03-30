@@ -9,14 +9,14 @@ Domain:
 Coefficients: 
 
 	0
-	1/2*N^2+3/2*N
-	1/2*N^2+1/2*N
-	3/4*N
+	3/2*N+1/2*N^2
 	1/4*N
-	1/2*N^2+N
+	1/2*N+1/2*N^2
+	3/4*N
+	N+1/2*N^2
 
 N >= 0
-	Maximum coefficient: 1/2*N^2+3/2*N
+	Maximum coefficient: 3/2*N+1/2*N^2
 	Minimum coefficient: 0
 
 

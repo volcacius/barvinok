@@ -11,9 +11,9 @@ Domain:
 Coefficients: 
 
 	34/7*L-1/7*M
-	61/28*L-79/28*M+75/28*N
+	75/28*N+61/28*L-79/28*M
 	Minimum coefficient: 34/7*L-1/7*M
-	Maximum coefficient: 61/28*L-79/28*M+75/28*N
+	Maximum coefficient: 75/28*N+61/28*L-79/28*M
 
 
 ===============================================
@@ -27,10 +27,10 @@ Domain:
 -----------------------------------------------
 Coefficients: 
 
-	5*L-1/7*N
-	-5*M+34/7*N
-	Maximum coefficient: 5*L-1/7*N
-	Minimum coefficient: -5*M+34/7*N
+	-1/7*N+5*L
+	34/7*N-5*M
+	Maximum coefficient: -1/7*N+5*L
+	Minimum coefficient: 34/7*N-5*M
 
 
 ===============================================

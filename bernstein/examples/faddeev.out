@@ -8,12 +8,12 @@ Domain:
 -----------------------------------------------
 Coefficients: 
 
-	-2+1/2*N^2+1/2*N
-	4+2*N^2-6*N
+	4-6*N+2*N^2
+	-2+1/2*N+1/2*N^2
 	1+N
 
 N >= 0
-	Maximum coefficient: 4+2*N^2-6*N
+	Maximum coefficient: 4-6*N+2*N^2
 	Minimum coefficient: 1+N
 
 
