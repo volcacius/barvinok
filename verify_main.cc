@@ -323,6 +323,7 @@ int main(int argc,char *argv[]) {
   printf( "\n" );
 #endif
   
+    Enumeration_Free(en);
     if (gf)
 	delete gf;
 
