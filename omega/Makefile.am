@@ -11,9 +11,10 @@ occ_SOURCES = \
 	polyfunc.cc \
 	y.tab.cc \
 	omega_calc/yylex.h
-LDADD = -lcode_gen -lomega ../libbarvinok.la
+LDADD = -lcode_gen -lomega ../libbarvinok.la ../bernstein/libbernstein.la
 LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
-CPPFLAGS = -I$(top_srcdir) @OMEGA_CPPFLAGS@ @CPPFLAGS@
+CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/bernstein/include \
+	    @OMEGA_CPPFLAGS@ @CPPFLAGS@
 
 EXTRA_DIST = \
 	parser.l \
