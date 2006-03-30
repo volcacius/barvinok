@@ -3729,14 +3729,9 @@ static Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
 	    }
 	Polyhedron *P = Constraints2Polyhedron(M, 1024);
 	Matrix_Free(M);
-	Polyhedron *P2;
 	Polyhedron *U = Universe_Polyhedron(1);
-	P2 = P;
-	Param_Polyhedron *PP = 
-	    Polyhedron2Param_SimplifiedDomain(&P, U, 1024, NULL, NULL);
+	Param_Polyhedron *PP = Polyhedron2Param_Domain(P, U, 1024);
 	Polyhedron_Free(P);
-	if (P2 != P)
-	    Polyhedron_Free(P2);
 	Polyhedron_Free(U);
 	Param_Vertices *V;
 	for (i = 0, V = PP->V; V; ++i, V = V->next)

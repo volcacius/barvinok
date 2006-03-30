@@ -131,7 +131,7 @@ int main()
     P = Constraints2Polyhedron(M, 1024);
     M = Matrix_Read();
     C = Constraints2Polyhedron(M, 1024);
-    PP = Polyhedron2Param_SimplifiedDomain(&P, C, 1024, NULL, NULL);
+    PP = Polyhedron2Param_Domain(P, C, 1024);
     for (i = 0, V = PP->V; V; ++i, V = V->next)
 	;
     return !(i == 10);
