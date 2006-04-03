@@ -4018,6 +4018,22 @@ static void SwapColumns(Polyhedron *P, int i, int j)
     SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
+/* Construct a constraint c from constraints l and u such that if
+ * if constraint c holds then for each value of the other variables
+ * there is at most one value of variable pos (position pos+1 in the constraints).
+ *
+ * Given a lower and an upper bound
+ *	    n_l v_i + <c_l,x> + c_l >= 0
+ *	   -n_u v_i + <c_u,x> + c_u >= 0
+ * the constructed constraint is
+ *
+ *	    -(n_l<c_u,x> + n_u<c_l,x>) + (-n_l c_u - n_u c_l + n_l n_u - 1)
+ *
+ * which is then simplified to remove the content of the non-constant coefficients
+ *
+ * len is the total length of the constraints.
+ * v is a temporary variable that can be used by this procedure
+ */
 static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
 				     int len, Value *v)
 {
@@ -4070,6 +4086,11 @@ static void negative_test_constraint7(Value *l, Value *u, Value *c, int pos,
     value_clear(g);
 }
 
+/* Turns a x + b >= 0 into a x + b <= -1
+ *
+ * len is the total length of the constraint.
+ * v is a temporary variable that can be used by this procedure
+ */
 static void oppose_constraint(Value *c, int len, Value *v)
 {
     value_set_si(*v, -1);
@@ -4077,13 +4098,22 @@ static void oppose_constraint(Value *c, int len, Value *v)
     value_decrement(c[len-1], c[len-1]);
 }
 
+/* Split polyhedron P into two polyhedra *pos and *neg, where
+ * existential variable i has at most one solution for each
+ * value of the other variables in *neg.
+ *
+ * The splitting is performed using constraints l and u.
+ *
+ * nvar: number of set variables
+ * row: temporary vector that can be used by this procedure
+ * f: temporary value that can be used by this procedure
+ */
 static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
-			      int nvar, int len, int exist, int MaxRays,
-			      Vector *row, Value& f, bool independent,
+			      int nvar, int MaxRays, Vector *row, Value& f,
 			      Polyhedron **pos, Polyhedron **neg)
 {
     negative_test_constraint(P->Constraint[l], P->Constraint[u],
-			     row->p, nvar+i, len, &f);
+			     row->p, nvar+i, P->Dimension+2, &f);
     *neg = AddConstraints(row->p, 1, P, MaxRays);
 
     /* We found an independent, but useless constraint
@@ -4095,7 +4125,7 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
 	return false;
     }
 
-    oppose_constraint(row->p, len, &f);
+    oppose_constraint(row->p, P->Dimension+2, &f);
     *pos = AddConstraints(row->p, 1, P, MaxRays);
 
     if (emptyQ((*pos))) {
@@ -4143,8 +4173,23 @@ static Polyhedron *rotate_along(Polyhedron *P, int r, int nvar, int exist,
     return T;
 }
 
+/* Split polyhedron P into two polyhedra *pos and *neg, where
+ * existential variable i has at most one solution for each
+ * value of the other variables in *neg.
+ *
+ * If independent is set, then the two constraints on which the
+ * split will be performed need to be independent of the other
+ * existential variables.
+ *
+ * Return true if an appropriate split could be performed.
+ *
+ * nvar: number of set variables
+ * exist: number of existential variables
+ * row: temporary vector that can be used by this procedure
+ * f: temporary value that can be used by this procedure
+ */
 static bool SplitOnVar(Polyhedron *P, int i, 
-			      int nvar, int len, int exist, int MaxRays,
+			      int nvar, int exist, int MaxRays,
 			      Vector *row, Value& f, bool independent,
 			      Polyhedron **pos, Polyhedron **neg)
 {
@@ -4174,10 +4219,7 @@ static bool SplitOnVar(Polyhedron *P, int i,
 		    continue;
 	    }
 
-	    if (SplitOnConstraint(P, i, l, u, 
-				   nvar, len, exist, MaxRays,
-				   row, f, independent,
-				   pos, neg)) {
+	    if (SplitOnConstraint(P, i, l, u, nvar, MaxRays, row, f, pos, neg)) {
 		if (independent) {
 		    if (i != 0)
 			SwapColumns(*neg, nvar+1, nvar+1+i);
@@ -5401,7 +5443,7 @@ next:
 
 	    /* Find constraint again and split off negative part */
 
-	    if (SplitOnVar(P, i, nvar, len, exist, MaxRays,
+	    if (SplitOnVar(P, i, nvar, exist, MaxRays,
 			   row, f, true, &pos, &neg)) {
 #ifdef DEBUG_ER
 		fprintf(stderr, "\nER: Split\n");
@@ -5479,7 +5521,7 @@ next:
     int i;
     Polyhedron *pos, *neg;
     for (i = 0; i < exist; ++i)
-	if (SplitOnVar(P, i, nvar, len, exist, MaxRays,
+	if (SplitOnVar(P, i, nvar, exist, MaxRays,
 		       row, f, false, &pos, &neg))
 	    break;
 
