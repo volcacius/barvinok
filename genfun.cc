@@ -206,6 +206,18 @@ gen_fun *gen_fun::Hadamard_product(gen_fun *gf, unsigned MaxRays)
     return sum;
 }
 
+void gen_fun::add_union(gen_fun *gf, unsigned MaxRays)
+{
+    ZZ one, mone;
+    one = 1;
+    mone = -1;
+
+    gen_fun *hp = gf->Hadamard_product(gf, MaxRays);
+    add(one, one, gf);
+    add(mone, one, hp);
+    delete hp;
+}
+
 static void print_power(vec_ZZ& c, vec_ZZ& p,
 			unsigned int nparam, char **param_name)
 {
