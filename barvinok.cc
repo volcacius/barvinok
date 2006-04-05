@@ -5705,11 +5705,8 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
 	if (!gf)
 	    gf = red.gf;
 	else {
-	    gen_fun *hp = gf->Hadamard_product(red.gf, MaxRays);
-	    gf->add(one, one, red.gf);
-	    gf->add(mone, one, hp);
+	    gf->add_union(red.gf, MaxRays);
 	    delete red.gf;
-	    delete hp;
 	}
     }
     /* we actually only need the convex union of the parameter space
