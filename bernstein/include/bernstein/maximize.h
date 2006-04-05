@@ -11,6 +11,8 @@ namespace bernstein {
 
 GiNaC::lst maximize(Polyhedron *domain, GiNaC::lst coeffs,
 		    const GiNaC::exvector& vars);
+GiNaC::lst minimize(Polyhedron *domain, GiNaC::lst coeffs,
+		    const GiNaC::exvector& vars);
 
 }
 

@@ -227,4 +227,17 @@ GiNaC::lst maximize(Polyhedron *domain, GiNaC::lst coeffs,
     return newlist;
 }
 
+GiNaC::lst minimize(Polyhedron *domain, GiNaC::lst coeffs,
+		    const GiNaC::exvector& vars)
+{
+    lst negcoeffs, negresult, result;
+    lst::const_iterator j;
+    for (j = coeffs.begin(); j != coeffs.end(); ++j)
+	negcoeffs.append(-*j);
+    negresult = maximize(domain, negcoeffs, vars);
+    for (j = negresult.begin(); j != negresult.end(); ++j)
+	result.append(-*j);
+    return result;
+}
+
 }
