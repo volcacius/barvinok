@@ -11,8 +11,8 @@ Coefficients:
 
 	P
 	-1+Q
-	Maximum coefficient: P
-	Minimum coefficient: -1+Q
+	Minimum coefficient(s): {-1+Q}
+	Maximum coefficient(s): {P}
 
 
 ===============================================
@@ -27,8 +27,8 @@ Coefficients:
 
 	1
 	P
-	Minimum coefficient: 1
-	Maximum coefficient: P
+	Minimum coefficient(s): {1}
+	Maximum coefficient(s): {P}
 
 
 ===============================================

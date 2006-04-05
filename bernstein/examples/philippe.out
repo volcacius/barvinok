@@ -14,10 +14,8 @@ Coefficients:
 	1/2*N+1/2*N^2
 	3/4*N
 	N+1/2*N^2
-
-N >= 0
-	Maximum coefficient: 3/2*N+1/2*N^2
-	Minimum coefficient: 0
+	Minimum coefficient(s): {0}
+	Maximum coefficient(s): {3/2*N+1/2*N^2}
 
 
 ===============================================

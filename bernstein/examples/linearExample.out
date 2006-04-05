@@ -12,8 +12,8 @@ Coefficients:
 
 	34/7*L-1/7*M
 	75/28*N+61/28*L-79/28*M
-	Minimum coefficient: 34/7*L-1/7*M
-	Maximum coefficient: 75/28*N+61/28*L-79/28*M
+	Minimum coefficient(s): {34/7*L-1/7*M}
+	Maximum coefficient(s): {75/28*N+61/28*L-79/28*M}
 
 
 ===============================================
@@ -29,8 +29,8 @@ Coefficients:
 
 	-1/7*N+5*L
 	34/7*N-5*M
-	Maximum coefficient: -1/7*N+5*L
-	Minimum coefficient: 34/7*N-5*M
+	Minimum coefficient(s): {34/7*N-5*M}
+	Maximum coefficient(s): {-1/7*N+5*L}
 
 
 ===============================================

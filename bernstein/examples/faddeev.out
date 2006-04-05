@@ -11,10 +11,8 @@ Coefficients:
 	4-6*N+2*N^2
 	-2+1/2*N+1/2*N^2
 	1+N
-
-N >= 0
-	Maximum coefficient: 4-6*N+2*N^2
-	Minimum coefficient: 1+N
+	Minimum coefficient(s): {1+N}
+	Maximum coefficient(s): {4-6*N+2*N^2}
 
 
 ===============================================

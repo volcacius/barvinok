@@ -12,10 +12,8 @@ Coefficients:
 	3/4*N+1/8*N^2-1/8*N^3
 	1/4*N
 	1/2*N+1/24*N^2
-
-N >= 0
-	Maximum coefficient: 1/2*N+1/24*N^2
-	Minimum coefficient: 3/4*N+1/8*N^2-1/8*N^3
+	Minimum coefficient(s): {0,3/4*N+1/8*N^2-1/8*N^3}
+	Maximum coefficient(s): {3/4*N+1/8*N^2-1/8*N^3,1/2*N+1/24*N^2}
 
 
 ===============================================
@@ -31,6 +29,8 @@ Coefficients:
 	N-N^3
 	-N^3
 	2/3*N-N^3
+	Minimum coefficient(s): {N-N^3}
+	Maximum coefficient(s): {-N^3}
 
 
 ===============================================

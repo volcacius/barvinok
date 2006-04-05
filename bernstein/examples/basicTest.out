@@ -11,10 +11,8 @@ Coefficients:
 	p+p^2
 	2
 	1/2+3/2*p
-
-p >= 0
-	Maximum coefficient: p+p^2
-	Minimum coefficient: 2
+	Minimum coefficient(s): {2}
+	Maximum coefficient(s): {p+p^2}
 
 
 ===============================================
