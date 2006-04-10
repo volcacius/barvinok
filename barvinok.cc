@@ -776,6 +776,10 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
 	values2zz(values, vertex, dim);
 }
 
+/* returns an evalue that corresponds to
+ *
+ * c/(*den) x_param
+ */
 static evalue *term(int param, ZZ& c, Value *den = NULL)
 {
     evalue *EP = new evalue();
@@ -893,6 +897,10 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
     value_clear(tmp);
 }
 
+/* returns an evalue that corresponds to
+ *
+ *   sum_i p[i] * x_i
+ */
 static evalue *multi_monom(vec_ZZ& p)
 {
     evalue *X = new evalue();
@@ -1104,6 +1112,12 @@ static void mask(Matrix *f, evalue *factor)
 }
 #endif
 
+/* This structure encodes the power of the term in a rational generating function.
+ * 
+ * Either E == NULL or constant = 0
+ * If E != NULL, then the power is 	    E
+ * If E == NULL, then the power is 	    coeff * param[pos] + constant
+ */
 struct term_info {
     evalue	   *E;
     ZZ		    constant;
@@ -1270,6 +1284,19 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     return E;
 }
 
+/* Returns the power of (t+1) in the term of a rational generating function,
+ * i.e., the scalar product of the actual lattice point and lambda.
+ * The lattice point is the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone i shifted to the parametric vertex W/lcm.
+ *
+ * The rows of W refer to the coordinates of the vertex
+ * The first nparam columns are the coefficients of the parameters
+ * and the final column is the constant term.
+ * lcm is the common denominator of all coefficients.
+ *
+ * PD is the parameter domain, which, if != NULL, may be used to simply the
+ * resulting expression.
+ */
 #ifdef USE_MODULO
 evalue* lattice_point(
     Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
@@ -1348,6 +1375,16 @@ evalue* lattice_point(
 }
 #endif
 
+/* Returns the power of (t+1) in the term of a rational generating function,
+ * i.e., the scalar product of the actual lattice point and lambda.
+ * The lattice point is the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone i shifted to the parametric vertex V.
+ *
+ * PD is the parameter domain, which, if != NULL, may be used to simply the
+ * resulting expression.
+ *
+ * The result is returned in term.
+ */
 void lattice_point(
     Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term,
     Polyhedron *PD)
@@ -3181,6 +3218,14 @@ static evalue* new_zero_ep()
     return EP;
 }
 
+/* returns the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone C shifted to the parametric vertex V.
+ *
+ * The return values num and E_vertex are such that
+ * coordinate i of this lattice point is equal to
+ *
+ *	    num[i] + E_vertex[i]
+ */
 void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 
 		   evalue **E_vertex)
 {
