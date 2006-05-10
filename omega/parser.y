@@ -42,6 +42,7 @@ bool anyTimingDone = false;
 int argCount = 0;
 int tuplePos = 0;
 Argument_Tuple currentTuple = Input_Tuple;
+char *currentVar = NULL;
 
 Relation LexForward(int n);
 
@@ -167,6 +168,8 @@ inputItem :
 	error ';' {
 		flushScanBuffer();
 		/* Kill all the local declarations -- ejr */
+		if (currentVar)
+		    free(currentVar);
 		Declaration_Site *ds1, *ds2;
 		for(ds1 = current_Declaration_Site; ds1 != globalDecls;) {
 		    ds2 = ds1;
@@ -179,13 +182,14 @@ inputItem :
 	| SYMBOLIC globVarList ';' 
 		{ flushScanBuffer();
 		}
-	| VAR IS_ASSIGNED relation ';' 
+	| VAR { currentVar = $1; } IS_ASSIGNED relation ';' 
 			{
 			  flushScanBuffer();
-			  $3->simplify(min(2,redundant_conj_level),4);
+			  $4->simplify(min(2,redundant_conj_level),4);
 			  Relation *r = relationMap((Const_String)$1);
 			  if (r) delete r;
-			  relationMap[(Const_String)$1] = $3; 
+			  relationMap[(Const_String)$1] = $4; 
+			  currentVar = NULL;
 			  free($1);
 			}
 	| relation ';' { 
@@ -1065,9 +1069,14 @@ formula_sep : ':'
 	;
 
 tupleDeclaration :
-	{ currentTupleDescriptor = new tupleDescriptor; tuplePos = 1; }
+	{ 
+	    if (currentTupleDescriptor)
+		delete currentTupleDescriptor;
+	    currentTupleDescriptor = new tupleDescriptor; 
+	    tuplePos = 1;
+	}
 	'[' optionalTupleVarList ']' 
-	{$$ = currentTupleDescriptor; }
+	{$$ = currentTupleDescriptor; currentTupleDescriptor = NULL; }
 	;
 
 optionalTupleVarList : 
@@ -1171,9 +1180,9 @@ constraintChain : expList REL_OP expList
 simpleExp : 
 	VAR	%prec OMEGA_P9 	
 		{ Variable_Ref * v = lookupScalar($1);
+		  free($1); 
 		  if (!v) YYERROR;
 		  $$ = new Exp(v); 
-		  free($1); 
 		  }
 	| VAR '(' {argCount = 1;}  argumentList ')' %prec OMEGA_P9 	
 		{Variable_Ref *v;
@@ -1195,8 +1204,8 @@ simpleExp :
 argumentList :
 	argumentList ',' VAR {
 		Variable_Ref * v = lookupScalar($3);
+		free($3);
 		if (!v) YYERROR;
-		 free($3);
 		 if (v->pos != argCount || v->of != $1 || v->of != Input_Tuple && v->of != Output_Tuple) {
 			fprintf(stderr,"arguments to function must be prefix of input or output tuple\n");
 			YYERROR;
@@ -1205,8 +1214,8 @@ argumentList :
 		 argCount++;
 		}
 	| VAR { Variable_Ref * v = lookupScalar($1);
+		free($1);
 		if (!v) YYERROR;
-		 free($1);
 		 if (v->pos != argCount || v->of != Input_Tuple && v->of != Output_Tuple) {
 			fprintf(stderr,"arguments to function must be prefix of input or output tuple\n");
 			YYERROR;
@@ -1491,6 +1500,7 @@ int main(int argc, char **argv){
 
   initializeOmega();
   initializeScanBuffer();
+  currentTupleDescriptor = NULL;
 
   yyparse();
 
