@@ -776,6 +776,10 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
 	values2zz(values, vertex, dim);
 }
 
+/* returns an evalue that corresponds to
+ *
+ * c/(*den) x_param
+ */
 static evalue *term(int param, ZZ& c, Value *den = NULL)
 {
     evalue *EP = new evalue();
@@ -893,6 +897,10 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
     value_clear(tmp);
 }
 
+/* returns an evalue that corresponds to
+ *
+ *   sum_i p[i] * x_i
+ */
 static evalue *multi_monom(vec_ZZ& p)
 {
     evalue *X = new evalue();
@@ -1104,6 +1112,12 @@ static void mask(Matrix *f, evalue *factor)
 }
 #endif
 
+/* This structure encodes the power of the term in a rational generating function.
+ * 
+ * Either E == NULL or constant = 0
+ * If E != NULL, then the power is 	    E
+ * If E == NULL, then the power is 	    coeff * param[pos] + constant
+ */
 struct term_info {
     evalue	   *E;
     ZZ		    constant;
@@ -1270,6 +1284,19 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     return E;
 }
 
+/* Returns the power of (t+1) in the term of a rational generating function,
+ * i.e., the scalar product of the actual lattice point and lambda.
+ * The lattice point is the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone i shifted to the parametric vertex W/lcm.
+ *
+ * The rows of W refer to the coordinates of the vertex
+ * The first nparam columns are the coefficients of the parameters
+ * and the final column is the constant term.
+ * lcm is the common denominator of all coefficients.
+ *
+ * PD is the parameter domain, which, if != NULL, may be used to simply the
+ * resulting expression.
+ */
 #ifdef USE_MODULO
 evalue* lattice_point(
     Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
@@ -1348,6 +1375,16 @@ evalue* lattice_point(
 }
 #endif
 
+/* Returns the power of (t+1) in the term of a rational generating function,
+ * i.e., the scalar product of the actual lattice point and lambda.
+ * The lattice point is the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone i shifted to the parametric vertex V.
+ *
+ * PD is the parameter domain, which, if != NULL, may be used to simply the
+ * resulting expression.
+ *
+ * The result is returned in term.
+ */
 void lattice_point(
     Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term,
     Polyhedron *PD)
@@ -3181,6 +3218,14 @@ static evalue* new_zero_ep()
     return EP;
 }
 
+/* returns the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone C shifted to the parametric vertex V.
+ *
+ * The return values num and E_vertex are such that
+ * coordinate i of this lattice point is equal to
+ *
+ *	    num[i] + E_vertex[i]
+ */
 void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 
 		   evalue **E_vertex)
 {
@@ -4018,6 +4063,22 @@ static void SwapColumns(Polyhedron *P, int i, int j)
     SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
+/* Construct a constraint c from constraints l and u such that if
+ * if constraint c holds then for each value of the other variables
+ * there is at most one value of variable pos (position pos+1 in the constraints).
+ *
+ * Given a lower and an upper bound
+ *	    n_l v_i + <c_l,x> + c_l >= 0
+ *	   -n_u v_i + <c_u,x> + c_u >= 0
+ * the constructed constraint is
+ *
+ *	    -(n_l<c_u,x> + n_u<c_l,x>) + (-n_l c_u - n_u c_l + n_l n_u - 1)
+ *
+ * which is then simplified to remove the content of the non-constant coefficients
+ *
+ * len is the total length of the constraints.
+ * v is a temporary variable that can be used by this procedure
+ */
 static void negative_test_constraint(Value *l, Value *u, Value *c, int pos,
 				     int len, Value *v)
 {
@@ -4070,6 +4131,11 @@ static void negative_test_constraint7(Value *l, Value *u, Value *c, int pos,
     value_clear(g);
 }
 
+/* Turns a x + b >= 0 into a x + b <= -1
+ *
+ * len is the total length of the constraint.
+ * v is a temporary variable that can be used by this procedure
+ */
 static void oppose_constraint(Value *c, int len, Value *v)
 {
     value_set_si(*v, -1);
@@ -4077,13 +4143,22 @@ static void oppose_constraint(Value *c, int len, Value *v)
     value_decrement(c[len-1], c[len-1]);
 }
 
+/* Split polyhedron P into two polyhedra *pos and *neg, where
+ * existential variable i has at most one solution for each
+ * value of the other variables in *neg.
+ *
+ * The splitting is performed using constraints l and u.
+ *
+ * nvar: number of set variables
+ * row: temporary vector that can be used by this procedure
+ * f: temporary value that can be used by this procedure
+ */
 static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
-			      int nvar, int len, int exist, int MaxRays,
-			      Vector *row, Value& f, bool independent,
+			      int nvar, int MaxRays, Vector *row, Value& f,
 			      Polyhedron **pos, Polyhedron **neg)
 {
     negative_test_constraint(P->Constraint[l], P->Constraint[u],
-			     row->p, nvar+i, len, &f);
+			     row->p, nvar+i, P->Dimension+2, &f);
     *neg = AddConstraints(row->p, 1, P, MaxRays);
 
     /* We found an independent, but useless constraint
@@ -4095,7 +4170,7 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
 	return false;
     }
 
-    oppose_constraint(row->p, len, &f);
+    oppose_constraint(row->p, P->Dimension+2, &f);
     *pos = AddConstraints(row->p, 1, P, MaxRays);
 
     if (emptyQ((*pos))) {
@@ -4143,8 +4218,23 @@ static Polyhedron *rotate_along(Polyhedron *P, int r, int nvar, int exist,
     return T;
 }
 
+/* Split polyhedron P into two polyhedra *pos and *neg, where
+ * existential variable i has at most one solution for each
+ * value of the other variables in *neg.
+ *
+ * If independent is set, then the two constraints on which the
+ * split will be performed need to be independent of the other
+ * existential variables.
+ *
+ * Return true if an appropriate split could be performed.
+ *
+ * nvar: number of set variables
+ * exist: number of existential variables
+ * row: temporary vector that can be used by this procedure
+ * f: temporary value that can be used by this procedure
+ */
 static bool SplitOnVar(Polyhedron *P, int i, 
-			      int nvar, int len, int exist, int MaxRays,
+			      int nvar, int exist, int MaxRays,
 			      Vector *row, Value& f, bool independent,
 			      Polyhedron **pos, Polyhedron **neg)
 {
@@ -4174,10 +4264,7 @@ static bool SplitOnVar(Polyhedron *P, int i,
 		    continue;
 	    }
 
-	    if (SplitOnConstraint(P, i, l, u, 
-				   nvar, len, exist, MaxRays,
-				   row, f, independent,
-				   pos, neg)) {
+	    if (SplitOnConstraint(P, i, l, u, nvar, MaxRays, row, f, pos, neg)) {
 		if (independent) {
 		    if (i != 0)
 			SwapColumns(*neg, nvar+1, nvar+1+i);
@@ -5401,7 +5488,7 @@ next:
 
 	    /* Find constraint again and split off negative part */
 
-	    if (SplitOnVar(P, i, nvar, len, exist, MaxRays,
+	    if (SplitOnVar(P, i, nvar, exist, MaxRays,
 			   row, f, true, &pos, &neg)) {
 #ifdef DEBUG_ER
 		fprintf(stderr, "\nER: Split\n");
@@ -5479,7 +5566,7 @@ next:
     int i;
     Polyhedron *pos, *neg;
     for (i = 0; i < exist; ++i)
-	if (SplitOnVar(P, i, nvar, len, exist, MaxRays,
+	if (SplitOnVar(P, i, nvar, exist, MaxRays,
 		       row, f, false, &pos, &neg))
 	    break;
 
@@ -5663,11 +5750,8 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
 	if (!gf)
 	    gf = red.gf;
 	else {
-	    gen_fun *hp = gf->Hadamard_product(red.gf, MaxRays);
-	    gf->add(one, one, red.gf);
-	    gf->add(mone, one, hp);
+	    gf->add_union(red.gf, MaxRays);
 	    delete red.gf;
-	    delete hp;
 	}
     }
     /* we actually only need the convex union of the parameter space

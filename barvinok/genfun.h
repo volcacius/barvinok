@@ -36,6 +36,7 @@ struct gen_fun {
     void add(const ZZ& cn, const ZZ& cd, gen_fun *gf);
     void substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset);
     gen_fun *Hadamard_product(gen_fun *gf, unsigned MaxRays);
+    void add_union(gen_fun *gf, unsigned MaxRays);
     void print(unsigned int nparam, char **param_name) const;
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
