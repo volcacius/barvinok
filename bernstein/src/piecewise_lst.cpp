@@ -1,3 +1,5 @@
+#include <cln/cln.h>
+
 #include <bernstein/bernstein.h>
 #include <bernstein/maximize.h>
 #include <bernstein/piecewise_lst.h>
@@ -170,6 +172,69 @@ void piecewise_lst_s::simplify_domains(Polyhedron *ctx)
 	list[i].first = DomainSimplify(D, ctx, MAXRAYS);
 	Domain_Free(D);
     }
+}
+
+#if (GMP_LIMB_BITS==32)
+inline mp_limb_t cl_I_to_limb(const cln::cl_I& x) { return cln::cl_I_to_UL(x); }
+#elif (GMP_LIMB_BITS==64)
+inline mp_limb_t cl_I_to_limb(const cln::cl_I& x) { return cln::cl_I_to_UQ(x); }
+#endif
+
+static void numeric2value(numeric n, Value& v)
+{
+    cln::cl_I mask;
+    cln::cl_I abs_n = cln::the<cln::cl_I>(abs(n).to_cl_N());
+    int abs_sa;
+
+    for (abs_sa = 0; abs_n != 0; abs_sa++)
+	abs_n = abs_n >> GMP_LIMB_BITS;
+    _mpz_realloc(v, abs_sa);
+
+    mask = 1;
+    mask = mask << GMP_LIMB_BITS;
+    mask = mask - 1;
+    abs_n = cln::the<cln::cl_I>(abs(n).to_cl_N());
+    for (int i = 0; i < abs_sa; ++i) {
+	cln::cl_I digit = abs_n & mask;
+	v[0]._mp_d[i] = cl_I_to_limb(digit);
+	abs_n >> GMP_LIMB_BITS;
+    }
+
+    v[0]._mp_size = n < 0 ? -abs_sa : abs_sa;
+}
+
+numeric piecewise_lst_s::evaluate(const exvector& values)
+{
+    Value *v = new Value[values.size()];
+    numeric result = 0;
+
+    for (int i = 0; i < values.size(); ++i) {
+	value_init(v[i]);
+	assert(is_a<numeric>(values[i]));
+	numeric2value(ex_to<numeric>(values[i]), v[i]);
+    }
+
+    for (int i = 0; i < list.size(); ++i) {
+	if (!in_domain(list[i].first, v))
+	    continue;
+	exmap m;
+	for (int j = 0; j < values.size(); ++j)
+	    m[vars[j]] = values[j];
+	ex ex_val = list[i].second.subs(m);
+	assert(is_a<lst>(ex_val));
+	lst val = ex_to<lst>(ex_val);;
+	ex max = val.op(0);
+	for (int j = 1; j < val.nops(); ++i)
+	    if (val.op(j) > max)
+		max = val.op(j);
+	assert(is_a<numeric>(max));
+	result = ex_to<numeric>(max);
+	break;
+    }
+    for (int i = 0; i < values.size(); ++i)
+	value_clear(v[i]);
+    delete [] v;
+    return result;
 }
 
 }
