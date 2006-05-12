@@ -321,6 +321,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
     assert(PolyhedronIncludes(P, U));
 }
 
+/* Computes x, y and g such that g = gcd(a,b) and a*x+b*y = g */
 static void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 {
     Value c, d, e, f, tmp;
