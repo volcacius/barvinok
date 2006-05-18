@@ -1,6 +1,10 @@
 #ifndef EV_OPERATIONS_H
 #define EV_OPERATIONS_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include <polylib/polylibgmp.h>
 #undef divide
 
@@ -70,6 +74,7 @@ typedef struct _enumeration {
 void evalue_set_si(evalue *ev, int n, int d);
 void evalue_set(evalue *ev, Value n, Value d);
 void evalue_copy(evalue *dst, evalue *src);
+evalue *evalue_zero();
 enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);
 int eequal(evalue *e1,evalue *e2);
@@ -98,5 +103,9 @@ Enumeration* partition2enumeration(evalue *EP);
 void evalue_frac2floor(evalue *e);
 evalue *esum(evalue *E, int nvar);
 void eor(evalue *e1, evalue *res);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

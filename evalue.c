@@ -11,11 +11,11 @@
 #define value_pmodulus(ref,val1,val2)  (mpz_fdiv_r((ref),(val1),(val2)))
 #endif
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+
 #ifdef __GNUC__
-#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 #else
-#define ALLOC(p) p = (void *)malloc(sizeof(*p))
 #define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
 #endif
 
@@ -29,6 +29,14 @@ void evalue_set(evalue *ev, Value n, Value d) {
     value_assign(ev->d, d);
     value_init(ev->x.n);
     value_assign(ev->x.n, n);
+}
+
+evalue* evalue_zero()
+{
+    evalue *EP = ALLOC(evalue);
+    value_init(EP->d);
+    evalue_set_si(EP, 0, 1);
+    return EP;
 }
 
 void aep_evalue(evalue *e, int *ref) {
@@ -3161,7 +3169,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	int pos = e->x.p->pos;
 
 	if (pos > nvar) {
-	    ALLOC(factor);
+	    factor = ALLOC(evalue);
 	    value_init(factor->d);
 	    value_set_si(factor->d, 0);
 	    factor->x.p = new_enode(polynomial, 2, pos - nvar);
@@ -3176,7 +3184,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 		break;
 	assert(i < D->NbRays);
 	if (value_neg_p(D->Ray[i][pos])) {
-	    ALLOC(factor);
+	    factor = ALLOC(evalue);
 	    value_init(factor->d);
 	    evalue_set_si(factor, -1, 1);
 	}
@@ -3249,8 +3257,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 evalue *esum(evalue *e, int nvar)
 {
     int i;
-    evalue *res;
-    ALLOC(res);
+    evalue *res = ALLOC(evalue);
     value_init(res->d);
 
     assert(nvar >= 0);

@@ -2872,15 +2872,6 @@ struct ienumerator : public polar_decomposer, public vertex_decomposer,
     void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f);
 };
 
-static evalue* new_zero_ep()
-{
-    evalue *EP;
-    ALLOC(evalue, EP);
-    value_init(EP->d);
-    evalue_set_si(EP, 0, 1);
-    return EP;
-}
-
 /* returns the unique lattice point in the fundamental parallelepiped
  * of the unimodual cone C shifted to the parametric vertex V.
  *
@@ -2933,7 +2924,7 @@ void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num,
 
 	evalue *remainders[dim];
 	for (int i = 0; i < dim; ++i) {
-	    remainders[i] = new_zero_ep();
+	    remainders[i] = evalue_zero();
 	    one = 1;
 	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], 0);
 	}
@@ -4581,7 +4572,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     evalue *EP = 0;
 
     if (nd == 0)
-	EP = new_zero_ep();
+	EP = evalue_zero();
 
     /* This doesn't seem to have any effect */
     if (nd == 1) {
@@ -4592,7 +4583,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	    Polyhedron_Free(O);
 	Polyhedron_Free(CA);
 	if (emptyQ(P))
-	    EP = new_zero_ep();
+	    EP = evalue_zero();
     }
 
     if (!EP && CT->NbColumns != CT->NbRows) {
@@ -4853,7 +4844,7 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
     int nvar = P->Dimension - exist - nparam;
-    evalue *EP = new_zero_ep();
+    evalue *EP = evalue_zero();
     Polyhedron *Q, *N;
 
 #ifdef DEBUG_ER
@@ -4935,10 +4926,10 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
     POL_ENSURE_VERTICES(P);
 
     if (emptyQ(P))
-	return new_zero_ep();
+	return evalue_zero();
 
     if (nvar == 0 && nparam == 0) {
-	evalue *EP = new_zero_ep();
+	evalue *EP = evalue_zero();
 	barvinok_count(P, &EP->x.n, MaxRays);
 	if (value_pos_p(EP->x.n))
 	    value_set_si(EP->x.n, 1);
@@ -4962,7 +4953,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		break;
 	}
     if (r <  P->NbRays) {
-	evalue *EP = new_zero_ep();
+	evalue *EP = evalue_zero();
 	value_set_si(EP->x.n, -1);
 	return EP;
     }
