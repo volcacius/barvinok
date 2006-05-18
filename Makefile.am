@@ -26,6 +26,8 @@ libbarvinok_la_SOURCES = \
     conversion.h \
     decomposer.cc \
     decomposer.h \
+    lattice_point.cc \
+    lattice_point.h \
     barvinok.cc
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
