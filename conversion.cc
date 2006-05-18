@@ -37,6 +37,15 @@ void zz2value(ZZ& z, Value& v)
     v[0]._mp_size = sa;
 }
 
+void values2zz(Value *p, vec_ZZ& v, int len)
+{
+    v.SetLength(len);
+
+    for (int i = 0; i < len; ++i) {
+	value2zz(p[i], v[i]);
+    }
+}
+
 /*
  */
 void zz2values(vec_ZZ& v, Value *p)
@@ -78,6 +87,23 @@ Matrix *rays(Polyhedron *C)
 	}
     assert(c == dim);
     value_set_si(M->p[dim][dim], 1);
+
+    return M;
+}
+
+Matrix * rays2(Polyhedron *C)
+{
+    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
+    assert(C->NbRays - 1 == C->Dimension);
+
+    Matrix *M = Matrix_Alloc(dim, dim);
+    assert(M);
+
+    int i, c;
+    for (i = 0, c = 0; i <= dim && c < dim; ++i)
+	if (value_zero_p(C->Ray[i][dim+1]))
+	    Vector_Copy(C->Ray[i] + 1, M->p[c++], dim);
+    assert(c == dim);
 
     return M;
 }

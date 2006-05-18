@@ -32,15 +32,6 @@ using std::ostringstream;
 
 #define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
 
-static void values2zz(Value *p, vec_ZZ& v, int len)
-{
-    v.SetLength(len);
-
-    for (int i = 0; i < len; ++i) {
-	value2zz(p[i], v[i]);
-    }
-}
-
 static void rays(mat_ZZ& r, Polyhedron *C)
 {
     unsigned dim = C->NbRays - 1; /* don't count zero vertex */
@@ -57,23 +48,6 @@ static void rays(mat_ZZ& r, Polyhedron *C)
 	    }
 	    ++c;
 	}
-}
-
-static Matrix * rays2(Polyhedron *C)
-{
-    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
-    assert(C->NbRays - 1 == C->Dimension);
-
-    Matrix *M = Matrix_Alloc(dim, dim);
-    assert(M);
-
-    int i, c;
-    for (i = 0, c = 0; i <= dim && c < dim; ++i)
-	if (value_zero_p(C->Ray[i][dim+1]))
-	    Vector_Copy(C->Ray[i] + 1, M->p[c++], dim);
-    assert(c == dim);
-
-    return M;
 }
 
 class dpoly {
