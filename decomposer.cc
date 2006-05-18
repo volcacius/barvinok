@@ -200,6 +200,16 @@ void polar_decomposer::handle(Polyhedron *P, int sign)
     handle_polar(P, sign);
 }
 
+void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i, 
+					    unsigned MaxRays)
+{
+    Polyhedron *C = supporting_cone_p(P, V);
+    vert = _i;
+    this->V = V;
+
+    pd->decompose(C, MaxRays);
+}
+
 /*
  * Barvinok's Decomposition of a simplicial cone
  *
