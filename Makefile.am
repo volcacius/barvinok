@@ -22,6 +22,10 @@ libbarvinok_la_SOURCES = \
     evalue.c \
     genfun.cc \
     util.c \
+    conversion.cc \
+    conversion.h \
+    decomposer.cc \
+    decomposer.h \
     barvinok.cc
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
