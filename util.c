@@ -8,11 +8,12 @@
 #define Polyhedron_Enumerate(a,b,c,d) Polyhedron_Enumerate(a,b,c)
 #endif
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+
 #ifdef __GNUC__
-#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 #else
-#define ALLOC(p) p = (void *)malloc(sizeof(*p))
 #define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
 #endif
 
@@ -833,7 +834,7 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
 
     Matrix_Free(M);
 
-    ALLOC(F);
+    F = ALLOC(evalue);
     value_init(F->d);
     value_set_si(F->d, 0);
     F->x.p = new_enode(partition, 2*nd, dim-nvar);
@@ -1201,6 +1202,130 @@ Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
     return partition2enumeration(EP);
 }
 #endif
+
+static void print_varlist(FILE *out, int n, char **names)
+{
+    int i;
+    fprintf(out, "[");
+    for (i = 0; i < n; ++i) {
+	if (i)
+	    fprintf(out, ",");
+	fprintf(out, "%s", names[i]);
+    }
+    fprintf(out, "]");
+}
+
+static void print_term(FILE *out, Value v, int pos, int dim, int nparam,
+		       char **iter_names, char **param_names, int *first)
+{
+    if (value_zero_p(v)) {
+	if (first && *first && pos >= dim + nparam)
+	    fprintf(out, "0");
+	return;
+    }
+
+    if (first) {
+	if (!*first && value_pos_p(v))
+	    fprintf(out, "+");
+	*first = 0;
+    }
+    if (pos < dim + nparam) {
+	if (value_mone_p(v))
+	    fprintf(out, "-");
+	else if (!value_one_p(v))
+	    value_print(out, VALUE_FMT, v);
+	if (pos < dim)
+	    fprintf(out, "%s", iter_names[pos]);
+	else
+	    fprintf(out, "%s", param_names[pos-dim]);
+    } else
+	value_print(out, VALUE_FMT, v);
+}
+
+char **util_generate_names(int n, char *prefix)
+{
+    int i;
+    int len = (prefix ? strlen(prefix) : 0) + 10;
+    char **names = ALLOCN(char*, n);
+    if (!names) {
+	fprintf(stderr, "ERROR: memory overflow.\n");
+	exit(1);
+    }
+    for (i = 0; i < n; ++i) {
+	names[i] = ALLOCN(char, len);
+	if (!names[i]) {
+	    fprintf(stderr, "ERROR: memory overflow.\n");
+	    exit(1);
+	}
+	if (!prefix)
+	    snprintf(names[i], len, "%d", i);
+	else
+	    snprintf(names[i], len, "%s%d", prefix, i);
+    }
+
+    return names;
+}
+
+void util_free_names(int n, char **names)
+{
+    int i;
+    for (i = 0; i < n; ++i)
+	free(names[i]);
+    free(names);
+}
+
+void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
+		       char **iter_names, char **param_names)
+{
+    int i, j;
+    Value tmp;
+
+    assert(dim + nparam == P->Dimension);
+
+    value_init(tmp);
+
+    fprintf(out, "{ ");
+    if (nparam) {
+	print_varlist(out, nparam, param_names);
+	fprintf(out, " -> ");
+    }
+    print_varlist(out, dim, iter_names);
+    fprintf(out, " : ");
+
+    for (i = 0; i < P->NbConstraints; ++i) {
+	int first = 1;
+	int v = First_Non_Zero(P->Constraint[i]+1, P->Dimension);
+	if (v == -1)
+	    continue;
+	if (i)
+	    fprintf(out, " && ");
+	if (value_pos_p(P->Constraint[i][v+1])) {
+	    print_term(out, P->Constraint[i][v+1], v, dim, nparam, 
+		       iter_names, param_names, NULL);
+	    if (value_zero_p(P->Constraint[i][0]))
+		fprintf(out, " = ");
+	    else
+		fprintf(out, " >= ");
+	    for (j = v+1; j <= dim+nparam; ++j) {
+		value_oppose(tmp, P->Constraint[i][1+j]);
+		print_term(out, tmp, j, dim, nparam, 
+			   iter_names, param_names, &first);
+	    }
+	} else {
+	    value_oppose(tmp, P->Constraint[i][1+v]);
+	    print_term(out, tmp, v, dim, nparam, 
+		       iter_names, param_names, NULL);
+	    fprintf(out, " <= ");
+	    for (j = v+1; j <= dim+nparam; ++j)
+		print_term(out, P->Constraint[i][1+j], j, dim, nparam, 
+			   iter_names, param_names, &first);
+	}
+    }
+
+    fprintf(out, " }\n");
+
+    value_clear(tmp);
+}
 
 const char *barvinok_version(void)
 {

@@ -63,6 +63,11 @@ evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
 Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
 				 Polyhedron *C, unsigned MaxRays);
 
+char **util_generate_names(int n, char *prefix);
+void util_free_names(int n, char **names);
+void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
+		       char **iter_names, char **param_names);
+
 const char *barvinok_version();
 
 #if defined(__cplusplus)
