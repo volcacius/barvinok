@@ -19,6 +19,7 @@ extern "C" {
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
+#include "reduce_domain.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -2002,64 +2003,6 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     Vector_Free(row);
     value_clear(g);
     return R;
-}
-
-static Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
-				 Polyhedron **fVD, int nd, unsigned MaxRays)
-{
-    assert(CEq);
-
-    Polyhedron *Dt;
-    Dt = CT ? DomainPreimage(D, CT, MaxRays) : D;
-    Polyhedron *rVD = DomainIntersection(Dt, CEq, MaxRays);
-
-    /* if rVD is empty or too small in geometric dimension */
-    if(!rVD || emptyQ(rVD) ||
-	    (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
-	if(rVD)
-	    Domain_Free(rVD);
-	if (CT)
-	    Domain_Free(Dt);
-	return 0;		/* empty validity domain */
-    }
-
-    if (CT)
-	Domain_Free(Dt);
-
-    fVD[nd] = Domain_Copy(rVD);
-    for (int i = 0 ; i < nd; ++i) {
-	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], MaxRays);
-	if (emptyQ(I)) {
-	    Domain_Free(I);
-	    continue;
-	}
-	Polyhedron *F = DomainSimplify(I, fVD[nd], MaxRays);
-	if (F->NbEq == 1) {
-	    Polyhedron *T = rVD;
-	    rVD = DomainDifference(rVD, F, MaxRays);
-	    Domain_Free(T);
-	}
-	Domain_Free(F);
-	Domain_Free(I);
-    }
-
-    rVD = DomainConstraintSimplify(rVD, MaxRays);
-    if (emptyQ(rVD)) {
-	Domain_Free(fVD[nd]);
-	Domain_Free(rVD);
-	return 0;
-    }
-
-    Value c;
-    value_init(c);
-    barvinok_count(rVD, &c, MaxRays);
-    if (value_zero_p(c)) {
-	Domain_Free(rVD);
-	rVD = 0;
-    }
-    value_clear(c);
-
-    return rVD;
 }
 
 /* this procedure may have false negatives */
