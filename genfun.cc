@@ -139,6 +139,25 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, gen_fun *gf)
  * This function is applied to a gen_fun computed with the compressed parameters
  * and adapts it to refer to the original parameters.
  *
+ * That is, if y are the compressed parameters and x = A y + b are the original
+ * parameters, then we want the coefficient of the monomial t^y in the original
+ * generating function to be the coefficient of the monomial u^x in the resulting
+ * generating function.  
+ * The original generating function has the form
+ *
+ *        a t^m/(1-t^n) = a t^m + a t^{m+n} + a t^{m+2n} + ...
+ * 
+ * Since each term t^y should correspond to a term u^x, with x = A y + b, we want
+ *
+ *         a u^{A m + b} + a u^{A (m+n) + b} + a u^{A (m+2n) +b} + ... = 
+ *        
+ *         = a u^{A m + b}/(1-u^{A n})
+ *
+ * Therefore, we multiply the powers m and n in both numerator and denominator by A
+ * and add b to the power in the numerator.
+ * Since the above powers are stored as row vectors m^T and n^T,
+ * we compute, say, m'^T = m^T A^T to obtain m' = A m.
+ *
  * The pair (map, offset) contains the same information as CP.
  * map is the transpose of the linear part of CP, while offset is the constant part.
  */
