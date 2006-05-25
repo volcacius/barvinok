@@ -2862,7 +2862,7 @@ Enumeration* partition2enumeration(evalue *EP)
     return res;
 }
 
-static int frac2floor_in_domain(evalue *e, Polyhedron *D)
+int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 {
     enode *p;
     int r = 0;
@@ -2880,7 +2880,7 @@ static int frac2floor_in_domain(evalue *e, Polyhedron *D)
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
-	r |= frac2floor_in_domain(&p->arr[i], D);
+	r |= evalue_frac2floor_in_domain(&p->arr[i], D);
 
     if (p->type != fractional) {
 	if (r && p->type == polynomial) {
@@ -2955,8 +2955,8 @@ void evalue_frac2floor(evalue *e)
 	return;
 
     for (i = 0; i < e->x.p->size/2; ++i)
-	if (frac2floor_in_domain(&e->x.p->arr[2*i+1],
-				 EVALUE_DOMAIN(e->x.p->arr[2*i])))
+	if (evalue_frac2floor_in_domain(&e->x.p->arr[2*i+1],
+					EVALUE_DOMAIN(e->x.p->arr[2*i])))
 	    reduce_evalue(&e->x.p->arr[2*i+1]);
 }
 
