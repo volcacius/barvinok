@@ -2554,20 +2554,6 @@ void ienumerator::handle_polar(Polyhedron *C, int s)
 	    free_evalue_refs(E_vertex[i]);
 	    delete E_vertex[i];
 	}
-
-	/*
-        {
-           char * test[] = {"a", "b"};
-           evalue E;
-           value_init(E.d);
-           evalue_copy(&E, vE[_i]);
-           frac2floor_in_domain(&E, pVD);
-	   printf("***** Curr value:");
-           print_evalue(stdout, &E, test);
-           fprintf(stdout, "\n");
-        }
-	*/
-
 }
 
 struct bfenumerator : public vertex_decomposer, public bf_base,
