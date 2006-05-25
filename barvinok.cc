@@ -3002,7 +3002,7 @@ try_again:
 		}
 	    eadd(et.vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	reduce_in_domain(&s[nd].E, pVD);
+	evalue_range_reduction_in_domain(&s[nd].E, pVD);
 
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);

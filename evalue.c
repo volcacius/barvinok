@@ -2598,7 +2598,7 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     return H;
 }
 
-int reduce_in_domain(evalue *e, Polyhedron *D)
+int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 {
     int i;
     enode *p;
@@ -2641,7 +2641,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(min);
 	    value_clear(max);
 	    Matrix_Free(T);
-	    return r ? r : reduce_in_domain(e, D);
+	    return r ? r : evalue_range_reduction_in_domain(e, D);
 	} else if (bounded && equal) {
 	    /* Always zero */
 	    if (p->size == 3)
@@ -2654,7 +2654,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(min);
 	    value_clear(max);
 	    Matrix_Free(T);
-	    return reduce_in_domain(e, D);
+	    return evalue_range_reduction_in_domain(e, D);
 	} else if (bounded && value_eq(min, max)) {
 	    /* zero for a single value */
 	    Polyhedron *E;
@@ -2669,9 +2669,9 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(max);
 	    Matrix_Free(T);
 	    Matrix_Free(M);
-	    r = reduce_in_domain(&p->arr[1], E);
+	    r = evalue_range_reduction_in_domain(&p->arr[1], E);
 	    if (p->size == 3)
-		r |= reduce_in_domain(&p->arr[2], D);
+		r |= evalue_range_reduction_in_domain(&p->arr[2], D);
 	    Domain_Free(E);
 	    _reduce_evalue(&p->arr[0].x.p->arr[0], 0, 1);
 	    return r;
@@ -2687,7 +2687,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
-	r |= reduce_in_domain(&p->arr[i], D);
+	r |= evalue_range_reduction_in_domain(&p->arr[i], D);
 
     if (p->type != fractional) {
 	if (r && p->type == polynomial) {
@@ -2784,7 +2784,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	free_evalue_refs(&factor);
 	free_evalue_refs(&rem);
 
-	reduce_in_domain(e, D);
+	evalue_range_reduction_in_domain(e, D);
 
 	r = 1;
     } else {
@@ -2819,7 +2819,7 @@ void evalue_range_reduction(evalue *e)
 	return;
 
     for (i = 0; i < e->x.p->size/2; ++i)
-	if (reduce_in_domain(&e->x.p->arr[2*i+1],
+	if (evalue_range_reduction_in_domain(&e->x.p->arr[2*i+1],
 			     EVALUE_DOMAIN(e->x.p->arr[2*i]))) {
 	    reduce_evalue(&e->x.p->arr[2*i+1]);
 
