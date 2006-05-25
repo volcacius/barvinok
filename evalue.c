@@ -766,6 +766,50 @@ static void add_substitution(struct subst *s, Value *row, unsigned dim)
     ++s->n;
 }
 
+static void _reduce_evalue_in_domain(evalue *e, Polyhedron *D, struct subst *s)
+{
+    unsigned dim;
+    Polyhedron *orig = D;
+
+    s->n = 0;
+    dim = D->Dimension;
+    if (D->next)
+	D = DomainConvex(D, 0);
+    if (!D->next && D->NbEq) {
+	int j, k;
+	if (s->max < dim) {
+	    if (s->max != 0)
+		realloc_substitution(s, dim);
+	    else {
+		int d = relations_depth(e);
+		s->max = dim+d;
+		NALLOC(s->fixed, s->max);
+	    }
+	}
+	for (j = 0; j < D->NbEq; ++j)
+	    add_substitution(s, D->Constraint[j], dim);
+    }
+    if (D != orig)
+	Domain_Free(D);
+    _reduce_evalue(e, s, 0);
+    if (s->n != 0) {
+	int j;
+	for (j = 0; j < s->n; ++j) {
+	    value_clear(s->fixed[j].d);
+	    value_clear(s->fixed[j].m);
+	    free_evalue_refs(&s->fixed[j].s); 
+	}
+    }
+}
+
+void reduce_evalue_in_domain(evalue *e, Polyhedron *D)
+{
+    struct subst s = { NULL, 0, 0 };
+    _reduce_evalue_in_domain(e, D, &s);
+    if (s.max != 0)
+	free(s.fixed);
+}
+
 void reduce_evalue (evalue *e) {
     struct subst s = { NULL, 0, 0 };
 
@@ -777,36 +821,15 @@ void reduce_evalue (evalue *e) {
 	unsigned dim = -1;
 	for (i = 0; i < e->x.p->size/2; ++i) {
 	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
-	    s.n = 0;
+
 	    /* This shouldn't really happen; 
 	     * Empty domains should not be added.
 	     */
 	    POL_ENSURE_VERTICES(D);
-	    if (emptyQ(D))
-		goto discard;
+	    if (!emptyQ(D))
+		_reduce_evalue_in_domain(&e->x.p->arr[2*i+1], D, &s);
 
-	    dim = D->Dimension;
-	    if (D->next)
-		D = DomainConvex(D, 0);
-	    if (!D->next && D->NbEq) {
-		int j, k;
-		if (s.max < dim) {
-		    if (s.max != 0)
-			realloc_substitution(&s, dim);
-		    else {
-			int d = relations_depth(&e->x.p->arr[2*i+1]);
-			s.max = dim+d;
-			NALLOC(s.fixed, s.max);
-		    }
-		}
-		for (j = 0; j < D->NbEq; ++j)
-		    add_substitution(&s, D->Constraint[j], dim);
-	    }
-	    if (D != EVALUE_DOMAIN(e->x.p->arr[2*i]))
-		Domain_Free(D);
-	    _reduce_evalue(&e->x.p->arr[2*i+1], &s, 0);
-	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
-discard:
+	    if (emptyQ(D) || EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
 		free_evalue_refs(&e->x.p->arr[2*i+1]);
 		Domain_Free(EVALUE_DOMAIN(e->x.p->arr[2*i]));
 		value_clear(e->x.p->arr[2*i].d);
@@ -814,14 +837,6 @@ discard:
 		e->x.p->arr[2*i] = e->x.p->arr[e->x.p->size];
 		e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
 		--i;
-	    }
-	    if (s.n != 0) {
-		int j;
-		for (j = 0; j < s.n; ++j) {
-		    value_clear(s.fixed[j].d);
-		    value_clear(s.fixed[j].m);
-		    free_evalue_refs(&s.fixed[j].s); 
-		}
 	    }
 	}
 	if (e->x.p->size == 0) {

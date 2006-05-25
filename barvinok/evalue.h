@@ -82,6 +82,7 @@ void free_evalue_refs(evalue *e);
 void print_evalue(FILE *DST,evalue *e,char **pname);
 void print_enode(FILE *DST,enode *p,char **pname);
 void reduce_evalue (evalue *e);
+void reduce_evalue_in_domain(evalue *e, Polyhedron *D);
 void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
