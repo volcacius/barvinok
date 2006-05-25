@@ -3,18 +3,9 @@
 #include "config.h"
 #include <barvinok/genfun.h>
 #include <barvinok/barvinok.h>
+#include "mat_util.h"
 
 using std::cout;
-
-static int lex_cmp(vec_ZZ& a, vec_ZZ& b)
-{
-    assert(a.length() == b.length());
-
-    for (int j = 0; j < a.length(); ++j)
-	if (a[j] != b[j])
-	    return a[j] < b[j] ? -1 : 1;
-    return 0;
-}
 
 static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
 {
@@ -60,17 +51,7 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     }
 
     /* Order powers in denominator */
-    for (int i = 0; i < r->d.power.NumRows(); ++i) {
-	int m = i;
-	for (int j = i+1; j < r->d.power.NumRows(); ++j)
-	    if (lex_cmp(r->d.power[j], r->d.power[m]) < 0)
-		m = j;
-	if (m != i) {
-	    vec_ZZ tmp = r->d.power[m];
-	    r->d.power[m] = r->d.power[i];
-	    r->d.power[i] = tmp;
-	}
-    }
+    lex_order_rows(r->d.power);
 
     for (int i = 0; i < term.size(); ++i)
 	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {

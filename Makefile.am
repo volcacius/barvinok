@@ -30,6 +30,8 @@ libbarvinok_la_SOURCES = \
     lattice_point.h \
     reduce_domain.c \
     reduce_domain.h \
+    mat_util.cc \
+    mat_util.h \
     barvinok.cc
 EXTRA_libbarvinok_la_SOURCES = \
     piputil.h
