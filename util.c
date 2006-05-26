@@ -1203,6 +1203,21 @@ Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
 }
 #endif
 
+/* "align" matrix to have nrows by inserting
+ * the necessary number of rows and an equal number of columns in front
+ */
+Matrix *align_matrix(Matrix *M, int nrows)
+{
+    int i;
+    int newrows = nrows - M->NbRows;
+    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
+    for (i = 0; i < newrows; ++i)
+	value_set_si(M2->p[i][i], 1);
+    for (i = 0; i < M->NbRows; ++i)
+	Vector_Copy(M->p[i], M2->p[newrows+i]+newrows, M->NbColumns);
+    return M2;
+}
+
 static void print_varlist(FILE *out, int n, char **names)
 {
     int i;

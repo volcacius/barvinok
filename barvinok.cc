@@ -4571,20 +4571,6 @@ out:
     return EP;
 }
 
-/* "align" matrix to have nrows by inserting
- * the necessary number of rows and an equal number of columns in front
- */
-static Matrix *align_matrix(Matrix *M, int nrows)
-{
-    int newrows = nrows - M->NbRows;
-    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
-    for (int i = 0; i < newrows; ++i)
-	value_set_si(M2->p[i][i], 1);
-    for (int i = 0; i < M->NbRows; ++i)
-	Vector_Copy(M->p[i], M2->p[newrows+i]+newrows, M->NbColumns);
-    return M2;
-}
-
 static void split_param_compression(Matrix *CP, mat_ZZ& map, vec_ZZ& offset)
 {
     Matrix *T = Transpose(CP);
