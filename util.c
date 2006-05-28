@@ -1307,14 +1307,18 @@ void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
     print_varlist(out, dim, iter_names);
     fprintf(out, " : ");
 
-    for (i = 0; i < P->NbConstraints; ++i) {
+    if (emptyQ2(P))
+	fprintf(out, "FALSE");
+    else for (i = 0; i < P->NbConstraints; ++i) {
 	int first = 1;
 	int v = First_Non_Zero(P->Constraint[i]+1, P->Dimension);
-	if (v == -1)
+	if (v == -1 && value_pos_p(P->Constraint[i][0]))
 	    continue;
 	if (i)
 	    fprintf(out, " && ");
-	if (value_pos_p(P->Constraint[i][v+1])) {
+	if (v == -1 && value_notzero_p(P->Constraint[i][1+P->Dimension]))
+	    fprintf(out, "FALSE");
+	else if (value_pos_p(P->Constraint[i][v+1])) {
 	    print_term(out, P->Constraint[i][v+1], v, dim, nparam, 
 		       iter_names, param_names, NULL);
 	    if (value_zero_p(P->Constraint[i][0]))
