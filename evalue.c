@@ -2927,24 +2927,25 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 	if (value_pos_p(I->Constraint[i][1]))
 	    break;
 
-    assert(i < I->NbConstraints);
-    value_init(min);
-    value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
-    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
-    if (value_neg_p(min)) {
-	evalue offset;
-	mpz_fdiv_q(min, min, d);
-	value_init(offset.d);
-	value_set_si(offset.d, 1);
-	value_init(offset.x.n);
-	value_oppose(offset.x.n, min);
-	eadd(&offset, &p->arr[0]);
-	free_evalue_refs(&offset);
+    if (i < I->NbConstraints) {
+	value_init(min);
+	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+	mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
+	if (value_neg_p(min)) {
+	    evalue offset;
+	    mpz_fdiv_q(min, min, d);
+	    value_init(offset.d);
+	    value_set_si(offset.d, 1);
+	    value_init(offset.x.n);
+	    value_oppose(offset.x.n, min);
+	    eadd(&offset, &p->arr[0]);
+	    free_evalue_refs(&offset);
+	}
+	value_clear(min);
     }
 
     Polyhedron_Free(I);
     Matrix_Free(T);
-    value_clear(min);
     value_clear(d);
 
     value_init(fl.d);
