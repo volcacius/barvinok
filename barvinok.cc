@@ -1853,6 +1853,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     int allocated = 0;
     Polyhedron *Q;
     int r = 0;
+    bool infinite = false;
 
     if (emptyQ2(P)) {
 	value_set_si(*result, 0);
@@ -1898,6 +1899,13 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
 	for (Q = P->next; Q; Q = Q->next) {
 	    barvinok_count_f(Q, &factor, NbMaxCons);
+	    if (value_neg_p(factor)) {
+		infinite = true;
+		continue;
+	    } else if (Q->next && value_zero_p(factor)) {
+		value_set_si(*result, 0);
+		break;
+	    }
 	    value_multiply(*result, *result, factor);
 	}
 
@@ -1906,6 +1914,8 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
     if (allocated)
 	Domain_Free(P);
+    if (infinite)
+	value_set_si(*result, -1);
 }
 
 static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
