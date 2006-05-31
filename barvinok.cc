@@ -1859,14 +1859,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	value_set_si(*result, 0);
 	return;
     }
-    if (P->NbBid == 0)
-	for (; r < P->NbRays; ++r)
-	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
-		break;
-    if (P->NbBid !=0 || r < P->NbRays) {
-	value_set_si(*result, -1);
-	return;
-    }
     if (P->NbEq != 0) {
 	P = remove_equalities(P);
 	if (emptyQ(P)) {
@@ -1875,6 +1867,16 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	    return;
 	}
 	allocated = 1;
+    }
+    if (P->NbBid == 0)
+	for (; r < P->NbRays; ++r)
+	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
+		break;
+    if (P->NbBid != 0 || r < P->NbRays) {
+	value_set_si(*result, -1);
+	if (allocated)
+	    Polyhedron_Free(P);
+	return;
     }
     if (P->Dimension == 0) {
 	/* Test whether the constraints are satisfied */
