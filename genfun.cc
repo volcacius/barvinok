@@ -212,7 +212,7 @@ void gen_fun::add_union(gen_fun *gf, unsigned MaxRays)
     one = 1;
     mone = -1;
 
-    gen_fun *hp = gf->Hadamard_product(gf, MaxRays);
+    gen_fun *hp = Hadamard_product(gf, MaxRays);
     add(one, one, gf);
     add(mone, one, hp);
     delete hp;
