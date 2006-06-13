@@ -17,14 +17,39 @@
 #define MAXRAYS  600
 #endif
 
+#include "config.h"
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
+struct option options[] = {
+    { "series",  no_argument,  0,  's' },
+    { "version",   no_argument,  0,  'V' },
+    { 0, 0, 0, 0 }
+};
+#endif
+
 int main(int argc, char **argv)
 {
     Matrix *M;
     Polyhedron *C, *D = NULL;
-    evalue *EP;
     int i, npol;
     char **param_name;
     char s[128];
+    int c, ind = 0;
+    int series = 0;
+
+    while ((c = getopt_long(argc, argv, "sV", options, &ind)) != -1) {
+	switch (c) {
+	case 's':
+	    series = 1;
+	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
+	    break;
+	}
+    }
 
     fgets(s, 128, stdin);
     while ((*s=='#') || (sscanf(s, "%d", &npol)<1))
@@ -43,10 +68,19 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, D);
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
-    EP = barvinok_enumerate_union(D, C, MAXRAYS);
-    print_evalue(stdout, EP, param_name);
-    free_evalue_refs(EP);
-    free(EP);
+    if (series) {
+	gen_fun *gf;
+	gf = barvinok_enumerate_union_series(D, C, MAXRAYS);
+	gf->print(C->Dimension, param_name);
+	puts("");
+	delete gf;
+    } else {
+	evalue *EP;
+	EP = barvinok_enumerate_union(D, C, MAXRAYS);
+	print_evalue(stdout, EP, param_name);
+	free_evalue_refs(EP);
+	free(EP);
+    }
     Free_ParamNames(param_name, C->Dimension);
     Domain_Free(D);
     Polyhedron_Free(C);

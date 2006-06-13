@@ -4713,9 +4713,9 @@ static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam,
     return D;
 }
 
-evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
+gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
+					 unsigned MaxRays)
 {
-    evalue *EP;
     Polyhedron *conv, *D2;
     gen_fun *gf = NULL;
     unsigned nparam = C->Dimension;
@@ -4758,7 +4758,14 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
     if (D != D2)
 	Domain_Free(D2);
     Polyhedron_Free(conv);
-    EP = *red.gf;
-    delete red.gf;
+    return red.gf;
+}
+
+evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
+{
+    evalue *EP;
+    gen_fun *gf = barvinok_enumerate_union_series(D, C, MaxRays);
+    EP = *gf;
+    delete gf;
     return EP;
 }

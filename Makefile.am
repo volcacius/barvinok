@@ -42,6 +42,7 @@ LDADD = libbarvinok.la
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
 barvinok_series_SOURCES = barvinok_series.cc
+barvinok_union_SOURCES = barvinok_union.cc
 if HAVE_OMEGA
 BEEO_SOURCES = omega/Exit.cc omega/convert.cc
 else
