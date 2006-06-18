@@ -14,11 +14,20 @@ extern "C" {
 #define emptyQ2(P)							\
 	((F_ISSET(P, POL_INEQUALITIES) && P->NbEq > P->Dimension) ||	\
 	 (F_ISSET(P, POL_POINTS) && P->NbRays == 0))
+#define POL_HAS(P,f)		(F_ISSET(P, f))
+#define POL_SET(P,f)		(F_SET(P, f))
 #else
 #define POL_NO_DUAL		0
 #define emptyQ2(P)		emptyQ(P)
 #define POL_ENSURE_FACETS(P)	/* nothing */
 #define POL_ENSURE_VERTICES(P)	/* nothing */
+#define	POL_INEQUALITIES	0
+#define	POL_POINTS		0
+#define	POL_FACETS		0
+#define	POL_VERTICES		0
+#define	POL_VALID		0
+#define POL_HAS(P,f)		(1)
+#define POL_SET(P,f)		/* nothing */
 #endif
 
 void value_lcm(Value i, Value j, Value* lcm);

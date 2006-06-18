@@ -2,6 +2,7 @@ SUBDIRS = . omega
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
+		  barvinok_ehrhart \
 		  verif_ehrhart barvinok_enumerate_e \
 		  barvinok_series remove_redundant_equalities \
 		  barvinok_union \
@@ -41,6 +42,7 @@ LDADD = libbarvinok.la
 
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
+barvinok_ehrhart_SOURCES = barvinok_ehrhart.cc
 barvinok_series_SOURCES = barvinok_series.cc
 barvinok_union_SOURCES = barvinok_union.cc
 if HAVE_OMEGA
