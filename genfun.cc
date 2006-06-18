@@ -3,18 +3,9 @@
 #include "config.h"
 #include <barvinok/genfun.h>
 #include <barvinok/barvinok.h>
+#include "mat_util.h"
 
 using std::cout;
-
-static int lex_cmp(vec_ZZ& a, vec_ZZ& b)
-{
-    assert(a.length() == b.length());
-
-    for (int j = 0; j < a.length(); ++j)
-	if (a[j] != b[j])
-	    return a[j] < b[j] ? -1 : 1;
-    return 0;
-}
 
 static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
 {
@@ -60,17 +51,7 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     }
 
     /* Order powers in denominator */
-    for (int i = 0; i < r->d.power.NumRows(); ++i) {
-	int m = i;
-	for (int j = i+1; j < r->d.power.NumRows(); ++j)
-	    if (lex_cmp(r->d.power[j], r->d.power[m]) < 0)
-		m = j;
-	if (m != i) {
-	    vec_ZZ tmp = r->d.power[m];
-	    r->d.power[m] = r->d.power[i];
-	    r->d.power[i] = tmp;
-	}
-    }
+    lex_order_rows(r->d.power);
 
     for (int i = 0; i < term.size(); ++i)
 	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {
@@ -138,6 +119,25 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, gen_fun *gf)
  *
  * This function is applied to a gen_fun computed with the compressed parameters
  * and adapts it to refer to the original parameters.
+ *
+ * That is, if y are the compressed parameters and x = A y + b are the original
+ * parameters, then we want the coefficient of the monomial t^y in the original
+ * generating function to be the coefficient of the monomial u^x in the resulting
+ * generating function.  
+ * The original generating function has the form
+ *
+ *        a t^m/(1-t^n) = a t^m + a t^{m+n} + a t^{m+2n} + ...
+ * 
+ * Since each term t^y should correspond to a term u^x, with x = A y + b, we want
+ *
+ *         a u^{A m + b} + a u^{A (m+n) + b} + a u^{A (m+2n) +b} + ... = 
+ *        
+ *         = a u^{A m + b}/(1-u^{A n})
+ *
+ * Therefore, we multiply the powers m and n in both numerator and denominator by A
+ * and add b to the power in the numerator.
+ * Since the above powers are stored as row vectors m^T and n^T,
+ * we compute, say, m'^T = m^T A^T to obtain m' = A m.
  *
  * The pair (map, offset) contains the same information as CP.
  * map is the transpose of the linear part of CP, while offset is the constant part.
@@ -212,7 +212,7 @@ void gen_fun::add_union(gen_fun *gf, unsigned MaxRays)
     one = 1;
     mone = -1;
 
-    gen_fun *hp = gf->Hadamard_product(gf, MaxRays);
+    gen_fun *hp = Hadamard_product(gf, MaxRays);
     add(one, one, gf);
     add(mone, one, hp);
     delete hp;

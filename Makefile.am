@@ -7,6 +7,7 @@ AM_CPPFLAGS = -I$(srcdir)/bernstein/include
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
+		  barvinok_ehrhart \
 		  verif_ehrhart barvinok_enumerate_e \
 		  barvinok_series remove_redundant_equalities \
 		  barvinok_union \
@@ -31,6 +32,16 @@ libbarvinok_la_SOURCES = \
     evalue.c \
     genfun.cc \
     util.c \
+    conversion.cc \
+    conversion.h \
+    decomposer.cc \
+    decomposer.h \
+    lattice_point.cc \
+    lattice_point.h \
+    reduce_domain.c \
+    reduce_domain.h \
+    mat_util.cc \
+    mat_util.h \
     barvinok.cc \
     $(BERNSTEIN_CC)
 EXTRA_libbarvinok_la_SOURCES = \
@@ -45,7 +56,9 @@ LDADD = libbarvinok.la
 
 test_SOURCES = test.c
 barvinok_count_SOURCES = barvinok_count.c
+barvinok_ehrhart_SOURCES = barvinok_ehrhart.cc
 barvinok_series_SOURCES = barvinok_series.cc
+barvinok_union_SOURCES = barvinok_union.cc
 if HAVE_OMEGA
 BEEO_SOURCES = omega/Exit.cc omega/convert.cc
 else

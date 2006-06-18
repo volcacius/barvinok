@@ -16,6 +16,10 @@ extern "C" {
 #include "config.h"
 #include <barvinok/barvinok.h>
 #include <barvinok/genfun.h>
+#include "conversion.h"
+#include "decomposer.h"
+#include "lattice_point.h"
+#include "reduce_domain.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -28,75 +32,7 @@ using std::deque;
 using std::string;
 using std::ostringstream;
 
-#define ALLOC(p) (((long *) (p))[0])
-#define SIZE(p) (((long *) (p))[1])
-#define DATA(p) ((mp_limb_t *) (((long *) (p)) + 2))
-
-static void value2zz(Value v, ZZ& z)
-{
-    int sa = v[0]._mp_size;
-    int abs_sa = sa < 0 ? -sa : sa;
-
-    _ntl_gsetlength(&z.rep, abs_sa);
-    mp_limb_t * adata = DATA(z.rep);
-    for (int i = 0; i < abs_sa; ++i)
-	adata[i] = v[0]._mp_d[i];
-    SIZE(z.rep) = sa;
-}
-
-void zz2value(ZZ& z, Value& v)
-{
-    if (!z.rep) {
-	value_set_si(v, 0);
-	return;
-    }
-
-    int sa = SIZE(z.rep);
-    int abs_sa = sa < 0 ? -sa : sa;
-
-    mp_limb_t * adata = DATA(z.rep);
-    _mpz_realloc(v, abs_sa);
-    for (int i = 0; i < abs_sa; ++i)
-	v[0]._mp_d[i] = adata[i];
-    v[0]._mp_size = sa;
-}
-
-#undef ALLOC
 #define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
-
-/*
- * We just ignore the last column and row
- * If the final element is not equal to one
- * then the result will actually be a multiple of the input
- */
-static void matrix2zz(Matrix *M, mat_ZZ& m, unsigned nr, unsigned nc)
-{
-    m.SetDims(nr, nc);
-
-    for (int i = 0; i < nr; ++i) {
-//	assert(value_one_p(M->p[i][M->NbColumns - 1]));
-	for (int j = 0; j < nc; ++j) {
-	    value2zz(M->p[i][j], m[i][j]);
-	}
-    }
-}
-
-static void values2zz(Value *p, vec_ZZ& v, int len)
-{
-    v.SetLength(len);
-
-    for (int i = 0; i < len; ++i) {
-	value2zz(p[i], v[i]);
-    }
-}
-
-/*
- */
-static void zz2values(vec_ZZ& v, Value *p)
-{
-    for (int i = 0; i < v.length(); ++i)
-	zz2value(v[i], p[i]);
-}
 
 static void rays(mat_ZZ& r, Polyhedron *C)
 {
@@ -115,147 +51,6 @@ static void rays(mat_ZZ& r, Polyhedron *C)
 	    ++c;
 	}
 }
-
-static Matrix * rays(Polyhedron *C)
-{
-    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
-    assert(C->NbRays - 1 == C->Dimension);
-
-    Matrix *M = Matrix_Alloc(dim+1, dim+1);
-    assert(M);
-
-    int i, c;
-    for (i = 0, c = 0; i <= dim && c < dim; ++i)
-	if (value_zero_p(C->Ray[i][dim+1])) {
-	    Vector_Copy(C->Ray[i] + 1, M->p[c], dim);
-	    value_set_si(M->p[c++][dim], 0);
-	}
-    assert(c == dim);
-    value_set_si(M->p[dim][dim], 1);
-
-    return M;
-}
-
-static Matrix * rays2(Polyhedron *C)
-{
-    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
-    assert(C->NbRays - 1 == C->Dimension);
-
-    Matrix *M = Matrix_Alloc(dim, dim);
-    assert(M);
-
-    int i, c;
-    for (i = 0, c = 0; i <= dim && c < dim; ++i)
-	if (value_zero_p(C->Ray[i][dim+1]))
-	    Vector_Copy(C->Ray[i] + 1, M->p[c++], dim);
-    assert(c == dim);
-
-    return M;
-}
-
-/*
- * Returns the largest absolute value in the vector
- */
-static ZZ max(vec_ZZ& v)
-{
-    ZZ max = abs(v[0]);
-    for (int i = 1; i < v.length(); ++i)
-	if (abs(v[i]) > max)
-	    max = abs(v[i]);
-    return max;
-}
-
-class cone {
-public:
-    cone(Matrix *M) {
-	Cone = 0;
-	Rays = Matrix_Copy(M);
-	set_det();
-    }
-    cone(Polyhedron *C) {
-	Cone = Polyhedron_Copy(C);
-	Rays = rays(C);
-	set_det();
-    }
-    void set_det() {
-	mat_ZZ A;
-	matrix2zz(Rays, A, Rays->NbRows - 1, Rays->NbColumns - 1);
-	det = determinant(A);
-    }
-
-    Vector* short_vector(vec_ZZ& lambda) {
-	Matrix *M = Matrix_Copy(Rays);
-	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
-	int ok = Matrix_Inverse(M, inv);
-	assert(ok);
-	Matrix_Free(M);
-
-	ZZ det2;
-	mat_ZZ B;
-	mat_ZZ U;
-	matrix2zz(inv, B, inv->NbRows - 1, inv->NbColumns - 1);
-	long r = LLL(det2, B, U);
-
-	ZZ min = max(B[0]);
-	int index = 0;
-	for (int i = 1; i < B.NumRows(); ++i) {
-	    ZZ tmp = max(B[i]);
-	    if (tmp < min) {
-		min = tmp;
-		index = i;
-	    }
-	}
-
-	Matrix_Free(inv);
-
-	lambda = B[index];
-
-	Vector *z = Vector_Alloc(U[index].length()+1);
-	assert(z);
-	zz2values(U[index], z->p);
-	value_set_si(z->p[U[index].length()], 0);
-
-	Polyhedron *C = poly();
-	int i;
-	for (i = 0; i < lambda.length(); ++i)
-	    if (lambda[i] > 0)
-		break;
-	if (i == lambda.length()) {
-	    Value tmp;
-	    value_init(tmp);
-	    value_set_si(tmp, -1);
-	    Vector_Scale(z->p, z->p, tmp, z->Size-1);
-	    value_clear(tmp);
-	}
-	return z;
-    }
-
-    ~cone() {
-	Polyhedron_Free(Cone);
-	Matrix_Free(Rays);
-    }
-
-    Polyhedron *poly() {
-	if (!Cone) {
-	    Matrix *M = Matrix_Alloc(Rays->NbRows+1, Rays->NbColumns+1);
-	    for (int i = 0; i < Rays->NbRows; ++i) {
-		Vector_Copy(Rays->p[i], M->p[i]+1, Rays->NbColumns);
-		value_set_si(M->p[i][0], 1);
-	    }
-	    Vector_Set(M->p[Rays->NbRows]+1, 0, Rays->NbColumns-1);
-	    value_set_si(M->p[Rays->NbRows][0], 1);
-	    value_set_si(M->p[Rays->NbRows][Rays->NbColumns], 1);
-	    Cone = Rays2Polyhedron(M, M->NbRows+1);
-	    assert(Cone->NbConstraints == Cone->NbRays);
-	    Matrix_Free(M);
-	}
-	return Cone;
-    }
-
-    ZZ det;
-    Polyhedron *Cone;
-    Matrix *Rays;
-};
 
 class dpoly {
 public:
@@ -520,155 +315,6 @@ struct dpoly_r {
     }
 };
 
-struct decomposer {
-    void decompose(Polyhedron *C);
-    virtual void handle(Polyhedron *P, int sign) = 0;
-};
-
-struct polar_decomposer : public decomposer {
-    void decompose(Polyhedron *C, unsigned MaxRays);
-    virtual void handle(Polyhedron *P, int sign);
-    virtual void handle_polar(Polyhedron *P, int sign) = 0;
-};
-
-void decomposer::decompose(Polyhedron *C)
-{
-    vector<cone *> nonuni;
-    cone * c = new cone(C);
-    ZZ det = c->det;
-    int s = sign(det);
-    assert(det != 0);
-    if (abs(det) > 1) {
-	nonuni.push_back(c);
-    } else {
-	try {
-	    handle(C, 1);
-	    delete c;
-	} catch (...) {
-	    delete c;
-	    throw;
-	}
-    }
-    vec_ZZ lambda;
-    while (!nonuni.empty()) {
-	c = nonuni.back();
-	nonuni.pop_back();
-	Vector* v = c->short_vector(lambda);
-	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
-	    if (lambda[i] == 0)
-		continue;
-	    Matrix* M = Matrix_Copy(c->Rays);
-	    Vector_Copy(v->p, M->p[i], v->Size);
-	    cone * pc = new cone(M);
-	    assert (pc->det != 0);
-	    if (abs(pc->det) > 1) {
-		assert(abs(pc->det) < abs(c->det));
-		nonuni.push_back(pc);
-	    } else {
-		try {
-		    handle(pc->poly(), sign(pc->det) * s);
-		    delete pc;
-		} catch (...) {
-		    delete c;
-		    delete pc;
-		    while (!nonuni.empty()) {
-			c = nonuni.back();
-			nonuni.pop_back();
-			delete c;
-		    }
-		    Matrix_Free(M);
-		    Vector_Free(v);
-		    throw;
-		}
-	    }
-	    Matrix_Free(M);
-	}
-	Vector_Free(v);
-	delete c;
-    }
-}
-
-void polar_decomposer::decompose(Polyhedron *cone, unsigned MaxRays)
-{
-    Polyhedron_Polarize(cone);
-    if (cone->NbRays - 1 != cone->Dimension) {
-	Polyhedron *tmp = cone;
-	cone = triangulate_cone(cone, MaxRays);
-	Polyhedron_Free(tmp);
-    }
-    try {
-	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	    decomposer::decompose(Polar);
-	Domain_Free(cone);
-    } catch (...) {
-	Domain_Free(cone);
-	throw;
-    }
-}
-
-void polar_decomposer::handle(Polyhedron *P, int sign)
-{
-    Polyhedron_Polarize(P);
-    handle_polar(P, sign);
-}
-
-/*
- * Barvinok's Decomposition of a simplicial cone
- *
- * Returns two lists of polyhedra
- */
-void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
-{
-    Polyhedron *pos = *ppos, *neg = *pneg;
-    vector<cone *> nonuni;
-    cone * c = new cone(C);
-    ZZ det = c->det;
-    int s = sign(det);
-    assert(det != 0);
-    if (abs(det) > 1) {
-	nonuni.push_back(c);
-    } else {
-	Polyhedron *p = Polyhedron_Copy(c->Cone);
-	p->next = pos;
-	pos = p;
-	delete c;
-    }
-    vec_ZZ lambda;
-    while (!nonuni.empty()) {
-	c = nonuni.back();
-	nonuni.pop_back();
-	Vector* v = c->short_vector(lambda);
-	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
-	    if (lambda[i] == 0)
-		continue;
-	    Matrix* M = Matrix_Copy(c->Rays);
-	    Vector_Copy(v->p, M->p[i], v->Size);
-	    cone * pc = new cone(M);
-	    assert (pc->det != 0);
-	    if (abs(pc->det) > 1) {
-		assert(abs(pc->det) < abs(c->det));
-		nonuni.push_back(pc);
-	    } else {
-		Polyhedron *p = pc->poly();
-		pc->Cone = 0;
-		if (sign(pc->det) == s) {
-		    p->next = pos;
-		    pos = p;
-		} else {
-		    p->next = neg;
-		    neg = p;
-		}
-		delete pc;
-	    }
-	    Matrix_Free(M);
-	}
-	Vector_Free(v);
-	delete c;
-    }
-    *ppos = pos;
-    *pneg = neg;
-}
-
 const int MAX_TRY=10;
 /*
  * Searches for a vector that is not orthogonal to any
@@ -750,117 +396,6 @@ static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r, int nvar = -1,
     }
 }
 
-void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
-{
-    unsigned dim = i->Dimension;
-    if(!value_one_p(values[dim])) {
-	Matrix* Rays = rays(i);
-	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
-	int ok = Matrix_Inverse(Rays, inv);
-	assert(ok);
-	Matrix_Free(Rays);
-	Rays = rays(i);
-	Vector *lambda = Vector_Alloc(dim+1);
-	Vector_Matrix_Product(values, inv, lambda->p);
-	Matrix_Free(inv);
-	for (int j = 0; j < dim; ++j)
-	    mpz_cdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
-	value_set_si(lambda->p[dim], 1);
-	Vector *A = Vector_Alloc(dim+1);
-	Vector_Matrix_Product(lambda->p, Rays, A->p);
-	Vector_Free(lambda);
-	Matrix_Free(Rays);
-	values2zz(A->p, vertex, dim);
-	Vector_Free(A);
-    } else
-	values2zz(values, vertex, dim);
-}
-
-/* returns an evalue that corresponds to
- *
- * c/(*den) x_param
- */
-static evalue *term(int param, ZZ& c, Value *den = NULL)
-{
-    evalue *EP = new evalue();
-    value_init(EP->d);
-    value_set_si(EP->d,0);
-    EP->x.p = new_enode(polynomial, 2, param + 1);
-    evalue_set_si(&EP->x.p->arr[0], 0, 1);
-    value_init(EP->x.p->arr[1].x.n);
-    if (den == NULL)
-	value_set_si(EP->x.p->arr[1].d, 1);
-    else
-	value_assign(EP->x.p->arr[1].d, *den);
-    zz2value(c, EP->x.p->arr[1].x.n);
-    return EP;
-}
-
-static void vertex_period(
-		    Polyhedron *i, vec_ZZ& lambda, Matrix *T, 
-		    Value lcm, int p, Vector *val, 
-		    evalue *E, evalue* ev,
-		    ZZ& offset)
-{
-    unsigned nparam = T->NbRows - 1;
-    unsigned dim = i->Dimension;
-    Value tmp;
-    ZZ nump;
-
-    if (p == nparam) {
-	vec_ZZ vertex;
-	ZZ num, l;
-	Vector * values = Vector_Alloc(dim + 1);
-	Vector_Matrix_Product(val->p, T, values->p);
-	value_assign(values->p[dim], lcm);
-	lattice_point(values->p, i, vertex);
-	num = vertex * lambda;
-	value2zz(lcm, l);
-	num *= l;
-	num += offset;
-	value_init(ev->x.n);
-	zz2value(num, ev->x.n);
-	value_assign(ev->d, lcm);
-	Vector_Free(values);
-	return;
-    }
-
-    value_init(tmp);
-    vec_ZZ vertex;
-    values2zz(T->p[p], vertex, dim);
-    nump = vertex * lambda;
-    if (First_Non_Zero(val->p, p) == -1) {
-	value_assign(tmp, lcm);
-	evalue *ET = term(p, nump, &tmp);
-	eadd(ET, E);   
-	free_evalue_refs(ET); 
-	delete ET;
-    }
-
-    value_assign(tmp, lcm);
-    if (First_Non_Zero(T->p[p], dim) != -1)
-	Vector_Gcd(T->p[p], dim, &tmp);
-    Gcd(tmp, lcm, &tmp);
-    if (value_lt(tmp, lcm)) {
-	ZZ count;
-
-	value_division(tmp, lcm, tmp);
-	value_set_si(ev->d, 0);
-	ev->x.p = new_enode(periodic, VALUE_TO_INT(tmp), p+1);
-	value2zz(tmp, count);
-	do {
-	    value_decrement(tmp, tmp);
-	    --count;
-	    ZZ new_offset = offset - count * nump;
-	    value_assign(val->p[p], tmp);
-	    vertex_period(i, lambda, T, lcm, p+1, val, E, 
-			  &ev->x.p->arr[VALUE_TO_INT(tmp)], new_offset);
-	} while (value_pos_p(tmp));
-    } else
-	vertex_period(i, lambda, T, lcm, p+1, val, E, ev, offset);
-    value_clear(tmp);
-}
-
 static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *ev)
 {
     unsigned nparam = lcm->Size;
@@ -895,106 +430,6 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
 	} while (value_pos_p(tmp));
     }
     value_clear(tmp);
-}
-
-/* returns an evalue that corresponds to
- *
- *   sum_i p[i] * x_i
- */
-static evalue *multi_monom(vec_ZZ& p)
-{
-    evalue *X = new evalue();
-    value_init(X->d);
-    value_init(X->x.n);
-    unsigned nparam = p.length()-1;
-    zz2value(p[nparam], X->x.n);
-    value_set_si(X->d, 1);
-    for (int i = 0; i < nparam; ++i) {
-	if (p[i] == 0)
-	    continue;
-	evalue *T = term(i, p[i]);
-	eadd(T, X); 
-	free_evalue_refs(T); 
-	delete T;
-    }
-    return X;
-}
-
-/*
- * Check whether mapping polyhedron P on the affine combination
- * num yields a range that has a fixed quotient on integer
- * division by d
- * If zero is true, then we are only interested in the quotient
- * for the cases where the remainder is zero.
- * Returns NULL if false and a newly allocated value if true.
- */
-static Value *fixed_quotient(Polyhedron *P, vec_ZZ& num, Value d, bool zero)
-{
-    Value* ret = NULL;
-    int len = num.length();
-    Matrix *T = Matrix_Alloc(2, len);
-    zz2values(num, T->p[0]);
-    value_set_si(T->p[1][len-1], 1);
-    Polyhedron *I = Polyhedron_Image(P, T, P->NbConstraints);
-    Matrix_Free(T);
-
-    int i;
-    for (i = 0; i < I->NbRays; ++i)
-	if (value_zero_p(I->Ray[i][2])) {
-	    Polyhedron_Free(I);
-	    return NULL;
-	}
-
-    Value min, max;
-    value_init(min);
-    value_init(max);
-    int bounded = line_minmax(I, &min, &max);
-    assert(bounded);
-
-    if (zero)
-	mpz_cdiv_q(min, min, d);
-    else
-	mpz_fdiv_q(min, min, d);
-    mpz_fdiv_q(max, max, d);
-
-    if (value_eq(min, max)) {
-	ALLOC(Value, ret);
-	value_init(*ret);
-	value_assign(*ret, min);
-    } 
-    value_clear(min);
-    value_clear(max);
-    return ret;
-}
-
-/*
- * Normalize linear expression coef modulo m
- * Removes common factor and reduces coefficients
- * Returns index of first non-zero coefficient or len
- */
-static int normal_mod(Value *coef, int len, Value *m)
-{
-    Value gcd;
-    value_init(gcd);
-
-    Vector_Gcd(coef, len, &gcd);
-    Gcd(gcd, *m, &gcd);
-    Vector_AntiScale(coef, coef, gcd, len);
-
-    value_division(*m, *m, gcd);
-    value_clear(gcd);
-
-    if (value_one_p(*m))
-	return len;
-
-    int j;
-    for (j = 0; j < len; ++j)
-	mpz_fdiv_r(coef[j], coef[j], *m);
-    for (j = 0; j < len; ++j)
-	if (value_notzero_p(coef[j]))
-	    break;
-
-    return j;
 }
 
 #ifdef USE_MODULO
@@ -1124,256 +559,6 @@ struct term_info {
     ZZ		    coeff;
     int		    pos;
 };
-
-static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
-{
-    Value *q = fixed_quotient(PD, num, d, false);
-
-    if (!q)
-	return true;
-
-    value_oppose(*q, *q);
-    evalue EV;
-    value_init(EV.d);
-    value_set_si(EV.d, 1);
-    value_init(EV.x.n);
-    value_multiply(EV.x.n, *q, d);
-    eadd(&EV, E);
-    free_evalue_refs(&EV); 
-    value_clear(*q);
-    free(q);
-    return false;
-}
-
-/* modifies f argument ! */
-static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
-{
-    Value m;
-    value_init(m);
-    value_set_si(m, -1);
-
-    Vector_Scale(coef, coef, m, len);
-
-    value_assign(m, d);
-    int j = normal_mod(coef, len, &m);
-
-    if (j == len) {
-	value_clear(m);
-	return;
-    }
-
-    vec_ZZ num;
-    values2zz(coef, num, len);
-
-    ZZ g;
-    value2zz(m, g);
-
-    evalue tmp;
-    value_init(tmp.d);
-    evalue_set_si(&tmp, 0, 1);
-
-    int p = j;
-    if (g % 2 == 0)
-	while (j < len-1 && (num[j] == g/2 || num[j] == 0))
-	    ++j;
-    if ((j < len-1 && num[j] > g/2) || (j == len-1 && num[j] >= (g+1)/2)) {
-	for (int k = j; k < len-1; ++k)
-	    if (num[k] != 0)
-		num[k] = g - num[k];
-	num[len-1] = g - 1 - num[len-1];
-	value_assign(tmp.d, m);
-	ZZ t = f*(g-1);
-	zz2value(t, tmp.x.n);
-	eadd(&tmp, EP);
-	f = -f;
-    }
-
-    if (p >= len-1) {
-	ZZ t = num[len-1] * f;
-	zz2value(t, tmp.x.n);
-	value_assign(tmp.d, m);
-	eadd(&tmp, EP);
-    } else {
-	evalue *E = multi_monom(num);
-	evalue EV;
-	value_init(EV.d);
-
-	if (PD && !mod_needed(PD, num, m, E)) {
-	    value_init(EV.x.n);
-	    zz2value(f, EV.x.n);
-	    value_assign(EV.d, m);
-	    emul(&EV, E);
-	    eadd(E, EP);
-	} else {
-	    value_init(EV.x.n);
-	    value_set_si(EV.x.n, 1);
-	    value_assign(EV.d, m);
-	    emul(&EV, E);
-	    value_clear(EV.x.n);
-	    value_set_si(EV.d, 0);
-	    EV.x.p = new_enode(fractional, 3, -1);
-	    evalue_copy(&EV.x.p->arr[0], E);
-	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
-	    value_init(EV.x.p->arr[2].x.n);
-	    zz2value(f, EV.x.p->arr[2].x.n);
-	    value_set_si(EV.x.p->arr[2].d, 1);
-
-	    eadd(&EV, EP);
-	}
-
-	free_evalue_refs(&EV); 
-	free_evalue_refs(E); 
-	delete E;
-    }
-
-    free_evalue_refs(&tmp); 
-
-out:
-    value_clear(m);
-}
-
-#ifdef USE_MODULO
-static void ceil(Value *coef, int len, Value d, ZZ& f, 
-                 evalue *EP, Polyhedron *PD) {
-    ceil_mod(coef, len, d, f, EP, PD);
-}
-#else
-static void ceil(Value *coef, int len, Value d, ZZ& f, 
-                 evalue *EP, Polyhedron *PD) {
-    ceil_mod(coef, len, d, f, EP, PD);
-    evalue_mod2table(EP, len-1);
-}
-#endif
-
-evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
-{
-    Vector *val = Vector_Alloc(len);
-
-    Value t;
-    value_init(t);
-    value_set_si(t, -1);
-    Vector_Scale(coef, val->p, t, len);
-    value_absolute(t, d);
-
-    vec_ZZ num;
-    values2zz(val->p, num, len);
-    evalue *EP = multi_monom(num);
-
-    evalue tmp;
-    value_init(tmp.d);
-    value_init(tmp.x.n);
-    value_set_si(tmp.x.n, 1);
-    value_assign(tmp.d, t);
-
-    emul(&tmp, EP);
-
-    ZZ one;
-    one = 1;
-    ceil_mod(val->p, len, t, one, EP, P);
-    value_clear(t);
-
-    /* copy EP to malloc'ed evalue */
-    evalue *E;
-    ALLOC(evalue, E);
-    *E = *EP;
-    delete EP;
-
-    free_evalue_refs(&tmp); 
-    Vector_Free(val);
-
-    return E;
-}
-
-/* Returns the power of (t+1) in the term of a rational generating function,
- * i.e., the scalar product of the actual lattice point and lambda.
- * The lattice point is the unique lattice point in the fundamental parallelepiped
- * of the unimodual cone i shifted to the parametric vertex W/lcm.
- *
- * The rows of W refer to the coordinates of the vertex
- * The first nparam columns are the coefficients of the parameters
- * and the final column is the constant term.
- * lcm is the common denominator of all coefficients.
- *
- * PD is the parameter domain, which, if != NULL, may be used to simply the
- * resulting expression.
- */
-#ifdef USE_MODULO
-evalue* lattice_point(
-    Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
-{
-    unsigned nparam = W->NbColumns - 1;
-
-    Matrix* Rays = rays2(i);
-    Matrix *T = Transpose(Rays);
-    Matrix *T2 = Matrix_Copy(T);
-    Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
-    int ok = Matrix_Inverse(T2, inv);
-    assert(ok);
-    Matrix_Free(Rays);
-    Matrix_Free(T2);
-    mat_ZZ vertex;
-    matrix2zz(W, vertex, W->NbRows, W->NbColumns);
-
-    vec_ZZ num;
-    num = lambda * vertex;
-
-    evalue *EP = multi_monom(num);
-
-    evalue tmp;
-    value_init(tmp.d);
-    value_init(tmp.x.n);
-    value_set_si(tmp.x.n, 1);
-    value_assign(tmp.d, lcm);
-
-    emul(&tmp, EP);
-
-    Matrix *L = Matrix_Alloc(inv->NbRows, W->NbColumns);
-    Matrix_Product(inv, W, L);
-
-    mat_ZZ RT;
-    matrix2zz(T, RT, T->NbRows, T->NbColumns);
-    Matrix_Free(T);
-
-    vec_ZZ p = lambda * RT;
-
-    for (int i = 0; i < L->NbRows; ++i) {
-	ceil_mod(L->p[i], nparam+1, lcm, p[i], EP, PD);
-    }
-
-    Matrix_Free(L);
-
-    Matrix_Free(inv);
-    free_evalue_refs(&tmp); 
-    return EP;
-}
-#else
-evalue* lattice_point(
-    Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
-{
-    Matrix *T = Transpose(W);
-    unsigned nparam = T->NbRows - 1;
-
-    evalue *EP = new evalue();
-    value_init(EP->d);
-    evalue_set_si(EP, 0, 1);
-
-    evalue ev;
-    Vector *val = Vector_Alloc(nparam+1);
-    value_set_si(val->p[nparam], 1);
-    ZZ offset(INIT_VAL, 0);
-    value_init(ev.d);
-    vertex_period(i, lambda, T, lcm, 0, val, EP, &ev, offset);
-    Vector_Free(val);
-    eadd(&ev, EP);
-    free_evalue_refs(&ev);   
-
-    Matrix_Free(T);
-
-    reduce_evalue(EP);
-
-    return EP;
-}
-#endif
 
 /* Returns the power of (t+1) in the term of a rational generating function,
  * i.e., the scalar product of the actual lattice point and lambda.
@@ -2668,17 +1853,10 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     int allocated = 0;
     Polyhedron *Q;
     int r = 0;
+    bool infinite = false;
 
     if (emptyQ2(P)) {
 	value_set_si(*result, 0);
-	return;
-    }
-    if (P->NbBid == 0)
-	for (; r < P->NbRays; ++r)
-	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
-		break;
-    if (P->NbBid !=0 || r < P->NbRays) {
-	value_set_si(*result, -1);
 	return;
     }
     if (P->NbEq != 0) {
@@ -2689,6 +1867,16 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	    return;
 	}
 	allocated = 1;
+    }
+    if (P->NbBid == 0)
+	for (; r < P->NbRays; ++r)
+	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
+		break;
+    if (P->NbBid != 0 || r < P->NbRays) {
+	value_set_si(*result, -1);
+	if (allocated)
+	    Polyhedron_Free(P);
+	return;
     }
     if (P->Dimension == 0) {
 	/* Test whether the constraints are satisfied */
@@ -2713,6 +1901,13 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
 	for (Q = P->next; Q; Q = Q->next) {
 	    barvinok_count_f(Q, &factor, NbMaxCons);
+	    if (value_neg_p(factor)) {
+		infinite = true;
+		continue;
+	    } else if (Q->next && value_zero_p(factor)) {
+		value_set_si(*result, 0);
+		break;
+	    }
 	    value_multiply(*result, *result, factor);
 	}
 
@@ -2721,6 +1916,8 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
     if (allocated)
 	Domain_Free(P);
+    if (infinite)
+	value_set_si(*result, -1);
 }
 
 static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
@@ -2818,64 +2015,6 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     Vector_Free(row);
     value_clear(g);
     return R;
-}
-
-static Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
-				 Polyhedron **fVD, int nd, unsigned MaxRays)
-{
-    assert(CEq);
-
-    Polyhedron *Dt;
-    Dt = CT ? DomainPreimage(D, CT, MaxRays) : D;
-    Polyhedron *rVD = DomainIntersection(Dt, CEq, MaxRays);
-
-    /* if rVD is empty or too small in geometric dimension */
-    if(!rVD || emptyQ(rVD) ||
-	    (rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
-	if(rVD)
-	    Domain_Free(rVD);
-	if (CT)
-	    Domain_Free(Dt);
-	return 0;		/* empty validity domain */
-    }
-
-    if (CT)
-	Domain_Free(Dt);
-
-    fVD[nd] = Domain_Copy(rVD);
-    for (int i = 0 ; i < nd; ++i) {
-	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], MaxRays);
-	if (emptyQ(I)) {
-	    Domain_Free(I);
-	    continue;
-	}
-	Polyhedron *F = DomainSimplify(I, fVD[nd], MaxRays);
-	if (F->NbEq == 1) {
-	    Polyhedron *T = rVD;
-	    rVD = DomainDifference(rVD, F, MaxRays);
-	    Domain_Free(T);
-	}
-	Domain_Free(F);
-	Domain_Free(I);
-    }
-
-    rVD = DomainConstraintSimplify(rVD, MaxRays);
-    if (emptyQ(rVD)) {
-	Domain_Free(fVD[nd]);
-	Domain_Free(rVD);
-	return 0;
-    }
-
-    Value c;
-    value_init(c);
-    barvinok_count(rVD, &c, MaxRays);
-    if (value_zero_p(c)) {
-	Domain_Free(rVD);
-	rVD = 0;
-    }
-    value_clear(c);
-
-    return rVD;
 }
 
 /* this procedure may have false negatives */
@@ -3018,24 +2157,19 @@ void enumerator::handle_polar(Polyhedron *C, int s)
 }
 
 struct enumerator_base {
-    Polyhedron *P;
-    unsigned dim, nbV;
+    unsigned dim;
     evalue ** vE;
-    int _i;
-    Param_Vertices *V;
     evalue ** E_vertex;
     evalue mone;
-    polar_decomposer *pd;
+    vertex_decomposer *vpd;
 
-    enumerator_base(Polyhedron *P, unsigned dim, unsigned nbV, polar_decomposer *pd)
+    enumerator_base(unsigned dim, vertex_decomposer *vpd)
     {
-	this->P = P;
 	this->dim = dim;
-	this->nbV = nbV;
-	this->pd = pd;
+	this->vpd = vpd;
 
-	vE = new evalue_p[nbV];
-	for (int j = 0; j < nbV; ++j)
+	vE = new evalue_p[vpd->nbV];
+	for (int j = 0; j < vpd->nbV; ++j)
 	    vE[j] = 0;
 
 	E_vertex = new evalue_p[dim];
@@ -3045,20 +2179,17 @@ struct enumerator_base {
     }
 
     void decompose_at(Param_Vertices *V, int _i, unsigned MaxRays/*, Polyhedron *pVD*/) {
-	Polyhedron *C = supporting_cone_p(P, V);
-	this->_i = _i;
-	this->V = V;
 	//this->pVD = pVD;
 
 	vE[_i] = new evalue;
 	value_init(vE[_i]->d);
 	evalue_set_si(vE[_i], 0, 1);
 
-	pd->decompose(C, MaxRays);
+	vpd->decompose_at_vertex(V, _i, MaxRays);
     }
 
     ~enumerator_base() {
-    	for (int j = 0; j < nbV; ++j)
+    	for (int j = 0; j < vpd->nbV; ++j)
 	    if (vE[j]) {
 		free_evalue_refs(vE[j]);
 		delete vE[j];
@@ -3187,14 +2318,15 @@ void ie_cum::add_term(int *powers, int len, evalue *f2)
     }
 }
 
-struct ienumerator : public polar_decomposer, public enumerator_base {
+struct ienumerator : public polar_decomposer, public vertex_decomposer, 
+		     public enumerator_base {
     //Polyhedron *pVD;
     mat_ZZ den;
     vec_ZZ vertex;
     mpq_t tcount;
 
     ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
-		enumerator_base(P, dim, nbV, this) {
+		vertex_decomposer(P, nbV, this), enumerator_base(dim, this) {
 	vertex.SetLength(dim);
 
 	den.SetDims(dim, dim);
@@ -3209,128 +2341,6 @@ struct ienumerator : public polar_decomposer, public enumerator_base {
     void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f);
 };
 
-static evalue* new_zero_ep()
-{
-    evalue *EP;
-    ALLOC(evalue, EP);
-    value_init(EP->d);
-    evalue_set_si(EP, 0, 1);
-    return EP;
-}
-
-/* returns the unique lattice point in the fundamental parallelepiped
- * of the unimodual cone C shifted to the parametric vertex V.
- *
- * The return values num and E_vertex are such that
- * coordinate i of this lattice point is equal to
- *
- *	    num[i] + E_vertex[i]
- */
-void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 
-		   evalue **E_vertex)
-{
-    unsigned nparam = V->Vertex->NbColumns - 2;
-    unsigned dim = C->Dimension;
-    vec_ZZ vertex;
-    vertex.SetLength(nparam+1);
-
-    Value lcm, tmp;
-    value_init(lcm);
-    value_init(tmp);
-    value_set_si(lcm, 1);
-
-    for (int j = 0; j < V->Vertex->NbRows; ++j) {
-	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
-    }
-
-    if (value_notone_p(lcm)) {
-	Matrix * mv = Matrix_Alloc(dim, nparam+1);
-	for (int j = 0 ; j < dim; ++j) {
-	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
-	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
-	}
-
-	Matrix* Rays = rays2(C);
-	Matrix *T = Transpose(Rays);
-	Matrix *T2 = Matrix_Copy(T);
-	Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
-	int ok = Matrix_Inverse(T2, inv);
-	assert(ok);
-	Matrix_Free(Rays);
-	Matrix_Free(T2);
-	Matrix *L = Matrix_Alloc(inv->NbRows, mv->NbColumns);
-	Matrix_Product(inv, mv, L);
-	Matrix_Free(inv);
-
-	evalue f;
-	value_init(f.d);
-	value_init(f.x.n);
-
-	ZZ one;
-
-	evalue *remainders[dim];
-	for (int i = 0; i < dim; ++i) {
-	    remainders[i] = new_zero_ep();
-	    one = 1;
-	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], 0);
-	}
-	Matrix_Free(L);
-
-
-	for (int i = 0; i < V->Vertex->NbRows; ++i) {
-	    values2zz(mv->p[i], vertex, nparam+1);
-	    E_vertex[i] = multi_monom(vertex);
-	    num[i] = 0;
-
-	    value_set_si(f.x.n, 1);
-	    value_assign(f.d, lcm);
-
-	    emul(&f, E_vertex[i]);
-
-	    for (int j = 0; j < dim; ++j) {
-		if (value_zero_p(T->p[i][j]))
-		    continue;
-		evalue cp;
-		value_init(cp.d);
-		evalue_copy(&cp, remainders[j]);
-		if (value_notone_p(T->p[i][j])) {
-		    value_set_si(f.d, 1);
-		    value_assign(f.x.n, T->p[i][j]);
-		    emul(&f, &cp);
-		}
-		eadd(&cp, E_vertex[i]);
-		free_evalue_refs(&cp);
-	    }
-	}
-	for (int i = 0; i < dim; ++i) {
-	    free_evalue_refs(remainders[i]); 
-	    free(remainders[i]);
-	}
-
-	free_evalue_refs(&f); 
-
-	Matrix_Free(T);
-	Matrix_Free(mv);
-	value_clear(lcm);
-	value_clear(tmp);
-	return;
-    }
-    value_clear(lcm);
-    value_clear(tmp);
-
-    for (int i = 0; i < V->Vertex->NbRows; ++i) {
-	/* fixed value */
-	if (First_Non_Zero(V->Vertex->p[i], nparam) == -1) {
-	    E_vertex[i] = 0;
-	    value2zz(V->Vertex->p[i][nparam], num[i]);
-	} else {
-	    values2zz(V->Vertex->p[i], vertex, nparam+1);
-	    E_vertex[i] = multi_monom(vertex);
-	    num[i] = 0;
-	}
-    }
-}
-
 void ienumerator::reduce(
 	evalue *factor, vec_ZZ& num, mat_ZZ& den_f)
 {
@@ -3338,7 +2348,7 @@ void ienumerator::reduce(
     unsigned dim = num.length();
 
     if (dim == 0) {
-	eadd(factor, vE[_i]);
+	eadd(factor, vE[vert]);
 	return;
     }
 
@@ -3556,27 +2566,15 @@ void ienumerator::handle_polar(Polyhedron *C, int s)
 	    free_evalue_refs(E_vertex[i]);
 	    delete E_vertex[i];
 	}
-
-	/*
-        {
-           char * test[] = {"a", "b"};
-           evalue E;
-           value_init(E.d);
-           evalue_copy(&E, vE[_i]);
-           frac2floor_in_domain(&E, pVD);
-	   printf("***** Curr value:");
-           print_evalue(stdout, &E, test);
-           fprintf(stdout, "\n");
-        }
-	*/
-
 }
 
-struct bfenumerator : public bf_base, public enumerator_base {
+struct bfenumerator : public vertex_decomposer, public bf_base,
+		      public enumerator_base {
     evalue *factor;
 
     bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
-		    bf_base(P, dim), enumerator_base(P, dim, nbV, this) {
+		    vertex_decomposer(P, nbV, this),
+		    bf_base(P, dim), enumerator_base(dim, this) {
 	lower = 0;
 	factor = NULL;
     }
@@ -3705,7 +2703,7 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
     for (int i = 0; i < v.size(); ++i) {
 	assert(v[i]->terms.NumRows() == 1);
 	evalue *factor = static_cast<bfe_term *>(v[i])->factors[0];
-	eadd(factor, vE[_i]);
+	eadd(factor, vE[vert]);
 	delete v[i];
     }
 }
@@ -4016,7 +3014,7 @@ try_again:
 		}
 	    eadd(et.vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	reduce_in_domain(&s[nd].E, pVD);
+	evalue_range_reduction_in_domain(&s[nd].E, pVD);
 
 	if (CT)
 	    addeliminatedparams_evalue(&s[nd].E, CT);
@@ -4916,7 +3914,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     evalue *EP = 0;
 
     if (nd == 0)
-	EP = new_zero_ep();
+	EP = evalue_zero();
 
     /* This doesn't seem to have any effect */
     if (nd == 1) {
@@ -4927,7 +3925,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	    Polyhedron_Free(O);
 	Polyhedron_Free(CA);
 	if (emptyQ(P))
-	    EP = new_zero_ep();
+	    EP = evalue_zero();
     }
 
     if (!EP && CT->NbColumns != CT->NbRows) {
@@ -5188,7 +4186,7 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays)
 {
     int nvar = P->Dimension - exist - nparam;
-    evalue *EP = new_zero_ep();
+    evalue *EP = evalue_zero();
     Polyhedron *Q, *N;
 
 #ifdef DEBUG_ER
@@ -5270,10 +4268,10 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
     POL_ENSURE_VERTICES(P);
 
     if (emptyQ(P))
-	return new_zero_ep();
+	return evalue_zero();
 
     if (nvar == 0 && nparam == 0) {
-	evalue *EP = new_zero_ep();
+	evalue *EP = evalue_zero();
 	barvinok_count(P, &EP->x.n, MaxRays);
 	if (value_pos_p(EP->x.n))
 	    value_set_si(EP->x.n, 1);
@@ -5297,7 +4295,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		break;
 	}
     if (r <  P->NbRays) {
-	evalue *EP = new_zero_ep();
+	evalue *EP = evalue_zero();
 	value_set_si(EP->x.n, -1);
 	return EP;
     }
@@ -5585,20 +4583,6 @@ out:
     return EP;
 }
 
-/* "align" matrix to have nrows by inserting
- * the necessary number of rows and an equal number of columns in front
- */
-static Matrix *align_matrix(Matrix *M, int nrows)
-{
-    int newrows = nrows - M->NbRows;
-    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
-    for (int i = 0; i < newrows; ++i)
-	value_set_si(M2->p[i][i], 1);
-    for (int i = 0; i < M->NbRows; ++i)
-	Vector_Copy(M->p[i], M2->p[newrows+i]+newrows, M->NbColumns);
-    return M2;
-}
-
 static void split_param_compression(Matrix *CP, mat_ZZ& map, vec_ZZ& offset)
 {
     Matrix *T = Transpose(CP);
@@ -5729,9 +4713,9 @@ static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam,
     return D;
 }
 
-evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
+gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
+					 unsigned MaxRays)
 {
-    evalue *EP;
     Polyhedron *conv, *D2;
     gen_fun *gf = NULL;
     unsigned nparam = C->Dimension;
@@ -5774,7 +4758,14 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
     if (D != D2)
 	Domain_Free(D2);
     Polyhedron_Free(conv);
-    EP = *red.gf;
-    delete red.gf;
+    return red.gf;
+}
+
+evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
+{
+    evalue *EP;
+    gen_fun *gf = barvinok_enumerate_union_series(D, C, MaxRays);
+    EP = *gf;
+    delete gf;
     return EP;
 }

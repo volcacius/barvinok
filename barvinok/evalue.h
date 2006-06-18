@@ -1,6 +1,10 @@
 #ifndef EV_OPERATIONS_H
 #define EV_OPERATIONS_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include <polylib/polylibgmp.h>
 #undef divide
 
@@ -70,6 +74,7 @@ typedef struct _enumeration {
 void evalue_set_si(evalue *ev, int n, int d);
 void evalue_set(evalue *ev, Value n, Value d);
 void evalue_copy(evalue *dst, evalue *src);
+evalue *evalue_zero();
 enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);
 int eequal(evalue *e1,evalue *e2);
@@ -77,6 +82,7 @@ void free_evalue_refs(evalue *e);
 void print_evalue(FILE *DST,evalue *e,char **pname);
 void print_enode(FILE *DST,enode *p,char **pname);
 void reduce_evalue (evalue *e);
+void reduce_evalue_in_domain(evalue *e, Polyhedron *D);
 void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
@@ -91,13 +97,18 @@ void evalue_mod2table(evalue *ev, int nparam);
 void evalue_mod2relation(evalue *e);
 void evalue_combine(evalue *e);
 void evalue_range_reduction(evalue *e);
-int reduce_in_domain(evalue *e, Polyhedron *D);
+int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D);
 size_t evalue_size(evalue *e);
 size_t domain_size(Polyhedron *D);
 Enumeration* partition2enumeration(evalue *EP);
 void evalue_frac2floor(evalue *e);
+int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D);
 evalue *esum(evalue *E, int nvar);
 void eor(evalue *e1, evalue *res);
 void evalue_denom(evalue *e, Value *d);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

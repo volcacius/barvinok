@@ -11,11 +11,11 @@
 #define value_pmodulus(ref,val1,val2)  (mpz_fdiv_r((ref),(val1),(val2)))
 #endif
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+
 #ifdef __GNUC__
-#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 #else
-#define ALLOC(p) p = (void *)malloc(sizeof(*p))
 #define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
 #endif
 
@@ -29,6 +29,14 @@ void evalue_set(evalue *ev, Value n, Value d) {
     value_assign(ev->d, d);
     value_init(ev->x.n);
     value_assign(ev->x.n, n);
+}
+
+evalue* evalue_zero()
+{
+    evalue *EP = ALLOC(evalue);
+    value_init(EP->d);
+    evalue_set_si(EP, 0, 1);
+    return EP;
 }
 
 void aep_evalue(evalue *e, int *ref) {
@@ -758,6 +766,50 @@ static void add_substitution(struct subst *s, Value *row, unsigned dim)
     ++s->n;
 }
 
+static void _reduce_evalue_in_domain(evalue *e, Polyhedron *D, struct subst *s)
+{
+    unsigned dim;
+    Polyhedron *orig = D;
+
+    s->n = 0;
+    dim = D->Dimension;
+    if (D->next)
+	D = DomainConvex(D, 0);
+    if (!D->next && D->NbEq) {
+	int j, k;
+	if (s->max < dim) {
+	    if (s->max != 0)
+		realloc_substitution(s, dim);
+	    else {
+		int d = relations_depth(e);
+		s->max = dim+d;
+		NALLOC(s->fixed, s->max);
+	    }
+	}
+	for (j = 0; j < D->NbEq; ++j)
+	    add_substitution(s, D->Constraint[j], dim);
+    }
+    if (D != orig)
+	Domain_Free(D);
+    _reduce_evalue(e, s, 0);
+    if (s->n != 0) {
+	int j;
+	for (j = 0; j < s->n; ++j) {
+	    value_clear(s->fixed[j].d);
+	    value_clear(s->fixed[j].m);
+	    free_evalue_refs(&s->fixed[j].s); 
+	}
+    }
+}
+
+void reduce_evalue_in_domain(evalue *e, Polyhedron *D)
+{
+    struct subst s = { NULL, 0, 0 };
+    _reduce_evalue_in_domain(e, D, &s);
+    if (s.max != 0)
+	free(s.fixed);
+}
+
 void reduce_evalue (evalue *e) {
     struct subst s = { NULL, 0, 0 };
 
@@ -769,36 +821,15 @@ void reduce_evalue (evalue *e) {
 	unsigned dim = -1;
 	for (i = 0; i < e->x.p->size/2; ++i) {
 	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
-	    s.n = 0;
+
 	    /* This shouldn't really happen; 
 	     * Empty domains should not be added.
 	     */
 	    POL_ENSURE_VERTICES(D);
-	    if (emptyQ(D))
-		goto discard;
+	    if (!emptyQ(D))
+		_reduce_evalue_in_domain(&e->x.p->arr[2*i+1], D, &s);
 
-	    dim = D->Dimension;
-	    if (D->next)
-		D = DomainConvex(D, 0);
-	    if (!D->next && D->NbEq) {
-		int j, k;
-		if (s.max < dim) {
-		    if (s.max != 0)
-			realloc_substitution(&s, dim);
-		    else {
-			int d = relations_depth(&e->x.p->arr[2*i+1]);
-			s.max = dim+d;
-			NALLOC(s.fixed, s.max);
-		    }
-		}
-		for (j = 0; j < D->NbEq; ++j)
-		    add_substitution(&s, D->Constraint[j], dim);
-	    }
-	    if (D != EVALUE_DOMAIN(e->x.p->arr[2*i]))
-		Domain_Free(D);
-	    _reduce_evalue(&e->x.p->arr[2*i+1], &s, 0);
-	    if (EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
-discard:
+	    if (emptyQ(D) || EVALUE_IS_ZERO(e->x.p->arr[2*i+1])) {
 		free_evalue_refs(&e->x.p->arr[2*i+1]);
 		Domain_Free(EVALUE_DOMAIN(e->x.p->arr[2*i]));
 		value_clear(e->x.p->arr[2*i].d);
@@ -806,14 +837,6 @@ discard:
 		e->x.p->arr[2*i] = e->x.p->arr[e->x.p->size];
 		e->x.p->arr[2*i+1] = e->x.p->arr[e->x.p->size+1];
 		--i;
-	    }
-	    if (s.n != 0) {
-		int j;
-		for (j = 0; j < s.n; ++j) {
-		    value_clear(s.fixed[j].d);
-		    value_clear(s.fixed[j].m);
-		    free_evalue_refs(&s.fixed[j].s); 
-		}
 	    }
 	}
 	if (e->x.p->size == 0) {
@@ -2590,7 +2613,7 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     return H;
 }
 
-int reduce_in_domain(evalue *e, Polyhedron *D)
+int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 {
     int i;
     enode *p;
@@ -2633,7 +2656,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(min);
 	    value_clear(max);
 	    Matrix_Free(T);
-	    return r ? r : reduce_in_domain(e, D);
+	    return r ? r : evalue_range_reduction_in_domain(e, D);
 	} else if (bounded && equal) {
 	    /* Always zero */
 	    if (p->size == 3)
@@ -2646,7 +2669,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(min);
 	    value_clear(max);
 	    Matrix_Free(T);
-	    return reduce_in_domain(e, D);
+	    return evalue_range_reduction_in_domain(e, D);
 	} else if (bounded && value_eq(min, max)) {
 	    /* zero for a single value */
 	    Polyhedron *E;
@@ -2661,9 +2684,9 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	    value_clear(max);
 	    Matrix_Free(T);
 	    Matrix_Free(M);
-	    r = reduce_in_domain(&p->arr[1], E);
+	    r = evalue_range_reduction_in_domain(&p->arr[1], E);
 	    if (p->size == 3)
-		r |= reduce_in_domain(&p->arr[2], D);
+		r |= evalue_range_reduction_in_domain(&p->arr[2], D);
 	    Domain_Free(E);
 	    _reduce_evalue(&p->arr[0].x.p->arr[0], 0, 1);
 	    return r;
@@ -2679,7 +2702,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
-	r |= reduce_in_domain(&p->arr[i], D);
+	r |= evalue_range_reduction_in_domain(&p->arr[i], D);
 
     if (p->type != fractional) {
 	if (r && p->type == polynomial) {
@@ -2776,7 +2799,7 @@ int reduce_in_domain(evalue *e, Polyhedron *D)
 	free_evalue_refs(&factor);
 	free_evalue_refs(&rem);
 
-	reduce_in_domain(e, D);
+	evalue_range_reduction_in_domain(e, D);
 
 	r = 1;
     } else {
@@ -2811,7 +2834,7 @@ void evalue_range_reduction(evalue *e)
 	return;
 
     for (i = 0; i < e->x.p->size/2; ++i)
-	if (reduce_in_domain(&e->x.p->arr[2*i+1],
+	if (evalue_range_reduction_in_domain(&e->x.p->arr[2*i+1],
 			     EVALUE_DOMAIN(e->x.p->arr[2*i]))) {
 	    reduce_evalue(&e->x.p->arr[2*i+1]);
 
@@ -2854,7 +2877,7 @@ Enumeration* partition2enumeration(evalue *EP)
     return res;
 }
 
-static int frac2floor_in_domain(evalue *e, Polyhedron *D)
+int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 {
     enode *p;
     int r = 0;
@@ -2872,7 +2895,7 @@ static int frac2floor_in_domain(evalue *e, Polyhedron *D)
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
-	r |= frac2floor_in_domain(&p->arr[i], D);
+	r |= evalue_frac2floor_in_domain(&p->arr[i], D);
 
     if (p->type != fractional) {
 	if (r && p->type == polynomial) {
@@ -2904,24 +2927,25 @@ static int frac2floor_in_domain(evalue *e, Polyhedron *D)
 	if (value_pos_p(I->Constraint[i][1]))
 	    break;
 
-    assert(i < I->NbConstraints);
-    value_init(min);
-    value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
-    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
-    if (value_neg_p(min)) {
-	evalue offset;
-	mpz_fdiv_q(min, min, d);
-	value_init(offset.d);
-	value_set_si(offset.d, 1);
-	value_init(offset.x.n);
-	value_oppose(offset.x.n, min);
-	eadd(&offset, &p->arr[0]);
-	free_evalue_refs(&offset);
+    if (i < I->NbConstraints) {
+	value_init(min);
+	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+	mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
+	if (value_neg_p(min)) {
+	    evalue offset;
+	    mpz_fdiv_q(min, min, d);
+	    value_init(offset.d);
+	    value_set_si(offset.d, 1);
+	    value_init(offset.x.n);
+	    value_oppose(offset.x.n, min);
+	    eadd(&offset, &p->arr[0]);
+	    free_evalue_refs(&offset);
+	}
+	value_clear(min);
     }
 
     Polyhedron_Free(I);
     Matrix_Free(T);
-    value_clear(min);
     value_clear(d);
 
     value_init(fl.d);
@@ -2947,8 +2971,8 @@ void evalue_frac2floor(evalue *e)
 	return;
 
     for (i = 0; i < e->x.p->size/2; ++i)
-	if (frac2floor_in_domain(&e->x.p->arr[2*i+1],
-				 EVALUE_DOMAIN(e->x.p->arr[2*i])))
+	if (evalue_frac2floor_in_domain(&e->x.p->arr[2*i+1],
+					EVALUE_DOMAIN(e->x.p->arr[2*i])))
 	    reduce_evalue(&e->x.p->arr[2*i+1]);
 }
 
@@ -3161,7 +3185,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	int pos = e->x.p->pos;
 
 	if (pos > nvar) {
-	    ALLOC(factor);
+	    factor = ALLOC(evalue);
 	    value_init(factor->d);
 	    value_set_si(factor->d, 0);
 	    factor->x.p = new_enode(polynomial, 2, pos - nvar);
@@ -3176,7 +3200,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 		break;
 	assert(i < D->NbRays);
 	if (value_neg_p(D->Ray[i][pos])) {
-	    ALLOC(factor);
+	    factor = ALLOC(evalue);
 	    value_init(factor->d);
 	    evalue_set_si(factor, -1, 1);
 	}
@@ -3249,8 +3273,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 evalue *esum(evalue *e, int nvar)
 {
     int i;
-    evalue *res;
-    ALLOC(res);
+    evalue *res = ALLOC(evalue);
     value_init(res->d);
 
     assert(nvar >= 0);

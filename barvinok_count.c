@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
@@ -21,11 +22,38 @@ struct option options[] = {
 };
 #endif
 
+static Polyhedron *Polyhedron_Read()
+{
+    int vertices = 0; 
+    unsigned NbRows, NbColumns;
+    Matrix *M;
+    Polyhedron *P;
+    char s[128];
+
+    while (fgets(s, sizeof(s), stdin)) {
+	if (*s == '#')
+	    continue;
+	if (strncasecmp(s, "vertices", sizeof("vertices")-1) == 0)
+	    vertices = 1;
+	if (sscanf(s, "%u %u", &NbRows, &NbColumns) == 2)
+	    break;
+    }
+    if (feof(stdin))
+	return NULL;
+    M = Matrix_Alloc(NbRows,NbColumns);
+    Matrix_Read_Input(M);
+    if (vertices)
+	P = Rays2Polyhedron(M, MAXRAYS);
+    else
+	P = Constraints2Polyhedron(M, MAXRAYS);
+    Matrix_Free(M);
+    return P;
+}
+
 int main(int argc, char **argv)
 {
     Value cb;
     Polyhedron *A;
-    Matrix *M;
     int c, ind = 0;
 
     while ((c = getopt_long(argc, argv, "V", options, &ind)) != -1) {
@@ -37,9 +65,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    M = Matrix_Read();
-    A = Constraints2Polyhedron(M, MAXRAYS);
-    Matrix_Free(M);
+    A = Polyhedron_Read();
     value_init(cb);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     barvinok_count(A, &cb, MAXRAYS);

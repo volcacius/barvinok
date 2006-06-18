@@ -8,11 +8,12 @@
 #define Polyhedron_Enumerate(a,b,c,d) Polyhedron_Enumerate(a,b,c)
 #endif
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+
 #ifdef __GNUC__
-#define ALLOC(p) p = (typeof(p))malloc(sizeof(*p))
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 #else
-#define ALLOC(p) p = (void *)malloc(sizeof(*p))
 #define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
 #endif
 
@@ -321,6 +322,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
     assert(PolyhedronIncludes(P, U));
 }
 
+/* Computes x, y and g such that g = gcd(a,b) and a*x+b*y = g */
 static void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 {
     Value c, d, e, f, tmp;
@@ -832,7 +834,7 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
 
     Matrix_Free(M);
 
-    ALLOC(F);
+    F = ALLOC(evalue);
     value_init(F->d);
     value_set_si(F->d, 0);
     F->x.p = new_enode(partition, 2*nd, dim-nvar);
@@ -1200,6 +1202,195 @@ Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
     return partition2enumeration(EP);
 }
 #endif
+
+/* "align" matrix to have nrows by inserting
+ * the necessary number of rows and an equal number of columns in front
+ */
+Matrix *align_matrix(Matrix *M, int nrows)
+{
+    int i;
+    int newrows = nrows - M->NbRows;
+    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
+    for (i = 0; i < newrows; ++i)
+	value_set_si(M2->p[i][i], 1);
+    for (i = 0; i < M->NbRows; ++i)
+	Vector_Copy(M->p[i], M2->p[newrows+i]+newrows, M->NbColumns);
+    return M2;
+}
+
+static void print_varlist(FILE *out, int n, char **names)
+{
+    int i;
+    fprintf(out, "[");
+    for (i = 0; i < n; ++i) {
+	if (i)
+	    fprintf(out, ",");
+	fprintf(out, "%s", names[i]);
+    }
+    fprintf(out, "]");
+}
+
+static void print_term(FILE *out, Value v, int pos, int dim, int nparam,
+		       char **iter_names, char **param_names, int *first)
+{
+    if (value_zero_p(v)) {
+	if (first && *first && pos >= dim + nparam)
+	    fprintf(out, "0");
+	return;
+    }
+
+    if (first) {
+	if (!*first && value_pos_p(v))
+	    fprintf(out, "+");
+	*first = 0;
+    }
+    if (pos < dim + nparam) {
+	if (value_mone_p(v))
+	    fprintf(out, "-");
+	else if (!value_one_p(v))
+	    value_print(out, VALUE_FMT, v);
+	if (pos < dim)
+	    fprintf(out, "%s", iter_names[pos]);
+	else
+	    fprintf(out, "%s", param_names[pos-dim]);
+    } else
+	value_print(out, VALUE_FMT, v);
+}
+
+char **util_generate_names(int n, char *prefix)
+{
+    int i;
+    int len = (prefix ? strlen(prefix) : 0) + 10;
+    char **names = ALLOCN(char*, n);
+    if (!names) {
+	fprintf(stderr, "ERROR: memory overflow.\n");
+	exit(1);
+    }
+    for (i = 0; i < n; ++i) {
+	names[i] = ALLOCN(char, len);
+	if (!names[i]) {
+	    fprintf(stderr, "ERROR: memory overflow.\n");
+	    exit(1);
+	}
+	if (!prefix)
+	    snprintf(names[i], len, "%d", i);
+	else
+	    snprintf(names[i], len, "%s%d", prefix, i);
+    }
+
+    return names;
+}
+
+void util_free_names(int n, char **names)
+{
+    int i;
+    for (i = 0; i < n; ++i)
+	free(names[i]);
+    free(names);
+}
+
+void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
+		       char **iter_names, char **param_names)
+{
+    int i, j;
+    Value tmp;
+
+    assert(dim + nparam == P->Dimension);
+
+    value_init(tmp);
+
+    fprintf(out, "{ ");
+    if (nparam) {
+	print_varlist(out, nparam, param_names);
+	fprintf(out, " -> ");
+    }
+    print_varlist(out, dim, iter_names);
+    fprintf(out, " : ");
+
+    if (emptyQ2(P))
+	fprintf(out, "FALSE");
+    else for (i = 0; i < P->NbConstraints; ++i) {
+	int first = 1;
+	int v = First_Non_Zero(P->Constraint[i]+1, P->Dimension);
+	if (v == -1 && value_pos_p(P->Constraint[i][0]))
+	    continue;
+	if (i)
+	    fprintf(out, " && ");
+	if (v == -1 && value_notzero_p(P->Constraint[i][1+P->Dimension]))
+	    fprintf(out, "FALSE");
+	else if (value_pos_p(P->Constraint[i][v+1])) {
+	    print_term(out, P->Constraint[i][v+1], v, dim, nparam, 
+		       iter_names, param_names, NULL);
+	    if (value_zero_p(P->Constraint[i][0]))
+		fprintf(out, " = ");
+	    else
+		fprintf(out, " >= ");
+	    for (j = v+1; j <= dim+nparam; ++j) {
+		value_oppose(tmp, P->Constraint[i][1+j]);
+		print_term(out, tmp, j, dim, nparam, 
+			   iter_names, param_names, &first);
+	    }
+	} else {
+	    value_oppose(tmp, P->Constraint[i][1+v]);
+	    print_term(out, tmp, v, dim, nparam, 
+		       iter_names, param_names, NULL);
+	    fprintf(out, " <= ");
+	    for (j = v+1; j <= dim+nparam; ++j)
+		print_term(out, P->Constraint[i][1+j], j, dim, nparam, 
+			   iter_names, param_names, &first);
+	}
+    }
+
+    fprintf(out, " }\n");
+
+    value_clear(tmp);
+}
+
+/* Construct a cone over P with P placed at x_d = 1, with
+ * x_d the coordinate of an extra dimension
+ *
+ * It's probably a mistake to depend so much on the internal
+ * representation.  We should probably simply compute the
+ * vertices/facets first.
+ */
+Polyhedron *Cone_over_Polyhedron(Polyhedron *P)
+{
+    unsigned NbConstraints = 0;
+    unsigned NbRays = 0;
+    Polyhedron *C;
+    int i;
+
+    if (POL_HAS(P, POL_INEQUALITIES))
+	NbConstraints = P->NbConstraints + 1;
+    if (POL_HAS(P, POL_POINTS))
+	NbRays = P->NbRays + 1;
+
+    C = Polyhedron_Alloc(P->Dimension+1, NbConstraints, NbRays);
+    if (POL_HAS(P, POL_INEQUALITIES)) {
+	C->NbEq = P->NbEq;
+	for (i = 0; i < P->NbConstraints; ++i)
+	    Vector_Copy(P->Constraint[i], C->Constraint[i], P->Dimension+2);
+	/* n >= 0 */
+	value_set_si(C->Constraint[P->NbConstraints][0], 1);
+	value_set_si(C->Constraint[P->NbConstraints][1+P->Dimension], 1);
+    }
+    if (POL_HAS(P, POL_POINTS)) {
+	C->NbBid = P->NbBid;
+	for (i = 0; i < P->NbRays; ++i)
+	    Vector_Copy(P->Ray[i], C->Ray[i], P->Dimension+2);
+	/* vertex 0 */
+	value_set_si(C->Ray[P->NbRays][0], 1);
+	value_set_si(C->Ray[P->NbRays][1+C->Dimension], 1);
+    }
+    POL_SET(C, POL_VALID);
+    if (POL_HAS(P, POL_INEQUALITIES))
+	POL_SET(C, POL_INEQUALITIES);
+    if (POL_HAS(P, POL_POINTS))
+	POL_SET(C, POL_POINTS);
+    if (POL_HAS(P, POL_VERTICES))
+	POL_SET(C, POL_VERTICES);
+    return C;
+}
 
 const char *barvinok_version(void)
 {
