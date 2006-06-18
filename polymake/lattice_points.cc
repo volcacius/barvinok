@@ -7,6 +7,7 @@ extern "C" {
 #include <polylib/polylibgmp.h>
 }
 #include <barvinok/barvinok.h>
+#include "convert.h"
 
 namespace polymake { namespace polytope {
 
@@ -14,22 +15,7 @@ void lattice_points(Poly& p)
 {
     Value cb;
     Matrix<Rational> F = p.give("FACETS | INEQUALITIES");
-    int r = F.rows();
-    int c = F.cols();
-    ::Matrix *M = Matrix_Alloc(r, c+1);
-    for (int i = 0; i < r; ++i) {
-	Integer LCM = denominator(F[i][0]);
-	for (int j = 1; j < c; ++j)
-	    LCM = lcm(LCM, denominator(F[i][j]));
-	value_set_si(M->p[i][0], 1);
-	F[i][0] *= LCM;
-	value_assign(M->p[i][c], mpq_numref(F[i][0].get_rep()));
-	for (int j = 1; j < c; ++j) {
-	    F[i][j] *= LCM;
-	    value_assign(M->p[i][j], mpq_numref(F[i][j].get_rep()));
-	}
-    }
-
+    ::Matrix *M = polymake_constraints2polylib(F);
     Polyhedron *A = Constraints2Polyhedron(M, 0);
     Matrix_Free(M);
     value_init(cb);
