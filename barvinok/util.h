@@ -79,6 +79,8 @@ void util_free_names(int n, char **names);
 void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
 		       char **iter_names, char **param_names);
 
+Polyhedron *Cone_over_Polyhedron(Polyhedron *P);
+
 const char *barvinok_version();
 
 #if defined(__cplusplus)

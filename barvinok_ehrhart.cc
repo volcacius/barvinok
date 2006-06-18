@@ -67,52 +67,6 @@ static Polyhedron *Polyhedron_Read()
     return P;
 }
 
-/* Construct a cone over P with P placed at x_d = 1, with
- * x_d the coordinate of an extra dimension
- *
- * It's probably a mistake to depend so much on the internal
- * representation.  We should probably simply compute the
- * vertices/facets first.
- */
-static Polyhedron *Cone_over_Polyhedron(Polyhedron *P)
-{
-    unsigned NbConstraints = 0;
-    unsigned NbRays = 0;
-    Polyhedron *C;
-    int i;
-
-    if (POL_HAS(P, POL_INEQUALITIES))
-	NbConstraints = P->NbConstraints + 1;
-    if (POL_HAS(P, POL_POINTS))
-	NbRays = P->NbRays + 1;
-
-    C = Polyhedron_Alloc(P->Dimension+1, NbConstraints, NbRays);
-    if (POL_HAS(P, POL_INEQUALITIES)) {
-	C->NbEq = P->NbEq;
-	for (i = 0; i < P->NbConstraints; ++i)
-	    Vector_Copy(P->Constraint[i], C->Constraint[i], P->Dimension+2);
-	/* n >= 0 */
-	value_set_si(C->Constraint[P->NbConstraints][0], 1);
-	value_set_si(C->Constraint[P->NbConstraints][1+P->Dimension], 1);
-    }
-    if (POL_HAS(P, POL_POINTS)) {
-	C->NbBid = P->NbBid;
-	for (i = 0; i < P->NbRays; ++i)
-	    Vector_Copy(P->Ray[i], C->Ray[i], P->Dimension+2);
-	/* vertex 0 */
-	value_set_si(C->Ray[P->NbRays][0], 1);
-	value_set_si(C->Ray[P->NbRays][1+C->Dimension], 1);
-    }
-    POL_SET(C, POL_VALID);
-    if (POL_HAS(P, POL_INEQUALITIES))
-	POL_SET(C, POL_INEQUALITIES);
-    if (POL_HAS(P, POL_POINTS))
-	POL_SET(C, POL_POINTS);
-    if (POL_HAS(P, POL_VERTICES))
-	POL_SET(C, POL_VERTICES);
-    return C;
-}
-
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C, *U;
