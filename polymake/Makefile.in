@@ -5,3 +5,4 @@ SourceDir := @srcdir@
 ExtraModules := convert
 include @bv_cv_polymake@/Makefile
 lattice_points$(suffix) : convert$O
+h_star_vector$(suffix) : convert$O
