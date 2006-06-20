@@ -62,7 +62,7 @@ EXTRA_DIST = \
     README.Solaris \
     ChangeLog \
     $(TESTFILES) \
-    cdd2polylib.pl \
+    latte2polylib.pl \
     NTL_5_3_2.patch \
     polymake/Makefile.in \
     polymake/README \
