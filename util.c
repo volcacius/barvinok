@@ -1395,7 +1395,7 @@ Polyhedron *Cone_over_Polyhedron(Polyhedron *P)
 const char *barvinok_version(void)
 {
     return 
-	"barvinok " VERSION " (" GIT_HEAD_ID ")\n"
+	GIT_HEAD_ID"\n"
 #ifdef USE_MODULO
 	" +MODULO"
 #else
