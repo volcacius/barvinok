@@ -11,6 +11,11 @@ For compilation instructions we refer to the \verb+README+ file
 included in the distribution.
 }
 
+Common option to all programs:\\
+\begin{tabular}{lll}
+\ai[\tt]{--version} & \ai[\tt]{-V} & print version
+\end{tabular}
+
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_count}}{barvinok\_count}}
 
 The program \ai[\tt]{barvinok\_count} enumerates a
@@ -179,6 +184,15 @@ $$
 \end{cases}
 $$
 
+Options:\\
+\begin{tabular}{lll}
+\ai[\tt]{--floor} & \ai[\tt]{-f} & 
+convert \ai[\tt]{fractional}s to \ai[\tt]{flooring}s
+\\
+\ai[\tt]{--convert} & \ai[\tt]{-c} & 
+convert \ai[\tt]{fractional}s to \ai[\tt]{periodic}s
+\end{tabular}
+
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_enumerate\_e}}
 {barvinok\_enumerate\_e}}
 
@@ -229,6 +243,22 @@ exist: 2, nparam: 1
 ( 8 * P + 0 )
 \end{verbatim}
 
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--floor} & \ai[\tt]{-f} & 
+convert \ai[\tt]{fractional}s to \ai[\tt]{flooring}s
+\\
+\ai[\tt]{--convert} & \ai[\tt]{-c} & 
+convert \ai[\tt]{fractional}s to \ai[\tt]{periodic}s
+\\
+\ai[\tt]{--omega} & \ai[\tt]{-o} & 
+use \Omegalib/ as a preprocessor
+\\
+\ai[\tt]{--pip} & \ai[\tt]{-p} & 
+\raggedright
+call \ai[\tt]{barvinok\_enumerate\_pip} instead of \ai[\tt]{barvinok\_enumerate\_e}
+\end{tabular}
+
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_series}}
 {barvinok\_series}}
 
@@ -272,3 +302,9 @@ Line:   [   1 ]
 Vertex: [   0 ]/1
 (n^3)/((1-n) * (1-n) * (1-n^2) * (1-n^3))
 \end{verbatim}
+
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--explicit} & \ai[\tt]{-e} & 
+convert computed \rgf/ to a \psp/
+\end{tabular}
