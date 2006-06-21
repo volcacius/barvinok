@@ -329,4 +329,4 @@ echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
-AC_OUTPUT(Makefile omega/Makefile)
+AC_OUTPUT(Makefile doc/Makefile omega/Makefile)

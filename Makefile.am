@@ -1,4 +1,4 @@
-SUBDIRS = . omega
+SUBDIRS = . omega doc
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
@@ -64,6 +64,14 @@ EXTRA_DIST = \
     $(TESTFILES) \
     latte2polylib.pl \
     NTL_5_3_2.patch \
+    doc/Internal.tex \
+    doc/Usage.tex \
+    doc/barvinok.bib \
+    doc/barvinok.gdf \
+    doc/barvinok.tex \
+    doc/chicago.bst \
+    doc/chicago.sty \
+    doc/mydefs.sty \
     polymake/Makefile.in \
     polymake/README \
     polymake/autogen.sh \
@@ -82,6 +90,8 @@ uninstall-local:
 dist-hook:
 	(cd $(distdir)/polymake; \
 	    ./autogen.sh; rm -rf autogen.sh autom4te.cache)
+	(cd doc; make barvinok.pdf)
+	cp doc/barvinok.pdf $(distdir)/doc/
 	if test -f $(top_srcdir)/.git/HEAD; then \
 	    echo @GIT_HEAD_VERSION@ > $(distdir)/GIT_HEAD_ID; \
 	else \
