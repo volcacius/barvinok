@@ -20,6 +20,7 @@ of integer points in the polytope.
 The \PolyLib/ notation corresponds to the internal
 representation of \ai[\tt]{Polyhedron}s as explained
 in Section~\ref{a:existing}.
+\index{input format!constraints}
 The first line of the input contains the number of rows
 and the number of columns in the \ai[\tt]{Constraint} matrix.
 The rest of the input is composed of the elements of the matrix.
@@ -58,6 +59,29 @@ may have been postponed to a later stage.
 The program \ai[\tt]{latte2polylib.pl} can be used to
 convert a polytope from \ai[\tt]{LattE} \shortcite{latte1.1}
 notation to \PolyLib/ notation.
+
+\index{input format!vertices}
+As an alternative to the constraints based input, the input polytope
+may also be specified by its \ai[\tt]{Ray} matrix.
+The first line of the input contains the single word \ai[\tt]{vertices}.
+The second line contains the number of rows
+and the number of columns in the \ai[\tt]{Ray} matrix.
+The rest of the input is composed of the elements of the matrix.
+Recall that the number of columns is two more than the number
+of variables, where the extra first columns is one or zero
+depending on whether the ray is a line or not.
+The next columns contain
+the numerators of the coordinates and the final column contains
+the denominator of the vertex or $0$ for a ray.
+E.g., the above set can also be described as
+\begin{verbatim}
+vertices
+
+2 3
+
+1 0 1
+1 13 2
+\end{verbatim}
 
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_enumerate}}
 {barvinok\_enumerate}}
