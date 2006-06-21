@@ -4,11 +4,21 @@
 \usepackage[plainpages=false,pdfpagelabels,breaklinks,pagebackref]{hyperref}
 \usepackage{mydefs}
 \usepackage{chicago}
+\usepackage{glosstex}
 
 \makeglossary
 \makeindex
 
 \begin{document}
+
+\title{\barvinok/: User Guide}
+\author{Sven Verdoolaege}
+
+\maketitle
+
+\tableofcontents
+
+\listoffigures
 
 \include{Internal}
 
@@ -16,6 +26,8 @@
 
 \bibliography{barvinok}
 \bibliographystyle{chicago}
+
+\printglosstex(acr)
 
 \index{index|(}
 
