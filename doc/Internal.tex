@@ -405,8 +405,9 @@ typedef struct _evalue {
 } evalue;
 \end{verbatim}
 Note that we allow a ``chamber'' to be a union of polyhedra
-as discussed in Section~\ref{s:addition}.
-Chambers with extra variables, i.e., those of Section~\ref{s:line},
+as discussed in \citeN[Section~4.5.1]{Verdoolaege2005PhD}.
+Chambers with extra variables, i.e., those of
+\citeN[Section~4.6.5]{Verdoolaege2005PhD},
 are only partially supported.
 The field \ai[\tt]{pos} is set to the actual dimension,
 i.e., the number of parameters.
@@ -433,7 +434,8 @@ It is an error if exactly one of
 the arguments of \ai[\tt]{eadd} is of type \ai[\tt]{partition}
 (unless the other argument is \verb+0+).
 The addition and multiplication operations are described
-in Sections~\ref{s:addition} and~\ref{s:multiplication}
+in \citeN[Section~4.5.1]{Verdoolaege2005PhD} 
+and~\citeN[Section~4.5.2]{Verdoolaege2005PhD}
 respectively.
 
 The function \ai[\tt]{eadd} is an extension of the function
@@ -453,14 +455,14 @@ which is just a funny way of saying $0$.
 void eor(evalue *e1, evalue *res);
 \end{verbatim}
 The function \ai[\tt]{eor} implements the \ai{union}
-operation from Section~\ref{s:set}.  Both arguments
+operation from \citeN[Section~4.5.3]{Verdoolaege2005PhD}.  Both arguments
 are assumed to correspond to indicator functions.
 
 \begin{verbatim}
 evalue *esum(evalue *E, int nvar);
 \end{verbatim}
 The function \ai[\tt]{esum} performs the summation
-operation from Section~\ref{s:summation}.
+operation from \citeN[Section~4.5.4]{Verdoolaege2005PhD}.
 The piecewise step-polynomial represented by \verb+E+ is summated
 over its first \verb+nvar+ variables.
 Note that \verb+E+ must be zero or of type \ai[\tt]{partition}.
@@ -514,7 +516,8 @@ The function \ai[\tt]{reduce\_evalue} performs some
 simplifications on \ai[\tt]{evalue}s.
 Here, we only describe the simplifications that are directly
 related to the internal representation.
-Some other simplifications are explained in Section~\ref{s:simplification}.
+Some other simplifications are explained in
+\citeN[Section~4.7.2]{Verdoolaege2005PhD}.
 If the highest order coefficients of a \ai[\tt]{polynomial},
 \ai[\tt]{fractional} or \ai[\tt]{flooring} are zero (possibly
 after some other simplifications), then the size of the array
@@ -633,10 +636,11 @@ orders them in lexicographical order and inserts the new
 term in \ai[\tt]{term} according to the lexicographical
 order of the combined powers in the denominator.
 The method \ai[\tt]{gen\_fun::operator evalue *} performs
-the conversion from \rgf/ to \psp/ explained in Section~\ref{s:conversion}.
+the conversion from \rgf/ to \psp/ explained in 
+\citeN[Section~4.5.5]{Verdoolaege2005PhD}.
 The \ai[\tt]{Polyhedron} \ai[\tt]{context} is the superset
 of all points where the enumerator is non-zero used during this conversion,
-i.e., it is the set $Q$ from (\ref{eq:context}).
+i.e., it is the set $Q$ from \citeN[Equation~4.31]{Verdoolaege2005PhD}.
 If  \ai[\tt]{context} is \verb+NULL+ the maximal
 allowed context is assumed, i.e., the maximal
 region with lexico-positive rays.  
@@ -714,10 +718,10 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
           unsigned exist, unsigned nparam, unsigned MaxRays);
 \end{verbatim}
 The first function tries the simplification rules from
-Section~\ref{s:elimination} before resorting to the method
-based on \indac{PIP} from Section~\ref{s:PIP}.
+\citeN[Section~4.6.2]{Verdoolaege2005PhD} before resorting to the method
+based on \indac{PIP} from \citeN[Section~4.6.3]{Verdoolaege2005PhD}.
 The second function immediately applies the technique from
-Section~\ref{s:PIP}.
+\citeN[Section~4.6.3]{Verdoolaege2005PhD}.
 The argument \verb+exist+ refers to the number of existential variables,
 whereas
 the argument \verb+nparam+ refers to the number of parameters.
@@ -745,7 +749,7 @@ void Polyhedron_Polarize(Polyhedron *P);
 \end{verbatim}
 The function \ai[\tt]{Polyhedron\_Polarize} 
 polarizes its argument and is explained
-in Section~\ref{s:computing}.
+in \citeN[Section~4.4.2]{Verdoolaege2005PhD}.
 
 \begin{verbatim}
 Matrix * unimodular_complete(Vector *row);
