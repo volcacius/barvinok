@@ -331,7 +331,8 @@ The program \ai[\tt]{barvinok\_ehrhart} computes the
 \ai{Ehrhart quasi-polynomial} of a polytope $P$, i.e., a quasi-polynomial
 in $n$ that evaluates to the number of integer points in the dilation
 of $P$ by a factor $n$.
-The input is the same as that of \ai[\tt]{barvinok\_count}.
+The input is the same as that of \ai[\tt]{barvinok\_count}, except that
+it may be followed by the variable name.
 The functionality is the same as running \ai[\tt]{barvinok\_enumerate}
 (or \ai[\tt]{barvinok\_series} if the \ai[\tt]{--series} option was given)
 on the cone over $P$ placed at $n=1$.
