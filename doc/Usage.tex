@@ -309,6 +309,21 @@ Options:\\
 convert computed \rgf/ to a \psp/
 \end{tabular}
 
+\subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_union}}
+{barvinok\_union}}
+
+The program \ai[\tt]{barvinok\_union} enumerates a \ai{union} of
+parametric polytopes.  It takes as input the number of parametric
+polytopes in the union, the polytopes in combined data and
+parameter space in \PolyLib/ notation, the context in parameter space
+in \PolyLib/ notation and optionally a list of parameter names.
+
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--series} & \ai[\tt]{-s} & 
+compute \rgf/ instead of \psp/
+\end{tabular}
+
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_ehrhart}}
 {barvinok\_ehrhart}}
 
@@ -322,7 +337,7 @@ The functionality is the same as running \ai[\tt]{barvinok\_enumerate}
 on the cone over $P$ placed at $n=1$.
 
 Options:\\
-\begin{tabular}{lll}
+\begin{tabular}{llp{0.7\textwidth}}
 \ai[\tt]{--floor} & \ai[\tt]{-f} & 
 convert \ai[\tt]{fractional}s to \ai[\tt]{flooring}s
 \\
