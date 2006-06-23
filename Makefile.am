@@ -1,7 +1,7 @@
 if HAVE_GINAC
     MAYBE_BERNSTEIN = bernstein
 endif
-SUBDIRS = $(MAYBE_BERNSTEIN) . omega
+SUBDIRS = $(MAYBE_BERNSTEIN) . omega doc
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include
 
@@ -76,8 +76,16 @@ EXTRA_DIST = \
     README.Solaris \
     ChangeLog \
     $(TESTFILES) \
-    cdd2polylib.pl \
+    latte2polylib.pl \
     NTL_5_3_2.patch \
+    doc/Internal.tex \
+    doc/Usage.tex \
+    doc/barvinok.bib \
+    doc/barvinok.gdf \
+    doc/barvinok.tex \
+    doc/chicago.bst \
+    doc/chicago.sty \
+    doc/mydefs.sty \
     polymake/Makefile.in \
     polymake/README \
     polymake/autogen.sh \
@@ -96,6 +104,8 @@ uninstall-local:
 dist-hook:
 	(cd $(distdir)/polymake; \
 	    ./autogen.sh; rm -rf autogen.sh autom4te.cache)
+	(cd doc; make barvinok.pdf)
+	cp doc/barvinok.pdf $(distdir)/doc/
 	if test -f $(top_srcdir)/.git/HEAD; then \
 	    echo @GIT_HEAD_VERSION@ > $(distdir)/GIT_HEAD_ID; \
 	else \

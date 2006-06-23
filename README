@@ -6,7 +6,9 @@ http://www.kotnet.org/~skimo/polylib/).
 Next to polylib, it uses NTL (http://shoup.net/ntl/)
 Mac users may want to apply NTL_5_3_2.patch
 
-Optionally, PIP (http://www.prism.uvsq.fr/~cedb/bastools/piplib.html)
+Optionally, PIP (http://www.piplib.org/)
+and Omega (http://www.cs.umd.edu/projects/omega/ or 
+http://www.liacs.nl/~sverdool/gitweb.cgi?p=omega.git;a=summary)
 can be used during enumeration of integer projections.
 
 Both NTL and polylib need to have been compiled with gmp
@@ -25,6 +27,18 @@ For NTL,
 
 cd src
 ./configure NTL_GMP_LIP=on PREFIX=/opt GMP_PREFIX=/path/to/gmp
+make
+make install
+
+For Omega,
+
+vi -c '/DESTDIR=/|s/=.*$/=\/opt/|wq' Makefile.config
+make libomega.a libcode_gen.a
+make install
+
+For piplib,
+
+./configure --with-gmp=/path/to/gmp --prefix=/opt
 make
 make install
 

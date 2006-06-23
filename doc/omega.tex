@@ -1,0 +1,29 @@
+\section{\texorpdfstring{\protect\Omegalib/ interface}
+{Omega interface}}
+
+The \ai[\tt]{barvinok} distribution includes an interface
+to \Omegalib/ \shortcite{Omega_lib} \ai[\tt]{occ}, an extension
+of \ai[\tt]{oc} \shortcite{Omega_calc}.
+The extension adds the operations shown in Figure~\ref{f:unary}.
+The following is an example:
+\begin{verbatim}
+symbolic n, m; 
+P := { [i,j] : 0 <= i <= n and i <= j <= m };
+card P;
+\end{verbatim}
+
+\begin{figure}
+\begin{tabular}{llp{0.7\textwidth}}
+Name & Syntax & Explanation
+\\
+\hline
+Card & \ai[\tt]{card} $r$ & Computes the number of integer points in $r$ and
+prints the result to standard output
+\\
+Ranking & \ai[\tt]{ranking} $r$ & Computes the rank function of $r$ and
+prints the result to standard output
+\shortcite{Loechner2002,Turjan2002}
+\end{tabular}
+\caption{Extra relational operations of {\tt occ}}
+\label{f:unary}
+\end{figure}
