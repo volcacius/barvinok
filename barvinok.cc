@@ -1922,6 +1922,11 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
 static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
+    if (emptyQ2(P)) {
+	value_set_si(*result, 0);
+	return;
+    }
+
     if (P->Dimension == 1)
 	return Line_Length(P, result);
 
