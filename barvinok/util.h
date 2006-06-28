@@ -30,6 +30,10 @@ extern "C" {
 #define POL_SET(P,f)		/* nothing */
 #endif
 
+#ifndef POL_INTEGER
+#define POL_INTEGER		0
+#endif
+
 void value_lcm(Value i, Value j, Value* lcm);
 int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
