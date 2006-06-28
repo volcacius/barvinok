@@ -427,7 +427,7 @@ Polyhedron *remove_equalities(Polyhedron *P)
     int i;
 
     value_init(g);
-    while (p->NbEq > 0) {
+    while (!emptyQ2(p) && p->NbEq > 0) {
 	assert(dim > 0);
 	Vector_Gcd(p->Constraint[0]+1, dim+1, &g);
 	Vector_AntiScale(p->Constraint[0]+1, p->Constraint[0]+1, g, dim+1);
