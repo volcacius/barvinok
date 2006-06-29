@@ -1843,6 +1843,103 @@ void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 }
 
 
+/* Check whether the polyhedron is unbounded and if so,
+ * check whether it has any (and therefore an infinite number of)
+ * integer points.
+ * If one of the vertices is integer, then we are done.
+ * Otherwise, transform the polyhedron such that one of the rays
+ * is the first unit vector and cut it off at a height that ensures
+ * that if the whole polyhedron has any points, then the remaining part
+ * has integer points.  In particular we add the largest coefficient
+ * of a ray to the highest vertex (rounded up).
+ */
+static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRays)
+{
+    int r = 0;
+    Matrix *M, *M2;
+    Value c, tmp;
+    Value g;
+    bool first;
+    Vector *v;
+    Value offset, size;
+    Polyhedron *R;
+
+    if (P->NbBid == 0)
+	for (; r < P->NbRays; ++r)
+	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
+		break;
+    if (P->NbBid == 0 && r == P->NbRays)
+	return false;
+
+    for (int i = 0; i < P->NbRays; ++i)
+	if (value_one_p(P->Ray[i][1+P->Dimension])) {
+	    value_set_si(*result, -1);
+	    return true;
+	}
+
+    value_init(g);
+    v = Vector_Alloc(P->Dimension+1);
+    Vector_Gcd(P->Ray[r]+1, P->Dimension, &g);
+    Vector_AntiScale(P->Ray[r]+1, v->p, g, P->Dimension+1);
+    M = unimodular_complete(v);
+    value_set_si(M->p[P->Dimension][P->Dimension], 1);
+    M2 = Transpose(M);
+    Matrix_Free(M);
+    P = Polyhedron_Preimage(P, M2, 0);
+    Matrix_Free(M2);
+    value_clear(g);
+    Vector_Free(v);
+
+    first = true;
+    value_init(offset);
+    value_init(size);
+    value_init(tmp);
+    value_set_si(size, 0);
+
+    for (int i = 0; i < P->NbBid; ++i) {
+	value_absolute(tmp, P->Ray[i][1]);
+	if (value_gt(tmp, size))
+	    value_assign(size, tmp);
+    }
+    for (int i = P->NbBid; i < P->NbRays; ++i) {
+	if (value_zero_p(P->Ray[i][P->Dimension+1])) {
+	    if (value_gt(P->Ray[i][1], size))
+		value_assign(size, P->Ray[i][1]);
+	    continue;
+	}
+	mpz_cdiv_q(tmp, P->Ray[i][1], P->Ray[i][P->Dimension+1]);
+	if (first || value_gt(tmp, offset)) {
+	    value_assign(offset, tmp);
+	    first = false;
+	}
+    }
+    value_addto(offset, offset, size);
+    value_clear(size);
+    value_clear(tmp);
+
+    v = Vector_Alloc(P->Dimension+2);
+    value_set_si(v->p[0], 1);
+    value_set_si(v->p[1], -1);
+    value_assign(v->p[1+P->Dimension], offset);
+    R = AddConstraints(v->p, 1, P, MaxRays);
+    Polyhedron_Free(P);
+    P = R;
+
+    value_clear(offset);
+    Vector_Free(v);
+
+    value_init(c);
+    barvinok_count(P, &c, MaxRays);
+    Polyhedron_Free(P);
+    if (value_zero_p(c))
+	value_set_si(*result, 0);
+    else
+	value_set_si(*result, -1);
+    value_clear(c);
+
+    return true;
+}
+
 typedef Polyhedron * Polyhedron_p;
 
 static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons);
@@ -1852,7 +1949,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     unsigned dim;
     int allocated = 0;
     Polyhedron *Q;
-    int r = 0;
     bool infinite = false;
 
     if (emptyQ2(P)) {
@@ -1868,12 +1964,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	}
 	allocated = 1;
     }
-    if (P->NbBid == 0)
-	for (; r < P->NbRays; ++r)
-	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
-		break;
-    if (P->NbBid != 0 || r < P->NbRays) {
-	value_set_si(*result, -1);
+    if (Polyhedron_is_infinite(P, result, NbMaxCons)) {
 	if (allocated)
 	    Polyhedron_Free(P);
 	return;
@@ -2025,7 +2116,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 }
 
 /* this procedure may have false negatives */
-static bool Polyhedron_is_infinite(Polyhedron *P, unsigned nparam)
+static bool Polyhedron_is_infinite_param(Polyhedron *P, unsigned nparam)
 {
     int r;
     for (r = 0; r < P->NbRays; ++r) {
@@ -2860,7 +2951,7 @@ out:
 	   
 	return eres;
     }
-    if (Polyhedron_is_infinite(P, nparam))
+    if (Polyhedron_is_infinite_param(P, nparam))
 	goto constant;
 
     if (P->NbEq != 0) {
@@ -4647,7 +4738,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	return new gen_fun;
     }
 
-    assert(!Polyhedron_is_infinite(P, nparam));
+    assert(!Polyhedron_is_infinite_param(P, nparam));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_positive_rays(P, nparam));
     if (P->NbEq != 0)
@@ -4683,7 +4774,7 @@ static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam,
     value_init(tmp);
     for (Polyhedron *P = D; P; P = P->next) {
 	POL_ENSURE_VERTICES(P);
-	assert(!Polyhedron_is_infinite(P, nparam));
+	assert(!Polyhedron_is_infinite_param(P, nparam));
 	assert(P->NbBid == 0);
 	assert(Polyhedron_has_positive_rays(P, nparam));
 
