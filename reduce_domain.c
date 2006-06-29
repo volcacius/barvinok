@@ -4,6 +4,7 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 			  Polyhedron **fVD, int nd, unsigned MaxRays)
 {
     Polyhedron *Dt, *rVD;
+    Value c;
     int i;
 
     Dt = CT ? DomainPreimage(D, CT, MaxRays) : D;
@@ -47,7 +48,6 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 	return 0;
     }
 
-    Value c;
     value_init(c);
     barvinok_count(rVD, &c, MaxRays);
     if (value_zero_p(c)) {
