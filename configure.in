@@ -243,17 +243,15 @@ if test "$omega_package" != "no"; then
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
 
-AC_MSG_CHECKING(if --enable-fractional option specified)
-AC_ARG_ENABLE(fractional,
-            [  --enable-fractional     Use fractional representation],
-	    [bv_cv_fractional=$enableval], [bv_cv_fractional="no"])
-AC_MSG_RESULT($bv_cv_fractional)
-AC_MSG_CHECKING(if --enable-modulo option specified)
-AC_ARG_ENABLE(modulo,
-            [  --enable-modulo         Use fractional representation],
-	    [bv_cv_modulo=$enableval], [bv_cv_modulo="no"])
+AC_MSG_CHECKING(if the fractional representation should be used)
+AC_ARG_ENABLE(fractional, [AS_HELP_STRING([--disable-fractional],
+					  [Don't use fractional representation])],
+	    [bv_cv_fractional=$enableval], [bv_cv_fractional="yes"])
+AC_ARG_ENABLE(modulo, [AS_HELP_STRING([--disable-modulo],
+				      [Don't use fractional representation])],
+	    [bv_cv_modulo=$enableval], [bv_cv_modulo="$bv_cv_fractional"])
 AC_MSG_RESULT($bv_cv_modulo)
-if test "x$bv_cv_modulo" != "xno" -o "x$bv_cv_fractional" != "xno"; then
+if test "x$bv_cv_modulo" != "xno" ; then
         AC_DEFINE(USE_MODULO,[], [Use fractional representation])
 fi
 
