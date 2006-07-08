@@ -323,7 +323,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
 }
 
 /* Computes x, y and g such that g = gcd(a,b) and a*x+b*y = g */
-static void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
+void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 {
     Value c, d, e, f, tmp;
 
@@ -393,7 +393,7 @@ Matrix * unimodular_complete(Vector *row)
     }
     for (; i < row->Size; ++i) {
 	value_assign(old, g);
-	Euclid(old, row->p[i], &c, &b, &g);
+	Extended_Euclid(old, row->p[i], &c, &b, &g);
 	value_oppose(b, b);
 	for (j = 0; j < row->Size; ++j) {
 	    if (j < i) {
