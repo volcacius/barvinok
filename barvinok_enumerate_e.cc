@@ -4,6 +4,7 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"
+#include "scarf.h"
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
 #endif
@@ -34,6 +35,8 @@ struct option options[] = {
 #ifdef HAVE_PIPLIB
     { "pip",   	    no_argument,  0,  'p' },
 #endif
+    { "series",     no_argument,  0,  's' },
+    { "scarf",      no_argument,  0,  'S' },
     { "convert",    no_argument,  0,  'c' },
     { "floor",      no_argument,  0,  'f' },
     { "range-reduction",	no_argument,	0,  'R' },
@@ -124,14 +127,22 @@ int main(int argc, char **argv)
     int convert = 0;
     int omega = 0;
     int pip = 0;
+    int scarf = 0;
+    int series = 0;
     int floor = 0;
     int verify = 0;
     int m = INT_MAX, M = INT_MIN, r;
     int print_solution = 1;
 
     while ((c = getopt_long(argc, argv, 
-		    OMEGA_OPT PIPLIB_OPT "fcRTm:M:r:V", options, &ind)) != -1) {
+		    OMEGA_OPT PIPLIB_OPT "sSfcRTm:M:r:V", options, &ind)) != -1) {
 	switch (c) {
+	case 's':
+	    series = 1;
+	    break;
+	case 'S':
+	    scarf = 1;
+	    break;
 	case 'o':
 	    omega = 1;
 	    break;
@@ -168,6 +179,12 @@ int main(int argc, char **argv)
 	    exit(0);
 	    break;
 	}
+    }
+
+    if (series && !scarf) {
+	fprintf(stderr, 
+		"--series currently only available if --scarf is specified\n");
+	exit(1);
     }
 
     MA = Matrix_Read();
@@ -212,30 +229,43 @@ int main(int argc, char **argv)
 	assert(!A->next);
 	exist = A->Dimension - nvar - nparam;
     }
-    if (pip && exist > 0)
-	EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
-    else
-	EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
-    reduce_evalue(EP);
-    evalue_combine(EP);
-    if (range)
-	evalue_range_reduction(EP);
-    if (print_solution)
-	print_evalue(stdout, EP, param_name);
-    if (floor) {
-	fprintf(stderr, "WARNING: floor conversion not supported\n");
-	evalue_frac2floor(EP);
+    if (series) {
+	gen_fun *gf;
+	assert(scarf);
+	gf = barvinok_enumerate_scarf_series(A, exist, nparam, MAXRAYS);
+	if (print_solution) {
+	    gf->print(nparam, param_name);
+	    puts("");
+	}
+	delete gf;
+    } else {
+	if (scarf) {
+	    EP = barvinok_enumerate_scarf(A, exist, nparam, MAXRAYS);
+	} else if (pip && exist > 0)
+	    EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
+	else
+	    EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
+	reduce_evalue(EP);
+	evalue_combine(EP);
+	if (range)
+	    evalue_range_reduction(EP);
 	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
-    } else if (convert) {
-	evalue_mod2table(EP, nparam);
-	if (print_solution)
-	    print_evalue(stdout, EP, param_name);
+	if (floor) {
+	    fprintf(stderr, "WARNING: floor conversion not supported\n");
+	    evalue_frac2floor(EP);
+	    if (print_solution)
+		print_evalue(stdout, EP, param_name);
+	} else if (convert) {
+	    evalue_mod2table(EP, nparam);
+	    if (print_solution)
+		print_evalue(stdout, EP, param_name);
+	}
+	if (verify)
+	    verify_results(A, EP, exist, nparam, m, M);
+	free_evalue_refs(EP);
+	free(EP);
     }
-    if (verify)
-	verify_results(A, EP, exist, nparam, m, M);
-    free_evalue_refs(EP);
-    free(EP);
     Free_ParamNames(param_name, nparam);
     Polyhedron_Free(A);
     return 0;

@@ -50,7 +50,10 @@ BEEO_SOURCES = omega/Exit.cc omega/convert.cc
 else
 BEEO_SOURCES = 
 endif
-barvinok_enumerate_e_SOURCES = barvinok_enumerate_e.cc $(BEEO_SOURCES)
+barvinok_enumerate_e_SOURCES = \
+	barvinok_enumerate_e.cc \
+	scarf.cc \
+	$(BEEO_SOURCES)
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ @CPPFLAGS@
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
