@@ -75,15 +75,8 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
 	    value_notzero_p(B->p[1][pos[2]])) {
 	    assert(value_neg_p(B->p[1][pos[1]]));
 	    assert(value_pos_p(B->p[1][pos[2]]));
-	    value_set_si(factor, 0);
-	    for (int i = 1; i <= 2; ++i) {
-		value_pdivision(tmp, B->p[0][pos[i]], B->p[1][pos[i]]);
-		value_increment(tmp, tmp);
-		if (value_gt(tmp, factor))
-		    value_assign(factor, tmp);
-	    }
-	    value_set_si(tmp, 1);
-	    Vector_Combine(B->p[0], B->p[1], B->p[0], tmp, factor, B->NbColumns);
+	    assert(value_pos_p(B->p[0][pos[1]]));
+	    assert(value_neg_p(B->p[0][pos[2]]));
 	    Vector_Exchange(B->p[0], B->p[1], B->NbColumns);
 	    type = 2;
 	} else {
