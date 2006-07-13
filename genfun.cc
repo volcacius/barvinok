@@ -40,6 +40,80 @@ static void lex_order_terms(struct short_rat* rat)
     }
 }
 
+void short_rat::add(short_rat *r)
+{
+    for (int i = 0; i < r->n.power.NumRows(); ++i) {
+	int len = n.coeff.NumRows();
+	int j;
+	for (j = 0; j < len; ++j)
+	    if (r->n.power[i] == n.power[j])
+		break;
+	if (j < len) {
+	    ZZ g = GCD(r->n.coeff[i][1], n.coeff[j][1]);
+	    ZZ num = n.coeff[j][0] * (r->n.coeff[i][1] / g) +
+		       (n.coeff[j][1] / g) * r->n.coeff[i][0];
+	    ZZ d = n.coeff[j][1] / g * r->n.coeff[i][1];
+	    if (num != 0) {
+		g = GCD(num,d);
+		n.coeff[j][0] = num/g;
+		n.coeff[j][1] = d/g;
+	    } else {
+		if (j < len-1) {
+		    n.power[j] = n.power[len-1];
+		    n.coeff[j] = n.coeff[len-1];
+		}
+		int dim = n.power.NumCols();
+		n.coeff.SetDims(len-1, 2);
+		n.power.SetDims(len-1, dim);
+	    }
+	} else {
+	    int dim = n.power.NumCols();
+	    n.coeff.SetDims(len+1, 2);
+	    n.power.SetDims(len+1, dim);
+	    n.coeff[len] = r->n.coeff[i];
+	    n.power[len] = r->n.power[i];
+	}
+    }
+}
+
+bool short_rat::reduced()
+{
+    int dim = n.power.NumCols();
+    lex_order_terms(this);
+    if (n.power.NumRows() % 2 == 0) {
+	if (n.coeff[0][0] == -n.coeff[1][0] &&
+	    n.coeff[0][1] == n.coeff[1][1]) {
+	    vec_ZZ step = n.power[1] - n.power[0];
+	    int k;
+	    for (k = 1; k < n.power.NumRows()/2; ++k) {
+		if (n.coeff[2*k][0] != -n.coeff[2*k+1][0] ||
+		    n.coeff[2*k][1] != n.coeff[2*k+1][1])
+		    break;
+		if (step != n.power[2*k+1] - n.power[2*k])
+		    break;
+	    }
+	    if (k == n.power.NumRows()/2) {
+		for (k = 0; k < d.power.NumRows(); ++k)
+		    if (d.power[k] == step)
+			break;
+		if (k < d.power.NumRows()) {
+		    for (++k; k < d.power.NumRows(); ++k)
+			d.power[k-1] = d.power[k];
+		    d.power.SetDims(k-1, dim);
+		    for (k = 1; k < n.power.NumRows()/2; ++k) {
+			n.coeff[k] = n.coeff[2*k];
+			n.power[k] = n.power[2*k];
+		    }
+		    n.coeff.SetDims(k, 2);
+		    n.power.SetDims(k, dim);
+		    return true;
+		}
+	    }
+	}
+    }
+    return false;
+}
+
 void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
 		  const mat_ZZ& den)
 {
@@ -73,43 +147,23 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
 
     for (int i = 0; i < term.size(); ++i)
 	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {
-	    int len = term[i]->n.coeff.NumRows();
-	    int j;
-	    for (j = 0; j < len; ++j)
-		if (r->n.power[0] == term[i]->n.power[j])
-		    break;
-	    if (j < len) {
-		ZZ g = GCD(r->n.coeff[0][1], term[i]->n.coeff[j][1]);
-		ZZ n = term[i]->n.coeff[j][0] * (r->n.coeff[0][1] / g) +
-			   (term[i]->n.coeff[j][1] / g) * r->n.coeff[0][0];
-		ZZ d = term[i]->n.coeff[j][1] / g * r->n.coeff[0][1];
-		if (n != 0) {
-		    g = GCD(n,d);
-		    term[i]->n.coeff[j][0] = n/g;
-		    term[i]->n.coeff[j][1] = d/g;
-		} else {
-		    if (len > 1) {
-			if (j < len-1) {
-			    term[i]->n.power[j] = term[i]->n.power[len-1];
-			    term[i]->n.coeff[j] = term[i]->n.coeff[len-1];
-			}
-			int dim = term[i]->n.power.NumCols();
-			term[i]->n.coeff.SetDims(len-1, 2);
-			term[i]->n.power.SetDims(len-1, dim);
-		    } else {
-			delete term[i];
-			if (i != term.size()-1)
-			    term[i] = term[term.size()-1];
-			term.pop_back();
-		    }
-		}
-	    } else {
-		int dim = term[i]->n.power.NumCols();
-		term[i]->n.coeff.SetDims(len+1, 2);
-		term[i]->n.power.SetDims(len+1, dim);
-		term[i]->n.coeff[len] = r->n.coeff[0];
-		term[i]->n.power[len] = r->n.power[0];
-		lex_order_terms(term[i]);
+	    term[i]->add(r);
+	    if (term[i]->n.coeff.NumRows() == 0) {
+		delete term[i];
+		if (i != term.size()-1)
+		    term[i] = term[term.size()-1];
+		term.pop_back();
+	    } else if (term[i]->reduced()) {
+		delete r;
+		/* we've modified term[i], so removed it
+		 * and add it back again
+		 */
+		r = term[i];
+		if (i != term.size()-1)
+		    term[i] = term[term.size()-1];
+		term.pop_back();
+		i = -1;
+		continue;
 	    }
 	    delete r;
 	    return;

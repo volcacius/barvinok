@@ -24,6 +24,8 @@ struct short_rat {
 	/* rows: factors in denominator */
 	mat_ZZ	power;
     } d;
+    void add(short_rat *rat);
+    bool reduced();
 };
 
 struct gen_fun {
