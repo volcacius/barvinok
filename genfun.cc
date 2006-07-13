@@ -22,6 +22,24 @@ static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
     return alen-blen;
 }
 
+static void lex_order_terms(struct short_rat* rat)
+{
+    for (int i = 0; i < rat->n.power.NumRows(); ++i) {
+	int m = i;
+	for (int j = i+1; j < rat->n.power.NumRows(); ++j)
+	    if (lex_cmp(rat->n.power[j], rat->n.power[m]) < 0)
+		m = j;
+	if (m != i) {
+	    vec_ZZ tmp = rat->n.power[m];
+	    rat->n.power[m] = rat->n.power[i];
+	    rat->n.power[i] = tmp;
+	    tmp = rat->n.coeff[m];
+	    rat->n.coeff[m] = rat->n.coeff[i];
+	    rat->n.coeff[i] = tmp;
+	}
+    }
+}
+
 void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
 		  const mat_ZZ& den)
 {
@@ -91,6 +109,7 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
 		term[i]->n.power.SetDims(len+1, dim);
 		term[i]->n.coeff[len] = r->n.coeff[0];
 		term[i]->n.power[len] = r->n.power[0];
+		lex_order_terms(term[i]);
 	    }
 	    delete r;
 	    return;
