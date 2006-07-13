@@ -78,17 +78,12 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
     }
 
     if (n == 3) {
-	if (value_notzero_p(B->p[1][pos[1]]) &&
-	    value_notzero_p(B->p[1][pos[2]])) {
-	    assert(value_neg_p(B->p[1][pos[1]]));
-	    assert(value_pos_p(B->p[1][pos[2]]));
-	    assert(value_pos_p(B->p[0][pos[1]]));
-	    assert(value_neg_p(B->p[0][pos[2]]));
-	    Vector_Exchange(B->p[0], B->p[1], B->NbColumns);
-	    type = 2;
-	} else {
-	    assert(0);
-	}
+	assert(value_neg_p(B->p[1][pos[1]]));
+	assert(value_pos_p(B->p[1][pos[2]]));
+	assert(value_pos_p(B->p[0][pos[1]]));
+	assert(value_neg_p(B->p[0][pos[2]]));
+	Vector_Exchange(B->p[0], B->p[1], B->NbColumns);
+	type = 2;
     } else {
 	int i;
 	for (i = 1; i <= 3; ++i)
