@@ -407,7 +407,7 @@ Polyhedron *simplex::shrunk_polyhedron(Polyhedron *P, int dim, Matrix *A,
     }
     constant = Constraints->NbColumns - 1;
 
-    for (int i = 0, j = 0; i < Constraints->NbRows; ++i) {
+    for (int i = 0, j = 0; i < P->NbConstraints; ++i) {
 	if (value_zero_p(Constraints->p[i][1+dim]) &&
 	    value_zero_p(Constraints->p[i][1+dim+1]))
 	    continue;
