@@ -297,6 +297,23 @@ AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
 ])
 
+AC_MSG_CHECKING(whether to use GLPK)
+AC_ARG_WITH(glpk, [AS_HELP_STRING([--with-glpk=DIR],[DIR Location of GLPK])],
+            [ glpk_package=$withval],  [ glpk_package=yes ])
+AC_MSG_RESULT($glpk_package)
+
+have_glpk=false
+if test "$glpk_package" != "no"; then
+    if test "x$glpk_package" != "xyes"; then
+	CPPFLAGS="-I$glpk_package/include $CPPFLAGS"
+	LDFLAGS="-L$glpk_package/lib $LDFLAGS"
+    fi
+    AC_CHECK_HEADERS([glpk.h],[
+	have_glpk=true
+	AC_CHECK_LIB(glpk, main,[],[have_glpk=false])
+    ])
+fi
+
 AC_SUBST(GIT_HEAD_ID)
 AC_SUBST(GIT_HEAD)
 AC_SUBST(GIT_HEAD_VERSION)
