@@ -7,7 +7,7 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  barvinok_series remove_redundant_equalities \
 		  barvinok_union \
 		  @bv_extra_programs@
-EXTRA_PROGRAMS = piptest verify_lexsmaller
+EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample
 pkginclude_HEADERS = \
     barvinok/barvinok.h \
     barvinok/util.h \

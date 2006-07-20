@@ -314,6 +314,12 @@ if test "$glpk_package" != "no"; then
     ])
 fi
 
+if test "$have_glpk" = "true"; then
+    AC_LIBOBJ(basis_reduction)
+    AC_LIBOBJ(sample)
+    bv_extra_programs="polyhedron_sample $bv_extra_programs"
+fi
+
 AC_SUBST(GIT_HEAD_ID)
 AC_SUBST(GIT_HEAD)
 AC_SUBST(GIT_HEAD_VERSION)
