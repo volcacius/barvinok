@@ -20,6 +20,7 @@ extern "C" {
 #include "decomposer.h"
 #include "lattice_point.h"
 #include "reduce_domain.h"
+#include "sample.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -1870,6 +1871,19 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRay
 		break;
     if (P->NbBid == 0 && r == P->NbRays)
 	return false;
+
+#ifdef HAVE_LIBGLPK
+    Vector *sample;
+
+    sample = Polyhedron_Sample(P, MaxRays);
+    if (!sample)
+	value_set_si(*result, 0);
+    else {
+	value_set_si(*result, -1);
+	Vector_Free(sample);
+    }
+    return true;
+#endif
 
     for (int i = 0; i < P->NbRays; ++i)
 	if (value_one_p(P->Ray[i][1+P->Dimension])) {
