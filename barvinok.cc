@@ -705,7 +705,48 @@ static void normalize(ZZ& sign,
 	sign = -sign;
 }
 
-struct counter : public polar_decomposer {
+/* base for non-parametric counting */
+struct np_base : public polar_decomposer {
+    unsigned dim;
+    ZZ one;
+
+    np_base(unsigned dim) {
+	this->dim = dim;
+	one = 1;
+    }
+
+    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d) = 0;
+    virtual void handle_polar(Polyhedron *C, int s);
+    void start(Polyhedron *P, unsigned MaxRays);
+    virtual void init(Polyhedron *P) {
+    }
+
+private:
+    Value *current_vertex;
+    ZZ sign;
+};
+
+void np_base::handle_polar(Polyhedron *C, int s)
+{
+    assert(C->NbRays-1 == dim);
+    sign = s;
+    handle_polar(C, current_vertex, sign, one);
+}
+
+void np_base::start(Polyhedron *P, unsigned MaxRays)
+{
+    init(P);
+    for (int i = 0; i < P->NbRays; ++i) {
+	if (!value_pos_p(P->Ray[i][dim+1]))
+	    continue;
+
+	current_vertex = P->Ray[i]+1;
+	Polyhedron *C = supporting_cone(P, i);
+	decompose(C, MaxRays);
+    }
+}
+
+struct counter : public np_base {
     vec_ZZ lambda;
     mat_ZZ rays;
     vec_ZZ vertex;
@@ -713,42 +754,39 @@ struct counter : public polar_decomposer {
     ZZ sign;
     ZZ num;
     int j;
-    Polyhedron *P;
-    unsigned dim;
     mpq_t count;
 
-    counter(Polyhedron *P) {
-	this->P = P;
-	dim = P->Dimension;
+    counter(unsigned dim) : np_base(dim) {
 	rays.SetDims(dim, dim);
 	den.SetLength(dim);
 	mpq_init(count);
     }
 
-    void start(unsigned MaxRays);
+    void start(Polyhedron *P, unsigned MaxRays);
 
     ~counter() {
 	mpq_clear(count);
     }
 
-    virtual void handle_polar(Polyhedron *P, int sign);
+    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d);
 };
 
 struct OrthogonalException {} Orthogonal;
 
-void counter::handle_polar(Polyhedron *C, int s)
+void counter::handle_polar(Polyhedron *C, Value *V, ZZ cn, ZZ cd)
 {
     int r = 0;
-    assert(C->NbRays-1 == dim);
     add_rays(rays, C, &r);
     for (int k = 0; k < dim; ++k) {
 	if (lambda * rays[k] == 0)
 	    throw Orthogonal;
     }
 
-    sign = s;
+    assert(cd == 1);
+    assert(cn == 1 || cn == -1);
+    sign = cn;
 
-    lattice_point(P->Ray[j]+1, C, vertex);
+    lattice_point(V, C, vertex);
     num = vertex * lambda;
     den = rays * lambda;
     normalize(sign, num, den);
@@ -762,58 +800,16 @@ void counter::handle_polar(Polyhedron *C, int s)
     d.div(n, count, sign);
 }
 
-void counter::start(unsigned MaxRays)
+void counter::start(Polyhedron *P, unsigned MaxRays)
 {
     for (;;) {
 	try {
 	    randomvector(P, lambda, dim);
-	    for (j = 0; j < P->NbRays; ++j) {
-		Polyhedron *C = supporting_cone(P, j);
-		decompose(C, MaxRays);
-	    }
+	    np_base::start(P, MaxRays);
 	    break;
 	} catch (OrthogonalException &e) {
 	    mpq_set_si(count, 0, 0);
 	}
-    }
-}
-
-/* base for non-parametric counting */
-struct np_base : public polar_decomposer {
-    Polyhedron *P;
-    unsigned dim;
-    ZZ one;
-
-    np_base(Polyhedron *P, unsigned dim) {
-	this->P = P;
-	this->dim = dim;
-	one = 1;
-    }
-
-    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d) = 0;
-    virtual void handle_polar(Polyhedron *C, int s);
-    void start(unsigned MaxRays);
-
-private:
-    int current_vertex;
-    ZZ sign;
-};
-
-void np_base::handle_polar(Polyhedron *C, int s)
-{
-    assert(C->NbRays-1 == dim);
-    sign = s;
-    handle_polar(C, P->Ray[current_vertex]+1, sign, one);
-}
-
-void np_base::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
-	    continue;
-
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
     }
 }
 
@@ -826,7 +822,7 @@ struct reducer : public np_base {
     mpz_t td;
     int lower;	    // call base when only this many variables is left
 
-    reducer(Polyhedron *P) : np_base(P, P->Dimension) {
+    reducer(unsigned dim) : np_base(dim) {
 	//den.SetLength(dim);
 	mpq_init(tcount);
 	mpz_init(tn);
@@ -981,7 +977,7 @@ void reducer::handle_polar(Polyhedron *C, Value *V, ZZ n, ZZ d)
 }
 
 struct ireducer : public reducer {
-    ireducer(Polyhedron *P) : reducer(P) {}
+    ireducer(unsigned dim) : reducer(dim) {}
 
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
@@ -1008,7 +1004,7 @@ struct ireducer : public reducer {
 struct icounter : public ireducer {
     mpq_t count;
 
-    icounter(Polyhedron *P) : ireducer(P) {
+    icounter(unsigned dim) : ireducer(dim) {
 	mpq_init(count);
 	lower = 1;
     }
@@ -1050,14 +1046,14 @@ struct gf_base {
     np_base *base;
     gen_fun *gf;
 
-    gf_base(np_base *npb, unsigned nparam) : base(npb) {
-	gf = new gen_fun(Polyhedron_Project(base->P, nparam));
+    gf_base(np_base *npb, Polyhedron *context) : base(npb) {
+	gf = new gen_fun(context);
     }
 };
 
 struct partial_ireducer : public ireducer, public gf_base {
-    partial_ireducer(Polyhedron *P, unsigned nparam) : 
-	    ireducer(P), gf_base(this, nparam) {
+    partial_ireducer(Polyhedron *context, unsigned dim, unsigned nparam) : 
+	    ireducer(dim), gf_base(this, context) {
 	lower = nparam;
     }
     ~partial_ireducer() {
@@ -1074,12 +1070,14 @@ struct partial_reducer : public reducer, public gf_base {
     vec_ZZ lambda;
     vec_ZZ tmp;
 
-    partial_reducer(Polyhedron *P, unsigned nparam) : 
-	    reducer(P), gf_base(this, nparam) {
+    partial_reducer(Polyhedron *context, unsigned dim, unsigned nparam) : 
+	    reducer(dim), gf_base(this, context) {
 	lower = nparam;
 
 	tmp.SetLength(dim - nparam);
-	randomvector(P, lambda, dim - nparam);
+    }
+    virtual void init(Polyhedron *P) {
+	randomvector(P, lambda, dim - lower);
     }
     ~partial_reducer() {
     }
@@ -1164,7 +1162,7 @@ struct bf_base : public np_base {
     mpz_t td;
     int lower;	    // call base when only this many variables is left
 
-    bf_base(Polyhedron *P, unsigned dim) : np_base(P, dim) {
+    bf_base(unsigned dim) : np_base(dim) {
 	mpq_init(tcount);
 	mpz_init(tn);
 	mpz_init(td);
@@ -1659,7 +1657,7 @@ struct bfcounter_base : public bf_base {
     ZZ cn;
     ZZ cd;
 
-    bfcounter_base(Polyhedron *P) : bf_base(P, P->Dimension) {
+    bfcounter_base(unsigned dim) : bf_base(dim) {
     }
 
     bfc_term_base* new_bf_term(int len) {
@@ -1729,7 +1727,7 @@ struct bfcounter_base : public bf_base {
 struct bfcounter : public bfcounter_base {
     mpq_t count;
 
-    bfcounter(Polyhedron *P) : bfcounter_base(P) {
+    bfcounter(unsigned dim) : bfcounter_base(dim) {
 	mpq_init(count);
 	lower = 1;
     }
@@ -1786,8 +1784,8 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 }
 
 struct partial_bfcounter : public bfcounter_base, public gf_base {
-    partial_bfcounter(Polyhedron *P, unsigned nparam) : 
-	    bfcounter_base(P), gf_base(this, nparam) {
+    partial_bfcounter(Polyhedron *context, unsigned dim, unsigned nparam) : 
+	    bfcounter_base(dim), gf_base(this, context) {
 	lower = nparam;
     }
     ~partial_bfcounter() {
@@ -2019,13 +2017,13 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
     POL_ENSURE_VERTICES(P);
 
 #ifdef USE_INCREMENTAL_BF
-    bfcounter cnt(P);
+    bfcounter cnt(P->Dimension);
 #elif defined USE_INCREMENTAL_DF
-    icounter cnt(P);
+    icounter cnt(P->Dimension);
 #else
-    counter cnt(P);
+    counter cnt(P->Dimension);
 #endif
-    cnt.start(NbMaxCons);
+    cnt.start(P, NbMaxCons);
 
     assert(value_one_p(&cnt.count[0]._mp_den));
     value_assign(*result, &cnt.count[0]._mp_num);
@@ -2660,7 +2658,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 
     bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
 		    vertex_decomposer(P, nbV, this),
-		    bf_base(P, dim), enumerator_base(dim, this) {
+		    bf_base(dim), enumerator_base(dim, this) {
 	lower = 0;
 	factor = NULL;
     }
@@ -4736,13 +4734,13 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     assert(P->NbEq == 0);
 
 #ifdef USE_INCREMENTAL_BF
-    partial_bfcounter red(P, nparam);
+    partial_bfcounter red(Polyhedron_Project(P, nparam), P->Dimension, nparam);
 #elif defined USE_INCREMENTAL_DF
-    partial_ireducer red(P, nparam);
+    partial_ireducer red(Polyhedron_Project(P, nparam), P->Dimension, nparam);
 #else
-    partial_reducer red(P, nparam);
+    partial_reducer red(Polyhedron_Project(P, nparam), P->Dimension, nparam);
 #endif
-    red.start(MaxRays);
+    red.start(P, MaxRays);
     Polyhedron_Free(P);
     if (CP) {
 	mat_ZZ map;
@@ -4815,8 +4813,9 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
 	/* it doesn't matter which reducer we use, since we don't actually
 	 * reduce anything here
 	 */
-	partial_reducer red(P, P->Dimension);
-	red.start(MaxRays);
+	partial_reducer red(Polyhedron_Project(P, P->Dimension), P->Dimension, 
+			    P->Dimension);
+	red.start(P, MaxRays);
 	if (!gf)
 	    gf = red.gf;
 	else {
@@ -4830,10 +4829,11 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
      */
     conv = DomainConvex(D2, MaxRays);
 #ifdef USE_INCREMENTAL_DF
-    partial_ireducer red(conv, nparam);
+    partial_ireducer red(Polyhedron_Project(conv, nparam), D2->Dimension, nparam);
 #else
-    partial_reducer red(conv, nparam);
+    partial_reducer red(Polyhedron_Project(conv, nparam), D2->Dimension, nparam);
 #endif
+    red.init(conv);
     for (int i = 0; i < gf->term.size(); ++i) {
 	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
 	    red.reduce(gf->term[i]->n.coeff[j][0], gf->term[i]->n.coeff[j][1],
