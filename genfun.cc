@@ -3,6 +3,7 @@
 #include "config.h"
 #include <barvinok/genfun.h>
 #include <barvinok/barvinok.h>
+#include "conversion.h"
 #include "mat_util.h"
 
 using std::cout;
@@ -289,6 +290,38 @@ void gen_fun::add_union(gen_fun *gf, unsigned MaxRays)
     add(one, one, gf);
     add(mone, one, hp);
     delete hp;
+}
+
+static void Polyhedron_Shift(Polyhedron *P, Vector *offset)
+{
+    Value tmp;
+    value_init(tmp);
+    for (int i = 0; i < P->NbConstraints; ++i) {
+	Inner_Product(P->Constraint[i]+1, offset->p, P->Dimension, &tmp);
+	value_subtract(P->Constraint[i][1+P->Dimension],
+		       P->Constraint[i][1+P->Dimension], tmp);
+    }
+    for (int i = 0; i < P->NbRays; ++i) {
+	if (value_notone_p(P->Ray[i][0]))
+	    continue;
+	if (value_zero_p(P->Ray[i][1+P->Dimension]))
+	    continue;
+	Vector_Combine(P->Ray[i]+1, offset->p, P->Ray[i]+1,
+		       P->Ray[i][0], P->Ray[i][1+P->Dimension], P->Dimension);
+    }
+    value_clear(tmp);
+}
+
+void gen_fun::shift(const vec_ZZ& offset)
+{
+    for (int i = 0; i < term.size(); ++i)
+	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
+	    term[i]->n.power[j] += offset;
+
+    Vector *v = Vector_Alloc(offset.length());
+    zz2values(offset, v->p);
+    Polyhedron_Shift(context, v);
+    Vector_Free(v);
 }
 
 static void print_power(vec_ZZ& c, vec_ZZ& p,
