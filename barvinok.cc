@@ -780,22 +780,47 @@ void counter::start(unsigned MaxRays)
 
 /* base for non-parametric counting */
 struct np_base : public polar_decomposer {
-    int current_vertex;
     Polyhedron *P;
     unsigned dim;
+    ZZ one;
 
     np_base(Polyhedron *P, unsigned dim) {
 	this->P = P;
 	this->dim = dim;
+	one = 1;
     }
+
+    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d) = 0;
+    virtual void handle_polar(Polyhedron *C, int s);
+    void start(unsigned MaxRays);
+
+private:
+    int current_vertex;
+    ZZ sign;
 };
+
+void np_base::handle_polar(Polyhedron *C, int s)
+{
+    assert(C->NbRays-1 == dim);
+    sign = s;
+    handle_polar(C, P->Ray[current_vertex]+1, sign, one);
+}
+
+void np_base::start(unsigned MaxRays)
+{
+    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
+	if (!value_pos_p(P->Ray[current_vertex][dim+1]))
+	    continue;
+
+	Polyhedron *C = supporting_cone(P, current_vertex);
+	decompose(C, MaxRays);
+    }
+}
 
 struct reducer : public np_base {
     vec_ZZ vertex;
     //vec_ZZ den;
-    ZZ sgn;
     ZZ num;
-    ZZ one;
     mpq_t tcount;
     mpz_t tn;
     mpz_t td;
@@ -806,10 +831,7 @@ struct reducer : public np_base {
 	mpq_init(tcount);
 	mpz_init(tn);
 	mpz_init(td);
-	one = 1;
     }
-
-    void start(unsigned MaxRays);
 
     ~reducer() {
 	mpq_clear(tcount);
@@ -817,7 +839,7 @@ struct reducer : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle_polar(Polyhedron *P, int sign);
+    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d);
     void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f) = 0;
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
@@ -944,13 +966,9 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     }
 }
 
-void reducer::handle_polar(Polyhedron *C, int s)
+void reducer::handle_polar(Polyhedron *C, Value *V, ZZ n, ZZ d)
 {
-    assert(C->NbRays-1 == dim);
-
-    sgn = s;
-
-    lattice_point(P->Ray[current_vertex]+1, C, vertex);
+    lattice_point(V, C, vertex);
 
     mat_ZZ den;
     den.SetDims(dim, dim);
@@ -959,15 +977,7 @@ void reducer::handle_polar(Polyhedron *C, int s)
     for (r = 0; r < dim; ++r)
 	values2zz(C->Ray[r]+1, den[r], dim);
 
-    reduce(sgn, one, vertex, den);
-}
-
-void reducer::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
-    }
+    reduce(n, d, vertex, den);
 }
 
 struct ireducer : public reducer {
@@ -1043,20 +1053,7 @@ struct gf_base {
     gf_base(np_base *npb, unsigned nparam) : base(npb) {
 	gf = new gen_fun(Polyhedron_Project(base->P, nparam));
     }
-    void start(unsigned MaxRays);
 };
-
-void gf_base::start(unsigned MaxRays)
-{
-    for (int i = 0; i < base->P->NbRays; ++i) {
-	if (!value_pos_p(base->P->Ray[i][base->dim+1]))
-	    continue;
-
-	Polyhedron *C = supporting_cone(base->P, i);
-	base->current_vertex = i;
-	base->decompose(C, MaxRays);
-    }
-}
 
 struct partial_ireducer : public ireducer, public gf_base {
     partial_ireducer(Polyhedron *P, unsigned nparam) : 
@@ -1066,10 +1063,6 @@ struct partial_ireducer : public ireducer, public gf_base {
     ~partial_ireducer() {
     }
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    /* we want to override the start method from reducer with the one from gf_base */
-    void start(unsigned MaxRays) {
-	gf_base::start(MaxRays);
-    }
 };
 
 void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
@@ -1091,10 +1084,6 @@ struct partial_reducer : public reducer, public gf_base {
     ~partial_reducer() {
     }
     virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    /* we want to override the start method from reducer with the one from gf_base */
-    void start(unsigned MaxRays) {
-	gf_base::start(MaxRays);
-    }
 
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
@@ -1188,8 +1177,7 @@ struct bf_base : public np_base {
 	mpz_clear(td);
     }
 
-    void start(unsigned MaxRays);
-    virtual void handle_polar(Polyhedron *P, int sign);
+    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d);
     int setup_factors(Polyhedron *P, mat_ZZ& factors, bfc_term_base* t, int s);
 
     bfc_term_base* find_bfc_term(bfc_vec& v, int *powers, int len);
@@ -1645,36 +1633,26 @@ int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle_polar(Polyhedron *C, int s)
+void bf_base::handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
     v.push_back(t);
 
-    assert(C->NbRays-1 == dim);
-
     t->cn.SetLength(1);
     t->cd.SetLength(1);
 
     t->terms.SetDims(1, dim);
-    lattice_point(P->Ray[current_vertex]+1, C, t->terms[0]);
+    lattice_point(vertex, C, t->terms[0]);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;
-    s = setup_factors(C, factors, t, s);
+    int s = setup_factors(C, factors, t, 1);
 
-    t->cn[0] = s;
-    t->cd[0] = 1;
+    t->cn[0] = s * n;
+    t->cd[0] = d;
 
     reduce(factors, v);
-}
-
-void bf_base::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
-    }
 }
 
 struct bfcounter_base : public bf_base {
@@ -1815,10 +1793,6 @@ struct partial_bfcounter : public bfcounter_base, public gf_base {
     ~partial_bfcounter() {
     }
     virtual void base(mat_ZZ& factors, bfc_vec& v);
-    /* we want to override the start method from bf_base with the one from gf_base */
-    void start(unsigned MaxRays) {
-	gf_base::start(MaxRays);
-    }
 };
 
 void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
