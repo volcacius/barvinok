@@ -20,6 +20,13 @@ struct gf_base {
     gf_base(np_base *npb, Polyhedron *context) : base(npb) {
 	gf = new gen_fun(context);
     }
+    virtual ~gf_base() {
+    };
+    static gf_base *create(Polyhedron *context, unsigned dim, unsigned nparam);
+
+    void start_gf(Polyhedron *P, unsigned MaxRays) {
+	base->start(P, MaxRays);
+    }
 };
 
 struct partial_ireducer : public ireducer, public gf_base {

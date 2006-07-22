@@ -3910,6 +3910,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Matrix *CP = NULL;
     Polyhedron *CA;
     unsigned nparam = C->Dimension;
+    gen_fun *gf;
 
     CA = align_context(C, P->Dimension, MaxRays);
     P = DomainIntersection(P, CA, MaxRays);
@@ -3929,23 +3930,20 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	P = remove_more_equalities(P, nparam, &CP, MaxRays);
     assert(P->NbEq == 0);
 
-#ifdef USE_INCREMENTAL_BF
-    partial_bfcounter red(Polyhedron_Project(P, nparam), P->Dimension, nparam);
-#elif defined USE_INCREMENTAL_DF
-    partial_ireducer red(Polyhedron_Project(P, nparam), P->Dimension, nparam);
-#else
-    partial_reducer red(Polyhedron_Project(P, nparam), P->Dimension, nparam);
-#endif
-    red.start(P, MaxRays);
+    gf_base *red;
+    red = gf_base::create(Polyhedron_Project(P, nparam), P->Dimension, nparam);
+    red->start_gf(P, MaxRays);
     Polyhedron_Free(P);
     if (CP) {
 	mat_ZZ map;
 	vec_ZZ offset;
 	split_param_compression(CP, map, offset);
-	red.gf->substitute(CP, map, offset);
+	red->gf->substitute(CP, map, offset);
 	Matrix_Free(CP);
     }
-    return red.gf;
+    gf = red->gf;
+    delete red;
+    return gf;
 }
 
 static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam, 

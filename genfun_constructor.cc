@@ -1,5 +1,18 @@
 #include "genfun_constructor.h"
 
+gf_base *gf_base::create(Polyhedron *context, unsigned dim, unsigned nparam)
+{
+    gf_base *red;
+#ifdef USE_INCREMENTAL_BF
+    red = new partial_bfcounter(context, dim, nparam);
+#elif defined USE_INCREMENTAL_DF
+    red = new partial_ireducer(context, dim, nparam);
+#else
+    red = new partial_reducer(context, dim, nparam);
+#endif
+    return red;
+}
+
 void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
 {
     gf->add(c, cd, num, den_f);
