@@ -23,14 +23,22 @@ libbarvinok_la_SOURCES = \
     evalue.c \
     genfun.cc \
     util.c \
+    bfcounter.cc \
+    bfcounter.h \
     conversion.cc \
     conversion.h \
     decomposer.cc \
     decomposer.h \
+    dpoly.cc \
+    dpoly.h \
+    genfun_constructor.cc \
+    genfun_constructor.h \
     lattice_point.cc \
     lattice_point.h \
     reduce_domain.c \
     reduce_domain.h \
+    reducer.cc \
+    reducer.h \
     mat_util.cc \
     mat_util.h \
     barvinok.cc

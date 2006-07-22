@@ -14,4 +14,5 @@ void values2zz(Value *p, vec_ZZ& v, int len);
 void zz2values(const vec_ZZ& v, Value *p);
 void matrix2zz(Matrix *M, mat_ZZ& m, unsigned nr, unsigned nc);
 Matrix *rays(Polyhedron *C);
-Matrix * rays2(Polyhedron *C);
+Matrix *rays2(Polyhedron *C);
+void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar);
