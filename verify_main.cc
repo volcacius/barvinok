@@ -329,6 +329,8 @@ int main(int argc,char *argv[]) {
   for(i=0;i<=(P->Dimension+1);i++) 
     value_clear(p[i]);
   free(p);
+  value_clear(Min);
+  value_clear(Max);
   value_clear(tmp);
   Free_ParamNames(params, C->Dimension);
   Domain_Free(P);
