@@ -34,9 +34,9 @@ static void lex_order_terms(struct short_rat* rat)
 	    vec_ZZ tmp = rat->n.power[m];
 	    rat->n.power[m] = rat->n.power[i];
 	    rat->n.power[i] = tmp;
-	    tmp = rat->n.coeff[m];
+	    QQ tmp_coeff = rat->n.coeff[m];
 	    rat->n.coeff[m] = rat->n.coeff[i];
-	    rat->n.coeff[i] = tmp;
+	    rat->n.coeff[i] = tmp_coeff;
 	}
     }
 }
@@ -44,32 +44,25 @@ static void lex_order_terms(struct short_rat* rat)
 void short_rat::add(short_rat *r)
 {
     for (int i = 0; i < r->n.power.NumRows(); ++i) {
-	int len = n.coeff.NumRows();
+	int len = n.coeff.length();
 	int j;
 	for (j = 0; j < len; ++j)
 	    if (r->n.power[i] == n.power[j])
 		break;
 	if (j < len) {
-	    ZZ g = GCD(r->n.coeff[i][1], n.coeff[j][1]);
-	    ZZ num = n.coeff[j][0] * (r->n.coeff[i][1] / g) +
-		       (n.coeff[j][1] / g) * r->n.coeff[i][0];
-	    ZZ d = n.coeff[j][1] / g * r->n.coeff[i][1];
-	    if (num != 0) {
-		g = GCD(num,d);
-		n.coeff[j][0] = num/g;
-		n.coeff[j][1] = d/g;
-	    } else {
+	    n.coeff[j] += r->n.coeff[i];
+	    if (n.coeff[j].n == 0) {
 		if (j < len-1) {
 		    n.power[j] = n.power[len-1];
 		    n.coeff[j] = n.coeff[len-1];
 		}
 		int dim = n.power.NumCols();
-		n.coeff.SetDims(len-1, 2);
+		n.coeff.SetLength(len-1);
 		n.power.SetDims(len-1, dim);
 	    }
 	} else {
 	    int dim = n.power.NumCols();
-	    n.coeff.SetDims(len+1, 2);
+	    n.coeff.SetLength(len+1);
 	    n.power.SetDims(len+1, dim);
 	    n.coeff[len] = r->n.coeff[i];
 	    n.power[len] = r->n.power[i];
@@ -82,13 +75,13 @@ bool short_rat::reduced()
     int dim = n.power.NumCols();
     lex_order_terms(this);
     if (n.power.NumRows() % 2 == 0) {
-	if (n.coeff[0][0] == -n.coeff[1][0] &&
-	    n.coeff[0][1] == n.coeff[1][1]) {
+	if (n.coeff[0].n == -n.coeff[1].n &&
+	    n.coeff[0].d == n.coeff[1].d) {
 	    vec_ZZ step = n.power[1] - n.power[0];
 	    int k;
 	    for (k = 1; k < n.power.NumRows()/2; ++k) {
-		if (n.coeff[2*k][0] != -n.coeff[2*k+1][0] ||
-		    n.coeff[2*k][1] != n.coeff[2*k+1][1])
+		if (n.coeff[2*k].n != -n.coeff[2*k+1].n ||
+		    n.coeff[2*k].d != n.coeff[2*k+1].d)
 		    break;
 		if (step != n.power[2*k+1] - n.power[2*k])
 		    break;
@@ -105,7 +98,7 @@ bool short_rat::reduced()
 			n.coeff[k] = n.coeff[2*k];
 			n.power[k] = n.power[2*k];
 		    }
-		    n.coeff.SetDims(k, 2);
+		    n.coeff.SetLength(k);
 		    n.power.SetDims(k, dim);
 		    return true;
 		}
@@ -115,17 +108,16 @@ bool short_rat::reduced()
     return false;
 }
 
-void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
-		  const mat_ZZ& den)
+void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
 {
-    if (cn == 0)
+    if (c.n == 0)
 	return;
 
     short_rat * r = new short_rat;
-    r->n.coeff.SetDims(1, 2);
-    ZZ g = GCD(cn, cd);
-    r->n.coeff[0][0] = cn/g;
-    r->n.coeff[0][1] = cd/g;
+    r->n.coeff.SetLength(1);
+    ZZ g = GCD(c.n, c.d);
+    r->n.coeff[0].n = c.n/g;
+    r->n.coeff[0].d = c.d/g;
     r->n.power.SetDims(1, num.length());
     r->n.power[0] = num;
     r->d.power = den;
@@ -138,7 +130,7 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
 		break;
 	if (r->d.power[i][j] < 0) {
 	    r->d.power[i] = -r->d.power[i];
-	    r->n.coeff[0][0] = -r->n.coeff[0][0];
+	    r->n.coeff[0].n = -r->n.coeff[0].n;
 	    r->n.power[0] += r->d.power[i];
 	}
     }
@@ -149,7 +141,7 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     for (int i = 0; i < term.size(); ++i)
 	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {
 	    term[i]->add(r);
-	    if (term[i]->n.coeff.NumRows() == 0) {
+	    if (term[i]->n.coeff.length() == 0) {
 		delete term[i];
 		if (i != term.size()-1)
 		    term[i] = term[term.size()-1];
@@ -173,14 +165,14 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     term.push_back(r);
 }
 
-void gen_fun::add(const ZZ& cn, const ZZ& cd, const gen_fun *gf)
+void gen_fun::add(const QQ& c, const gen_fun *gf)
 {
-    ZZ n, d;
+    QQ p;
     for (int i = 0; i < gf->term.size(); ++i) {
 	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
-	    n = cn * gf->term[i]->n.coeff[j][0];
-	    d = cd * gf->term[i]->n.coeff[j][1];
-	    add(n, d, gf->term[i]->n.power[j], gf->term[i]->d.power);
+	    p = c;
+	    p *= gf->term[i]->n.coeff[j];
+	    add(p, gf->term[i]->n.power[j], gf->term[i]->d.power);
 	}
     }
 }
@@ -266,9 +258,9 @@ gen_fun *gen_fun::Hadamard_product(gen_fun *gf, unsigned MaxRays)
 
 		    gen_fun *t = barvinok_series(P, U, MaxRays);
 
-		    ZZ cn = term[i]->n.coeff[j][0] * gf->term[i2]->n.coeff[j2][0];
-		    ZZ cd = term[i]->n.coeff[j][1] * gf->term[i2]->n.coeff[j2][1];
-		    sum->add(cn, cd, t);
+		    QQ c = term[i]->n.coeff[j];
+		    c *= gf->term[i2]->n.coeff[j2];
+		    sum->add(c, t);
 		    delete t;
 
 		    Polyhedron_Free(P);
@@ -282,13 +274,11 @@ gen_fun *gen_fun::Hadamard_product(gen_fun *gf, unsigned MaxRays)
 
 void gen_fun::add_union(gen_fun *gf, unsigned MaxRays)
 {
-    ZZ one, mone;
-    one = 1;
-    mone = -1;
+    QQ one(1, 1), mone(-1, 1);
 
     gen_fun *hp = Hadamard_product(gf, MaxRays);
-    add(one, one, gf);
-    add(mone, one, hp);
+    add(one, gf);
+    add(mone, hp);
     delete hp;
 }
 
@@ -324,8 +314,7 @@ void gen_fun::shift(const vec_ZZ& offset)
     Vector_Free(v);
 }
 
-static void print_power(vec_ZZ& c, vec_ZZ& p,
-			unsigned int nparam, char **param_name)
+static void print_power(QQ& c, vec_ZZ& p, unsigned int nparam, char **param_name)
 {
     bool first = true;
 
@@ -333,12 +322,12 @@ static void print_power(vec_ZZ& c, vec_ZZ& p,
 	if (p[i] == 0)
 	    continue;
 	if (first) {
-	    if (c[0] == -1 && c[1] == 1)
+	    if (c.n == -1 && c.d == 1)
 		cout << "-";
-	    else if (c[0] != 1 || c[1] != 1) {
-		cout << c[0];
-		if (c[1] != 1)
-		    cout << " / " << c[1];
+	    else if (c.n != 1 || c.d != 1) {
+		cout << c.n;
+		if (c.d != 1)
+		    cout << " / " << c.d;
 		cout << "*";
 	    }
 	    first = false;
@@ -356,24 +345,21 @@ static void print_power(vec_ZZ& c, vec_ZZ& p,
 	    cout << "^" << p[i];
     }
     if (first) {
-	cout << c[0];
-	if (c[1] != 1)
-	    cout << " / " << c[1];
+	cout << c.n;
+	if (c.d != 1)
+	    cout << " / " << c.d;
     }
 }
 
 void gen_fun::print(unsigned int nparam, char **param_name) const
 {
-    vec_ZZ mone;
-    mone.SetLength(2);
-    mone[0] = -1;
-    mone[1] = 1;
+    QQ mone(-1, 1);
     for (int i = 0; i < term.size(); ++i) {
 	if (i != 0)
 	    cout << " + ";
 	cout << "(";
-	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
-	    if (j != 0 && term[i]->n.coeff[j][0] > 0)
+	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
+	    if (j != 0 && term[i]->n.coeff[j].n > 0)
 		cout << "+";
 	    print_power(term[i]->n.coeff[j], term[i]->n.power[j],
 			nparam, param_name);
@@ -383,8 +369,7 @@ void gen_fun::print(unsigned int nparam, char **param_name) const
 	    if (j != 0)
 		cout << " * ";
 	    cout << "(1";
-	    print_power(mone, term[i]->d.power[j],
-			nparam, param_name);
+	    print_power(mone, term[i]->d.power[j], nparam, param_name);
 	    cout << ")";
 	}
 	cout << ")";
@@ -404,7 +389,7 @@ gen_fun::operator evalue *() const
 	mat_ZZ& d = term[i]->d.power;
 	Polyhedron *U = context ? context : Universe_Polyhedron(nparam);
 
-	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
+	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
 	    for (int r = 0; r < nparam; ++r) {
 		value_set_si(C->p[r][0], 0);
 		for (int c = 0; c < nvar; ++c) {
@@ -427,8 +412,8 @@ gen_fun::operator evalue *() const
 		free(E);
 		continue;
 	    }
-	    zz2value(term[i]->n.coeff[j][0], factor.x.n);
-	    zz2value(term[i]->n.coeff[j][1], factor.d);
+	    zz2value(term[i]->n.coeff[j].n, factor.x.n);
+	    zz2value(term[i]->n.coeff[j].d, factor.d);
 	    emul(&factor, E);
 	    /*
 	    Matrix_Print(stdout, P_VALUE_FMT, C);
@@ -474,7 +459,7 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + 1); 
 	mat_ZZ& d = term[i]->d.power;
 
-	for (int j = 0; j < term[i]->n.coeff.NumRows(); ++j) {
+	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
 	    for (int r = 0; r < nparam; ++r) {
 		value_set_si(C->p[r][0], 0);
 		for (int c = 0; c < nvar; ++c) {
@@ -497,8 +482,8 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	    Polyhedron_Free(P);
 	    if (value_zero_p(tmp))
 		continue;
-	    zz2value(term[i]->n.coeff[j][0], part.x.n);
-	    zz2value(term[i]->n.coeff[j][1], part.d);
+	    zz2value(term[i]->n.coeff[j].n, part.x.n);
+	    zz2value(term[i]->n.coeff[j].d, part.d);
 	    value_multiply(part.x.n, part.x.n, tmp);
 	    eadd(&part, &sum);
 	}

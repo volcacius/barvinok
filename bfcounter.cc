@@ -43,38 +43,36 @@ void bf_base::add_term(bfc_term_base *t, vec_ZZ& num)
 bfc_term_base* bfcounter_base::new_bf_term(int len)
 {
     bfc_term* t = new bfc_term(len);
-    t->cn.SetLength(0);
-    t->cd.SetLength(0);
+    t->c.SetLength(0);
     return t;
 }
 
 void bfcounter_base::set_factor(bfc_term_base *t, int k, int change)
 {
     bfc_term* bfct = static_cast<bfc_term *>(t);
-    cn = bfct->cn[k];
+    c = bfct->c[k];
     if (change)
-	cn = -cn;
-    cd = bfct->cd[k];
+	c.n = -c.n;
 }
 
 void bfcounter_base::set_factor(bfc_term_base *t, int k, mpq_t &f, int change)
 {
     bfc_term* bfct = static_cast<bfc_term *>(t);
-    value2zz(mpq_numref(f), cn);
-    value2zz(mpq_denref(f), cd);
-    cn *= bfct->cn[k];
+    value2zz(mpq_numref(f), c.n);
+    value2zz(mpq_denref(f), c.d);
+    c *= bfct->c[k];
     if (change)
-	cn = -cn;
-    cd *= bfct->cd[k];
+	c.n = -c.n;
 }
 
-void bfcounter_base::set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change)
+void bfcounter_base::set_factor(bfc_term_base *t, int k, const QQ& c_factor,
+				int change)
 {
     bfc_term* bfct = static_cast<bfc_term *>(t);
-    cn = bfct->cn[k] * n;
+    c = bfct->c[k];
+    c *= c_factor;
     if (change)
-	cn = -cn;
-    cd = bfct->cd[k] * d;
+	c.n = -c.n;
 }
 
 void bfcounter_base::insert_term(bfc_term_base *t, int i)
@@ -82,24 +80,17 @@ void bfcounter_base::insert_term(bfc_term_base *t, int i)
     bfc_term* bfct = static_cast<bfc_term *>(t);
     int len = t->terms.NumRows()-1;	// already increased by one
 
-    bfct->cn.SetLength(len+1);
-    bfct->cd.SetLength(len+1);
+    bfct->c.SetLength(len+1);
     for (int j = len; j > i; --j) {
-	bfct->cn[j] = bfct->cn[j-1];
-	bfct->cd[j] = bfct->cd[j-1];
+	bfct->c[j] = bfct->c[j-1];
 	t->terms[j] = t->terms[j-1];
     }
-    bfct->cn[i] = cn;
-    bfct->cd[i] = cd;
+    bfct->c[i] = c;
 }
 
 void bfcounter_base::update_term(bfc_term_base *t, int i)
 {
     bfc_term* bfct = static_cast<bfc_term *>(t);
 
-    ZZ g = GCD(bfct->cd[i], cd);
-    ZZ n = cn * bfct->cd[i]/g + bfct->cn[i] * cd/g;
-    ZZ d = bfct->cd[i] * cd / g;
-    bfct->cn[i] = n;
-    bfct->cd[i] = d;
+    bfct->c[i] += c;
 }

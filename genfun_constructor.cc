@@ -13,9 +13,9 @@ gf_base *gf_base::create(Polyhedron *context, unsigned dim, unsigned nparam)
     return red;
 }
 
-void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+void partial_ireducer::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
-    gf->add(c, cd, num, den_f);
+    gf->add(c, num, den_f);
 }
 
 void partial_reducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
@@ -44,9 +44,9 @@ void partial_reducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 	num_p[k-nvar] = num[k];
 }
 
-void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+void partial_reducer::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
-    gf->add(c, cd, num, den_f);
+    gf->add(c, num, den_f);
 }
 
 void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
@@ -66,7 +66,7 @@ void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 		den[p++] = factors[j];
 	}
 	for (int j = 0; j < v[i]->terms.NumRows(); ++j)
-	    gf->add(bfct->cn[j], bfct->cd[j], v[i]->terms[j], den);
+	    gf->add(bfct->c[j], v[i]->terms[j], den);
 	delete v[i];
     }
 }

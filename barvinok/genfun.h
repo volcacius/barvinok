@@ -8,6 +8,7 @@ extern "C" {
 #include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
 }
+#include <barvinok/NTL_QQ.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -17,7 +18,7 @@ struct short_rat {
     struct __short_rat_n {
 	/* rows: terms in numerator */
 	/* coeff has two columns: the numerator and the denominator */
-	mat_ZZ	coeff;
+	vec_QQ	coeff;
 	mat_ZZ	power;
     } n;
     struct __short_rat_d {
@@ -32,10 +33,9 @@ struct gen_fun {
     std::vector< short_rat * > term;
     Polyhedron *context;
 
-    void add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
-	     const mat_ZZ& den);
+    void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
     /* add cn/cd times gf */
-    void add(const ZZ& cn, const ZZ& cd, const gen_fun *gf);
+    void add(const QQ& c, const gen_fun *gf);
     void substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset);
     gen_fun *Hadamard_product(gen_fun *gf, unsigned MaxRays);
     void add_union(gen_fun *gf, unsigned MaxRays);
@@ -45,10 +45,9 @@ struct gen_fun {
     void coefficient(Value* params, Value* c) const;
 
     gen_fun(const gen_fun *gf) {
-	ZZ one;
-	one = 1;
+	QQ one(1, 1);
 	context = Polyhedron_Copy(gf->context);
-	add(one, one, gf);
+	add(one, gf);
     }
     gen_fun(Polyhedron *C = NULL) : context(C) {}
     ~gen_fun() {

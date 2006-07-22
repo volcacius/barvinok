@@ -8,8 +8,8 @@ using std::vector;
 void np_base::handle_polar(Polyhedron *C, int s)
 {
     assert(C->NbRays-1 == dim);
-    sign = s;
-    handle_polar(C, current_vertex, sign, one);
+    factor.n = s;
+    handle_polar(C, current_vertex, factor);
 }
 
 void np_base::start(Polyhedron *P, unsigned MaxRays)
@@ -80,12 +80,12 @@ void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	sign = -sign;
 }
 
-void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
+void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
 
     if (num.length() == lower) {
-	base(c, cd, num, den_f);
+	base(c, num, den_f);
 	return;
     }
     assert(num.length() > 1);
@@ -100,7 +100,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     vec_ZZ den_p;
     den_p.SetLength(len);
 
-    normalize(c, num_s, num_p, den_s, den_p, den_r);
+    normalize(c.n, num_s, num_p, den_s, den_p, den_r);
 
     int only_param = 0;	    // k-r-s from text
     int no_param = 0;	    // r from text
@@ -111,7 +111,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 	    ++only_param;
     }
     if (no_param == 0) {
-	reduce(c, cd, num_p, den_r);
+	reduce(c, num_p, den_r);
     } else {
 	int k, l;
 	mat_ZZ pden;
@@ -137,15 +137,14 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 	    mpq_set_si(tcount, 0, 1);
 	    n.div(D, tcount, one);
 
-	    ZZ qn, qd;
-	    value2zz(mpq_numref(tcount), qn);
-	    value2zz(mpq_denref(tcount), qd);
+	    QQ q;
+	    value2zz(mpq_numref(tcount), q.n);
+	    value2zz(mpq_denref(tcount), q.d);
 
-	    qn *= c;
-	    qd *= cd;
+	    q *= c;
 
-	    if (qn != 0)
-		reduce(qn, qd, num_p, pden);
+	    if (q.n != 0)
+		reduce(q, num_p, pden);
 	} else {
 	    dpoly_r * r = 0;
 
@@ -171,7 +170,8 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 
 	    dpoly_r *rc = r->div(D);
 
-	    rc->denom *= cd;
+	    QQ factor;
+	    factor.d = rc->denom * c.d;
 
 	    int common = pden.NumRows();
 	    vector< dpoly_r_term * >& final = rc->c[rc->len-1];
@@ -190,8 +190,8 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
 			pden[rows+l] = den_r[k];
 		    rows += n;
 		}
-		final[j]->coeff *= c;
-		reduce(final[j]->coeff, rc->denom, num_p, pden);
+		factor.n = final[j]->coeff *= c.n;
+		reduce(factor, num_p, pden);
 	    }
 
 	    delete rc;
@@ -200,7 +200,7 @@ void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
     }
 }
 
-void reducer::handle_polar(Polyhedron *C, Value *V, ZZ n, ZZ d)
+void reducer::handle_polar(Polyhedron *C, Value *V, QQ c)
 {
     lattice_point(V, C, vertex);
 
@@ -211,7 +211,7 @@ void reducer::handle_polar(Polyhedron *C, Value *V, ZZ n, ZZ d)
     for (r = 0; r < dim; ++r)
 	values2zz(C->Ray[r]+1, den[r], dim);
 
-    reduce(n, d, vertex, den);
+    reduce(c, vertex, den);
 }
 
 void ireducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,

@@ -3,6 +3,7 @@
 extern "C" {
 #include <polylib/polylibgmp.h>
 }
+#include <barvinok/NTL_QQ.h>
 #include "reducer.h"
 
 struct bfc_term_base {
@@ -20,8 +21,7 @@ struct bfc_term_base {
 };
 
 struct bfc_term : public bfc_term_base {
-    vec_ZZ   cn;
-    vec_ZZ   cd;
+    vec_QQ   c;
 
     bfc_term(int len) : bfc_term_base(len) {}
 };
@@ -50,7 +50,7 @@ struct bf_base : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d);
+    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c);
     int setup_factors(Polyhedron *P, mat_ZZ& factors, bfc_term_base* t, int s);
 
     bfc_term_base* find_bfc_term(bfc_vec& v, int *powers, int len);
@@ -63,7 +63,7 @@ struct bf_base : public np_base {
     virtual bfc_term_base* new_bf_term(int len) = 0;
     virtual void set_factor(bfc_term_base *t, int k, int change) = 0;
     virtual void set_factor(bfc_term_base *t, int k, mpq_t &f, int change) = 0;
-    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change) = 0;
+    virtual void set_factor(bfc_term_base *t, int k, const QQ& c, int change) = 0;
     virtual void update_term(bfc_term_base *t, int i) = 0;
     virtual void insert_term(bfc_term_base *t, int i) = 0;
     virtual bool constant_vertex(int dim) = 0;
@@ -72,8 +72,7 @@ struct bf_base : public np_base {
 };
 
 struct bfcounter_base : public bf_base {
-    ZZ cn;
-    ZZ cd;
+    QQ c;
 
     bfcounter_base(unsigned dim) : bf_base(dim) {
     }
@@ -82,7 +81,7 @@ struct bfcounter_base : public bf_base {
 
     virtual void set_factor(bfc_term_base *t, int k, int change);
     virtual void set_factor(bfc_term_base *t, int k, mpq_t &f, int change);
-    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change);
+    virtual void set_factor(bfc_term_base *t, int k, const QQ& c_factor, int change);
     virtual void insert_term(bfc_term_base *t, int i);
     virtual void update_term(bfc_term_base *t, int i);
 

@@ -2,6 +2,7 @@
 #define REDUCER_H
 
 #include <NTL/mat_ZZ.h>
+#include <barvinok/NTL_QQ.h>
 #include "decomposer.h"
 #include "dpoly.h"
 
@@ -12,14 +13,16 @@ using namespace NTL;
 /* base for non-parametric counting */
 struct np_base : public polar_decomposer {
     unsigned dim;
+    QQ factor;
     ZZ one;
 
     np_base(unsigned dim) {
 	this->dim = dim;
+	factor.d = 1;
 	one = 1;
     }
 
-    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d) = 0;
+    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c) = 0;
     virtual void handle_polar(Polyhedron *C, int s);
     void start(Polyhedron *P, unsigned MaxRays);
     virtual void init(Polyhedron *P) {
@@ -52,9 +55,9 @@ struct reducer : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d);
-    void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
-    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f) = 0;
+    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c);
+    void reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f);
+    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
 };

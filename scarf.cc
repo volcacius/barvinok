@@ -808,11 +808,11 @@ static void scarf(Polyhedron *P, unsigned exist, unsigned nparam, unsigned MaxRa
 }
 
 struct scarf_collector_gf : public scarf_collector {
-    ZZ cn, cd;
+    QQ c;
     gen_fun *gf;
 
     scarf_collector_gf() {
-	cd = 1;
+	c.d = 1;
     }
     virtual void add(Polyhedron *P, int sign, Polyhedron *C, unsigned MaxRays);
 };
@@ -824,9 +824,9 @@ void scarf_collector_gf::add(Polyhedron *P, int sign, Polyhedron *C,
 	gf = barvinok_series(P, C, MaxRays);
     else {
 	gen_fun *gf2;
-	cn = sign;
+	c.n = sign;
 	gf2 = barvinok_series(P, C, MaxRays);
-	gf->add(cn, cd, gf2);
+	gf->add(c, gf2);
 	delete gf2;
     }
 }

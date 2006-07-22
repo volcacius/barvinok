@@ -433,12 +433,12 @@ struct counter : public np_base {
 	mpq_clear(count);
     }
 
-    virtual void handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d);
+    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c);
 };
 
 struct OrthogonalException {} Orthogonal;
 
-void counter::handle_polar(Polyhedron *C, Value *V, ZZ cn, ZZ cd)
+void counter::handle_polar(Polyhedron *C, Value *V, QQ c)
 {
     int r = 0;
     add_rays(rays, C, &r);
@@ -447,9 +447,9 @@ void counter::handle_polar(Polyhedron *C, Value *V, ZZ cn, ZZ cd)
 	    throw Orthogonal;
     }
 
-    assert(cd == 1);
-    assert(cn == 1 || cn == -1);
-    sign = cn;
+    assert(c.d == 1);
+    assert(c.n == 1 || c.n == -1);
+    sign = c.n;
 
     lattice_point(V, C, vertex);
     num = vertex * lambda;
@@ -489,10 +489,10 @@ struct icounter : public ireducer {
     ~icounter() {
 	mpq_clear(count);
     }
-    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
+    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
 };
 
-void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
+void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
     int r;
     unsigned len = den_f.NumRows();  // number of factors in den
@@ -501,7 +501,7 @@ void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     ZZ num_s = num[0];
     for (r = 0; r < len; ++r)
 	den_s[r] = den_f[r][0];
-    normalize(c, num_s, den_s);
+    normalize(c.n, num_s, den_s);
 
     dpoly n(len, num_s);
     dpoly D(len, den_s[0], 1);
@@ -511,8 +511,8 @@ void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
     }
     mpq_set_si(tcount, 0, 1);
     n.div(D, tcount, one);
-    zz2value(c, tn);
-    zz2value(cd, td);
+    zz2value(c.n, tn);
+    zz2value(c.d, td);
     mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
     mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
     mpq_canonicalize(tcount);
@@ -555,8 +555,7 @@ static void print_bfc_terms(mat_ZZ& factors, bfc_vec& v)
 	cerr << "terms" << endl;
 	cerr << v[i]->terms << endl;
 	bfc_term* bfct = static_cast<bfc_term *>(v[i]);
-	cerr << bfct->cn << endl;
-	cerr << bfct->cd << endl;
+	cerr << bfct->c << endl;
     }
 }
 
@@ -861,6 +860,8 @@ void bf_reducer::reduce()
 
 		    dpoly_r *rc = r->div(D);
 		    delete r;
+		    QQ factor;
+		    factor.d = rc->denom;
 
 		    if (bf->constant_vertex(d)) {
 			vector< dpoly_r_term * >& final = rc->c[rc->len-1];
@@ -872,7 +873,8 @@ void bf_reducer::reduce()
 			    update_powers(final[k]->powers, rc->dim);
 
 			    bfc_term_base * t = bf->find_bfc_term(vn, npowers, nnf);
-			    bf->set_factor(v[i], j, final[k]->coeff, rc->denom, l_changes % 2);
+			    factor.n = final[k]->coeff;
+			    bf->set_factor(v[i], j, factor, l_changes % 2);
 			    bf->add_term(t, v[i]->terms[j], l_extra_num);
 			}
 		    } else
@@ -930,14 +932,13 @@ int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d)
+void bf_base::handle_polar(Polyhedron *C, Value *vertex, QQ c)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
     v.push_back(t);
 
-    t->cn.SetLength(1);
-    t->cd.SetLength(1);
+    t->c.SetLength(1);
 
     t->terms.SetDims(1, dim);
     lattice_point(vertex, C, t->terms[0]);
@@ -946,8 +947,8 @@ void bf_base::handle_polar(Polyhedron *C, Value *vertex, ZZ n, ZZ d)
     mat_ZZ   factors;
     int s = setup_factors(C, factors, t, 1);
 
-    t->cn[0] = s * n;
-    t->cd[0] = d;
+    t->c[0].n = s * c.n;
+    t->c[0].d = c.d;
 
     reduce(factors, v);
 }
@@ -998,9 +999,9 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 	    mpq_set_si(tcount, 0, 1);
 	    n.div(D, tcount, one);
 	    if (total_power % 2)
-		bfct->cn[k] = -bfct->cn[k];
-	    zz2value(bfct->cn[k], tn);
-	    zz2value(bfct->cd[k], td);
+		bfct->c[k].n = -bfct->c[k].n;
+	    zz2value(bfct->c[k].n, tn);
+	    zz2value(bfct->c[k].d, td);
 
 	    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
 	    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
@@ -1896,7 +1897,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 	emul(&f, factor);
     }
 
-    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change) {
+    virtual void set_factor(bfc_term_base *t, int k, const QQ& c, int change) {
 	bfe_term* bfet = static_cast<bfe_term *>(t);
 
 	factor = new evalue;
@@ -1904,10 +1905,10 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 	evalue f;
 	value_init(f.d);
 	value_init(f.x.n);
-	zz2value(n, f.x.n);
+	zz2value(c.n, f.x.n);
 	if (change)
 	    value_oppose(f.x.n, f.x.n);
-	zz2value(d, f.d);
+	zz2value(c.d, f.d);
 
 	value_init(factor->d);
 	evalue_copy(factor, bfet->factors[k]);
@@ -4030,7 +4031,7 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
     red.init(conv);
     for (int i = 0; i < gf->term.size(); ++i) {
 	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
-	    red.reduce(gf->term[i]->n.coeff[j][0], gf->term[i]->n.coeff[j][1],
+	    red.reduce(gf->term[i]->n.coeff[j],
 		       gf->term[i]->n.power[j], gf->term[i]->d.power);
 	}
     }
