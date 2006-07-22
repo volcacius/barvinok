@@ -20,6 +20,7 @@ libbarvinok_la_SOURCES = \
     barvinok/genfun.h \
     barvinok/util.h \
     barvinok/barvinok.h \
+    NTL_QQ.cc \
     evalue.c \
     genfun.cc \
     util.c \
