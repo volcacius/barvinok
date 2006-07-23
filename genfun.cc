@@ -314,7 +314,8 @@ void gen_fun::shift(const vec_ZZ& offset)
     Vector_Free(v);
 }
 
-static void print_power(QQ& c, vec_ZZ& p, unsigned int nparam, char **param_name)
+static void print_power(std::ostream& os, QQ& c, vec_ZZ& p, 
+			unsigned int nparam, char **param_name)
 {
     bool first = true;
 
@@ -323,56 +324,56 @@ static void print_power(QQ& c, vec_ZZ& p, unsigned int nparam, char **param_name
 	    continue;
 	if (first) {
 	    if (c.n == -1 && c.d == 1)
-		cout << "-";
+		os << "-";
 	    else if (c.n != 1 || c.d != 1) {
-		cout << c.n;
+		os << c.n;
 		if (c.d != 1)
-		    cout << " / " << c.d;
-		cout << "*";
+		    os << " / " << c.d;
+		os << "*";
 	    }
 	    first = false;
 	} else
-	    cout << "*";
+	    os << "*";
 	if (i < nparam)
-	    cout << param_name[i];
+	    os << param_name[i];
 	else
-	    cout << "x" << i;
+	    os << "x" << i;
 	if (p[i] == 1)
 	    continue;
 	if (p[i] < 0)
-	    cout << "^(" << p[i] << ")";
+	    os << "^(" << p[i] << ")";
 	else
-	    cout << "^" << p[i];
+	    os << "^" << p[i];
     }
     if (first) {
-	cout << c.n;
+	os << c.n;
 	if (c.d != 1)
-	    cout << " / " << c.d;
+	    os << " / " << c.d;
     }
 }
 
-void gen_fun::print(unsigned int nparam, char **param_name) const
+void gen_fun::print(std::ostream& os, unsigned int nparam, char **param_name) const
 {
     QQ mone(-1, 1);
     for (int i = 0; i < term.size(); ++i) {
 	if (i != 0)
-	    cout << " + ";
-	cout << "(";
+	    os << " + ";
+	os << "(";
 	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
 	    if (j != 0 && term[i]->n.coeff[j].n > 0)
-		cout << "+";
-	    print_power(term[i]->n.coeff[j], term[i]->n.power[j],
+		os << "+";
+	    print_power(os, term[i]->n.coeff[j], term[i]->n.power[j],
 			nparam, param_name);
 	}
-	cout << ")/(";
+	os << ")/(";
 	for (int j = 0; j < term[i]->d.power.NumRows(); ++j) {
 	    if (j != 0)
-		cout << " * ";
-	    cout << "(1";
-	    print_power(mone, term[i]->d.power[j], nparam, param_name);
-	    cout << ")";
+		os << " * ";
+	    os << "(1";
+	    print_power(os, mone, term[i]->d.power[j], nparam, param_name);
+	    os << ")";
 	}
-	cout << ")";
+	os << ")";
     }
 }
 

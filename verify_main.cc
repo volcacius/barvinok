@@ -267,7 +267,7 @@ int main(int argc,char *argv[]) {
 	evalue *EP;
 	gf = barvinok_series(P, C, MAXRAYS);
 	if (verbose) {
-	    gf->print(C->Dimension, params);
+	    gf->print(std::cout, C->Dimension, params);
 	    puts("");
 	}
 	if (function) {

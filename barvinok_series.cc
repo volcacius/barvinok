@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
     gf = barvinok_series(A, C, MAXRAYS);
-    gf->print(C->Dimension, param_name);
+    gf->print(std::cout, C->Dimension, param_name);
     puts("");
     if (function) {
 	EP = *gf;

@@ -230,7 +230,7 @@ int main(int argc, char **argv)
 	assert(scarf);
 	gf = barvinok_enumerate_scarf_series(A, exist, nparam, MAXRAYS);
 	if (print_solution) {
-	    gf->print(nparam, param_name);
+	    gf->print(std::cout, nparam, param_name);
 	    puts("");
 	}
 	delete gf;

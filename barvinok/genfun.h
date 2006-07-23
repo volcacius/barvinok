@@ -2,6 +2,7 @@
 #define GENFUN_H
 
 #include <vector>
+#include <iostream>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 extern "C" {
@@ -40,7 +41,7 @@ struct gen_fun {
     gen_fun *Hadamard_product(gen_fun *gf, unsigned MaxRays);
     void add_union(gen_fun *gf, unsigned MaxRays);
     void shift(const vec_ZZ& offset);
-    void print(unsigned int nparam, char **param_name) const;
+    void print(std::ostream& os, unsigned int nparam, char **param_name) const;
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
 
