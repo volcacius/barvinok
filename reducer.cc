@@ -8,20 +8,21 @@ using std::vector;
 void np_base::handle_polar(Polyhedron *C, int s)
 {
     assert(C->NbRays-1 == dim);
-    factor.n = s;
+    factor.n *= s;
     handle_polar(C, current_vertex, factor);
+    factor.n *= s;
 }
 
 void np_base::start(Polyhedron *P, unsigned MaxRays)
 {
+    QQ factor(1, 1);
     init(P);
     for (int i = 0; i < P->NbRays; ++i) {
 	if (!value_pos_p(P->Ray[i][dim+1]))
 	    continue;
 
-	current_vertex = P->Ray[i]+1;
 	Polyhedron *C = supporting_cone(P, i);
-	decompose(C, MaxRays);
+	do_vertex_cone(factor, C, P->Ray[i]+1, MaxRays);
     }
 }
 

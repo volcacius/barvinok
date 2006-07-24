@@ -13,24 +13,28 @@ using namespace NTL;
 /* base for non-parametric counting */
 struct np_base : public polar_decomposer {
     unsigned dim;
-    QQ factor;
     ZZ one;
 
     np_base(unsigned dim) {
 	this->dim = dim;
-	factor.d = 1;
 	one = 1;
     }
 
     virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c) = 0;
     virtual void handle_polar(Polyhedron *C, int s);
     void start(Polyhedron *P, unsigned MaxRays);
+    void do_vertex_cone(const QQ& factor, Polyhedron *Cone, 
+			Value *vertex, unsigned MaxRays) {
+	current_vertex = vertex;
+	this->factor = factor;
+	decompose(Cone, MaxRays);
+    }
     virtual void init(Polyhedron *P) {
     }
 
 private:
+    QQ factor;
     Value *current_vertex;
-    ZZ sign;
 };
 
 struct reducer : public np_base {
