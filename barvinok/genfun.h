@@ -44,6 +44,7 @@ struct gen_fun {
     void print(std::ostream& os, unsigned int nparam, char **param_name) const;
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
+    gen_fun *summate(int nvar) const;
 
     gen_fun(const gen_fun *gf) {
 	QQ one(1, 1);

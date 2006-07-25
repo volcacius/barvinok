@@ -669,3 +669,20 @@ void gen_fun::coefficient(Value* params, Value* c) const
     value_clear(sum.d);
     value_clear(sum.x.n);
 }
+
+gen_fun *gen_fun::summate(int nvar) const
+{
+    int dim = context->Dimension;
+    int nparam = dim - nvar;
+
+#ifdef USE_INCREMENTAL_DF
+    partial_ireducer red(Polyhedron_Project(context, nparam), dim, nparam);
+#else
+    partial_reducer red(Polyhedron_Project(context, nparam), dim, nparam);
+#endif
+    red.init(context);
+    for (int i = 0; i < term.size(); ++i)
+	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
+	    red.reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
+    return red.gf;
+}
