@@ -221,7 +221,7 @@ void gen_fun::substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset)
     }
 }
 
-gen_fun *gen_fun::Hadamard_product(gen_fun *gf, unsigned MaxRays)
+gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 {
     Polyhedron *C = DomainIntersection(context, gf->context, MaxRays);
     Polyhedron *U = Universe_Polyhedron(C->Dimension);
