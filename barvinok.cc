@@ -3621,7 +3621,7 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
 					 unsigned MaxRays)
 {
     Polyhedron *conv, *D2;
-    gen_fun *gf = NULL;
+    gen_fun *gf = NULL, *gf2;
     unsigned nparam = C->Dimension;
     ZZ one, mone;
     one = 1;
@@ -3647,24 +3647,15 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
      * but the reducer classes currently expect a polyhedron in
      * the combined space
      */
-    conv = DomainConvex(D2, MaxRays);
-#ifdef USE_INCREMENTAL_DF
-    partial_ireducer red(Polyhedron_Project(conv, nparam), D2->Dimension, nparam);
-#else
-    partial_reducer red(Polyhedron_Project(conv, nparam), D2->Dimension, nparam);
-#endif
-    red.init(conv);
-    for (int i = 0; i < gf->term.size(); ++i) {
-	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
-	    red.reduce(gf->term[i]->n.coeff[j],
-		       gf->term[i]->n.power[j], gf->term[i]->d.power);
-	}
-    }
+    Polyhedron_Free(gf->context);
+    gf->context = DomainConvex(D2, MaxRays);
+
+    gf2 = gf->summate(D2->Dimension - nparam);
+
     delete gf;
     if (D != D2)
 	Domain_Free(D2);
-    Polyhedron_Free(conv);
-    return red.gf;
+    return gf2;
 }
 
 evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
