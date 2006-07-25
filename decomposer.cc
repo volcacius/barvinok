@@ -178,6 +178,7 @@ void decomposer::decompose(Polyhedron *C)
 
 void polar_decomposer::decompose(Polyhedron *cone, unsigned MaxRays)
 {
+    POL_ENSURE_VERTICES(cone);
     Polyhedron_Polarize(cone);
     if (cone->NbRays - 1 != cone->Dimension) {
 	Polyhedron *tmp = cone;
