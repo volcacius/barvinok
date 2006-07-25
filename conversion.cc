@@ -48,7 +48,7 @@ void values2zz(Value *p, vec_ZZ& v, int len)
 
 /*
  */
-void zz2values(vec_ZZ& v, Value *p)
+void zz2values(const vec_ZZ& v, Value *p)
 {
     for (int i = 0; i < v.length(); ++i)
 	zz2value(v[i], p[i]);
