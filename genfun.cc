@@ -1,12 +1,18 @@
 #include <iostream>
+#include <vector>
 #include <assert.h>
 #include "config.h"
 #include <barvinok/genfun.h>
 #include <barvinok/barvinok.h>
 #include "conversion.h"
+#include "genfun_constructor.h"
 #include "mat_util.h"
 
 using std::cout;
+using std::cerr;
+using std::endl;
+using std::pair;
+using std::vector;
 
 static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
 {
@@ -221,8 +227,165 @@ void gen_fun::substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset)
     }
 }
 
+struct cone {
+    int	    *pos;
+    vector<pair<Vector *, QQ> >	    vertices;
+    cone(int *pos) : pos(pos) {}
+};
+
+struct parallel_polytopes {
+    gf_base *red;
+    Matrix *Constraints;
+    int dim;
+    int nparam;
+    vector<cone>    cones;
+
+    parallel_polytopes(int n, Polyhedron *context, int dim, int nparam) :
+			dim(dim), nparam(nparam) {
+	red = gf_base::create(Polyhedron_Copy(context), dim, nparam);
+	Constraints = NULL;
+    }
+    void add(const QQ& c, Polyhedron *P, unsigned MaxRays) {
+	Polyhedron *Q = remove_equalities_p(Polyhedron_Copy(P), P->Dimension-nparam,
+					    NULL);
+	assert(Q->Dimension == dim);
+
+	POL_ENSURE_VERTICES(Q);
+	if (emptyQ(Q)) {
+	    Polyhedron_Free(Q);
+	    return;
+	}
+
+	if (First_Non_Zero(Q->Constraint[Q->NbConstraints-1]+1, Q->Dimension) == -1)
+	    Q->NbConstraints--;
+
+	if (!Constraints) {
+	    red->base->init(Q);
+	    Constraints = Matrix_Alloc(Q->NbConstraints, Q->Dimension);
+	    for (int i = 0; i < Q->NbConstraints; ++i) {
+		Vector_Copy(Q->Constraint[i]+1, Constraints->p[i], Q->Dimension);
+	    }
+	} else {
+	    for (int i = 0; i < Q->NbConstraints; ++i) {
+		int j;
+		for (j = 0; j < Constraints->NbRows; ++j)
+		    if (Vector_Equal(Q->Constraint[i]+1, Constraints->p[j],
+					Q->Dimension))
+			break;
+		assert(j < Constraints->NbRows);
+	    }
+	}
+
+	for (int i = 0; i < Q->NbRays; ++i) {
+	    if (!value_pos_p(Q->Ray[i][dim+1]))
+		continue;
+
+	    Polyhedron *C = supporting_cone(Q, i);
+
+	    if (First_Non_Zero(C->Constraint[C->NbConstraints-1]+1, 
+			       C->Dimension) == -1)
+		C->NbConstraints--;
+
+	    int *pos = new int[1+C->NbConstraints];
+	    pos[0] = C->NbConstraints;
+	    int l = 0;
+	    for (int k = 0; k < Constraints->NbRows; ++k) {
+		for (int j = 0; j < C->NbConstraints; ++j) {
+		    if (Vector_Equal(C->Constraint[j]+1, Constraints->p[k], 
+				     C->Dimension)) {
+			pos[1+l++] = k;
+			break;
+		    }
+		}
+	    }
+	    assert(l == C->NbConstraints);
+
+	    int j;
+	    for (j = 0; j < cones.size(); ++j)
+		if (!memcmp(pos, cones[j].pos, (1+C->NbConstraints)*sizeof(int)))
+		    break;
+	    if (j == cones.size())
+		cones.push_back(cone(pos));
+	    else
+		delete [] pos;
+
+	    Polyhedron_Free(C);
+
+	    int k;
+	    for (k = 0; k < cones[j].vertices.size(); ++k)
+		if (Vector_Equal(Q->Ray[i]+1, cones[j].vertices[k].first->p,
+				 Q->Dimension+1))
+		    break;
+
+	    if (k == cones[j].vertices.size()) {
+		Vector *vertex = Vector_Alloc(Q->Dimension+1);
+		Vector_Copy(Q->Ray[i]+1, vertex->p, Q->Dimension+1);
+		cones[j].vertices.push_back(pair<Vector*,QQ>(vertex, c));
+	    } else {
+		cones[j].vertices[k].second += c;
+		if (cones[j].vertices[k].second.n == 0) {
+		    int size = cones[j].vertices.size();
+		    Vector_Free(cones[j].vertices[k].first);
+		    if (k < size-1)
+			cones[j].vertices[k] = cones[j].vertices[size-1];
+		    cones[j].vertices.pop_back();
+		}
+	    }
+	}
+
+	Polyhedron_Free(Q);
+    }
+    gen_fun *compute(unsigned MaxRays) {
+	for (int i = 0; i < cones.size(); ++i) {
+	    Matrix *M = Matrix_Alloc(cones[i].pos[0], 1+Constraints->NbColumns+1);
+	    Polyhedron *Cone;
+	    for (int j = 0; j <cones[i].pos[0]; ++j) {
+		value_set_si(M->p[j][0], 1);
+		Vector_Copy(Constraints->p[cones[i].pos[1+j]], M->p[j]+1,
+			    Constraints->NbColumns);
+	    }
+	    Cone = Constraints2Polyhedron(M, MaxRays);
+	    Matrix_Free(M);
+	    for (int j = 0; j < cones[i].vertices.size(); ++j) {
+		red->base->do_vertex_cone(cones[i].vertices[j].second,
+					  Polyhedron_Copy(Cone),
+					  cones[i].vertices[j].first->p,
+					  MaxRays);
+	    }
+	    Polyhedron_Free(Cone);
+	}
+	return red->gf;
+    }
+    void print(std::ostream& os) const {
+	for (int i = 0; i < cones.size(); ++i) {
+	    os << "[";
+	    for (int j = 0; j < cones[i].pos[0]; ++j) {
+		if (j)
+		    os << ", ";
+		os << cones[i].pos[1+j];
+	    }
+	    os << "]" << endl;
+	    for (int j = 0; j < cones[i].vertices.size(); ++j) {
+		Vector_Print(stderr, P_VALUE_FMT, cones[i].vertices[j].first);
+		os << cones[i].vertices[j].second << endl;
+	    }
+	}
+    }
+    ~parallel_polytopes() {
+	for (int i = 0; i < cones.size(); ++i) {
+	    delete [] cones[i].pos;
+	    for (int j = 0; j < cones[i].vertices.size(); ++j)
+		Vector_Free(cones[i].vertices[j].first);
+	}
+	if (Constraints)
+	    Matrix_Free(Constraints);
+	delete red;
+    }
+};
+
 gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 {
+    QQ one(1, 1);
     Polyhedron *C = DomainIntersection(context, gf->context, MaxRays);
     Polyhedron *U = Universe_Polyhedron(C->Dimension);
     gen_fun *sum = new gen_fun(C);
@@ -232,6 +395,11 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 	    int k1 = term[i]->d.power.NumRows();
 	    int k2 = gf->term[i2]->d.power.NumRows();
 	    assert(term[i]->d.power.NumCols() == gf->term[i2]->d.power.NumCols());
+
+	    parallel_polytopes pp(term[i]->n.power.NumRows() *
+				  gf->term[i2]->n.power.NumRows(),
+				  sum->context, k1+k2-d, d);
+
 	    for (int j = 0; j < term[i]->n.power.NumRows(); ++j) {
 		for (int j2 = 0; j2 < gf->term[i2]->n.power.NumRows(); ++j2) {
 		    Matrix *M = Matrix_Alloc(k1+k2+d+d, 1+k1+k2+d+1);
@@ -256,16 +424,17 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 		    Polyhedron *P = Constraints2Polyhedron(M, MaxRays);
 		    Matrix_Free(M);
 
-		    gen_fun *t = barvinok_series(P, U, MaxRays);
-
 		    QQ c = term[i]->n.coeff[j];
 		    c *= gf->term[i2]->n.coeff[j2];
-		    sum->add(c, t);
-		    delete t;
+		    pp.add(c, P, MaxRays);
 
 		    Polyhedron_Free(P);
 		}
 	    }
+
+	    gen_fun *t = pp.compute(MaxRays);
+	    sum->add(one, t);
+	    delete t;
 	}
     }
     Polyhedron_Free(U);
