@@ -1520,6 +1520,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 	    value_assign(f.x.n, mpq_numref(q));
 	value_assign(f.d, mpq_denref(q));
 	emul(&f, factor);
+	free_evalue_refs(&f);
     }
 
     virtual void set_factor(bfc_term_base *t, int k, const QQ& c, int change) {
@@ -1538,6 +1539,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 	value_init(factor->d);
 	evalue_copy(factor, bfet->factors[k]);
 	emul(&f, factor);
+	free_evalue_refs(&f);
     }
 
     void set_factor(evalue *f, int change) {
