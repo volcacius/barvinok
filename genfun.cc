@@ -172,7 +172,7 @@ void gen_fun::add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num,
     term.push_back(r);
 }
 
-void gen_fun::add(const ZZ& cn, const ZZ& cd, gen_fun *gf)
+void gen_fun::add(const ZZ& cn, const ZZ& cd, const gen_fun *gf)
 {
     ZZ n, d;
     for (int i = 0; i < gf->term.size(); ++i) {

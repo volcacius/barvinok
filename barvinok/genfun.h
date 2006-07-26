@@ -35,7 +35,7 @@ struct gen_fun {
     void add(const ZZ& cn, const ZZ& cd, const vec_ZZ& num, 
 	     const mat_ZZ& den);
     /* add cn/cd times gf */
-    void add(const ZZ& cn, const ZZ& cd, gen_fun *gf);
+    void add(const ZZ& cn, const ZZ& cd, const gen_fun *gf);
     void substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset);
     gen_fun *Hadamard_product(gen_fun *gf, unsigned MaxRays);
     void add_union(gen_fun *gf, unsigned MaxRays);
@@ -43,6 +43,12 @@ struct gen_fun {
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
 
+    gen_fun(const gen_fun *gf) {
+	ZZ one;
+	one = 1;
+	context = Polyhedron_Copy(gf->context);
+	add(one, one, gf);
+    }
     gen_fun(Polyhedron *C = NULL) : context(C) {}
     ~gen_fun() {
 	if (context)
