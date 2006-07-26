@@ -20,6 +20,10 @@ public:
     dpoly(int d, ZZ& degree, int offset = 0);
     void operator *= (dpoly& f);
     void div(dpoly& d, mpq_t count, ZZ& sign);
+    void div(dpoly& d, mpq_t *count, const mpq_t& factor);
+private:
+    mpq_t *div(dpoly &d) const;
+    void   clear_div(mpq_t *c) const;
 };
 
 struct dpoly_r_term {

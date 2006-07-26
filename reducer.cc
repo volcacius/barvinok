@@ -280,3 +280,37 @@ void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     mpq_canonicalize(tcount);
     mpq_add(count, count, tcount);
 }
+
+void infinite_icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
+{
+    int r;
+    unsigned len = den_f.NumRows();  // number of factors in den
+    vec_ZZ den_s;
+    den_s.SetLength(len);
+    ZZ num_s = num[0];
+
+    for (r = 0; r < len; ++r)
+	den_s[r] = den_f[r][0];
+    normalize(c.n, num_s, den_s);
+
+    dpoly n(len, num_s);
+    dpoly D(len, den_s[0], 1);
+    for (int k = 1; k < len; ++k) {
+	dpoly fact(len, den_s[k], 1);
+	D *= fact;
+    }
+
+    Value tmp;
+    mpq_t factor;
+    mpq_init(factor);
+    value_init(tmp);
+    zz2value(c.n, tmp);
+    value_assign(mpq_numref(factor), tmp);
+    zz2value(c.d, tmp);
+    value_assign(mpq_denref(factor), tmp);
+
+    n.div(D, count, factor);
+
+    value_clear(tmp);
+    mpq_clear(factor);
+}

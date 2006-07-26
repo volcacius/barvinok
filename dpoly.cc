@@ -34,7 +34,7 @@ void dpoly::operator *= (dpoly& f)
 	    coeff[i+j] += f.coeff[i] * old[j];
 }
 
-void dpoly::div(dpoly& d, mpq_t count, ZZ& sign)
+mpq_t *dpoly::div(dpoly& d) const
 {
     int len = coeff.length();
     Value tmp;
@@ -58,16 +58,45 @@ void dpoly::div(dpoly& d, mpq_t count, ZZ& sign)
 	mpq_set_z(qtmp, tmp);
 	mpq_div(c[i], c[i], qtmp);
     }
+    value_clear(tmp);
+    mpq_clear(qtmp);
+
+    return c;
+}
+
+void dpoly::clear_div(mpq_t *c) const
+{
+    int len = coeff.length();
+
+    for (int i = 0; i < len; ++i)
+	mpq_clear(c[i]);
+    delete [] c;
+}
+
+void dpoly::div(dpoly& d, mpq_t count, ZZ& sign)
+{
+    int len = coeff.length();
+    mpq_t *c = div(d);
+
     if (sign == -1)
 	mpq_sub(count, count, c[len-1]);
     else
 	mpq_add(count, count, c[len-1]);
 
-    value_clear(tmp);
-    mpq_clear(qtmp);
-    for (int i = 0; i < len; ++i)
-	mpq_clear(c[i]);
-    delete [] c;
+    clear_div(c);
+}
+
+void dpoly::div(dpoly& d, mpq_t *count, const mpq_t& factor)
+{
+    int len = coeff.length();
+    mpq_t *c = div(d);
+
+    for (int i = 0; i < len; ++i) {
+	mpq_mul(c[len-1 - i], c[len-1 - i], factor);
+	mpq_add(count[i], count[i], c[len-1 - i]);
+    }
+
+    clear_div(c);
 }
 
 void dpoly_r::add_term(int i, int * powers, ZZ& coeff)
