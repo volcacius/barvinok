@@ -392,24 +392,6 @@ void lattice_point(
     value_clear(tmp);
 }
 
-static void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
-{
-    unsigned dim = den.length();
-
-    int change = 0;
-
-    for (int j = 0; j < den.length(); ++j) {
-	if (den[j] > 0)
-	    change ^= 1;
-	else {
-	    den[j] = abs(den[j]);
-	    num += den[j];
-	}
-    }
-    if (change)
-	sign = -sign;
-}
-
 
 struct counter : public np_base {
     vec_ZZ lambda;
@@ -476,47 +458,6 @@ void counter::start(Polyhedron *P, unsigned MaxRays)
 	    mpq_set_si(count, 0, 0);
 	}
     }
-}
-
-// incremental counter
-struct icounter : public ireducer {
-    mpq_t count;
-
-    icounter(unsigned dim) : ireducer(dim) {
-	mpq_init(count);
-	lower = 1;
-    }
-    ~icounter() {
-	mpq_clear(count);
-    }
-    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
-};
-
-void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
-{
-    int r;
-    unsigned len = den_f.NumRows();  // number of factors in den
-    vec_ZZ den_s;
-    den_s.SetLength(len);
-    ZZ num_s = num[0];
-    for (r = 0; r < len; ++r)
-	den_s[r] = den_f[r][0];
-    normalize(c.n, num_s, den_s);
-
-    dpoly n(len, num_s);
-    dpoly D(len, den_s[0], 1);
-    for (int k = 1; k < len; ++k) {
-	dpoly fact(len, den_s[k], 1);
-	D *= fact;
-    }
-    mpq_set_si(tcount, 0, 1);
-    n.div(D, tcount, one);
-    zz2value(c.n, tn);
-    zz2value(c.d, td);
-    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
-    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
-    mpq_canonicalize(tcount);
-    mpq_add(count, count, tcount);
 }
 
 struct bfe_term : public bfc_term_base {

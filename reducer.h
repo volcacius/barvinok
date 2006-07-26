@@ -76,4 +76,20 @@ struct ireducer : public reducer {
 void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	       mat_ZZ& f);
 
+// incremental counter
+struct icounter : public ireducer {
+    mpq_t count;
+
+    icounter(unsigned dim) : ireducer(dim) {
+	mpq_init(count);
+	lower = 1;
+    }
+    ~icounter() {
+	mpq_clear(count);
+    }
+    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+};
+
+void normalize(ZZ& sign, ZZ& num, vec_ZZ& den);
+
 #endif
