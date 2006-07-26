@@ -686,3 +686,32 @@ gen_fun *gen_fun::summate(int nvar) const
 	    red.reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
     return red.gf;
 }
+
+/* returns true if the set was finite and false otherwise */
+bool gen_fun::summate(Value *sum) const
+{
+    if (term.size() == 0) {
+	value_set_si(*sum, 0);
+	return true;
+    }
+
+    int maxlen = 0;
+    for (int i = 0; i < term.size(); ++i)
+	if (term[i]->d.power.NumRows() > maxlen)
+	    maxlen = term[i]->d.power.NumRows();
+
+    infinite_icounter cnt(term[0]->d.power.NumCols(), maxlen);
+    for (int i = 0; i < term.size(); ++i)
+	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
+	    cnt.reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
+
+    for (int i = 1; i <= maxlen; ++i)
+	if (value_notzero_p(mpq_numref(cnt.count[i]))) {
+	    value_set_si(*sum, -1);
+	    return false;
+	}
+
+    assert(value_one_p(mpq_denref(cnt.count[0])));
+    value_assign(*sum, mpq_numref(cnt.count[0]));
+    return true;
+}

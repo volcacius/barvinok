@@ -45,6 +45,7 @@ struct gen_fun {
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
     gen_fun *summate(int nvar) const;
+    bool summate(Value *sum) const;
 
     gen_fun(const gen_fun *gf) {
 	QQ one(1, 1);
