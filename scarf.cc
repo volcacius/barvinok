@@ -119,8 +119,26 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
 		    ++neg;
 	    assert(neg == 1 || neg == 2);
 	    if (neg == 1) {
-		/* We will deal with this later */
-		assert(0);
+		int i;
+		/* put negative one in position 1 */
+		for (i = 1; i <= 3; ++i)
+		    if (value_neg_p(B->p[1][pos[i]]))
+			break;
+		set_pos(pos, i, 1);
+
+		value_set_si(factor, 0);
+		for (int i = 1; i <= 3; ++i) {
+		    value_pdivision(tmp, B->p[0][pos[i]], B->p[1][pos[i]]);
+		    value_increment(tmp, tmp);
+		    if (value_gt(tmp, factor))
+			value_assign(factor, tmp);
+		}
+		value_oppose(factor, factor);
+		value_set_si(tmp, 1);
+		Vector_Combine(B->p[0], B->p[1], B->p[0],
+			       tmp, factor, B->NbColumns);
+		Vector_Exchange(B->p[0], B->p[1], B->NbColumns);
+		type = 1;
 	    } else {
 		int i;
 		/* put positive one in position 1 */
@@ -679,6 +697,7 @@ void scarf_complex::add(Matrix *B, int pos[4], int n)
 			Vector_Combine(h->p[2], h->p[i], offset->p, tmp, tmp2, 2);
 
 			if (initial) {
+			    /* the initial simplices not in any link */
 			    simplex l1(1);
 			    Vector_Copy(h->p[0], l1.M->p[0], 2);
 			    add(T, l1);
@@ -745,7 +764,56 @@ void scarf_complex::add(Matrix *B, int pos[4], int n)
 		}
 	    }
 	}
-	assert(!initial);
+	if (initial) {
+	    /* the initial simplices not in any link */
+	    simplex l1(1);
+	    Vector_Copy(h->p[0], l1.M->p[0], 2);
+	    add(T, l1);
+
+	    simplex l2(1);
+	    Vector_Copy(h->p[1], l2.M->p[0], 2);
+	    add(T, l2);
+
+	    simplex l3(1);
+	    Vector_Combine(h->p[0], h->p[1], l3.M->p[0],
+			   tmp, tmp2, 2);
+	    add(T, l3);
+
+	    simplex t1(2);
+	    Vector_Copy(h->p[0], t1.M->p[0], 2);
+	    Vector_Copy(h->p[1], t1.M->p[1], 2);
+	    add(T, t1);
+
+	    simplex t2(2);
+	    Vector_Combine(h->p[0], h->p[1], t2.M->p[0],
+			   tmp, tmp2, 2);
+	    Vector_Combine(h->p[2], h->p[1], t2.M->p[1],
+			   tmp, tmp2, 2);
+	    add(T, t2);
+
+	    {
+		/* the simplices in a link, here of length 1 */
+		simplex q(3);
+		Vector_Copy(h->p[0], q.M->p[0], 2);
+		Vector_Copy(h->p[1], q.M->p[1], 2);
+		Vector_Copy(h->p[2], q.M->p[2], 2);
+		add(T, q);
+
+		simplex t1(2);
+		Vector_Copy(h->p[0], t1.M->p[0], 2);
+		Vector_Copy(h->p[2], t1.M->p[1], 2);
+		add(T, t1);
+
+		simplex t2(2);
+		Vector_Copy(h->p[1], t2.M->p[0], 2);
+		Vector_Copy(h->p[2], t2.M->p[1], 2);
+		add(T, t2);
+
+		simplex l(1);
+		Vector_Copy(h->p[2], l.M->p[0], 2);
+		add(T, l);
+	    }
+	}
 
 	Vector_Free(offset);
 	Matrix_Free(h);
