@@ -80,8 +80,18 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
     if (n == 3) {
 	assert(value_neg_p(B->p[1][pos[1]]));
 	assert(value_pos_p(B->p[1][pos[2]]));
-	assert(value_pos_p(B->p[0][pos[1]]));
-	assert(value_neg_p(B->p[0][pos[2]]));
+
+	value_set_si(factor, 0);
+	for (int i = 1; i <= 2; ++i) {
+	    value_pdivision(tmp, B->p[0][pos[i]], B->p[1][pos[i]]);
+	    value_increment(tmp, tmp);
+	    if (value_gt(tmp, factor))
+		value_assign(factor, tmp);
+	}
+	value_oppose(factor, factor);
+	value_set_si(tmp, 1);
+	Vector_Combine(B->p[0], B->p[1], B->p[0],
+		       tmp, factor, B->NbColumns);
 	Vector_Exchange(B->p[0], B->p[1], B->NbColumns);
 	type = 2;
     } else {
@@ -852,12 +862,23 @@ static void scarf(Polyhedron *P, unsigned exist, unsigned nparam, unsigned MaxRa
     n = A->NbColumns - 2;
     assert(n >= 3 && n <= 4);
 
-    for (int i = 0; i < n; ++i)
-	pos[i] = i;
-    B = normalize_matrix(A, pos, n);
+    int l = 0;
+    for (int i = 0; i < n; ++i) {
+	int j;
+	for (j = 0; j < l; ++j)
+	    if (value_eq(A->p[0][pos[j]], A->p[0][i]) &&
+		value_eq(A->p[1][pos[j]], A->p[1][i]))
+		break;
+	if (j < l)
+	    continue;
+	pos[l++] = i;
+    }
+
+    assert(l >= 3 && l <= 4);
+    B = normalize_matrix(A, pos, l);
 
     scarf_complex scarf;
-    scarf.add(B, pos, n);
+    scarf.add(B, pos, l);
 
     U = Universe_Polyhedron(nparam);
     col.add(P, 0, U, MaxRays);
