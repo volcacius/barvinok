@@ -483,6 +483,28 @@ void gen_fun::shift(const vec_ZZ& offset)
     Vector_Free(v);
 }
 
+/* Divide the generating functin by 1/(1-z^power).
+ * The effect on the corresponding explicit function f(x) is
+ * f'(x) = \sum_{i=0}^\infty f(x - i * power)
+ */
+void gen_fun::divide(const vec_ZZ& power)
+{
+    for (int i = 0; i < term.size(); ++i) {
+	int r = term[i]->d.power.NumRows();
+	int c = term[i]->d.power.NumCols();
+	term[i]->d.power.SetDims(r+1, c);
+	term[i]->d.power[r] = power;
+    }
+
+    Vector *v = Vector_Alloc(1+power.length()+1);
+    value_set_si(v->p[0], 1);
+    zz2values(power, v->p+1);
+    Polyhedron *C = AddRays(v->p, 1, context, context->NbConstraints+1);
+    Vector_Free(v);
+    Polyhedron_Free(context);
+    context = C;
+}
+
 static void print_power(std::ostream& os, QQ& c, vec_ZZ& p, 
 			unsigned int nparam, char **param_name)
 {

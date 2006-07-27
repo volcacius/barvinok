@@ -41,6 +41,7 @@ struct gen_fun {
     gen_fun *Hadamard_product(const gen_fun *gf, unsigned MaxRays);
     void add_union(gen_fun *gf, unsigned MaxRays);
     void shift(const vec_ZZ& offset);
+    void divide(const vec_ZZ& power);
     void print(std::ostream& os, unsigned int nparam, char **param_name) const;
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
