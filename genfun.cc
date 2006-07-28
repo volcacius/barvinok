@@ -244,9 +244,17 @@ struct cone {
     cone(int *pos) : pos(pos) {}
 };
 
+#ifndef HAVE_COMPRESS_PARMS
+static Matrix *compress_parms(Matrix *M, unsigned nparam)
+{
+    assert(0);
+}
+#endif
+
 struct parallel_polytopes {
     gf_base *red;
     Matrix *Constraints;
+    Matrix *CP, *T;
     int dim;
     int nparam;
     vector<cone>    cones;
@@ -255,17 +263,34 @@ struct parallel_polytopes {
 			dim(dim), nparam(nparam) {
 	red = gf_base::create(Polyhedron_Copy(context), dim, nparam);
 	Constraints = NULL;
+	CP = NULL;
+	T = NULL;
     }
     void add(const QQ& c, Polyhedron *P, unsigned MaxRays) {
 	Polyhedron *Q = remove_equalities_p(Polyhedron_Copy(P), P->Dimension-nparam,
 					    NULL);
-	assert(Q->Dimension == dim);
-
 	POL_ENSURE_VERTICES(Q);
 	if (emptyQ(Q)) {
 	    Polyhedron_Free(Q);
 	    return;
 	}
+
+	if (Q->NbEq != 0) {
+	    Polyhedron *R;
+	    if (!CP) {
+		Matrix *M;
+		M = Matrix_Alloc(Q->NbEq, Q->Dimension+2);
+		Vector_Copy(Q->Constraint[0], M->p[0], Q->NbEq * (Q->Dimension+2));
+		CP = compress_parms(M, nparam);
+		T = align_matrix(CP, Q->Dimension+1);
+		Matrix_Free(M);
+	    }
+	    R = Polyhedron_Preimage(Q, T, MaxRays);
+	    Polyhedron_Free(Q);
+	    Q = remove_equalities_p(R, R->Dimension-nparam, NULL);
+	}
+	assert(Q->NbEq == 0);
+	assert(Q->Dimension == dim);
 
 	if (First_Non_Zero(Q->Constraint[Q->NbConstraints-1]+1, Q->Dimension) == -1)
 	    Q->NbConstraints--;
@@ -365,6 +390,8 @@ struct parallel_polytopes {
 	    }
 	    Polyhedron_Free(Cone);
 	}
+	if (CP)
+	    red->gf->substitute(CP);
 	return red->gf;
     }
     void print(std::ostream& os) const {
@@ -390,6 +417,10 @@ struct parallel_polytopes {
 	}
 	if (Constraints)
 	    Matrix_Free(Constraints);
+	if (CP)
+	    Matrix_Free(CP);
+	if (T)
+	    Matrix_Free(T);
 	delete red;
     }
 };
