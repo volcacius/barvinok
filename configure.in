@@ -317,7 +317,7 @@ fi
 if test "$have_glpk" = "true"; then
     AC_LIBOBJ(basis_reduction)
     AC_LIBOBJ(sample)
-    bv_extra_programs="polyhedron_sample $bv_extra_programs"
+    bv_extra_programs="polyhedron_sample 4coins $bv_extra_programs"
 fi
 
 AC_SUBST(GIT_HEAD_ID)

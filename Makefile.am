@@ -7,7 +7,7 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  barvinok_series remove_redundant_equalities \
 		  barvinok_union \
 		  @bv_extra_programs@
-EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample
+EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins
 pkginclude_HEADERS = \
     barvinok/barvinok.h \
     barvinok/util.h \
@@ -67,6 +67,7 @@ barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ @CPPFLAGS@
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
+4coins_SOURCES = 4coins.cc scarf.cc
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
