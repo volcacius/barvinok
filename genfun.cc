@@ -183,8 +183,16 @@ void gen_fun::add(const QQ& c, const gen_fun *gf)
     }
 }
 
+static void split_param_compression(Matrix *CP, mat_ZZ& map, vec_ZZ& offset)
+{
+    Matrix *T = Transpose(CP);
+    matrix2zz(T, map, T->NbRows-1, T->NbColumns-1);
+    values2zz(T->p[T->NbRows-1], offset, T->NbColumns-1);
+    Matrix_Free(T);
+}
+
 /*
- * Perform the substitution specified by CP and (map, offset)
+ * Perform the substitution specified by CP
  *
  * CP is a homogeneous matrix that maps a set of "compressed parameters"
  * to the original set of parameters.
@@ -214,8 +222,11 @@ void gen_fun::add(const QQ& c, const gen_fun *gf)
  * The pair (map, offset) contains the same information as CP.
  * map is the transpose of the linear part of CP, while offset is the constant part.
  */
-void gen_fun::substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset)
+void gen_fun::substitute(Matrix *CP)
 {
+    mat_ZZ map;
+    vec_ZZ offset;
+    split_param_compression(CP, map, offset);
     Polyhedron *C = Polyhedron_Image(context, CP, 0);
     Polyhedron_Free(context);
     context = C;

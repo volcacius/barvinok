@@ -37,7 +37,7 @@ struct gen_fun {
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
     /* add cn/cd times gf */
     void add(const QQ& c, const gen_fun *gf);
-    void substitute(Matrix *CP, const mat_ZZ& map, const vec_ZZ& offset);
+    void substitute(Matrix *CP);
     gen_fun *Hadamard_product(const gen_fun *gf, unsigned MaxRays);
     void add_union(gen_fun *gf, unsigned MaxRays);
     void shift(const vec_ZZ& offset);

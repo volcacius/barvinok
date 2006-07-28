@@ -3432,14 +3432,6 @@ out:
     return EP;
 }
 
-static void split_param_compression(Matrix *CP, mat_ZZ& map, vec_ZZ& offset)
-{
-    Matrix *T = Transpose(CP);
-    matrix2zz(T, map, T->NbRows-1, T->NbColumns-1);
-    values2zz(T->p[T->NbRows-1], offset, T->NbColumns-1);
-    Matrix_Free(T);
-}
-
 /*
  * remove equalities that require a "compression" of the parameters
  */
@@ -3504,10 +3496,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     red->start_gf(P, MaxRays);
     Polyhedron_Free(P);
     if (CP) {
-	mat_ZZ map;
-	vec_ZZ offset;
-	split_param_compression(CP, map, offset);
-	red->gf->substitute(CP, map, offset);
+	red->gf->substitute(CP);
 	Matrix_Free(CP);
     }
     gf = red->gf;
