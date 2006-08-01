@@ -1147,7 +1147,15 @@ Polyhedron *DomainConcat(Polyhedron *head, Polyhedron *tail)
     return head;
 }
 
-#ifdef HAVE_LEXSMALLER
+#ifndef HAVE_LEXSMALLER
+
+evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
+			       Polyhedron *C, unsigned MaxRays)
+{
+    assert(0);
+}
+
+#else
 #include <polylib/ranking.h>
 
 evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
