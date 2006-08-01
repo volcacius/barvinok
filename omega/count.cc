@@ -50,3 +50,28 @@ evalue *rank_relation(Relation& r)
     Domain_Free(D);
     return EP;
 }
+
+evalue *count_lexsmaller(Relation& r, Relation& domain)
+{
+    varvector P_vv;
+    varvector P_params;
+    varvector D_vv;
+    varvector D_params;
+    Polyhedron *P = relation2Domain(r, P_vv, P_params);
+    int P_dim = r.is_set() ? r.n_set() : r.n_inp() + r.n_out();
+    Polyhedron *D = relation2Domain(domain, D_vv, D_params);
+    int D_dim = r.is_set() ? r.n_set() : r.n_inp() + r.n_out();
+    assert(P_dim == D_dim);
+
+    evalue *EP = NULL;
+    if (P && D) {
+	assert(P->next == NULL);
+	assert(D->next == NULL);
+	Polyhedron *C = Universe_Polyhedron(D_params.size());
+	EP = barvinok_lexsmaller_ev(P, D, D_dim, C, MAXRAYS);
+	Polyhedron_Free(C);
+    }
+    Domain_Free(P);
+    Domain_Free(D);
+    return EP;
+}

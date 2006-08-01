@@ -198,6 +198,7 @@ void includeFile(char *s) {
 "assert_unsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "card"     	{ BUFFER;  return CARD; }
 "ranking"     	{ BUFFER;  return RANKING; }
+"count_lexsmaller"     	{ BUFFER;  return COUNT_LEXSMALLER; }
 "/"		{ BUFFER;  return RESTRICT_RANGE; }
 "&"		{ BUFFER;  return AND; }
 "|"		{ BUFFER;  return OR; }

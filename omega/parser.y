@@ -80,7 +80,7 @@ reachable_information *reachable_info;
 %token SUPERSETOF SUBSETOF SAMPLE SYM_SAMPLE
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
-%token CARD RANKING
+%token CARD RANKING COUNT_LEXSMALLER
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -98,7 +98,7 @@ reachable_information *reachable_info;
 %nonassoc GIVEN
 %left OMEGA_P9
 %left '('	OMEGA_P10
-%right CARD RANKING
+%right CARD RANKING COUNT_LEXSMALLER
 
 
 %type <INT_VALUE> effort 
@@ -482,6 +482,27 @@ printf("was substantially faster on the limited domain it handled.\n");
 		free(EP);
 	    }
 	    delete $2;
+	}
+	| COUNT_LEXSMALLER relation WITHIN relation ';' {
+	    evalue *EP = count_lexsmaller(*$2, *$4);
+	    if (EP) {
+		const Variable_ID_Tuple * globals = $4->global_decls();
+		int nvar = $4->n_set();
+		int n = nvar + globals->size();
+		const char **names = new (const char *)[n];
+		$4->setup_names();
+		for (int i = 0; i < nvar; ++i)
+		    names[i] = $4->set_var(i+1)->char_name();
+		for (int i = 0; i < globals->size(); ++i)
+		    names[nvar+i] = (*globals)[i+1]->char_name();
+		print_evalue(stdout, EP, (char**)names);
+		puts("");
+		delete [] names;
+		free_evalue_refs(EP); 
+		free(EP);
+	    }
+	    delete $2;
+	    delete $4;
 	}
 	;
 
