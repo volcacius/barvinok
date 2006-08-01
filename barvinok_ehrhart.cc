@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     if (series) {
 	gen_fun *gf;
 	gf = barvinok_series(C, U, MAXRAYS);
-	gf->print(U->Dimension, param_name);
+	gf->print(std::cout, U->Dimension, param_name);
 	puts("");
 	delete gf;
     } else {

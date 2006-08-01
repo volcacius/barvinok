@@ -267,7 +267,7 @@ int main(int argc,char *argv[]) {
 	evalue *EP;
 	gf = barvinok_series(P, C, MAXRAYS);
 	if (verbose) {
-	    gf->print(C->Dimension, params);
+	    gf->print(std::cout, C->Dimension, params);
 	    puts("");
 	}
 	if (function) {
@@ -330,6 +330,8 @@ int main(int argc,char *argv[]) {
   for(i=0;i<=(P->Dimension+1);i++) 
     value_clear(p[i]);
   free(p);
+  value_clear(Min);
+  value_clear(Max);
   value_clear(tmp);
   Free_ParamNames(params, C->Dimension);
   Domain_Free(P);

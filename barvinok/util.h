@@ -30,6 +30,10 @@ extern "C" {
 #define POL_SET(P,f)		/* nothing */
 #endif
 
+#ifndef POL_INTEGER
+#define POL_INTEGER		0
+#endif
+
 void value_lcm(Value i, Value j, Value* lcm);
 int random_int(int max);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
@@ -45,6 +49,7 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam,
 			      unsigned NbMaxRays);
 void Line_Length(Polyhedron *P, Value *len);
 evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays);
+void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g);
 Matrix * unimodular_complete(Vector *row);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);

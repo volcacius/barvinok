@@ -12,7 +12,7 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  barvinok_series remove_redundant_equalities \
 		  barvinok_union \
 		  @bv_extra_programs@
-EXTRA_PROGRAMS = piptest verify_lexsmaller
+EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins
 pkginclude_HEADERS = \
     barvinok/barvinok.h \
     barvinok/util.h \
@@ -29,17 +29,26 @@ libbarvinok_la_SOURCES = \
     barvinok/genfun.h \
     barvinok/util.h \
     barvinok/barvinok.h \
+    NTL_QQ.cc \
     evalue.c \
     genfun.cc \
     util.c \
+    bfcounter.cc \
+    bfcounter.h \
     conversion.cc \
     conversion.h \
     decomposer.cc \
     decomposer.h \
+    dpoly.cc \
+    dpoly.h \
+    genfun_constructor.cc \
+    genfun_constructor.h \
     lattice_point.cc \
     lattice_point.h \
     reduce_domain.c \
     reduce_domain.h \
+    reducer.cc \
+    reducer.h \
     mat_util.cc \
     mat_util.h \
     barvinok.cc \
@@ -64,11 +73,15 @@ BEEO_SOURCES = omega/Exit.cc omega/convert.cc
 else
 BEEO_SOURCES = 
 endif
-barvinok_enumerate_e_SOURCES = barvinok_enumerate_e.cc $(BEEO_SOURCES)
+barvinok_enumerate_e_SOURCES = \
+	barvinok_enumerate_e.cc \
+	scarf.cc \
+	$(BEEO_SOURCES)
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ @CPPFLAGS@
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
+4coins_SOURCES = 4coins.cc scarf.cc
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 

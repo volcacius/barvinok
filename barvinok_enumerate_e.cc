@@ -4,6 +4,7 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"
+#include "scarf.h"
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
 #endif
@@ -34,10 +35,13 @@ struct option options[] = {
 #ifdef HAVE_PIPLIB
     { "pip",   	    no_argument,  0,  'p' },
 #endif
+    { "series",     no_argument,  0,  's' },
+    { "scarf",      no_argument,  0,  'S' },
     { "convert",    no_argument,  0,  'c' },
     { "floor",      no_argument,  0,  'f' },
     { "range-reduction",	no_argument,	0,  'R' },
     { "verify",     no_argument,  0,  'T' },
+    { "print-all",  no_argument,  0,  'A' },
     { "min",   	    required_argument,  0,  'm' },
     { "max",   	    required_argument,  0,  'M' },
     { "range",      required_argument,  0,  'r' },
@@ -73,9 +77,6 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 }
 #endif
 
-/* define this to print all the results */
-/* else, only a progress bar is printed */
-/* #define PRINT_ALL_RESULTS	 
 /* define this to continue the test after first error found */
 /* #define DONT_BREAK_ON_ERROR */
 
@@ -98,18 +99,12 @@ static Value min_val, max_val;
 
 static char **params;
 
-#ifdef DONT_BREAK_ON_ERROR
-#define PRINT_ALL_RESULTS
-#endif
-
-#ifndef PRINT_ALL_RESULTS
 static int st;
-#endif
 
 static int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
-		      int exist, int nparam, int pos, Value *z);
+		      int exist, int nparam, int pos, Value *z, int print_all);
 static void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, 
-			   int m, int M);
+			   int m, int M, int print_all);
 
 int main(int argc, char **argv)
 {
@@ -124,14 +119,23 @@ int main(int argc, char **argv)
     int convert = 0;
     int omega = 0;
     int pip = 0;
+    int scarf = 0;
+    int series = 0;
     int floor = 0;
     int verify = 0;
+    int print_all = 0;
     int m = INT_MAX, M = INT_MIN, r;
     int print_solution = 1;
 
     while ((c = getopt_long(argc, argv, 
-		    OMEGA_OPT PIPLIB_OPT "fcRTm:M:r:V", options, &ind)) != -1) {
+		    OMEGA_OPT PIPLIB_OPT "sSfcRTAm:M:r:V", options, &ind)) != -1) {
 	switch (c) {
+	case 's':
+	    series = 1;
+	    break;
+	case 'S':
+	    scarf = 1;
+	    break;
 	case 'o':
 	    omega = 1;
 	    break;
@@ -149,6 +153,9 @@ int main(int argc, char **argv)
 	    break;
 	case 'T':
 	    verify = 1;
+	    break;
+	case 'A':
+	    print_all = 1;
 	    break;
 	case 'm':
 	    m = atoi(optarg);
@@ -168,6 +175,12 @@ int main(int argc, char **argv)
 	    exit(0);
 	    break;
 	}
+    }
+
+    if (series && !scarf) {
+	fprintf(stderr, 
+		"--series currently only available if --scarf is specified\n");
+	exit(1);
     }
 
     MA = Matrix_Read();
@@ -212,36 +225,50 @@ int main(int argc, char **argv)
 	assert(!A->next);
 	exist = A->Dimension - nvar - nparam;
     }
-    if (pip && exist > 0)
-	EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
-    else
-	EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
-    reduce_evalue(EP);
-    evalue_combine(EP);
-    if (range)
-	evalue_range_reduction(EP);
-    if (print_solution)
-	print_evalue(stdout, EP, param_name);
-    if (floor) {
-	fprintf(stderr, "WARNING: floor conversion not supported\n");
-	evalue_frac2floor(EP);
+    if (series) {
+	gen_fun *gf;
+	assert(scarf);
+	gf = barvinok_enumerate_scarf_series(A, exist, nparam, MAXRAYS);
+	if (print_solution) {
+	    gf->print(std::cout, nparam, param_name);
+	    puts("");
+	}
+	delete gf;
+    } else {
+	if (scarf) {
+	    EP = barvinok_enumerate_scarf(A, exist, nparam, MAXRAYS);
+	} else if (pip && exist > 0)
+	    EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
+	else
+	    EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
+	reduce_evalue(EP);
+	evalue_combine(EP);
+	if (range)
+	    evalue_range_reduction(EP);
 	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
-    } else if (convert) {
-	evalue_mod2table(EP, nparam);
-	if (print_solution)
-	    print_evalue(stdout, EP, param_name);
+	if (floor) {
+	    fprintf(stderr, "WARNING: floor conversion not supported\n");
+	    evalue_frac2floor(EP);
+	    if (print_solution)
+		print_evalue(stdout, EP, param_name);
+	} else if (convert) {
+	    evalue_mod2table(EP, nparam);
+	    if (print_solution)
+		print_evalue(stdout, EP, param_name);
+	}
+	if (verify)
+	    verify_results(A, EP, exist, nparam, m, M, print_all);
+	free_evalue_refs(EP);
+	free(EP);
     }
-    if (verify)
-	verify_results(A, EP, exist, nparam, m, M);
-    free_evalue_refs(EP);
-    free(EP);
     Free_ParamNames(param_name, nparam);
     Polyhedron_Free(A);
     return 0;
 }
 
-void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int M)
+void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int M,
+		    int print_all)
 {
     int i;
     int res;
@@ -265,30 +292,29 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int
     /* S = scanning list of polyhedra */
     S = Polyhedron_Scan(P, C, MAXRAYS & POL_NO_DUAL ? 0 : MAXRAYS);
 
-#ifndef PRINT_ALL_RESULTS
-    if (C->Dimension > 0) {
-      value_subtract(tmp,max_val,min_val);
-      if (VALUE_TO_INT(tmp) > 80)
-	st = 1+(VALUE_TO_INT(tmp))/80;
-      else
-	st=1;
-      for(i=VALUE_TO_INT(min_val);i<=VALUE_TO_INT(max_val);i+=st)
-	printf(".");
-      printf( "\r" );
-      fflush(stdout);
+    if (!print_all) {
+	if (C->Dimension > 0) {
+	  value_subtract(tmp,max_val,min_val);
+	  if (VALUE_TO_INT(tmp) > 80)
+	    st = 1+(VALUE_TO_INT(tmp))/80;
+	  else
+	    st=1;
+	  for(i=VALUE_TO_INT(min_val);i<=VALUE_TO_INT(max_val);i+=st)
+	    printf(".");
+	  printf( "\r" );
+	  fflush(stdout);
+	}
     }
-#endif
 
     /******* CHECK NOW *********/
     res = 0;
-    if(S && !check_poly(S, C, EP, exist, nparam, 0, p)) {
+    if(S && !check_poly(S, C, EP, exist, nparam, 0, p, print_all)) {
       fprintf(stderr,"Check failed !\n");
       res = -1;
     }
       
-#ifndef PRINT_ALL_RESULTS
-    printf( "\n" );
-#endif
+    if (!print_all)
+	printf( "\n" );
     
     for(i=0;i<=(P->Dimension+1);i++) 
       value_clear(p[i]);
@@ -307,7 +333,7 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int
 /****************************************************/
 
 int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
-	       int exist, int nparam, int pos, Value *z)
+	       int exist, int nparam, int pos, Value *z, int print_all)
 {  
   int k;
   Value c,tmp;
@@ -326,7 +352,7 @@ int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
     }
     else {
       
-#ifdef PRINT_ALL_RESULTS
+    if (print_all) {
       printf("EP( ");
       value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
       for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
@@ -336,15 +362,15 @@ int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
       printf(" ) = ");
       value_print(stdout,VALUE_FMT,c);
       printf(" ");
-#endif
+    }
 
       /* Manually count the number of points */
       count_points_e(1, S, exist, nparam, z, &tmp);
-#ifdef PRINT_ALL_RESULTS
+    if (print_all) {
 	printf(", count = ");
 	value_print(stdout, P_VALUE_FMT, tmp);
 	printf(". ");
-#endif
+    }
 
       if(value_ne(tmp,c)) {
         printf("\n"); 
@@ -367,26 +393,22 @@ int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
 	return(0);
 #endif
       }
-
-#ifdef PRINT_ALL_RESULTS
-      else
+      else if (print_all)
 	printf("OK.\n");
-#endif
     }
   }
   else
     for(value_assign(tmp,min_val); value_le(tmp,max_val); value_increment(tmp,tmp)) {
-
-#ifndef PRINT_ALL_RESULTS
-      k = VALUE_TO_INT(tmp);
-      if(!pos && !(k%st)) {
-	printf("o");
-	fflush(stdout);
-      }
-#endif
+      if (!print_all) {
+	  k = VALUE_TO_INT(tmp);
+	  if(!pos && !(k%st)) {
+	    printf("o");
+	    fflush(stdout);
+	  }
+       }
       
       value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if(!check_poly(S, C, EP, exist, nparam, pos+1, z)) {
+      if(!check_poly(S, C, EP, exist, nparam, pos+1, z, print_all)) {
 	value_clear(c); value_clear(tmp);
 	return(0);
       }

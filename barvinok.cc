@@ -20,6 +20,8 @@ extern "C" {
 #include "decomposer.h"
 #include "lattice_point.h"
 #include "reduce_domain.h"
+#include "genfun_constructor.h"
+#include "sample.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -51,69 +53,6 @@ static void rays(mat_ZZ& r, Polyhedron *C)
 	    ++c;
 	}
 }
-
-class dpoly {
-public:
-    vec_ZZ coeff;
-    dpoly(int d, ZZ& degree, int offset = 0) {
-	coeff.SetLength(d+1);
-
-	int min = d + offset;
-	if (degree >= 0 && degree < ZZ(INIT_VAL, min))
-	    min = to_int(degree);
-
-	ZZ c = ZZ(INIT_VAL, 1);
-	if (!offset)
-	    coeff[0] = c;
-	for (int i = 1; i <= min; ++i) {
-	    c *= (degree -i + 1);
-	    c /= i;
-	    coeff[i-offset] = c;
-	}
-    }
-    void operator *= (dpoly& f) {
-	assert(coeff.length() == f.coeff.length());
-	vec_ZZ old = coeff;
-	coeff = f.coeff[0] * coeff;
-	for (int i = 1; i < coeff.length(); ++i)
-	    for (int j = 0; i+j < coeff.length(); ++j)
-		coeff[i+j] += f.coeff[i] * old[j];
-    }
-    void div(dpoly& d, mpq_t count, ZZ& sign) {
-	int len = coeff.length();
-	Value tmp;
-	value_init(tmp);
-	mpq_t* c = new mpq_t[coeff.length()];
-	mpq_t qtmp;
-	mpq_init(qtmp);
-	for (int i = 0; i < len; ++i) {
-	    mpq_init(c[i]);
-	    zz2value(coeff[i], tmp);
-	    mpq_set_z(c[i], tmp);
-
-	    for (int j = 1; j <= i; ++j) {
-		zz2value(d.coeff[j], tmp);
-		mpq_set_z(qtmp, tmp);
-		mpq_mul(qtmp, qtmp, c[i-j]);
-		mpq_sub(c[i], c[i], qtmp);
-	    }
-
-	    zz2value(d.coeff[0], tmp);
-	    mpq_set_z(qtmp, tmp);
-	    mpq_div(c[i], c[i], qtmp);
-	}
-	if (sign == -1)
-	    mpq_sub(count, count, c[len-1]);
-	else
-	    mpq_add(count, count, c[len-1]);
-
-	value_clear(tmp);
-	mpq_clear(qtmp);
-	for (int i = 0; i < len; ++i)
-	    mpq_clear(c[i]);
-	delete [] c;
-    }
-};
 
 class dpoly_n {
 public:
@@ -171,150 +110,6 @@ public:
     }
 };
 
-struct dpoly_r_term {
-    int	    *powers;
-    ZZ	    coeff;
-};
-
-/* len: number of elements in c
- * each element in c is the coefficient of a power of t
- * in the MacLaurin expansion
- */
-struct dpoly_r {
-    vector< dpoly_r_term * >	*c;
-    int len;
-    int dim;
-    ZZ denom;
-
-    void add_term(int i, int * powers, ZZ& coeff) {
-	if (coeff == 0)
-	    return;
-	for (int k = 0; k < c[i].size(); ++k) {
-	    if (memcmp(c[i][k]->powers, powers, dim * sizeof(int)) == 0) {
-		c[i][k]->coeff += coeff;
-		return;
-	    }
-	}
-	dpoly_r_term *t = new dpoly_r_term;
-	t->powers = new int[dim];
-	memcpy(t->powers, powers, dim * sizeof(int));
-	t->coeff = coeff;
-	c[i].push_back(t);
-    }
-    dpoly_r(int len, int dim) {
-	denom = 1;
-	this->len = len;
-	this->dim = dim;
-	c = new vector< dpoly_r_term * > [len];
-    }
-    dpoly_r(dpoly& num, int dim) {
-	denom = 1;
-	len = num.coeff.length();
-	c = new vector< dpoly_r_term * > [len];
-	this->dim = dim;
-	int powers[dim];
-	memset(powers, 0, dim * sizeof(int));
-
-	for (int i = 0; i < len; ++i) {
-	    ZZ coeff = num.coeff[i];
-	    add_term(i, powers, coeff);
-	}
-    }
-    dpoly_r(dpoly& num, dpoly& den, int pos, int dim) {
-	denom = 1;
-	len = num.coeff.length();
-	c = new vector< dpoly_r_term * > [len];
-	this->dim = dim;
-	int powers[dim];
-
-	for (int i = 0; i < len; ++i) {
-	    ZZ coeff = num.coeff[i];
-	    memset(powers, 0, dim * sizeof(int));
-	    powers[pos] = 1;
-
-	    add_term(i, powers, coeff);
-
-	    for (int j = 1; j <= i; ++j) {
-		for (int k = 0; k < c[i-j].size(); ++k) {
-		    memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
-		    powers[pos]++;
-		    coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
-		    add_term(i, powers, coeff);
-		}
-	    }
-	}
-	//dump();
-    }
-    dpoly_r(dpoly_r* num, dpoly& den, int pos, int dim) {
-	denom = num->denom;
-	len = num->len;
-	c = new vector< dpoly_r_term * > [len];
-	this->dim = dim;
-	int powers[dim];
-	ZZ coeff;
-
-	for (int i = 0 ; i < len; ++i) {
-	    for (int k = 0; k < num->c[i].size(); ++k) {
-		memcpy(powers, num->c[i][k]->powers, dim*sizeof(int));
-		powers[pos]++;
-		add_term(i, powers, num->c[i][k]->coeff);
-	    }
-
-	    for (int j = 1; j <= i; ++j) {
-		for (int k = 0; k < c[i-j].size(); ++k) {
-		    memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
-		    powers[pos]++;
-		    coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
-		    add_term(i, powers, coeff);
-		}
-	    }
-	}
-    }
-    ~dpoly_r() {
-	for (int i = 0 ; i < len; ++i)
-	    for (int k = 0; k < c[i].size(); ++k) {
-		delete [] c[i][k]->powers;
-		delete c[i][k];
-	    }
-	delete [] c;
-    }
-    dpoly_r *div(dpoly& d) {
-	dpoly_r *rc = new dpoly_r(len, dim);
-	rc->denom = power(d.coeff[0], len);
-	ZZ inv_d = rc->denom / d.coeff[0];
-	ZZ coeff;
-
-	for (int i = 0; i < len; ++i) {
-	    for (int k = 0; k < c[i].size(); ++k) {
-		coeff = c[i][k]->coeff * inv_d;
-		rc->add_term(i, c[i][k]->powers, coeff);
-	    }
-
-	    for (int j = 1; j <= i; ++j) {
-		for (int k = 0; k < rc->c[i-j].size(); ++k) {
-		    coeff = - d.coeff[j] * rc->c[i-j][k]->coeff / d.coeff[0];
-		    rc->add_term(i, rc->c[i-j][k]->powers, coeff);
-		}
-	    }
-	}
-	return rc;
-    }
-    void dump(void) {
-	for (int i = 0; i < len; ++i) {
-	    cerr << endl;
-	    cerr << i << endl;
-	    cerr << c[i].size() << endl;
-	    for (int j = 0; j < c[i].size(); ++j) {
-		for (int k = 0; k < dim; ++k) {
-		    cerr << c[i][j]->powers[k] << " ";
-		}
-		cerr << ": " << c[i][j]->coeff << "/" << denom << endl;
-	    }
-	    cerr << endl;
-	}
-    }
-};
-
 const int MAX_TRY=10;
 /*
  * Searches for a vector that is not orthogonal to any
@@ -346,39 +141,6 @@ static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
 	}
     }
     assert(found);
-}
-
-static void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
-{
-    Value tmp;
-    int max = 10 * 16;
-    unsigned int dim = P->Dimension;
-    value_init(tmp);
-
-    for (int i = 0; i < P->NbRays; ++i) {
-	for (int j = 1; j <= dim; ++j) {
-	    value_absolute(tmp, P->Ray[i][j]);
-	    int t = VALUE_TO_LONG(tmp) * 16;
-	    if (t > max)
-		max = t;
-	}
-    }
-    for (int i = 0; i < P->NbConstraints; ++i) {
-	for (int j = 1; j <= dim; ++j) {
-	    value_absolute(tmp, P->Constraint[i][j]);
-	    int t = VALUE_TO_LONG(tmp) * 16;
-	    if (t > max)
-		max = t;
-	}
-    }
-    value_clear(tmp);
-
-    lambda.SetLength(nvar);
-    for (int k = 0; k < nvar; ++k) {
-	int r = random_int(max*dim)+2;
-	int v = (2*(r%2)-1) * (max/2*dim + (r >> 1));
-	lambda[k] = v;
-    }
 }
 
 static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r, int nvar = -1, 
@@ -630,81 +392,8 @@ void lattice_point(
     value_clear(tmp);
 }
 
-static void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
-{
-    unsigned dim = den.length();
 
-    int change = 0;
-
-    for (int j = 0; j < den.length(); ++j) {
-	if (den[j] > 0)
-	    change ^= 1;
-	else {
-	    den[j] = abs(den[j]);
-	    num += den[j];
-	}
-    }
-    if (change)
-	sign = -sign;
-}
-
-/* input:
- *	f: the powers in the denominator for the remaining vars
- *	      each row refers to a factor
- *      den_s: for each factor, the power of  (s+1)
- *	sign
- *	num_s: powers in the numerator corresponding to the summed vars
- *	num_p: powers in the numerator corresponding to the remaining vars
- * number of rays in cone: "dim" = "k"
- * length of each ray: "dim" = "d"
- * for now, it is assumed: k == d
- * output:
- *	den_p: for each factor
- *		0: independent of remaining vars
- *		1: power corresponds to corresponding row in f
- *
- * all inputs are subject to change
- */
-static void normalize(ZZ& sign,
-		      ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
-		      mat_ZZ& f)
-{
-    unsigned dim = f.NumRows();
-    unsigned nparam = num_p.length();
-    unsigned nvar = dim - nparam;
-
-    int change = 0;
-
-    for (int j = 0; j < den_s.length(); ++j) {
-	if (den_s[j] == 0) {
-	    den_p[j] = 1;
-	    continue;
-	}
-	int k;
-	for (k = 0; k < nparam; ++k)
-	    if (f[j][k] != 0)
-		break;
-	if (k < nparam) {
-	    den_p[j] = 1;
-	    if (den_s[j] > 0) {
-		f[j] = -f[j];
-		num_p += f[j];
-	    }
-	} else
-	    den_p[j] = 0;
-	if (den_s[j] > 0)
-	    change ^= 1;
-	else {
-	    den_s[j] = abs(den_s[j]);
-	    num_s += den_s[j];
-	}
-    }
-
-    if (change)
-	sign = -sign;
-}
-
-struct counter : public polar_decomposer {
+struct counter : public np_base {
     vec_ZZ lambda;
     mat_ZZ rays;
     vec_ZZ vertex;
@@ -712,42 +401,39 @@ struct counter : public polar_decomposer {
     ZZ sign;
     ZZ num;
     int j;
-    Polyhedron *P;
-    unsigned dim;
     mpq_t count;
 
-    counter(Polyhedron *P) {
-	this->P = P;
-	dim = P->Dimension;
+    counter(unsigned dim) : np_base(dim) {
 	rays.SetDims(dim, dim);
 	den.SetLength(dim);
 	mpq_init(count);
     }
 
-    void start(unsigned MaxRays);
+    void start(Polyhedron *P, unsigned MaxRays);
 
     ~counter() {
 	mpq_clear(count);
     }
 
-    virtual void handle_polar(Polyhedron *P, int sign);
+    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c);
 };
 
 struct OrthogonalException {} Orthogonal;
 
-void counter::handle_polar(Polyhedron *C, int s)
+void counter::handle_polar(Polyhedron *C, Value *V, QQ c)
 {
     int r = 0;
-    assert(C->NbRays-1 == dim);
     add_rays(rays, C, &r);
     for (int k = 0; k < dim; ++k) {
 	if (lambda * rays[k] == 0)
 	    throw Orthogonal;
     }
 
-    sign = s;
+    assert(c.d == 1);
+    assert(c.n == 1 || c.n == -1);
+    sign = c.n;
 
-    lattice_point(P->Ray[j]+1, C, vertex);
+    lattice_point(V, C, vertex);
     num = vertex * lambda;
     den = rays * lambda;
     normalize(sign, num, den);
@@ -761,391 +447,18 @@ void counter::handle_polar(Polyhedron *C, int s)
     d.div(n, count, sign);
 }
 
-void counter::start(unsigned MaxRays)
+void counter::start(Polyhedron *P, unsigned MaxRays)
 {
     for (;;) {
 	try {
 	    randomvector(P, lambda, dim);
-	    for (j = 0; j < P->NbRays; ++j) {
-		Polyhedron *C = supporting_cone(P, j);
-		decompose(C, MaxRays);
-	    }
+	    np_base::start(P, MaxRays);
 	    break;
 	} catch (OrthogonalException &e) {
 	    mpq_set_si(count, 0, 0);
 	}
     }
 }
-
-/* base for non-parametric counting */
-struct np_base : public polar_decomposer {
-    int current_vertex;
-    Polyhedron *P;
-    unsigned dim;
-
-    np_base(Polyhedron *P, unsigned dim) {
-	this->P = P;
-	this->dim = dim;
-    }
-};
-
-struct reducer : public np_base {
-    vec_ZZ vertex;
-    //vec_ZZ den;
-    ZZ sgn;
-    ZZ num;
-    ZZ one;
-    mpq_t tcount;
-    mpz_t tn;
-    mpz_t td;
-    int lower;	    // call base when only this many variables is left
-
-    reducer(Polyhedron *P) : np_base(P, P->Dimension) {
-	//den.SetLength(dim);
-	mpq_init(tcount);
-	mpz_init(tn);
-	mpz_init(td);
-	one = 1;
-    }
-
-    void start(unsigned MaxRays);
-
-    ~reducer() {
-	mpq_clear(tcount);
-	mpz_clear(tn);
-	mpz_clear(td);
-    }
-
-    virtual void handle_polar(Polyhedron *P, int sign);
-    void reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f);
-    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f) = 0;
-    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
-};
-
-void reducer::reduce(ZZ c, ZZ cd, vec_ZZ& num, mat_ZZ& den_f)
-{
-    unsigned len = den_f.NumRows();  // number of factors in den
-
-    if (num.length() == lower) {
-	base(c, cd, num, den_f);
-	return;
-    }
-    assert(num.length() > 1);
-
-    vec_ZZ den_s;
-    mat_ZZ den_r;
-    ZZ num_s;
-    vec_ZZ num_p;
-
-    split(num, num_s, num_p, den_f, den_s, den_r);
-
-    vec_ZZ den_p;
-    den_p.SetLength(len);
-
-    normalize(c, num_s, num_p, den_s, den_p, den_r);
-
-    int only_param = 0;	    // k-r-s from text
-    int no_param = 0;	    // r from text
-    for (int k = 0; k < len; ++k) {
-	if (den_p[k] == 0)
-	    ++no_param;
-	else if (den_s[k] == 0)
-	    ++only_param;
-    }
-    if (no_param == 0) {
-	reduce(c, cd, num_p, den_r);
-    } else {
-	int k, l;
-	mat_ZZ pden;
-	pden.SetDims(only_param, den_r.NumCols());
-
-	for (k = 0, l = 0; k < len; ++k)
-	    if (den_s[k] == 0)
-		pden[l++] = den_r[k];
-
-	for (k = 0; k < len; ++k)
-	    if (den_p[k] == 0)
-		break;
-
-	dpoly n(no_param, num_s);
-	dpoly D(no_param, den_s[k], 1);
-	for ( ; ++k < len; )
-	    if (den_p[k] == 0) {
-		dpoly fact(no_param, den_s[k], 1);
-		D *= fact;
-	    }
-
-	if (no_param + only_param == len) {
-	    mpq_set_si(tcount, 0, 1);
-	    n.div(D, tcount, one);
-
-	    ZZ qn, qd;
-	    value2zz(mpq_numref(tcount), qn);
-	    value2zz(mpq_denref(tcount), qd);
-
-	    qn *= c;
-	    qd *= cd;
-
-	    if (qn != 0)
-		reduce(qn, qd, num_p, pden);
-	} else {
-	    dpoly_r * r = 0;
-
-	    for (k = 0; k < len; ++k) {
-		if (den_s[k] == 0 || den_p[k] == 0)
-		    continue;
-
-		dpoly pd(no_param-1, den_s[k], 1);
-
-		int l;
-		for (l = 0; l < k; ++l)
-		    if (den_r[l] == den_r[k])
-			break;
-
-		if (r == 0)
-		    r = new dpoly_r(n, pd, l, len);
-		else {
-		    dpoly_r *nr = new dpoly_r(r, pd, l, len);
-		    delete r;
-		    r = nr;
-		}
-	    }
-
-	    dpoly_r *rc = r->div(D);
-
-	    rc->denom *= cd;
-
-	    int common = pden.NumRows();
-	    vector< dpoly_r_term * >& final = rc->c[rc->len-1];
-	    int rows;
-	    for (int j = 0; j < final.size(); ++j) {
-		if (final[j]->coeff == 0)
-		    continue;
-		rows = common;
-		pden.SetDims(rows, pden.NumCols());
-		for (int k = 0; k < rc->dim; ++k) {
-		    int n = final[j]->powers[k];
-		    if (n == 0)
-			continue;
-		    pden.SetDims(rows+n, pden.NumCols());
-		    for (int l = 0; l < n; ++l)
-			pden[rows+l] = den_r[k];
-		    rows += n;
-		}
-		final[j]->coeff *= c;
-		reduce(final[j]->coeff, rc->denom, num_p, pden);
-	    }
-
-	    delete rc;
-	    delete r;
-	}
-    }
-}
-
-void reducer::handle_polar(Polyhedron *C, int s)
-{
-    assert(C->NbRays-1 == dim);
-
-    sgn = s;
-
-    lattice_point(P->Ray[current_vertex]+1, C, vertex);
-
-    mat_ZZ den;
-    den.SetDims(dim, dim);
-
-    int r;
-    for (r = 0; r < dim; ++r)
-	values2zz(C->Ray[r]+1, den[r], dim);
-
-    reduce(sgn, one, vertex, den);
-}
-
-void reducer::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
-    }
-}
-
-struct ireducer : public reducer {
-    ireducer(Polyhedron *P) : reducer(P) {}
-
-    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
-	unsigned len = den_f.NumRows();  // number of factors in den
-	unsigned d = num.length() - 1;
-
-	den_s.SetLength(len);
-	den_r.SetDims(len, d);
-
-	for (int r = 0; r < len; ++r) {
-	    den_s[r] = den_f[r][0];
-	    for (int k = 1; k <= d; ++k)
-		den_r[r][k-1] = den_f[r][k];
-	}
-
-	num_s = num[0];
-	num_p.SetLength(d);
-	for (int k = 1 ; k <= d; ++k)
-	    num_p[k-1] = num[k];
-    }
-};
-
-// incremental counter
-struct icounter : public ireducer {
-    mpq_t count;
-
-    icounter(Polyhedron *P) : ireducer(P) {
-	mpq_init(count);
-	lower = 1;
-    }
-    ~icounter() {
-	mpq_clear(count);
-    }
-    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-};
-
-void icounter::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
-{
-    int r;
-    unsigned len = den_f.NumRows();  // number of factors in den
-    vec_ZZ den_s;
-    den_s.SetLength(len);
-    ZZ num_s = num[0];
-    for (r = 0; r < len; ++r)
-	den_s[r] = den_f[r][0];
-    normalize(c, num_s, den_s);
-
-    dpoly n(len, num_s);
-    dpoly D(len, den_s[0], 1);
-    for (int k = 1; k < len; ++k) {
-	dpoly fact(len, den_s[k], 1);
-	D *= fact;
-    }
-    mpq_set_si(tcount, 0, 1);
-    n.div(D, tcount, one);
-    zz2value(c, tn);
-    zz2value(cd, td);
-    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
-    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
-    mpq_canonicalize(tcount);
-    mpq_add(count, count, tcount);
-}
-
-/* base for generating function counting */
-struct gf_base {
-    np_base *base;
-    gen_fun *gf;
-
-    gf_base(np_base *npb, unsigned nparam) : base(npb) {
-	gf = new gen_fun(Polyhedron_Project(base->P, nparam));
-    }
-    void start(unsigned MaxRays);
-};
-
-void gf_base::start(unsigned MaxRays)
-{
-    for (int i = 0; i < base->P->NbRays; ++i) {
-	if (!value_pos_p(base->P->Ray[i][base->dim+1]))
-	    continue;
-
-	Polyhedron *C = supporting_cone(base->P, i);
-	base->current_vertex = i;
-	base->decompose(C, MaxRays);
-    }
-}
-
-struct partial_ireducer : public ireducer, public gf_base {
-    partial_ireducer(Polyhedron *P, unsigned nparam) : 
-	    ireducer(P), gf_base(this, nparam) {
-	lower = nparam;
-    }
-    ~partial_ireducer() {
-    }
-    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    /* we want to override the start method from reducer with the one from gf_base */
-    void start(unsigned MaxRays) {
-	gf_base::start(MaxRays);
-    }
-};
-
-void partial_ireducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
-{
-    gf->add(c, cd, num, den_f);
-}
-
-struct partial_reducer : public reducer, public gf_base {
-    vec_ZZ lambda;
-    vec_ZZ tmp;
-
-    partial_reducer(Polyhedron *P, unsigned nparam) : 
-	    reducer(P), gf_base(this, nparam) {
-	lower = nparam;
-
-	tmp.SetLength(dim - nparam);
-	randomvector(P, lambda, dim - nparam);
-    }
-    ~partial_reducer() {
-    }
-    virtual void base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f);
-    /* we want to override the start method from reducer with the one from gf_base */
-    void start(unsigned MaxRays) {
-	gf_base::start(MaxRays);
-    }
-
-    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
-	unsigned len = den_f.NumRows();  // number of factors in den
-	unsigned nvar = tmp.length();
-
-	den_s.SetLength(len);
-	den_r.SetDims(len, lower);
-
-	for (int r = 0; r < len; ++r) {
-	    for (int k = 0; k < nvar; ++k)
-		tmp[k] = den_f[r][k];
-	    den_s[r] = tmp * lambda;
-
-	    for (int k = nvar; k < dim; ++k)
-		den_r[r][k-nvar] = den_f[r][k];
-	}
-
-	for (int k = 0; k < nvar; ++k)
-	    tmp[k] = num[k];
-	num_s = tmp *lambda;
-	num_p.SetLength(lower);
-	for (int k = nvar ; k < dim; ++k)
-	    num_p[k-nvar] = num[k];
-    }
-};
-
-void partial_reducer::base(ZZ& c, ZZ& cd, vec_ZZ& num, mat_ZZ& den_f)
-{
-    gf->add(c, cd, num, den_f);
-}
-
-struct bfc_term_base {
-    // the number of times a given factor appears in the denominator
-    int	    *powers;
-    mat_ZZ   terms;
-
-    bfc_term_base(int len) {
-	powers = new int[len];
-    }
-
-    virtual ~bfc_term_base() {
-	delete [] powers;
-    }
-};
-
-struct bfc_term : public bfc_term_base {
-    vec_ZZ   cn;
-    vec_ZZ   cd;
-
-    bfc_term(int len) : bfc_term_base(len) {}
-};
 
 struct bfe_term : public bfc_term_base {
     vector<evalue *> factors;
@@ -1162,92 +475,6 @@ struct bfe_term : public bfc_term_base {
 	}
     }
 };
-
-typedef vector< bfc_term_base * > bfc_vec;
-
-struct bf_reducer;
-
-struct bf_base : public np_base {
-    ZZ one;
-    mpq_t tcount;
-    mpz_t tn;
-    mpz_t td;
-    int lower;	    // call base when only this many variables is left
-
-    bf_base(Polyhedron *P, unsigned dim) : np_base(P, dim) {
-	mpq_init(tcount);
-	mpz_init(tn);
-	mpz_init(td);
-	one = 1;
-    }
-
-    ~bf_base() {
-	mpq_clear(tcount);
-	mpz_clear(tn);
-	mpz_clear(td);
-    }
-
-    void start(unsigned MaxRays);
-    virtual void handle_polar(Polyhedron *P, int sign);
-    int setup_factors(Polyhedron *P, mat_ZZ& factors, bfc_term_base* t, int s);
-
-    bfc_term_base* find_bfc_term(bfc_vec& v, int *powers, int len);
-    void add_term(bfc_term_base *t, vec_ZZ& num1, vec_ZZ& num);
-    void add_term(bfc_term_base *t, vec_ZZ& num);
-
-    void reduce(mat_ZZ& factors, bfc_vec& v);
-    virtual void base(mat_ZZ& factors, bfc_vec& v) = 0;
-
-    virtual bfc_term_base* new_bf_term(int len) = 0;
-    virtual void set_factor(bfc_term_base *t, int k, int change) = 0;
-    virtual void set_factor(bfc_term_base *t, int k, mpq_t &f, int change) = 0;
-    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change) = 0;
-    virtual void update_term(bfc_term_base *t, int i) = 0;
-    virtual void insert_term(bfc_term_base *t, int i) = 0;
-    virtual bool constant_vertex(int dim) = 0;
-    virtual void cum(bf_reducer *bfr, bfc_term_base *t, int k, 
-		     dpoly_r *r) = 0;
-};
-
-static int lex_cmp(vec_ZZ& a, vec_ZZ& b)
-{
-    assert(a.length() == b.length());
-
-    for (int j = 0; j < a.length(); ++j)
-	if (a[j] != b[j])
-	    return a[j] < b[j] ? -1 : 1;
-    return 0;
-}
-
-void bf_base::add_term(bfc_term_base *t, vec_ZZ& num_orig, vec_ZZ& extra_num)
-{
-    vec_ZZ num;
-    int d = num_orig.length();
-    num.SetLength(d-1);
-    for (int l = 0; l < d-1; ++l)
-	num[l] = num_orig[l+1] + extra_num[l];
-
-    add_term(t, num);
-}
-
-void bf_base::add_term(bfc_term_base *t, vec_ZZ& num)
-{
-    int len = t->terms.NumRows();
-    int i, r;
-    for (i = 0; i < len; ++i) {
-	r = lex_cmp(t->terms[i], num);
-	if (r >= 0)
-	    break;
-    }
-    if (i == len || r > 0) {
-	t->terms.SetDims(len+1, num.length());
-	insert_term(t, i);
-	t->terms[i] = num;
-    } else {
-	// i < len && r == 0
-	update_term(t, i);
-    }
-}
 
 static void print_int_vector(int *v, int len, char *name)
 {
@@ -1269,8 +496,7 @@ static void print_bfc_terms(mat_ZZ& factors, bfc_vec& v)
 	cerr << "terms" << endl;
 	cerr << v[i]->terms << endl;
 	bfc_term* bfct = static_cast<bfc_term *>(v[i]);
-	cerr << bfct->cn << endl;
-	cerr << bfct->cd << endl;
+	cerr << bfct->c << endl;
     }
 }
 
@@ -1293,464 +519,10 @@ static void print_bfe_terms(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
-bfc_term_base* bf_base::find_bfc_term(bfc_vec& v, int *powers, int len)
-{
-    bfc_vec::iterator i;
-    for (i = v.begin(); i != v.end(); ++i) {
-	int j;
-	for (j = 0; j < len; ++j)
-	    if ((*i)->powers[j] != powers[j])
-		break;
-	if (j == len)
-	    return (*i);
-	if ((*i)->powers[j] > powers[j])
-	    break;
-    }
-
-    bfc_term_base* t = new_bf_term(len);
-    v.insert(i, t);
-    memcpy(t->powers, powers, len * sizeof(int));
-
-    return t;
-}
-
-struct bf_reducer {
-    mat_ZZ& factors;
-    bfc_vec& v;
-    bf_base *bf;
-
-    unsigned nf;
-    unsigned d;
-
-    mat_ZZ nfactors;
-    int *old2new;
-    int *sign;
-    unsigned int nnf;
-    bfc_vec vn;
-
-    vec_ZZ extra_num;
-    int changes;
-    int no_param;	    // r from text
-    int only_param;	    // k-r-s from text
-    int total_power;	    // k from text
-
-    // created in compute_reduced_factors
-    int *bpowers;
-    // set in update_powers
-    int *npowers;
-    vec_ZZ l_extra_num;
-    int l_changes;
-
-    bf_reducer(mat_ZZ& factors, bfc_vec& v, bf_base *bf) 
-	    : factors(factors), v(v), bf(bf) {
-	nf = factors.NumRows();
-	d = factors.NumCols();
-	old2new = new int[nf];
-	sign = new int[nf];
-
-	extra_num.SetLength(d-1);
-    }
-    ~bf_reducer() {
-	delete [] old2new;
-	delete [] sign;
-	delete [] npowers;
-	delete [] bpowers;
-    }
-
-    void compute_reduced_factors();
-    void compute_extra_num(int i);
-
-    void reduce();
-
-    void update_powers(int *powers, int len);
-};
-
-void bf_reducer::compute_extra_num(int i)
-{
-    clear(extra_num);
-    changes = 0;
-    no_param = 0;	    // r from text
-    only_param = 0;	    // k-r-s from text
-    total_power = 0;	    // k from text
-
-    for (int j = 0; j < nf; ++j) {
-	if (v[i]->powers[j] == 0)
-	    continue;
-
-	total_power += v[i]->powers[j];
-	if (factors[j][0] == 0) {
-	    only_param += v[i]->powers[j];
-	    continue;
-	}
-
-	if (old2new[j] == -1)
-	    no_param += v[i]->powers[j];
-	else
-	    extra_num += -sign[j] * v[i]->powers[j] * nfactors[old2new[j]];
-	changes += v[i]->powers[j];
-    }
-}
-
-void bf_reducer::update_powers(int *powers, int len)
-{
-    for (int l = 0; l < nnf; ++l)
-	npowers[l] = bpowers[l];
-
-    l_extra_num = extra_num;
-    l_changes = changes;
-
-    for (int l = 0; l < len; ++l) {
-	int n = powers[l];
-	if (n == 0)
-	    continue;
-	assert(old2new[l] != -1);
-
-	npowers[old2new[l]] += n;
-	// interpretation of sign has been inverted
-	// since we inverted the power for specialization
-	if (sign[l] == 1) {
-	    l_extra_num += n * nfactors[old2new[l]];
-	    l_changes += n;
-	}
-    }
-}
-
-
-void bf_reducer::compute_reduced_factors()
-{
-    unsigned nf = factors.NumRows();
-    unsigned d = factors.NumCols();
-    nnf = 0;
-    nfactors.SetDims(nnf, d-1);
-
-    for (int i = 0; i < nf; ++i) {
-	int j;
-	int s = 1;
-	for (j = 0; j < nnf; ++j) {
-	    int k;
-	    for (k = 1; k < d; ++k)
-		if (factors[i][k] != 0 || nfactors[j][k-1] != 0)
-		    break;
-	    if (k < d && factors[i][k] == -nfactors[j][k-1])
-		s = -1;
-	    for (; k < d; ++k)
-		if (factors[i][k] != s * nfactors[j][k-1])
-		    break;
-	    if (k == d)
-		break;
-	}
-	old2new[i] = j;
-	if (j == nnf) {
-	    int k;
-	    for (k = 1; k < d; ++k)
-		if (factors[i][k] != 0)
-		    break;
-	    if (k < d) {
-		if (factors[i][k] < 0)
-		    s = -1;
-		nfactors.SetDims(++nnf, d-1);
-		for (int k = 1; k < d; ++k)
-		    nfactors[j][k-1] = s * factors[i][k];
-	    } else
-		old2new[i] = -1;
-	}
-	sign[i] = s;
-    }
-    npowers = new int[nnf];
-    bpowers = new int[nnf];
-}
-
-void bf_reducer::reduce()
-{
-    compute_reduced_factors();
-
-    for (int i = 0; i < v.size(); ++i) {
-	compute_extra_num(i);
-
-	if (no_param == 0) {
-	    vec_ZZ extra_num;
-	    extra_num.SetLength(d-1);
-	    int changes = 0;
-	    int npowers[nnf];
-	    for (int k = 0; k < nnf; ++k)
-		npowers[k] = 0;
-	    for (int k = 0; k < nf; ++k) {
-		assert(old2new[k] != -1);
-		npowers[old2new[k]] += v[i]->powers[k];
-		if (sign[k] == -1) {
-		    extra_num += v[i]->powers[k] * nfactors[old2new[k]];
-		    changes += v[i]->powers[k];
-		}
-	    }
-
-	    bfc_term_base * t = bf->find_bfc_term(vn, npowers, nnf);
-	    for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
-		bf->set_factor(v[i], k, changes % 2);
-		bf->add_term(t, v[i]->terms[k], extra_num);
-	    }
-	} else {
-	    // powers of "constant" part
-	    for (int k = 0; k < nnf; ++k)
-		bpowers[k] = 0;
-	    for (int k = 0; k < nf; ++k) {
-		if (factors[k][0] != 0)
-		    continue;
-		assert(old2new[k] != -1);
-		bpowers[old2new[k]] += v[i]->powers[k];
-		if (sign[k] == -1) {
-		    extra_num += v[i]->powers[k] * nfactors[old2new[k]];
-		    changes += v[i]->powers[k];
-		}
-	    }
-
-	    int j;
-	    for (j = 0; j < nf; ++j)
-		if (old2new[j] == -1 && v[i]->powers[j] > 0)
-		    break;
-
-	    dpoly D(no_param, factors[j][0], 1);
-	    for (int k = 1; k < v[i]->powers[j]; ++k) {
-		dpoly fact(no_param, factors[j][0], 1);
-		D *= fact;
-	    }
-	    for ( ; ++j < nf; )
-		if (old2new[j] == -1) 
-		    for (int k = 0; k < v[i]->powers[j]; ++k) {
-			dpoly fact(no_param, factors[j][0], 1);
-			D *= fact;
-		    }
-
-	    if (no_param + only_param == total_power &&
-		    bf->constant_vertex(d)) {
-		bfc_term_base * t = NULL;
-		vec_ZZ num;
-		num.SetLength(d-1);
-		ZZ cn;
-		ZZ cd;
-		for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
-		    dpoly n(no_param, v[i]->terms[k][0]);
-		    mpq_set_si(bf->tcount, 0, 1);
-		    n.div(D, bf->tcount, bf->one);
-
-		    if (value_zero_p(mpq_numref(bf->tcount)))
-			continue;
-
-		    if (!t)
-			 t = bf->find_bfc_term(vn, bpowers, nnf);
-		    bf->set_factor(v[i], k, bf->tcount, changes % 2);
-		    bf->add_term(t, v[i]->terms[k], extra_num);
-		}
-	    } else {
-		for (int j = 0; j < v[i]->terms.NumRows(); ++j) {
-		    dpoly n(no_param, v[i]->terms[j][0]);
-
-		    dpoly_r * r = 0;
-		    if (no_param + only_param == total_power)
-			r = new dpoly_r(n, nf);
-		    else
-			for (int k = 0; k < nf; ++k) {
-			    if (v[i]->powers[k] == 0)
-				continue;
-			    if (factors[k][0] == 0 || old2new[k] == -1)
-				continue;
-
-			    dpoly pd(no_param-1, factors[k][0], 1);
-
-			    for (int l = 0; l < v[i]->powers[k]; ++l) {
-				int q;
-				for (q = 0; q < k; ++q)
-				    if (old2new[q] == old2new[k] &&
-					sign[q] == sign[k])
-					    break;
-
-				if (r == 0)
-				    r = new dpoly_r(n, pd, q, nf);
-				else {
-				    dpoly_r *nr = new dpoly_r(r, pd, q, nf);
-				    delete r;
-				    r = nr;
-				}
-			    }
-			}
-
-		    dpoly_r *rc = r->div(D);
-		    delete r;
-
-		    if (bf->constant_vertex(d)) {
-			vector< dpoly_r_term * >& final = rc->c[rc->len-1];
-
-			for (int k = 0; k < final.size(); ++k) {
-			    if (final[k]->coeff == 0)
-				continue;
-
-			    update_powers(final[k]->powers, rc->dim);
-
-			    bfc_term_base * t = bf->find_bfc_term(vn, npowers, nnf);
-			    bf->set_factor(v[i], j, final[k]->coeff, rc->denom, l_changes % 2);
-			    bf->add_term(t, v[i]->terms[j], l_extra_num);
-			}
-		    } else
-			bf->cum(this, v[i], j, rc);
-
-		    delete rc;
-		}
-	    }
-	}
-	delete v[i];
-    }
-
-}
-
-void bf_base::reduce(mat_ZZ& factors, bfc_vec& v)
-{
-    assert(v.size() > 0);
-    unsigned nf = factors.NumRows();
-    unsigned d = factors.NumCols();
-
-    if (d == lower)
-	return base(factors, v);
-
-    bf_reducer bfr(factors, v, this);
-
-    bfr.reduce();
-
-    if (bfr.vn.size() > 0)
-	reduce(bfr.nfactors, bfr.vn);
-}
-
-int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors, 
-				    bfc_term_base* t, int s)
-{
-    factors.SetDims(dim, dim);
-
-    int r;
-
-    for (r = 0; r < dim; ++r)
-	t->powers[r] = 1;
-
-    for (r = 0; r < dim; ++r) {
-	values2zz(C->Ray[r]+1, factors[r], dim);
-	int k;
-	for (k = 0; k < dim; ++k)
-	    if (factors[r][k] != 0)
-		break;
-	if (factors[r][k] < 0) {
-	    factors[r] = -factors[r];
-	    t->terms[0] += factors[r];
-	    s = -s;
-	}
-    }
-
-    return s;
-}
-
-void bf_base::handle_polar(Polyhedron *C, int s)
-{
-    bfc_term* t = new bfc_term(dim);
-    vector< bfc_term_base * > v;
-    v.push_back(t);
-
-    assert(C->NbRays-1 == dim);
-
-    t->cn.SetLength(1);
-    t->cd.SetLength(1);
-
-    t->terms.SetDims(1, dim);
-    lattice_point(P->Ray[current_vertex]+1, C, t->terms[0]);
-
-    // the elements of factors are always lexpositive
-    mat_ZZ   factors;
-    s = setup_factors(C, factors, t, s);
-
-    t->cn[0] = s;
-    t->cd[0] = 1;
-
-    reduce(factors, v);
-}
-
-void bf_base::start(unsigned MaxRays)
-{
-    for (current_vertex = 0; current_vertex < P->NbRays; ++current_vertex) {
-	Polyhedron *C = supporting_cone(P, current_vertex);
-	decompose(C, MaxRays);
-    }
-}
-
-struct bfcounter_base : public bf_base {
-    ZZ cn;
-    ZZ cd;
-
-    bfcounter_base(Polyhedron *P) : bf_base(P, P->Dimension) {
-    }
-
-    bfc_term_base* new_bf_term(int len) {
-	bfc_term* t = new bfc_term(len);
-	t->cn.SetLength(0);
-	t->cd.SetLength(0);
-	return t;
-    }
-
-    virtual void set_factor(bfc_term_base *t, int k, int change) {
-	bfc_term* bfct = static_cast<bfc_term *>(t);
-	cn = bfct->cn[k];
-	if (change)
-	    cn = -cn;
-	cd = bfct->cd[k];
-    }
-
-    virtual void set_factor(bfc_term_base *t, int k, mpq_t &f, int change) {
-	bfc_term* bfct = static_cast<bfc_term *>(t);
-	value2zz(mpq_numref(f), cn);
-	value2zz(mpq_denref(f), cd);
-	cn *= bfct->cn[k];
-	if (change)
-	    cn = -cn;
-	cd *= bfct->cd[k];
-    }
-
-    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change) {
-	bfc_term* bfct = static_cast<bfc_term *>(t);
-	cn = bfct->cn[k] * n;
-	if (change)
-	    cn = -cn;
-	cd = bfct->cd[k] * d;
-    }
-
-    virtual void insert_term(bfc_term_base *t, int i) {
-	bfc_term* bfct = static_cast<bfc_term *>(t);
-	int len = t->terms.NumRows()-1;	// already increased by one
-
-	bfct->cn.SetLength(len+1);
-	bfct->cd.SetLength(len+1);
-	for (int j = len; j > i; --j) {
-	    bfct->cn[j] = bfct->cn[j-1];
-	    bfct->cd[j] = bfct->cd[j-1];
-	    t->terms[j] = t->terms[j-1];
-	}
-	bfct->cn[i] = cn;
-	bfct->cd[i] = cd;
-    }
-
-    virtual void update_term(bfc_term_base *t, int i) {
-	bfc_term* bfct = static_cast<bfc_term *>(t);
-
-	ZZ g = GCD(bfct->cd[i], cd);
-	ZZ n = cn * bfct->cd[i]/g + bfct->cn[i] * cd/g;
-	ZZ d = bfct->cd[i] * cd / g;
-	bfct->cn[i] = n;
-	bfct->cd[i] = d;
-    }
-
-    virtual bool constant_vertex(int dim) { return true; }
-    virtual void cum(bf_reducer *bfr, bfc_term_base *t, int k, dpoly_r *r) {
-	assert(0);
-    }
-};
-
 struct bfcounter : public bfcounter_base {
     mpq_t count;
 
-    bfcounter(Polyhedron *P) : bfcounter_base(P) {
+    bfcounter(unsigned dim) : bfcounter_base(dim) {
 	mpq_init(count);
 	lower = 1;
     }
@@ -1793,9 +565,9 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 	    mpq_set_si(tcount, 0, 1);
 	    n.div(D, tcount, one);
 	    if (total_power % 2)
-		bfct->cn[k] = -bfct->cn[k];
-	    zz2value(bfct->cn[k], tn);
-	    zz2value(bfct->cd[k], td);
+		bfct->c[k].n = -bfct->c[k].n;
+	    zz2value(bfct->c[k].n, tn);
+	    zz2value(bfct->c[k].d, td);
 
 	    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
 	    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
@@ -1806,42 +578,116 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
-struct partial_bfcounter : public bfcounter_base, public gf_base {
-    partial_bfcounter(Polyhedron *P, unsigned nparam) : 
-	    bfcounter_base(P), gf_base(this, nparam) {
-	lower = nparam;
-    }
-    ~partial_bfcounter() {
-    }
-    virtual void base(mat_ZZ& factors, bfc_vec& v);
-    /* we want to override the start method from bf_base with the one from gf_base */
-    void start(unsigned MaxRays) {
-	gf_base::start(MaxRays);
-    }
-};
 
-void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
+/* Check whether the polyhedron is unbounded and if so,
+ * check whether it has any (and therefore an infinite number of)
+ * integer points.
+ * If one of the vertices is integer, then we are done.
+ * Otherwise, transform the polyhedron such that one of the rays
+ * is the first unit vector and cut it off at a height that ensures
+ * that if the whole polyhedron has any points, then the remaining part
+ * has integer points.  In particular we add the largest coefficient
+ * of a ray to the highest vertex (rounded up).
+ */
+static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRays)
 {
-    mat_ZZ den;
-    unsigned nf = factors.NumRows();
+    int r = 0;
+    Matrix *M, *M2;
+    Value c, tmp;
+    Value g;
+    bool first;
+    Vector *v;
+    Value offset, size;
+    Polyhedron *R;
 
-    for (int i = 0; i < v.size(); ++i) {
-	bfc_term* bfct = static_cast<bfc_term *>(v[i]);
-	den.SetDims(0, lower);
-	int total_power = 0;
-	int p = 0;
-	for (int j = 0; j < nf; ++j) {
-	    total_power += v[i]->powers[j];
-	    den.SetDims(total_power, lower);
-	    for (int k = 0; k < v[i]->powers[j]; ++k)
-		den[p++] = factors[j];
-	}
-	for (int j = 0; j < v[i]->terms.NumRows(); ++j)
-	    gf->add(bfct->cn[j], bfct->cd[j], v[i]->terms[j], den);
-	delete v[i];
+    if (P->NbBid == 0)
+	for (; r < P->NbRays; ++r)
+	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
+		break;
+    if (P->NbBid == 0 && r == P->NbRays)
+	return false;
+
+#ifdef HAVE_LIBGLPK
+    Vector *sample;
+
+    sample = Polyhedron_Sample(P, MaxRays);
+    if (!sample)
+	value_set_si(*result, 0);
+    else {
+	value_set_si(*result, -1);
+	Vector_Free(sample);
     }
-}
+    return true;
+#endif
 
+    for (int i = 0; i < P->NbRays; ++i)
+	if (value_one_p(P->Ray[i][1+P->Dimension])) {
+	    value_set_si(*result, -1);
+	    return true;
+	}
+
+    value_init(g);
+    v = Vector_Alloc(P->Dimension+1);
+    Vector_Gcd(P->Ray[r]+1, P->Dimension, &g);
+    Vector_AntiScale(P->Ray[r]+1, v->p, g, P->Dimension+1);
+    M = unimodular_complete(v);
+    value_set_si(M->p[P->Dimension][P->Dimension], 1);
+    M2 = Transpose(M);
+    Matrix_Free(M);
+    P = Polyhedron_Preimage(P, M2, 0);
+    Matrix_Free(M2);
+    value_clear(g);
+    Vector_Free(v);
+
+    first = true;
+    value_init(offset);
+    value_init(size);
+    value_init(tmp);
+    value_set_si(size, 0);
+
+    for (int i = 0; i < P->NbBid; ++i) {
+	value_absolute(tmp, P->Ray[i][1]);
+	if (value_gt(tmp, size))
+	    value_assign(size, tmp);
+    }
+    for (int i = P->NbBid; i < P->NbRays; ++i) {
+	if (value_zero_p(P->Ray[i][P->Dimension+1])) {
+	    if (value_gt(P->Ray[i][1], size))
+		value_assign(size, P->Ray[i][1]);
+	    continue;
+	}
+	mpz_cdiv_q(tmp, P->Ray[i][1], P->Ray[i][P->Dimension+1]);
+	if (first || value_gt(tmp, offset)) {
+	    value_assign(offset, tmp);
+	    first = false;
+	}
+    }
+    value_addto(offset, offset, size);
+    value_clear(size);
+    value_clear(tmp);
+
+    v = Vector_Alloc(P->Dimension+2);
+    value_set_si(v->p[0], 1);
+    value_set_si(v->p[1], -1);
+    value_assign(v->p[1+P->Dimension], offset);
+    R = AddConstraints(v->p, 1, P, MaxRays);
+    Polyhedron_Free(P);
+    P = R;
+
+    value_clear(offset);
+    Vector_Free(v);
+
+    value_init(c);
+    barvinok_count(P, &c, MaxRays);
+    Polyhedron_Free(P);
+    if (value_zero_p(c))
+	value_set_si(*result, 0);
+    else
+	value_set_si(*result, -1);
+    value_clear(c);
+
+    return true;
+}
 
 typedef Polyhedron * Polyhedron_p;
 
@@ -1852,7 +698,6 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     unsigned dim;
     int allocated = 0;
     Polyhedron *Q;
-    int r = 0;
     bool infinite = false;
 
     if (emptyQ2(P)) {
@@ -1868,12 +713,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	}
 	allocated = 1;
     }
-    if (P->NbBid == 0)
-	for (; r < P->NbRays; ++r)
-	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
-		break;
-    if (P->NbBid != 0 || r < P->NbRays) {
-	value_set_si(*result, -1);
+    if (Polyhedron_is_infinite(P, result, NbMaxCons)) {
 	if (allocated)
 	    Polyhedron_Free(P);
 	return;
@@ -1895,7 +735,9 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     }
 
     barvinok_count_f(P, result, NbMaxCons);
-    if (Q && P->next) {
+    if (value_neg_p(*result))
+	infinite = true;
+    if (Q && P->next && value_notzero_p(*result)) {
 	Value factor;
 	value_init(factor);
 
@@ -1922,6 +764,11 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
 static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
 {
+    if (emptyQ2(P)) {
+	value_set_si(*result, 0);
+	return;
+    }
+
     if (P->Dimension == 1)
 	return Line_Length(P, result);
 
@@ -1933,13 +780,13 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
     POL_ENSURE_VERTICES(P);
 
 #ifdef USE_INCREMENTAL_BF
-    bfcounter cnt(P);
+    bfcounter cnt(P->Dimension);
 #elif defined USE_INCREMENTAL_DF
-    icounter cnt(P);
+    icounter cnt(P->Dimension);
 #else
-    counter cnt(P);
+    counter cnt(P->Dimension);
 #endif
-    cnt.start(NbMaxCons);
+    cnt.start(P, NbMaxCons);
 
     assert(value_one_p(&cnt.count[0]._mp_den));
     value_assign(*result, &cnt.count[0]._mp_num);
@@ -2018,7 +865,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 }
 
 /* this procedure may have false negatives */
-static bool Polyhedron_is_infinite(Polyhedron *P, unsigned nparam)
+static bool Polyhedron_is_infinite_param(Polyhedron *P, unsigned nparam)
 {
     int r;
     for (r = 0; r < P->NbRays; ++r) {
@@ -2574,7 +1421,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 
     bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
 		    vertex_decomposer(P, nbV, this),
-		    bf_base(P, dim), enumerator_base(dim, this) {
+		    bf_base(dim), enumerator_base(dim, this) {
 	lower = 0;
 	factor = NULL;
     }
@@ -2614,9 +1461,10 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 	    value_assign(f.x.n, mpq_numref(q));
 	value_assign(f.d, mpq_denref(q));
 	emul(&f, factor);
+	free_evalue_refs(&f);
     }
 
-    virtual void set_factor(bfc_term_base *t, int k, ZZ& n, ZZ& d, int change) {
+    virtual void set_factor(bfc_term_base *t, int k, const QQ& c, int change) {
 	bfe_term* bfet = static_cast<bfe_term *>(t);
 
 	factor = new evalue;
@@ -2624,14 +1472,15 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 	evalue f;
 	value_init(f.d);
 	value_init(f.x.n);
-	zz2value(n, f.x.n);
+	zz2value(c.n, f.x.n);
 	if (change)
 	    value_oppose(f.x.n, f.x.n);
-	zz2value(d, f.d);
+	zz2value(c.d, f.d);
 
 	value_init(factor->d);
 	evalue_copy(factor, bfet->factors[k]);
 	emul(&f, factor);
+	free_evalue_refs(&f);
     }
 
     void set_factor(evalue *f, int change) {
@@ -2853,7 +1702,7 @@ out:
 	   
 	return eres;
     }
-    if (Polyhedron_is_infinite(P, nparam))
+    if (Polyhedron_is_infinite_param(P, nparam))
 	goto constant;
 
     if (P->NbEq != 0) {
@@ -4583,14 +3432,6 @@ out:
     return EP;
 }
 
-static void split_param_compression(Matrix *CP, mat_ZZ& map, vec_ZZ& offset)
-{
-    Matrix *T = Transpose(CP);
-    matrix2zz(T, map, T->NbRows-1, T->NbColumns-1);
-    values2zz(T->p[T->NbRows-1], offset, T->NbColumns-1);
-    Matrix_Free(T);
-}
-
 /*
  * remove equalities that require a "compression" of the parameters
  */
@@ -4630,6 +3471,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     Matrix *CP = NULL;
     Polyhedron *CA;
     unsigned nparam = C->Dimension;
+    gen_fun *gf;
 
     CA = align_context(C, P->Dimension, MaxRays);
     P = DomainIntersection(P, CA, MaxRays);
@@ -4640,7 +3482,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	return new gen_fun;
     }
 
-    assert(!Polyhedron_is_infinite(P, nparam));
+    assert(!Polyhedron_is_infinite_param(P, nparam));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_positive_rays(P, nparam));
     if (P->NbEq != 0)
@@ -4649,23 +3491,17 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	P = remove_more_equalities(P, nparam, &CP, MaxRays);
     assert(P->NbEq == 0);
 
-#ifdef USE_INCREMENTAL_BF
-    partial_bfcounter red(P, nparam);
-#elif defined USE_INCREMENTAL_DF
-    partial_ireducer red(P, nparam);
-#else
-    partial_reducer red(P, nparam);
-#endif
-    red.start(MaxRays);
+    gf_base *red;
+    red = gf_base::create(Polyhedron_Project(P, nparam), P->Dimension, nparam);
+    red->start_gf(P, MaxRays);
     Polyhedron_Free(P);
     if (CP) {
-	mat_ZZ map;
-	vec_ZZ offset;
-	split_param_compression(CP, map, offset);
-	red.gf->substitute(CP, map, offset);
+	red->gf->substitute(CP);
 	Matrix_Free(CP);
     }
-    return red.gf;
+    gf = red->gf;
+    delete red;
+    return gf;
 }
 
 static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam, 
@@ -4676,7 +3512,7 @@ static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam,
     value_init(tmp);
     for (Polyhedron *P = D; P; P = P->next) {
 	POL_ENSURE_VERTICES(P);
-	assert(!Polyhedron_is_infinite(P, nparam));
+	assert(!Polyhedron_is_infinite_param(P, nparam));
 	assert(P->NbBid == 0);
 	assert(Polyhedron_has_positive_rays(P, nparam));
 
@@ -4717,7 +3553,7 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
 					 unsigned MaxRays)
 {
     Polyhedron *conv, *D2;
-    gen_fun *gf = NULL;
+    gen_fun *gf = NULL, *gf2;
     unsigned nparam = C->Dimension;
     ZZ one, mone;
     one = 1;
@@ -4729,8 +3565,9 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
 	/* it doesn't matter which reducer we use, since we don't actually
 	 * reduce anything here
 	 */
-	partial_reducer red(P, P->Dimension);
-	red.start(MaxRays);
+	partial_reducer red(Polyhedron_Project(P, P->Dimension), P->Dimension, 
+			    P->Dimension);
+	red.start(P, MaxRays);
 	if (!gf)
 	    gf = red.gf;
 	else {
@@ -4742,23 +3579,15 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
      * but the reducer classes currently expect a polyhedron in
      * the combined space
      */
-    conv = DomainConvex(D2, MaxRays);
-#ifdef USE_INCREMENTAL_DF
-    partial_ireducer red(conv, nparam);
-#else
-    partial_reducer red(conv, nparam);
-#endif
-    for (int i = 0; i < gf->term.size(); ++i) {
-	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
-	    red.reduce(gf->term[i]->n.coeff[j][0], gf->term[i]->n.coeff[j][1],
-		       gf->term[i]->n.power[j], gf->term[i]->d.power);
-	}
-    }
+    Polyhedron_Free(gf->context);
+    gf->context = DomainConvex(D2, MaxRays);
+
+    gf2 = gf->summate(D2->Dimension - nparam);
+
     delete gf;
     if (D != D2)
 	Domain_Free(D2);
-    Polyhedron_Free(conv);
-    return red.gf;
+    return gf2;
 }
 
 evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)

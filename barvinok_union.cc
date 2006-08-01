@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     if (series) {
 	gen_fun *gf;
 	gf = barvinok_enumerate_union_series(D, C, MAXRAYS);
-	gf->print(C->Dimension, param_name);
+	gf->print(std::cout, C->Dimension, param_name);
 	puts("");
 	delete gf;
     } else {

@@ -323,7 +323,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T)
 }
 
 /* Computes x, y and g such that g = gcd(a,b) and a*x+b*y = g */
-static void Euclid(Value a, Value b, Value *x, Value *y, Value *g)
+void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g)
 {
     Value c, d, e, f, tmp;
 
@@ -393,7 +393,7 @@ Matrix * unimodular_complete(Vector *row)
     }
     for (; i < row->Size; ++i) {
 	value_assign(old, g);
-	Euclid(old, row->p[i], &c, &b, &g);
+	Extended_Euclid(old, row->p[i], &c, &b, &g);
 	value_oppose(b, b);
 	for (j = 0; j < row->Size; ++j) {
 	    if (j < i) {
@@ -427,7 +427,7 @@ Polyhedron *remove_equalities(Polyhedron *P)
     int i;
 
     value_init(g);
-    while (p->NbEq > 0) {
+    while (!emptyQ2(p) && p->NbEq > 0) {
 	assert(dim > 0);
 	Vector_Gcd(p->Constraint[0]+1, dim+1, &g);
 	Vector_AntiScale(p->Constraint[0]+1, p->Constraint[0]+1, g, dim+1);
@@ -1147,7 +1147,15 @@ Polyhedron *DomainConcat(Polyhedron *head, Polyhedron *tail)
     return head;
 }
 
-#ifdef HAVE_LEXSMALLER
+#ifndef HAVE_LEXSMALLER
+
+evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
+			       Polyhedron *C, unsigned MaxRays)
+{
+    assert(0);
+}
+
+#else
 #include <polylib/ranking.h>
 
 evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,

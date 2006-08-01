@@ -3,6 +3,7 @@
 extern "C" {
 #include <polylib/polylibgmp.h>
 }
+#include <barvinok/util.h>
 #include "conversion.h"
 
 #define SIZE(p) (((long *) (p))[1])
@@ -20,7 +21,7 @@ void value2zz(Value v, ZZ& z)
     SIZE(z.rep) = sa;
 }
 
-void zz2value(ZZ& z, Value& v)
+void zz2value(const ZZ& z, Value& v)
 {
     if (!z.rep) {
 	value_set_si(v, 0);
@@ -48,7 +49,7 @@ void values2zz(Value *p, vec_ZZ& v, int len)
 
 /*
  */
-void zz2values(vec_ZZ& v, Value *p)
+void zz2values(const vec_ZZ& v, Value *p)
 {
     for (int i = 0; i < v.length(); ++i)
 	zz2value(v[i], p[i]);
@@ -91,7 +92,7 @@ Matrix *rays(Polyhedron *C)
     return M;
 }
 
-Matrix * rays2(Polyhedron *C)
+Matrix *rays2(Polyhedron *C)
 {
     unsigned dim = C->NbRays - 1; /* don't count zero vertex */
     assert(C->NbRays - 1 == C->Dimension);
@@ -106,4 +107,37 @@ Matrix * rays2(Polyhedron *C)
     assert(c == dim);
 
     return M;
+}
+
+void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
+{
+    Value tmp;
+    int max = 10 * 16;
+    unsigned int dim = P->Dimension;
+    value_init(tmp);
+
+    for (int i = 0; i < P->NbRays; ++i) {
+	for (int j = 1; j <= dim; ++j) {
+	    value_absolute(tmp, P->Ray[i][j]);
+	    int t = VALUE_TO_LONG(tmp) * 16;
+	    if (t > max)
+		max = t;
+	}
+    }
+    for (int i = 0; i < P->NbConstraints; ++i) {
+	for (int j = 1; j <= dim; ++j) {
+	    value_absolute(tmp, P->Constraint[i][j]);
+	    int t = VALUE_TO_LONG(tmp) * 16;
+	    if (t > max)
+		max = t;
+	}
+    }
+    value_clear(tmp);
+
+    lambda.SetLength(nvar);
+    for (int k = 0; k < nvar; ++k) {
+	int r = random_int(max*dim)+2;
+	int v = (2*(r%2)-1) * (max/2*dim + (r >> 1));
+	lambda[k] = v;
+    }
 }
