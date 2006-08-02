@@ -743,8 +743,17 @@ polynomial : INT { $$ = new GiNaC::ex($1); }
 		$$ = new GiNaC::ex(variableMap[v]);
 	}
 	| '(' polynomial ')' { $$ = $2; }
+	| '-' polynomial %prec '*' {
+	    $$ = new GiNaC::ex(-*$2);
+	    delete $2;
+	}
 	| polynomial '+' polynomial {
 	    $$ = new GiNaC::ex(*$1 + *$3);
+	    delete $1;
+	    delete $3;
+	}
+	| polynomial '-' polynomial {
+	    $$ = new GiNaC::ex(*$1 - *$3);
 	    delete $1;
 	    delete $3;
 	}
