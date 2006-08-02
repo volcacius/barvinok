@@ -9,6 +9,8 @@ occ_SOURCES = \
 	count.h \
 	lex.yy.cc \
 	polyfunc.cc \
+	vertices.cc \
+	vertices.h \
 	y.tab.cc \
 	omega_calc/yylex.h
 LDADD = -lcode_gen -lomega ../libbarvinok.la ../bernstein/libbernstein.la

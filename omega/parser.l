@@ -202,6 +202,7 @@ void includeFile(char *s) {
 "card"     	{ BUFFER;  return CARD; }
 "ranking"     	{ BUFFER;  return RANKING; }
 "count_lexsmaller"     	{ BUFFER;  return COUNT_LEXSMALLER; }
+"vertices"     	{ BUFFER;  return VERTICES; }
 "&"		{ BUFFER;  return AND; }
 "|"		{ BUFFER;  return OR; }
 "&&"		{ BUFFER;  return AND; }
