@@ -19,6 +19,7 @@
 #include <sys/resource.h>
 #endif
 #include "count.h"
+#include "vertices.h"
 
 #define CALC_VERSION_STRING "Omega Calculator v1.2"
 
@@ -81,6 +82,7 @@ reachable_information *reachable_info;
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
 %token CARD RANKING COUNT_LEXSMALLER
+%token VERTICES
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -99,6 +101,7 @@ reachable_information *reachable_info;
 %left OMEGA_P9
 %left '('	OMEGA_P10
 %right CARD RANKING COUNT_LEXSMALLER
+%right VERTICES
 
 
 %type <INT_VALUE> effort 
@@ -503,6 +506,10 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    }
 	    delete $2;
 	    delete $4;
+	}
+	| VERTICES relation ';' {
+	    vertices(*$2);
+	    delete $2;
 	}
 	;
 

@@ -8,6 +8,8 @@ occ_SOURCES = \
 	count.cc \
 	count.h \
 	lex.yy.cc \
+	vertices.cc \
+	vertices.h \
 	y.tab.cc \
 	omega_calc/yylex.h
 LDADD = -lcode_gen -lomega ../libbarvinok.la
