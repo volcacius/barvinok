@@ -257,9 +257,6 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	    return sample;
 	}
 
-    /* for now */
-    assert(P->NbEq == 0);
-
     Q = remove_ray(P, MaxRays);
     if (Q) {
 	sample = Polyhedron_Sample(Q, MaxRays);
