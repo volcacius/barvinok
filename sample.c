@@ -310,6 +310,12 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	value_assign(v->p[1+Q->Dimension], tmp);
 
 	R = AddConstraints(v->p, 1, Q, MaxRays);
+	R = DomainConstraintSimplify(R, MaxRays);
+	if (emptyQ(R)) {
+	    Polyhedron_Free(R);
+	    continue;
+	}
+
 	S = Polyhedron_RemoveFixedColumns(R, &T);
 	Polyhedron_Free(R);
 	S_sample = Polyhedron_Sample(S, MaxRays);
