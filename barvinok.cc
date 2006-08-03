@@ -782,6 +782,9 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
     POL_ENSURE_VERTICES(P);
 
+    if (Polyhedron_is_infinite(P, result, NbMaxCons))
+	return;
+
 #ifdef USE_INCREMENTAL_BF
     bfcounter cnt(P->Dimension);
 #elif defined USE_INCREMENTAL_DF
