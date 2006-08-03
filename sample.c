@@ -284,6 +284,8 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 
     Q = Polyhedron_Image(P, T, MaxRays);
 
+    POL_ENSURE_VERTICES(Q);
+
     value_init(min);
     value_init(max);
     value_init(tmp);
