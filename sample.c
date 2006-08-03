@@ -125,29 +125,40 @@ static void print_minmax(Polyhedron *P)
  */
 static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
 {
-    int i, j, n;
+    int i, j, k, n;
     int dim = P->Dimension;
     int *remove = ALLOCN(int, dim);
     Polyhedron *Q;
+    int NbEq;
 
     assert(POL_HAS(P, POL_INEQUALITIES));
     for (i = 0; i < dim; ++i)
 	remove[i] = 0;
+    NbEq = 0;
     for (i = 0; i < P->NbEq; ++i) {
 	int pos = First_Non_Zero(P->Constraint[i]+1, dim);
-	assert(First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) == -1);
+	if (First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) != -1)
+	    continue;
 	remove[pos] = 1;
+	++NbEq;
     }
-    Q = Polyhedron_Alloc(P->Dimension-P->NbEq, P->NbConstraints-P->NbEq, P->NbRays);
-    for (i = 0; i < Q->NbConstraints; ++i) {
-	value_assign(Q->Constraint[i][0], P->Constraint[P->NbEq+i][0]);
+    assert(NbEq > 0);
+    Q = Polyhedron_Alloc(P->Dimension-NbEq, P->NbConstraints-NbEq, P->NbRays);
+    for (i = 0, k = 0; i < P->NbConstraints; ++i) {
+	if (i < P->NbEq) {
+	    int pos = First_Non_Zero(P->Constraint[i]+1, dim);
+	    if (First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) == -1)
+		continue;
+	}
+	value_assign(Q->Constraint[k][0], P->Constraint[i][0]);
 	for (j = 0, n = 0; j < P->Dimension; ++j) {
 	    if (remove[j])
 		++n;
 	    else
-		value_assign(Q->Constraint[i][1+j-n], P->Constraint[P->NbEq+i][1+j]);
+		value_assign(Q->Constraint[k][1+j-n], P->Constraint[i][1+j]);
 	}
-	value_assign(Q->Constraint[i][1+j-n], P->Constraint[P->NbEq+i][1+j]);
+	value_assign(Q->Constraint[k][1+j-n], P->Constraint[i][1+j]);
+	++k;
     }
     for (i = 0; i < Q->NbRays; ++i) {
 	value_assign(Q->Ray[i][0], P->Ray[i][0]);
