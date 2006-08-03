@@ -104,11 +104,14 @@ Matrix *reduced_basis(Polyhedron *P)
     int row;
     Value one, tmp;
     Vector *b_tmp;
-    double *F = ALLOCN(double, dim);
+    double *F;
     double *alpha_buffer[2];
     double *alpha_saved;
     double F_saved;
     int use_saved = 0;
+
+    if (P->Dimension == 1)
+	return basis;
 
     value_init(one);
     value_init(tmp);
@@ -116,6 +119,7 @@ Matrix *reduced_basis(Polyhedron *P)
 
     b_tmp = Vector_Alloc(dim);
 
+    F = ALLOCN(double, dim);
     alpha_buffer[0] = ALLOCN(double, dim);
     alpha_buffer[1] = ALLOCN(double, dim);
     alpha_saved = alpha_buffer[0];
