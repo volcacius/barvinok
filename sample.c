@@ -241,6 +241,14 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
     int ok;
 
     POL_ENSURE_VERTICES(P);
+    if (emptyQ(P))
+	return NULL;
+
+    if (P->Dimension == 0) {
+	sample = Vector_Alloc(1);
+	value_set_si(sample->p[0], 1);
+	return sample;
+    }
 
     for (i = 0; i < P->NbRays; ++i)
 	if (value_one_p(P->Ray[i][1+P->Dimension])) {
