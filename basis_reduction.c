@@ -131,6 +131,7 @@ Matrix *reduced_basis(Polyhedron *P)
     lpx_adv_basis(lp);
     lpx_simplex(lp);
     F[0] = lpx_get_obj_val(lp);
+    assert(F[0] > -1e-10);
 
     do {
 	int mu[2];
@@ -154,6 +155,7 @@ Matrix *reduced_basis(Polyhedron *P)
 	    del_lp_row(lp);
 	}
 	F[i+1] = F_new;
+	assert(F[i+1] > -1e-10);
 
 
 	mu[0] = (int)floor(alpha+1e-10);
@@ -187,6 +189,7 @@ Matrix *reduced_basis(Polyhedron *P)
 	}
 	Vector_Combine(basis->p[i+1], basis->p[i], basis->p[i+1], one, tmp, dim);
 
+	assert(F_new > -1e-10);
 	F_old = F[i];
 
 	use_saved = 0;
