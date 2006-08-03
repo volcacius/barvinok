@@ -705,7 +705,10 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	return;
     }
     if (P->NbEq != 0) {
-	P = remove_equalities(P);
+	do {
+	    P = remove_equalities(P);
+	    P = DomainConstraintSimplify(P, NbMaxCons);
+	} while (!emptyQ(P) && P->NbEq != 0);
 	if (emptyQ(P)) {
 	    Polyhedron_Free(P);
 	    value_set_si(*result, 0);
