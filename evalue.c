@@ -2957,6 +2957,7 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 
     eadd(&fl, &p->arr[0]);
     reorder_terms(p, &p->arr[0]);
+    value_clear(e->d);
     *e = p->arr[1];
     free(p);
     free_evalue_refs(&fl);
