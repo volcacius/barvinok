@@ -842,7 +842,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     value_set_si(M->p[1][len-2], 1);
     for (int v = 0; v < P->Dimension; ++v) {
 	value_set_si(M->p[0][v], 1);
-	Polyhedron *I = Polyhedron_Image(P, M, 2+1);
+	Polyhedron *I = Polyhedron_Image(R, M, 2+1);
 	value_set_si(M->p[0][v], 0);
 	for (int r = 0; r < I->NbConstraints; ++r) {
 	    if (value_zero_p(I->Constraint[r][0]))
