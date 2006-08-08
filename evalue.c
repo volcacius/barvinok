@@ -3045,6 +3045,7 @@ static void floor2frac_r(evalue *e, int nvar)
 
     eadd(&f, &p->arr[0]);
     reorder_terms(p, &p->arr[0]);
+    value_clear(e->d);
     *e = p->arr[1];
     free(p);
     free_evalue_refs(&f);
