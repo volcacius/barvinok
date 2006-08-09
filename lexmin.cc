@@ -264,7 +264,6 @@ static void substitute(evalue *e, evalue *fract, evalue *val)
 {
     evalue *t;
 
-    char *test[] = {"a", "b", "C", "D"};
     for (t = e; value_zero_p(t->d); t = &t->x.p->arr[type_offset(t->x.p)]) {
 	if (t->x.p->type == fractional && eequal(&t->x.p->arr[0], fract))
 	    break;
@@ -298,7 +297,6 @@ static void substitute(evalue *e, int pos, evalue *val)
 {
     evalue *t;
 
-    char *test[] = {"a", "b", "C", "D"};
     for (t = e; value_zero_p(t->d); t = &t->x.p->arr[type_offset(t->x.p)]) {
 	if (t->x.p->type == polynomial && t->x.p->pos == pos)
 	    break;
