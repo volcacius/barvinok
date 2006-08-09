@@ -1347,7 +1347,7 @@ out2:
 out:
     Vector_Free(all_val);
     value_clear(tmp);
-    return in;
+    return in || (P->next && in_domain(P->next, val, dim, MaxRays));
 }
 
 void compute_evalue(evalue *e, Value *val, Value *res)
