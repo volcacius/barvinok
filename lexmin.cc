@@ -2376,7 +2376,8 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
     }
 
     if (S) {
-	check_poly(S, CS, maxima, nparam, 0, p, print_all, st, MaxRays);
+	if (!(CS && emptyQ2(CS)))
+	    check_poly(S, CS, maxima, nparam, 0, p, print_all, st, MaxRays);
 	Domain_Free(S);
     }
 
