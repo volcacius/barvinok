@@ -666,6 +666,8 @@ void indicator::combine(int i, int j)
 	    it->sign = -it->sign;
 	term.push_back(it);
     }
+    delete term[i];
+    delete term[j];
     term.erase(term.begin()+j);
     term.erase(term.begin()+i);
 }
@@ -1750,6 +1752,10 @@ static vector<max_term*> lexmin(indicator& ind, EDomain *D, unsigned nparam,
 	    ind.combine(i, peel);
 	    ind.simplify();
 	    i = -1;		    /* start over */
+	    for (j = 0; j < splits.size(); ++j) {
+		free_evalue_refs(splits[j].constraint);
+		delete splits[j].constraint;
+	    }
 	    continue;
 	} 
 	if (splits.size() != 0) {
