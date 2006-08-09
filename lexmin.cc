@@ -213,14 +213,14 @@ void indicator_term::print(ostream& os, char **p)
 }
 
 /* Perform the substitution specified by T on the variables.
- * T has dimension (newdim+1) x (olddim + nparam + 1).
+ * T has dimension (newdim+nparam+1) x (olddim + nparam + 1).
  * The substitution is performed as in gen_fun::substitute
  */
 void indicator_term::substitute(Matrix *T)
 {
     unsigned dim = den.NumCols();
-    unsigned newdim = T->NbRows - 1;
     unsigned nparam = T->NbColumns - dim - 1;
+    unsigned newdim = T->NbRows - nparam - 1;
     evalue **newvertex;
     mat_ZZ trans;
     matrix2zz(T, trans, newdim, dim);
@@ -1966,12 +1966,13 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
     Matrix_Free(Ul);
     Matrix_Free(T1);
 
-    T = Matrix_Alloc(dim+1, (dim-n)+nparam+1);
+    T = Matrix_Alloc(dim+nparam+1, (dim-n)+nparam+1);
     for (int i = 0; i < dim; ++i) {
 	Vector_Copy(U->p[i]+n, T->p[i], dim-n);
 	Vector_Copy(T2->p[i], T->p[i]+dim-n, nparam+1);
     }
-    value_set_si(T->p[dim][(dim-n)+nparam], 1);
+    for (int i = 0; i < nparam+1; ++i)
+	value_set_si(T->p[dim+i][(dim-n)+i], 1);
     assert(value_one_p(T2->p[dim][nparam]));
     Matrix_Free(U);
     Matrix_Free(T2);
