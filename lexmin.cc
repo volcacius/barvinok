@@ -1307,7 +1307,7 @@ bool in_domain(Polyhedron *P, Value *val, unsigned dim, unsigned MaxRays)
 				  &tmp);
 		    if (value_neg_p(tmp))
 			goto out2;
-		    if (i < P->NbEq && value_pos_p(tmp))
+		    if (j < P->NbEq && value_pos_p(tmp))
 			goto out2;
 		}
 	    }
