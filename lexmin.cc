@@ -917,7 +917,7 @@ struct max_term {
     void print(ostream& os, char **p) const;
     void resolve_existential_vars() const;
     void substitute(Matrix *T, unsigned MaxRays);
-    Vector *eval(Value *val) const;
+    Vector *eval(Value *val, unsigned MaxRays) const;
 
     ~max_term() {
 	for (int i = 0; i < max.size(); ++i) {
@@ -1213,7 +1213,7 @@ static void SwapColumns(Polyhedron *P, int i, int j)
     SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
-bool in_domain(Polyhedron *P, Value *val, unsigned dim)
+bool in_domain(Polyhedron *P, Value *val, unsigned dim, unsigned MaxRays)
 {
     int nexist = P->Dimension - dim;
     int last[P->NbConstraints];
@@ -1282,9 +1282,20 @@ bool in_domain(Polyhedron *P, Value *val, unsigned dim)
 	/* Move another existential variable in current position */
 	if (!max_set || !min_set) {
 	    if (!(alternate > i)) {
-		Polyhedron_Print(stderr, P_VALUE_FMT, P);
-		Vector_Print(stderr, P_VALUE_FMT, all_val);
-		fprintf(stderr, "%d %d %d\n", dim, alternate, i);
+		Matrix *M = Matrix_Alloc(dim+i, 1+P->Dimension+1);
+		for (int j = 0; j < dim+i; ++j) {
+		    value_set_si(M->p[j][1+j], -1);
+		    value_assign(M->p[j][1+P->Dimension], all_val->p[j]);
+		}
+		Polyhedron *Q = AddConstraints(M->p[0], dim+i, P, MaxRays);
+		Matrix_Free(M);
+		Q = DomainConstraintSimplify(Q, MaxRays);
+		Vector *sample = Polyhedron_Sample(Q, MaxRays);
+		in = !!sample;
+		if (sample)
+		    Vector_Free(sample);
+		Polyhedron_Free(Q);
+		goto out2;
 	    }
 	    assert(alternate > i);
 	    SwapColumns(P, 1+dim+i, 1+dim+alternate);
@@ -1309,6 +1320,22 @@ bool in_domain(Polyhedron *P, Value *val, unsigned dim)
 	assert(max_set && min_set);
 	if (value_lt(max, min))
 	    goto out2;
+	if (value_ne(max, min)) {
+	    Matrix *M = Matrix_Alloc(dim+i, 1+P->Dimension+1);
+	    for (int j = 0; j < dim+i; ++j) {
+		value_set_si(M->p[j][1+j], -1);
+		value_assign(M->p[j][1+P->Dimension], all_val->p[j]);
+	    }
+	    Polyhedron *Q = AddConstraints(M->p[0], dim+i, P, MaxRays);
+	    Matrix_Free(M);
+	    Q = DomainConstraintSimplify(Q, MaxRays);
+	    Vector *sample = Polyhedron_Sample(Q, MaxRays);
+	    in = !!sample;
+	    if (sample)
+		Vector_Free(sample);
+	    Polyhedron_Free(Q);
+	    goto out2;
+	}
 	assert(value_eq(max, min));
 	value_assign(all_val->p[dim+i], max);
 	alternate = nexist - 1;
@@ -1333,13 +1360,13 @@ void compute_evalue(evalue *e, Value *val, Value *res)
     value_set_double(*res, d);
 }
 
-Vector *max_term::eval(Value *val) const
+Vector *max_term::eval(Value *val, unsigned MaxRays) const
 {
     if (dim == domain->Dimension) {
 	if (!in_domain(domain, val))
 	    return NULL;
     } else {
-	if (!in_domain(domain, val, dim))
+	if (!in_domain(domain, val, dim, MaxRays))
 	    return NULL;
     }
     Vector *res = Vector_Alloc(max.size());
@@ -1572,7 +1599,7 @@ static void split_on(const split& sp, EDomain *D,
     }
 
     if (EDeq) {
-	if (sample && in_domain(EDeq->D, sample->p, sample->Size-1)) {
+	if (sample && in_domain(EDeq->D, sample->p, sample->Size-1, MaxRays)) {
 	    EDeq->sample = Vector_Alloc(sample->Size);
 	    Vector_Copy(sample->p, EDeq->sample->p, sample->Size);
 	} else if (!(EDeq->sample = Polyhedron_not_empty(EDeq->D, MaxRays))) {
@@ -1581,7 +1608,7 @@ static void split_on(const split& sp, EDomain *D,
 	}
     }
     if (EDgt) {
-	if (sample && in_domain(EDgt->D, sample->p, sample->Size-1)) {
+	if (sample && in_domain(EDgt->D, sample->p, sample->Size-1, MaxRays)) {
 	    EDgt->sample = Vector_Alloc(sample->Size);
 	    Vector_Copy(sample->p, EDgt->sample->p, sample->Size);
 	} else if (!(EDgt->sample = Polyhedron_not_empty(EDgt->D, MaxRays))) {
@@ -1590,7 +1617,7 @@ static void split_on(const split& sp, EDomain *D,
 	}
     }
     if (EDlt) {
-	if (sample && in_domain(EDlt->D, sample->p, sample->Size-1)) {
+	if (sample && in_domain(EDlt->D, sample->p, sample->Size-1, MaxRays)) {
 	    EDlt->sample = Vector_Alloc(sample->Size);
 	    Vector_Copy(sample->p, EDlt->sample->p, sample->Size);
 	} else if (!(EDlt->sample = Polyhedron_not_empty(EDlt->D, MaxRays))) {
@@ -2079,7 +2106,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 
 static void verify_results(Polyhedron *A, Polyhedron *C, 
 			   vector<max_term*>& maxima, int m, int M,
-			   int print_all);
+			   int print_all, unsigned MaxRays);
 
 int main(int argc, char **argv)
 {
@@ -2155,7 +2182,7 @@ int main(int argc, char **argv)
 	maxima[i]->print(cout, param_names);
 
     if (verify)
-	verify_results(A, C, maxima, m, M, print_all);
+	verify_results(A, C, maxima, m, M, print_all, MAXRAYS);
 
     for (int i = 0; i < maxima.size(); ++i)
 	delete maxima[i];
@@ -2216,7 +2243,8 @@ static void print_list(FILE *out, Value *z, char* brackets, int len)
 }
 
 static int check_poly(Polyhedron *S, Polyhedron *CS, vector<max_term*>& maxima, 
-		      int nparam, int pos, Value *z, int print_all, int st)
+		      int nparam, int pos, Value *z, int print_all, int st,
+		      unsigned MaxRays)
 {
     if (pos == nparam) {
 	int k;
@@ -2233,7 +2261,7 @@ static int check_poly(Polyhedron *S, Polyhedron *CS, vector<max_term*>& maxima,
 
 	Vector *min = NULL;
 	for (int i = 0; i < maxima.size(); ++i)
-	    if ((min = maxima[i]->eval(z+S->Dimension-nparam+1)))
+	    if ((min = maxima[i]->eval(z+S->Dimension-nparam+1, MaxRays)))
 		break;
 
 	int ok = !(found ^ !!min);
@@ -2281,7 +2309,8 @@ static int check_poly(Polyhedron *S, Polyhedron *CS, vector<max_term*>& maxima,
 		}
 	    }
 	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	    if (!check_poly(S, CS->next, maxima, nparam, pos+1, z, print_all, st)) {
+	    if (!check_poly(S, CS->next, maxima, nparam, pos+1, z, print_all, st,
+			    MaxRays)) {
 		value_clear(tmp);
 		value_clear(LB);
 		value_clear(UB);
@@ -2297,7 +2326,7 @@ static int check_poly(Polyhedron *S, Polyhedron *CS, vector<max_term*>& maxima,
 }
 
 void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima, 
-		    int m, int M, int print_all)
+		    int m, int M, int print_all, unsigned MaxRays)
 {
     Polyhedron *CC, *CC2, *CS, *S;
     unsigned nparam = C->Dimension;
@@ -2355,7 +2384,7 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
     }
 
     if (S) {
-	check_poly(S, CS, maxima, nparam, 0, p, print_all, st);
+	check_poly(S, CS, maxima, nparam, 0, p, print_all, st, MaxRays);
 	Domain_Free(S);
     }
 
