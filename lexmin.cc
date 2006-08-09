@@ -1923,6 +1923,7 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
     value_set_si(C->p[n][nparam], 1);
     left_hermite(M, &H, &Q, &U);
     Matrix_Free(M);
+    Matrix_Free(Q);
     value_clear(mone);
 
     /* we will need to treat scalings later */
@@ -1948,7 +1949,6 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
 		Matrix_Free(C);
 		Matrix_Free(invH);
 		Matrix_Free(U);
-		Matrix_Free(Q);
 		return NULL;
 	    }
 	    value_division(T1->p[i][nparam], T1->p[i][nparam], T1->p[n][nparam]);
@@ -1977,14 +1977,7 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
     Matrix_Free(U);
     Matrix_Free(T2);
 
-    T2 = Matrix_Alloc((dim-n)+nparam+1, dim+nparam+1);
-    for (int i = 0; i < dim-n; ++i)
-	Vector_Copy(Q->p[n+i], T2->p[i], dim);
-    for (int i = 0; i < nparam+1; ++i)
-	value_set_si(T2->p[dim-n+i][dim+i], 1);
-    *P = Polyhedron_Image(*P, T2, MaxRays);
-    Matrix_Free(Q);
-    Matrix_Free(T2);
+    *P = Polyhedron_Preimage(*P, T, MaxRays);
 
     return T;
 }
