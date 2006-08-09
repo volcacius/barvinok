@@ -4,10 +4,12 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 			  Polyhedron **fVD, int nd, unsigned MaxRays)
 {
     Polyhedron *Dt, *rVD;
+    Polyhedron *C;
     Value c;
     int i;
 
-    Dt = CT ? DomainPreimage(D, CT, MaxRays) : D;
+    C = D->next ? DomainConvex(D, MaxRays) : D;
+    Dt = CT ? DomainPreimage(C, CT, MaxRays) : C;
     rVD = CEq ? DomainIntersection(Dt, CEq, MaxRays) : Domain_Copy(Dt);
 
     /* if rVD is empty or too small in geometric dimension */
@@ -15,11 +17,15 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 	    (CEq && rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
 	if(rVD)
 	    Domain_Free(rVD);
+	if (D->next)
+	    Polyhedron_Free(C);
 	if (CT)
 	    Domain_Free(Dt);
 	return 0;		/* empty validity domain */
     }
 
+    if (D->next)
+	Polyhedron_Free(C);
     if (CT)
 	Domain_Free(Dt);
 
