@@ -1500,7 +1500,7 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
 Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
 {
     Polyhedron *Porig = P;
-    Vector *sample;
+    Vector *sample = NULL;
 
     POL_ENSURE_VERTICES(P);
     if (emptyQ2(P))
@@ -1514,7 +1514,8 @@ Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
 	}
 
     Matrix *T = remove_equalities(&P, 0, MaxRays);
-    sample = Polyhedron_Sample(P, MaxRays);
+    if (P)
+	sample = Polyhedron_Sample(P, MaxRays);
     if (sample) {
 	if (T) {
 	    Vector *P_sample = Vector_Alloc(Porig->Dimension + 1);
@@ -1911,7 +1912,14 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
 
     Matrix *T = compress_variables(&M, nparam);
 
-    if (T)
+    if (!T) {
+	*P = NULL;
+	return NULL;
+    }
+    if (isIdentity(T)) {
+	Matrix_Free(T);
+	T = NULL;
+    } else
 	*P = Polyhedron_Preimage(*P, T, MaxRays);
 
     return T;
@@ -1944,8 +1952,10 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	    CP = compress_parameters(&P, nparam, MaxRays);
 	Q = P;
 	T = remove_equalities(&P, nparam, MaxRays);
-	if (Q != Porig)
+	if (P != Q && Q != Porig)
 	    Polyhedron_Free(Q);
+	if (!P)
+	    return all_max;
     }
 
     Q = P;
