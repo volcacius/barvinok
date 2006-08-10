@@ -694,6 +694,7 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	mat_ZZ& d = term[i]->d.power;
 
 	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
+	    C->NbRows = nparam+nvar;
 	    for (int r = 0; r < nparam; ++r) {
 		value_set_si(C->p[r][0], 0);
 		for (int c = 0; c < nvar; ++c) {
