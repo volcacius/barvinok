@@ -3535,6 +3535,15 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     if (CP)
 	nparam = CP->NbColumns-1;
 
+    if (nparam == 0) {
+	Value c;
+	value_init(c);
+	barvinok_count(P, &c, MaxRays);
+	gf = new gen_fun(c);
+	value_clear(c);
+	return gf;
+    }
+
     gf_base *red;
     red = gf_base::create(Polyhedron_Project(P, nparam), P->Dimension, nparam);
     red->start_gf(P, MaxRays);
