@@ -86,6 +86,8 @@ void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
 
 Polyhedron *Cone_over_Polyhedron(Polyhedron *P);
 
+Matrix *compress_variables(Matrix *Equalities, unsigned nparam);
+
 const char *barvinok_version();
 
 #if defined(__cplusplus)
