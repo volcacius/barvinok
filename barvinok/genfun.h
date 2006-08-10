@@ -53,6 +53,7 @@ struct gen_fun {
 	context = Polyhedron_Copy(gf->context);
 	add(one, gf);
     }
+    gen_fun(Value c);
     gen_fun(Polyhedron *C = NULL) : context(C) {}
     ~gen_fun() {
 	if (context)
