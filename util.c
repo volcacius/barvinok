@@ -1400,6 +1400,84 @@ Polyhedron *Cone_over_Polyhedron(Polyhedron *P)
     return C;
 }
 
+Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
+{
+    unsigned dim = (Equalities->NbColumns-2) - nparam;
+    Matrix *M, *H, *Q, *U, *C, *ratH, *invH, *Ul, *T1, *T2, *T;
+    Value mone;
+    int n, i;
+
+    for (n = 0; n < Equalities->NbRows; ++n)
+	if (First_Non_Zero(Equalities->p[n]+1, dim) == -1)
+	    break;
+    if (n == 0)
+	return Identity(dim+nparam+1);
+    value_init(mone);
+    value_set_si(mone, -1);
+    M = Matrix_Alloc(n, dim);
+    C = Matrix_Alloc(n+1, nparam+1);
+    for (i = 0; i < n; ++i) {
+	Vector_Copy(Equalities->p[i]+1, M->p[i], dim);
+	Vector_Scale(Equalities->p[i]+1+dim, C->p[i], mone, nparam+1);
+    }
+    value_set_si(C->p[n][nparam], 1);
+    left_hermite(M, &H, &Q, &U);
+    Matrix_Free(M);
+    Matrix_Free(Q);
+    value_clear(mone);
+
+    /* we will need to treat scalings later */
+    if (nparam > 0)
+	for (i = 0; i < n; ++i)
+	    assert(value_one_p(H->p[i][i]));
+
+    ratH = Matrix_Alloc(n+1, n+1);
+    invH = Matrix_Alloc(n+1, n+1);
+    for (i = 0; i < n; ++i)
+	Vector_Copy(H->p[i], ratH->p[i], n);
+    value_set_si(ratH->p[n][n], 1);
+    int ok = Matrix_Inverse(ratH, invH);
+    Matrix_Free(H);
+    Matrix_Free(ratH);
+    assert(ok);
+    T1 = Matrix_Alloc(n+1, nparam+1);
+    Matrix_Product(invH, C, T1);
+    Matrix_Free(C);
+    Matrix_Free(invH);
+    if (nparam == 0 && value_notone_p(T1->p[n][nparam])) {
+	for (i = 0; i < n; ++i) {
+	    if (!mpz_divisible_p(T1->p[i][nparam], T1->p[n][nparam])) {
+		Matrix_Free(T1);
+		Matrix_Free(U);
+		return NULL;
+	    }
+	    value_division(T1->p[i][nparam], T1->p[i][nparam], T1->p[n][nparam]);
+	}
+	value_set_si(T1->p[n][nparam], 1);
+    }
+    Ul = Matrix_Alloc(dim+1, n+1);
+    for (i = 0; i < dim; ++i)
+	Vector_Copy(U->p[i], Ul->p[i], n);
+    value_set_si(Ul->p[dim][n], 1);
+    T2 = Matrix_Alloc(dim+1, nparam+1);
+    Matrix_Product(Ul, T1, T2);
+    Matrix_Free(Ul);
+    Matrix_Free(T1);
+
+    T = Matrix_Alloc(dim+nparam+1, (dim-n)+nparam+1);
+    for (i = 0; i < dim; ++i) {
+	Vector_Copy(U->p[i]+n, T->p[i], dim-n);
+	Vector_Copy(T2->p[i], T->p[i]+dim-n, nparam+1);
+    }
+    for (i = 0; i < nparam+1; ++i)
+	value_set_si(T->p[dim+i][(dim-n)+i], 1);
+    assert(value_one_p(T2->p[dim][nparam]));
+    Matrix_Free(U);
+    Matrix_Free(T2);
+
+    return T;
+}
+
 const char *barvinok_version(void)
 {
     return 

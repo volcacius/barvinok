@@ -705,7 +705,10 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	return;
     }
     if (P->NbEq != 0) {
-	P = remove_equalities(P);
+	do {
+	    P = remove_equalities(P);
+	    P = DomainConstraintSimplify(P, NbMaxCons);
+	} while (!emptyQ(P) && P->NbEq != 0);
 	if (emptyQ(P)) {
 	    Polyhedron_Free(P);
 	    value_set_si(*result, 0);
@@ -779,6 +782,9 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
 
     POL_ENSURE_VERTICES(P);
 
+    if (Polyhedron_is_infinite(P, result, NbMaxCons))
+	return;
+
 #ifdef USE_INCREMENTAL_BF
     bfcounter cnt(P->Dimension);
 #elif defined USE_INCREMENTAL_DF
@@ -836,7 +842,7 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     value_set_si(M->p[1][len-2], 1);
     for (int v = 0; v < P->Dimension; ++v) {
 	value_set_si(M->p[0][v], 1);
-	Polyhedron *I = Polyhedron_Image(P, M, 2+1);
+	Polyhedron *I = Polyhedron_Image(R, M, 2+1);
 	value_set_si(M->p[0][v], 0);
 	for (int r = 0; r < I->NbConstraints; ++r) {
 	    if (value_zero_p(I->Constraint[r][0]))
@@ -3447,10 +3453,37 @@ static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
 {
     Matrix *M, *T;
     Polyhedron *Q;
+    Matrix *CV = NULL;
+    int i;
 
     /* compress_parms doesn't like equalities that only involve parameters */
-    for (int i = 0; i < P->NbEq; ++i)
-	assert(First_Non_Zero(P->Constraint[i]+1, P->Dimension-nparam) != -1);
+    for (i = 0; i < P->NbEq; ++i)
+	if (First_Non_Zero(P->Constraint[i]+1, P->Dimension-nparam) == -1)
+	    break;
+
+    if (i < P->NbEq) {
+	Matrix *M = Matrix_Alloc(P->NbEq, 1+nparam+1);
+	int n = 0;
+	for (; i < P->NbEq; ++i) {
+	    if (First_Non_Zero(P->Constraint[i]+1, P->Dimension-nparam) == -1)
+		Vector_Copy(P->Constraint[i]+1+P->Dimension-nparam,
+			    M->p[n++]+1, nparam+1);
+	}
+	M->NbRows = n;
+	CV = compress_variables(M, 0);
+	T = align_matrix(CV, P->Dimension+1);
+	Q = Polyhedron_Preimage(P, T, MaxRays);
+	Matrix_Free(T);
+	Polyhedron_Free(P);
+	P = Q;
+	Matrix_Free(M);
+	nparam = CV->NbColumns-1;
+    }
+
+    if (P->NbEq == 0) {
+	*CP = CV;
+	return P;
+    }
 
     M = Matrix_Alloc(P->NbEq, P->Dimension+2);
     Vector_Copy(P->Constraint[0], M->p[0], P->NbEq * (P->Dimension+2));
@@ -3462,6 +3495,15 @@ static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
     P = remove_equalities_p(P, P->Dimension-nparam, NULL);
     Matrix_Free(T);
     Matrix_Free(M);
+
+    if (CV) {
+	T = *CP;
+	*CP = Matrix_Alloc(CV->NbRows, T->NbColumns);
+	Matrix_Product(CV, T, *CP);
+	Matrix_Free(T);
+	Matrix_Free(CV);
+    }
+
     return P;
 }
 #endif
@@ -3490,6 +3532,17 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     if (P->NbEq != 0)
 	P = remove_more_equalities(P, nparam, &CP, MaxRays);
     assert(P->NbEq == 0);
+    if (CP)
+	nparam = CP->NbColumns-1;
+
+    if (nparam == 0) {
+	Value c;
+	value_init(c);
+	barvinok_count(P, &c, MaxRays);
+	gf = new gen_fun(c);
+	value_clear(c);
+	return gf;
+    }
 
     gf_base *red;
     red = gf_base::create(Polyhedron_Project(P, nparam), P->Dimension, nparam);

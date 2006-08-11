@@ -114,6 +114,17 @@ bool short_rat::reduced()
     return false;
 }
 
+gen_fun::gen_fun(Value c)
+{
+    context = NULL;
+    term.push_back(new short_rat);
+    term[0]->n.coeff.SetLength(1);
+    value2zz(c, term[0]->n.coeff[0].n);
+    term[0]->n.coeff[0].d = 1;
+    term[0]->n.power.SetDims(1, 0);
+    term[0]->d.power.SetDims(0, 0);
+}
+
 void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
 {
     if (c.n == 0)
@@ -694,6 +705,7 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	mat_ZZ& d = term[i]->d.power;
 
 	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
+	    C->NbRows = nparam+nvar;
 	    for (int r = 0; r < nparam; ++r) {
 		value_set_si(C->p[r][0], 0);
 		for (int c = 0; c < nvar; ++c) {

@@ -6,26 +6,21 @@
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 /* If P has no rays, then we return NULL.
- * Otherwise, transform the polyhedron such that one of the rays
- * is the first unit vector and cut it off at a height that ensures
- * that if the whole polyhedron has any points, then the remaining part
- * has integer points.  In particular we add the largest coefficient
- * of a ray to the highest vertex (rounded up).
- *
- * The matrix that transforms the resulting polytope to part of the
- * original polyhedron is returned through T.
+ * Otherwise, look for the coordinate axis with the smallest maximal non-zero
+ * coefficient over all rays and a constraint that bounds the values on
+ * this axis to the maximal value over the vertices plus the above maximal
+ * non-zero coefficient minus 1.
+ * Any integer point outside this region should be the sum of a point inside
+ * the region and an integer multiple of the rays.
  */
-static Polyhedron *remove_ray(Polyhedron *P, Matrix **T, unsigned MaxRays)
+static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
 {
     int r = 0;
-    Matrix *M, *M2;
-    Value c, tmp;
-    Value g;
-    int first;
-    Vector *v;
-    Value offset, size;
-    Polyhedron *R;
+    Vector *min, *max, *c;
     int i;
+    Value s, v, tmp;
+    int pos;
+    Polyhedron *R;
 
     if (P->NbBid == 0)
 	for (; r < P->NbRays; ++r)
@@ -34,54 +29,91 @@ static Polyhedron *remove_ray(Polyhedron *P, Matrix **T, unsigned MaxRays)
     if (P->NbBid == 0 && r == P->NbRays)
 	return NULL;
 
-    value_init(g);
-    v = Vector_Alloc(P->Dimension+1);
-    Vector_Gcd(P->Ray[r]+1, P->Dimension, &g);
-    Vector_AntiScale(P->Ray[r]+1, v->p, g, P->Dimension+1);
-    M = unimodular_complete(v);
-    value_set_si(M->p[P->Dimension][P->Dimension], 1);
-    M2 = Transpose(M);
-    Matrix_Free(M);
-    P = Polyhedron_Preimage(P, M2, 0);
-    *T = M2;
-    value_clear(g);
-    Vector_Free(v);
+    max = Vector_Alloc(P->Dimension);
+    min = Vector_Alloc(P->Dimension);
+    for (r = 0; r < P->NbBid; ++r)
+	for (i = 0 ; i < P->Dimension; ++i)
+	    if (value_abs_gt(P->Ray[r][1+i], max->p[i]))
+		value_absolute(max->p[i], P->Ray[r][1+i]);
 
-    first = 1;
-    value_init(offset);
-    value_init(size);
-    value_init(tmp);
-    value_set_si(size, 0);
+    for (i = 0 ; i < P->Dimension; ++i)
+	value_oppose(min->p[i], max->p[i]);
 
-    for (i = 0; i < P->NbBid; ++i) {
-	value_absolute(tmp, P->Ray[i][1]);
-	if (value_gt(tmp, size))
-	    value_assign(size, tmp);
-    }
-    for (i = P->NbBid; i < P->NbRays; ++i) {
-	if (value_zero_p(P->Ray[i][P->Dimension+1])) {
-	    if (value_gt(P->Ray[i][1], size))
-		value_assign(size, P->Ray[i][1]);
+    for (r = P->NbBid; r < P->NbRays; ++r) {
+	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
 	    continue;
-	}
-	mpz_cdiv_q(tmp, P->Ray[i][1], P->Ray[i][P->Dimension+1]);
-	if (first || value_gt(tmp, offset)) {
-	    value_assign(offset, tmp);
-	    first = 0;
+	for (i = 0 ; i < P->Dimension; ++i) {
+	    if (value_gt(P->Ray[r][1+i], max->p[i]))
+		value_assign(max->p[i], P->Ray[r][1+i]);
+	    if (value_lt(P->Ray[r][1+i], min->p[i]))
+		value_assign(min->p[i], P->Ray[r][1+i]);
 	}
     }
-    value_addto(offset, offset, size);
-    value_clear(size);
-    value_clear(tmp);
 
-    v = Vector_Alloc(P->Dimension+2);
-    value_set_si(v->p[0], 1);
-    value_set_si(v->p[1], -1);
-    value_assign(v->p[1+P->Dimension], offset);
-    R = AddConstraints(v->p, 1, P, MaxRays);
-    value_clear(offset);
-    Vector_Free(v);
-    Polyhedron_Free(P);
+    value_init(s);
+    value_init(v);
+    value_init(tmp);
+
+    for (i = 0 ; i < P->Dimension; ++i) {
+	if (value_notzero_p(min->p[i]) && 
+	    (value_zero_p(s) || value_abs_lt(min->p[i], s))) {
+	    value_assign(s, min->p[i]);
+	    pos = i;
+	}
+	if (value_notzero_p(max->p[i]) && 
+	    (value_zero_p(s) || value_abs_lt(max->p[i], s))) {
+	    value_assign(s, max->p[i]);
+	    pos = i;
+	}
+    }
+
+    for (r = P->NbBid; r < P->NbRays; ++r)
+	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
+	    break;
+
+    if (value_pos_p(s))
+	mpz_cdiv_q(v, P->Ray[r][1+pos], P->Ray[r][P->Dimension+1]);
+    else
+	mpz_fdiv_q(v, P->Ray[r][1+pos], P->Ray[r][P->Dimension+1]);
+
+    for ( ; r < P->NbRays; ++r) {
+	if (value_zero_p(P->Ray[r][P->Dimension+1]))
+	    continue;
+
+	if (value_pos_p(s)) {
+	    mpz_cdiv_q(tmp, P->Ray[r][1+pos], P->Ray[r][P->Dimension+1]);
+	    if (value_gt(tmp, v))
+		value_assign(v, tmp);
+	} else {
+	    mpz_fdiv_q(tmp, P->Ray[r][1+pos], P->Ray[r][P->Dimension+1]);
+	    if (value_lt(tmp, v))
+		value_assign(v, tmp);
+	}
+    }
+
+    c = Vector_Alloc(1+P->Dimension+1);
+
+    value_addto(v, v, s);
+    value_set_si(c->p[0], 1);
+    if (value_pos_p(s)) {
+	value_set_si(c->p[1+pos], -1);
+	value_assign(c->p[1+P->Dimension], v);
+    } else {
+	value_set_si(c->p[1+pos], 1);
+	value_oppose(c->p[1+P->Dimension], v);
+    }
+    value_decrement(c->p[1+P->Dimension], c->p[1+P->Dimension]);
+
+    R = AddConstraints(c->p, 1, P, MaxRays);
+
+    Vector_Free(c);
+
+    Vector_Free(min);
+    Vector_Free(max);
+
+    value_clear(tmp);
+    value_clear(s);
+    value_clear(v);
 
     return R;
 }
@@ -125,29 +157,40 @@ static void print_minmax(Polyhedron *P)
  */
 static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
 {
-    int i, j, n;
+    int i, j, k, n;
     int dim = P->Dimension;
     int *remove = ALLOCN(int, dim);
     Polyhedron *Q;
+    int NbEq;
 
     assert(POL_HAS(P, POL_INEQUALITIES));
     for (i = 0; i < dim; ++i)
 	remove[i] = 0;
+    NbEq = 0;
     for (i = 0; i < P->NbEq; ++i) {
 	int pos = First_Non_Zero(P->Constraint[i]+1, dim);
-	assert(First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) == -1);
+	if (First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) != -1)
+	    continue;
 	remove[pos] = 1;
+	++NbEq;
     }
-    Q = Polyhedron_Alloc(P->Dimension-P->NbEq, P->NbConstraints-P->NbEq, P->NbRays);
-    for (i = 0; i < Q->NbConstraints; ++i) {
-	value_assign(Q->Constraint[i][0], P->Constraint[P->NbEq+i][0]);
+    assert(NbEq > 0);
+    Q = Polyhedron_Alloc(P->Dimension-NbEq, P->NbConstraints-NbEq, P->NbRays);
+    for (i = 0, k = 0; i < P->NbConstraints; ++i) {
+	if (i < P->NbEq) {
+	    int pos = First_Non_Zero(P->Constraint[i]+1, dim);
+	    if (First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) == -1)
+		continue;
+	}
+	value_assign(Q->Constraint[k][0], P->Constraint[i][0]);
 	for (j = 0, n = 0; j < P->Dimension; ++j) {
 	    if (remove[j])
 		++n;
 	    else
-		value_assign(Q->Constraint[i][1+j-n], P->Constraint[P->NbEq+i][1+j]);
+		value_assign(Q->Constraint[k][1+j-n], P->Constraint[i][1+j]);
 	}
-	value_assign(Q->Constraint[i][1+j-n], P->Constraint[P->NbEq+i][1+j]);
+	value_assign(Q->Constraint[k][1+j-n], P->Constraint[i][1+j]);
+	++k;
     }
     for (i = 0; i < Q->NbRays; ++i) {
 	value_assign(Q->Ray[i][0], P->Ray[i][0]);
@@ -198,6 +241,14 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
     int ok;
 
     POL_ENSURE_VERTICES(P);
+    if (emptyQ(P))
+	return NULL;
+
+    if (P->Dimension == 0) {
+	sample = Vector_Alloc(1);
+	value_set_si(sample->p[0], 1);
+	return sample;
+    }
 
     for (i = 0; i < P->NbRays; ++i)
 	if (value_one_p(P->Ray[i][1+P->Dimension])) {
@@ -206,23 +257,10 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	    return sample;
 	}
 
-    /* for now */
-    assert(P->NbEq == 0);
-
-    Q = remove_ray(P, &T, MaxRays);
+    Q = remove_ray(P, MaxRays);
     if (Q) {
-	Vector *Q_sample;
-
-	Q_sample = Polyhedron_Sample(Q, MaxRays);
+	sample = Polyhedron_Sample(Q, MaxRays);
 	Polyhedron_Free(Q);
-
-	if (Q_sample) {
-	    sample = Vector_Alloc(P->Dimension + 1);
-	    Matrix_Vector_Product(T, Q_sample->p, sample->p);
-	    Vector_Free(Q_sample);
-	}
-
-	Matrix_Free(T);
 	return sample;
     }
 
@@ -242,6 +280,8 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
     Matrix_Free(M);
 
     Q = Polyhedron_Image(P, T, MaxRays);
+
+    POL_ENSURE_VERTICES(Q);
 
     value_init(min);
     value_init(max);
@@ -269,6 +309,12 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	value_assign(v->p[1+Q->Dimension], tmp);
 
 	R = AddConstraints(v->p, 1, Q, MaxRays);
+	R = DomainConstraintSimplify(R, MaxRays);
+	if (emptyQ(R)) {
+	    Polyhedron_Free(R);
+	    continue;
+	}
+
 	S = Polyhedron_RemoveFixedColumns(R, &T);
 	Polyhedron_Free(R);
 	S_sample = Polyhedron_Sample(S, MaxRays);

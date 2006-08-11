@@ -2957,6 +2957,7 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 
     eadd(&fl, &p->arr[0]);
     reorder_terms(p, &p->arr[0]);
+    value_clear(e->d);
     *e = p->arr[1];
     free(p);
     free_evalue_refs(&fl);
@@ -3044,6 +3045,7 @@ static void floor2frac_r(evalue *e, int nvar)
 
     eadd(&f, &p->arr[0]);
     reorder_terms(p, &p->arr[0]);
+    value_clear(e->d);
     *e = p->arr[1];
     free(p);
     free_evalue_refs(&f);
@@ -3325,12 +3327,15 @@ void eor(evalue *e1, evalue *res)
  */
 void evalue_denom(evalue *e, Value *d)
 {
-    int i;
+    int i, offset;
     if (value_notzero_p(e->d)) {
 	value_lcm(*d, e->d, d);
 	return;
     }
-    assert(e->x.p->type == polynomial);
+    assert(e->x.p->type == polynomial ||
+	   e->x.p->type == fractional ||
+	   e->x.p->type == flooring);
+    offset = type_offset(e->x.p);
     for (i = e->x.p->size-1; i >= 0; --i)
 	evalue_denom(&e->x.p->arr[i], d);
 }
