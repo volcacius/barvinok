@@ -313,6 +313,7 @@ if test "$glpk_package" != "no"; then
 	AC_CHECK_LIB(glpk, main,[],[have_glpk=false])
     ])
 fi
+AM_CONDITIONAL(HAVE_GLPK, test x$have_glpk = xtrue)
 
 if test "$have_glpk" = "true"; then
     AC_LIBOBJ(basis_reduction)

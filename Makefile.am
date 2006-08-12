@@ -149,12 +149,14 @@ check:
 		echo " ok"; \
 	    fi \
 	done
+if HAVE_GLPK
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
 		./lexmin --verify < $$i; \
 	    fi \
 	done
+endif
 
 version.h: @GIT_HEAD@
 	echo '#define GIT_HEAD_ID "'@GIT_HEAD_VERSION@'"' > $@
