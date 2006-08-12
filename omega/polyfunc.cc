@@ -17,6 +17,7 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
     exvector exparams;
 
     cout << "maximize " << polyfunc->poly << " over ";
+    polyfunc->domain.simplify();
     polyfunc->domain.print(stdout);
 
     Polyhedron *D = relation2Domain(polyfunc->domain, vv, params);
