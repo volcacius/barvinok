@@ -1218,7 +1218,7 @@ varList: varList ',' VAR {$$ = $1; $$->insert($3); }
 varDecl : varList
 		{
 		$$ = current_Declaration_Site = new Declaration_Site($1);
-		foreach(s,char *, *$1, delete s);
+		foreach(s,char *, *$1, free(s));
 		delete $1;
 		}
 	;
