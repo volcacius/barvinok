@@ -2056,6 +2056,7 @@ int main(int argc, char **argv)
     int verify = 0;
     int print_all = 0;
     int m = INT_MAX, M = INT_MIN, r;
+    int print_solution = 1;
 
     while ((c = getopt_long(argc, argv, "TAm:M:r:V", options, &ind)) != -1) {
 	switch (c) {
@@ -2109,14 +2110,19 @@ int main(int argc, char **argv)
 	fprintf(stderr,"Nothing to do: min > max !\n");
 	return(0);
     }
+    if (verify)
+	print_solution = 0;
 
     iter_names = util_generate_names(A->Dimension - C->Dimension, "i");
     param_names = util_generate_names(C->Dimension, "p");
-    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-    Polyhedron_Print(stdout, P_VALUE_FMT, C);
+    if (print_solution) {
+	Polyhedron_Print(stdout, P_VALUE_FMT, A);
+	Polyhedron_Print(stdout, P_VALUE_FMT, C);
+    }
     vector<max_term*> maxima = lexmin(A, C, MAXRAYS);
-    for (int i = 0; i < maxima.size(); ++i)
-	maxima[i]->print(cout, param_names);
+    if (print_solution)
+	for (int i = 0; i < maxima.size(); ++i)
+	    maxima[i]->print(cout, param_names);
 
     if (verify)
 	verify_results(A, C, maxima, m, M, print_all, MAXRAYS);
