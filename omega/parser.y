@@ -72,7 +72,7 @@ Relation *build_relation(tupleDescriptor *tuple, AST* ast)
     return r;
 }
 
-Map<Variable_Ref *, GiNaC::ex>	variableMap(0);
+Map<Variable_Ref *, GiNaC::ex> *variableMap;
 
 
 %}
@@ -543,12 +543,16 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    delete $2;
 	}
 	| BMAX 
-	    { relationDecl = new Declaration_Site(); }
+	    {
+		relationDecl = new Declaration_Site(); 
+		variableMap = new Map<Variable_Ref *, GiNaC::ex>(0);
+	    }
 		polyfunc ';' {
-	    maximize($3, variableMap);
+	    maximize($3, *variableMap);
 	    delete $3;
 	    current_Declaration_Site = globalDecls;
 	    delete relationDecl;
+	    delete variableMap;
 	}
 	;
 
@@ -745,9 +749,9 @@ polynomial : INT { $$ = new GiNaC::ex($1); }
 		Variable_Ref *v = lookupScalar($1);
 		free($1);
 		if (!v) YYERROR;
-		if (variableMap(v) == 0)
-		    variableMap[v] = GiNaC::symbol(std::string(v->name));
-		$$ = new GiNaC::ex(variableMap[v]);
+		if ((*variableMap)(v) == 0)
+		    (*variableMap)[v] = GiNaC::symbol(std::string(v->name));
+		$$ = new GiNaC::ex((*variableMap)[v]);
 	}
 	| '(' polynomial ')' { $$ = $2; }
 	| '-' polynomial %prec '*' {
