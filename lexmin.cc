@@ -1947,6 +1947,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
     if (emptyQ2(P))
 	return all_max;
 
+    assert(P->NbBid == 0);
+
     if (P->NbEq > 0) {
 	if (nparam > 0)
 	    CP = compress_parameters(&P, nparam, MaxRays);
