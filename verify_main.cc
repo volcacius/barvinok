@@ -141,7 +141,7 @@ int main(int argc,char *argv[]) {
   Matrix *C1, *P1, *MM;
   Polyhedron *C, *P, *S, *CS, *U;
   Polyhedron *CC, *PP;
-  Enumeration *en;
+  Enumeration *en = NULL;
   Value *p, tmp;
   Value Min, Max;
   int i,j;
@@ -323,7 +323,8 @@ int main(int argc,char *argv[]) {
   printf( "\n" );
 #endif
   
-    Enumeration_Free(en);
+    if (en)
+	Enumeration_Free(en);
     if (gf)
 	delete gf;
 
