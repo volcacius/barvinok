@@ -1886,6 +1886,24 @@ static vector<max_term*> lexmin(indicator& ind, EDomain *D, unsigned nparam,
     return maxima;
 }
 
+static bool isTranslation(Matrix *M)
+{
+    unsigned i, j;
+    if (M->NbRows != M->NbColumns)
+	return False;
+
+    for (i = 0;i < M->NbRows; i ++)
+	for (j = 0; j < M->NbColumns-1; j ++)
+	    if (i == j) {
+		if(value_notone_p(M->p[i][j]))
+		    return False;
+	    } else {
+		if(value_notzero_p(M->p[i][j]))
+		    return False;
+	    }
+    return value_one_p(M->p[M->NbRows-1][M->NbColumns-1]);
+}
+
 static Matrix *compress_parameters(Polyhedron **P, Polyhedron **C,
 				   unsigned nparam, unsigned MaxRays)
 {
@@ -1900,7 +1918,7 @@ static Matrix *compress_parameters(Polyhedron **P, Polyhedron **C,
     CP = compress_parms(M, nparam);
     Matrix_Free(M);
 
-    if (isIdentity(CP)) {
+    if (isTranslation(CP)) {
 	Matrix_Free(CP);
 	return NULL;
     }
