@@ -9,9 +9,13 @@
  * Otherwise, look for the coordinate axis with the smallest maximal non-zero
  * coefficient over all rays and a constraint that bounds the values on
  * this axis to the maximal value over the vertices plus the above maximal
- * non-zero coefficient minus 1.
- * Any integer point outside this region should be the sum of a point inside
+ * non-zero coefficient times the number of rays minus 1.
+ * Any integer point x outside this region is the sum of a point inside
  * the region and an integer multiple of the rays.
+ * Write x = \sum_i a_i v_i + \sum_j b_j r_j
+ * with \sum_i a_i = 1.
+ * Then x = \sum_i a_i v_i + \sum_j {b_j} r_j + \sum_j [b_j] r_j
+ * with y = \sum_i a_i v_i + \sum_j {b_j} r_j a point inside the region.
  */
 static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
 {
@@ -21,6 +25,7 @@ static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
     Value s, v, tmp;
     int pos;
     Polyhedron *R;
+    int rays;
 
     if (P->NbBid == 0)
 	for (; r < P->NbRays; ++r)
@@ -39,6 +44,7 @@ static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
     for (i = 0 ; i < P->Dimension; ++i)
 	value_oppose(min->p[i], max->p[i]);
 
+    rays = P->NbBid;
     for (r = P->NbBid; r < P->NbRays; ++r) {
 	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
 	    continue;
@@ -48,6 +54,7 @@ static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
 	    if (value_lt(P->Ray[r][1+i], min->p[i]))
 		value_assign(min->p[i], P->Ray[r][1+i]);
 	}
+	++rays;
     }
 
     value_init(s);
@@ -93,7 +100,8 @@ static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
 
     c = Vector_Alloc(1+P->Dimension+1);
 
-    value_addto(v, v, s);
+    value_set_si(tmp, rays);
+    value_addmul(v, tmp, s);
     value_set_si(c->p[0], 1);
     if (value_pos_p(s)) {
 	value_set_si(c->p[1+pos], -1);
