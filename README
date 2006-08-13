@@ -1,23 +1,32 @@
-This is a (partial) reimplementation of latte
+barvinok is a library for counting the number of integer points
+in parametric and non-parametric polytopes as well as projections
+of such sets.
+For parametric polytopes the count is represented by either
+an explicit function or a generating function.
+The first comes in the shape of a piece-wise step-polynomial.
+This is a generalization of both Ehrhart quasi-polynomials
+and vector partition functions.
+The second is a generalization of an Ehrhart series.
+
+This library shares some functionality with LattE
 (http://www.math.ucdavis.edu/~latte/)
-using polylib (http://icps.u-strasbg.fr/polylib/ or
-http://www.kotnet.org/~skimo/polylib/).
+and uses PolyLib (http://icps.u-strasbg.fr/polylib/ or
+http://www.kotnet.org/~skimo/polylib/) and
+NTL (http://shoup.net/ntl/).
 
-Next to polylib, it uses NTL (http://shoup.net/ntl/)
-Mac users may want to apply NTL_5_3_2.patch
+Additionally, the following packages can optionally be used
+- PIP (http://www.piplib.org/)
+- Omega (http://www.cs.umd.edu/projects/omega/ or 
+    http://www.liacs.nl/~sverdool/gitweb.cgi?p=omega.git;a=summary)
+- GLPK (http://www.gnu.org/software/glpk/)
 
-Optionally, PIP (http://www.piplib.org/)
-and Omega (http://www.cs.umd.edu/projects/omega/ or 
-http://www.liacs.nl/~sverdool/gitweb.cgi?p=omega.git;a=summary)
-can be used during enumeration of integer projections.
-
-Both NTL and polylib need to have been compiled with gmp
+Both NTL and PolyLib need to have been compiled with GMP
 support.
 For NTL this means you have to specify
     NTL_GMP_LIP=on
 
-Suppose you want to put everyting in /opt,
-Then you configure/compile polylib using
+Suppose you want to put everything in /opt,
+Then you configure/compile PolyLib using
 
 ./configure --with-libgmp=/path/to/gmp --prefix=/opt
 make
@@ -62,8 +71,7 @@ For more information on other arguments,
 
 ./configure --help
 
-Please use a version of the PolyLib library that is not
-older than August 13th 2004.
+Please use PolyLib version 5.21.0 or later.
 
 The input format of barvinok_enumerate is the same as that
 of testehrhart from the PolyLib distribution.
