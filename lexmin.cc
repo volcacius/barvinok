@@ -1132,26 +1132,34 @@ static void evalue_substitute(evalue *e, evalue **subs)
     free(p);
 }
 
+/* "align" matrix to have nrows by inserting
+ * the necessary number of rows and an equal number of columns at the end
+ * right before the constant row/column
+ */
+static Matrix *align_matrix_initial(Matrix *M, int nrows)
+{
+    int i;
+    int newrows = nrows - M->NbRows;
+    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
+    for (i = 0; i < newrows; ++i)
+	value_set_si(M2->p[M->NbRows-1+i][M->NbColumns-1+i], 1);
+    for (i = 0; i < M->NbRows-1; ++i) {
+	Vector_Copy(M->p[i], M2->p[i], M->NbColumns-1);
+	value_assign(M2->p[i][M2->NbColumns-1], M->p[i][M->NbColumns-1]);
+    }
+    value_assign(M2->p[M2->NbRows-1][M2->NbColumns-1],
+		 M->p[M->NbRows-1][M->NbColumns-1]);
+    return M2;
+}
+
 /* T maps the compressed parameters to the original parameters,
  * while this max_term is based on the compressed parameters
  * and we want get the original parameters back.
  */
 void max_term::substitute(Matrix *T, unsigned MaxRays)
 {
-    int nexist = 0;
-    for (int i = 0; i < T->NbRows-1; ++i)
-	if (value_notone_p(T->p[i][i]))
-	    ++nexist;
-
-    Matrix *M = Matrix_Alloc(T->NbRows + nexist, T->NbColumns);
-    nexist = 0;
-    for (int i = 0; i < T->NbRows-1; ++i) {
-	Vector_Copy(T->p[i], M->p[i], T->NbColumns);
-	if (value_notone_p(T->p[i][i]))
-	    value_set_si(M->p[T->NbRows-1 + nexist++][i], 1);
-    }
-    value_assign(M->p[M->NbRows-1][M->NbColumns-1],
-		 T->p[T->NbRows-1][T->NbColumns-1]);
+    int nexist = domain->Dimension - (T->NbColumns-1);
+    Matrix *M = align_matrix_initial(T, T->NbRows+nexist);
 
     Polyhedron *D = DomainImage(domain, M, MaxRays);
     Polyhedron_Free(domain);
@@ -1159,8 +1167,10 @@ void max_term::substitute(Matrix *T, unsigned MaxRays)
     Matrix_Free(M);
 
     assert(T->NbRows == T->NbColumns);
+    Matrix *T2 = Matrix_Copy(T);
     Matrix *inv = Matrix_Alloc(T->NbColumns, T->NbRows);
-    int ok = Matrix_Inverse(T, inv);
+    int ok = Matrix_Inverse(T2, inv);
+    Matrix_Free(T2);
     assert(ok);
 
     evalue denom;
@@ -1876,7 +1886,8 @@ static vector<max_term*> lexmin(indicator& ind, EDomain *D, unsigned nparam,
     return maxima;
 }
 
-static Matrix *compress_parameters(Polyhedron **P, unsigned nparam, unsigned MaxRays)
+static Matrix *compress_parameters(Polyhedron **P, Polyhedron **C,
+				   unsigned nparam, unsigned MaxRays)
 {
     Matrix *M, *T, *CP;
 
@@ -1897,6 +1908,8 @@ static Matrix *compress_parameters(Polyhedron **P, unsigned nparam, unsigned Max
     T = align_matrix(CP, (*P)->Dimension+1);
     *P = Polyhedron_Preimage(*P, T, MaxRays);
     Matrix_Free(T);
+
+    *C = Polyhedron_Preimage(*C, CP, MaxRays);
 
     return CP;
 }
@@ -1935,6 +1948,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
     Param_Domain *D, *next;
     Param_Vertices *V;
     Polyhedron *Porig = P;
+    Polyhedron *Corig = C;
     int i;
     vector<max_term*> all_max;
     Polyhedron *Q;
@@ -1951,13 +1965,16 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 
     if (P->NbEq > 0) {
 	if (nparam > 0)
-	    CP = compress_parameters(&P, nparam, MaxRays);
+	    CP = compress_parameters(&P, &C, nparam, MaxRays);
 	Q = P;
 	T = remove_equalities(&P, nparam, MaxRays);
 	if (P != Q && Q != Porig)
 	    Polyhedron_Free(Q);
-	if (!P)
+	if (!P) {
+	    if (C != Corig)
+		Polyhedron_Free(C);
 	    return all_max;
+	}
     }
 
     Q = P;
@@ -2037,6 +2054,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	Domain_Free(fVD[nd]);
     }
     delete [] fVD;
+    if (C != Corig)
+	Polyhedron_Free(C);
     if (P != Porig)
 	Polyhedron_Free(P);
 
