@@ -9,6 +9,7 @@ noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin
 pkginclude_HEADERS = \
+    barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
     barvinok/util.h \
     barvinok/evalue.h \
