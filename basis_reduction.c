@@ -220,5 +220,7 @@ Matrix *reduced_basis(Polyhedron *P)
     free(alpha_buffer[0]);
     free(alpha_buffer[1]);
 
+    lpx_delete_prob(lp);
+
     return basis;
 }
