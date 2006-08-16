@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <polylib/polylibgmp.h>
+#include "basis_reduction.h"
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
@@ -40,15 +41,20 @@ static Polyhedron *Polyhedron_Read()
     return P;
 }
 
-static void scan_poly(Polyhedron *S, int pos, Value *z)
+static void scan_poly(Polyhedron *S, int pos, Value *z, Matrix *T)
 {
     if (!S) {
 	int k;
-	value_print(stdout, VALUE_FMT, z[1]);
-	for (k=2; k <= pos; ++k) {
+	Vector *v;
+
+	v = Vector_Alloc(T->NbRows);
+	Matrix_Vector_Product(T, z+1, v->p);
+	value_print(stdout, VALUE_FMT, v->p[0]);
+	for (k=1; k < pos; ++k) {
 	    printf(", ");
-	    value_print(stdout,VALUE_FMT,z[k]);
+	    value_print(stdout,VALUE_FMT, v->p[k]);
 	}
+	Vector_Free(v);
 	printf("\n");
     } else {
 	int ok;
@@ -60,7 +66,7 @@ static void scan_poly(Polyhedron *S, int pos, Value *z)
 	assert(ok);
 	for (value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
 	    value_assign(z[pos+1], tmp);
-	    scan_poly(S->next, pos+1, z);
+	    scan_poly(S->next, pos+1, z, T);
 	}
 	value_set_si(z[pos+1], 0);
 	value_clear(LB);
@@ -71,29 +77,49 @@ static void scan_poly(Polyhedron *S, int pos, Value *z)
 
 int main(int argc, char **argv)
 {
-    Polyhedron *A, *U, *S;
+    Polyhedron *A, *P, *U, *S;
     Value *p;
-    int i;
+    int i, j, ok;
+    Matrix *basis, *T, *inv;
 
     A = Polyhedron_Read();
-    U = Universe_Polyhedron(0);
-    S = Polyhedron_Scan(A, U, MAXRAYS);
 
-    p = ALLOCN(Value, A->Dimension+2);
-    for(i=0;i<=A->Dimension;i++) {
+    basis = reduced_basis(A);
+
+    T = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
+    inv = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
+    for (i = 0; i < A->Dimension; ++i)
+	for (j = 0; j < A->Dimension; ++j)
+	    value_assign(T->p[i][j], basis->p[i][j]);
+    value_set_si(T->p[A->Dimension][A->Dimension], 1);
+    Matrix_Free(basis);
+
+    ok = Matrix_Inverse(T, inv);
+    assert(ok);
+    Matrix_Free(T);
+
+    P = Polyhedron_Preimage(A, inv, MAXRAYS);
+    Polyhedron_Free(A);
+
+    U = Universe_Polyhedron(0);
+    S = Polyhedron_Scan(P, U, MAXRAYS);
+
+    p = ALLOCN(Value, P->Dimension+2);
+    for(i=0;i<=P->Dimension;i++) {
 	value_init(p[i]);
 	value_set_si(p[i],0);
     }
     value_init(p[i]);
     value_set_si(p[i],1);
 
-    scan_poly(S, 0, p);
+    scan_poly(S, 0, p, inv);
 
-    for(i=0;i<=(A->Dimension+1);i++) 
+    Matrix_Free(inv);
+    for(i=0;i<=(P->Dimension+1);i++) 
 	value_clear(p[i]);
     free(p);
     Domain_Free(S);
-    Polyhedron_Free(A);
+    Polyhedron_Free(P);
     Polyhedron_Free(U);
     return 0;
 }
