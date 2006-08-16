@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <polylib/polylibgmp.h>
+#include <barvinok/util.h>
 #include "basis_reduction.h"
 #include "config.h"
 
@@ -12,6 +13,17 @@
 #endif
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
+struct option options[] = {
+    { "direct",    no_argument,  0,  'd' },
+    { "version",   no_argument,  0,  'V' },
+    { 0, 0, 0, 0 }
+};
+#endif
 
 static Polyhedron *Polyhedron_Read()
 {
@@ -81,25 +93,44 @@ int main(int argc, char **argv)
     Value *p;
     int i, j, ok;
     Matrix *basis, *T, *inv;
+    int c, ind = 0;
+    int direct = 0;
+
+    while ((c = getopt_long(argc, argv, "dV", options, &ind)) != -1) {
+	switch (c) {
+	case 'd':
+	    direct = 1;
+	    break;
+	case 'V':
+	    printf(barvinok_version());
+	    exit(0);
+	    break;
+	}
+    }
 
     A = Polyhedron_Read();
 
-    basis = reduced_basis(A);
+    if (direct) {
+	inv = Identity(A->Dimension+1);
+	P = A;
+    } else {
+	basis = reduced_basis(A);
 
-    T = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
-    inv = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
-    for (i = 0; i < A->Dimension; ++i)
-	for (j = 0; j < A->Dimension; ++j)
-	    value_assign(T->p[i][j], basis->p[i][j]);
-    value_set_si(T->p[A->Dimension][A->Dimension], 1);
-    Matrix_Free(basis);
+	T = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
+	inv = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
+	for (i = 0; i < A->Dimension; ++i)
+	    for (j = 0; j < A->Dimension; ++j)
+		value_assign(T->p[i][j], basis->p[i][j]);
+	value_set_si(T->p[A->Dimension][A->Dimension], 1);
+	Matrix_Free(basis);
 
-    ok = Matrix_Inverse(T, inv);
-    assert(ok);
-    Matrix_Free(T);
+	ok = Matrix_Inverse(T, inv);
+	assert(ok);
+	Matrix_Free(T);
 
-    P = Polyhedron_Preimage(A, inv, MAXRAYS);
-    Polyhedron_Free(A);
+	P = Polyhedron_Preimage(A, inv, MAXRAYS);
+	Polyhedron_Free(A);
+    }
 
     U = Universe_Polyhedron(0);
     S = Polyhedron_Scan(P, U, MAXRAYS);
