@@ -3610,11 +3610,17 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
 					 unsigned MaxRays)
 {
     Polyhedron *conv, *D2;
+    Polyhedron *CA;
     gen_fun *gf = NULL, *gf2;
     unsigned nparam = C->Dimension;
     ZZ one, mone;
     one = 1;
     mone = -1;
+
+    CA = align_context(C, D->Dimension, MaxRays);
+    D = DomainIntersection(D, CA, MaxRays);
+    Polyhedron_Free(CA);
+
     D2 = skew_into_positive_orthant(D, nparam, MaxRays);
     for (Polyhedron *P = D2; P; P = P->next) {
 	assert(P->Dimension == D2->Dimension);
@@ -3644,6 +3650,7 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
     delete gf;
     if (D != D2)
 	Domain_Free(D2);
+    Domain_Free(D);
     return gf2;
 }
 
