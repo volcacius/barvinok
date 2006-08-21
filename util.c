@@ -491,7 +491,7 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor)
     while (nvar > 0 && p->NbEq - skip > 0) {
 	assert(dim > 0);
 
-	while (value_zero_p(p->Constraint[skip][0]) &&
+	while (skip < p->NbEq &&
 	       First_Non_Zero(p->Constraint[skip]+1, nvar) == -1)
 	    ++skip;
 	if (p->NbEq == skip)
