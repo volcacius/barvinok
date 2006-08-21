@@ -264,15 +264,16 @@ static Matrix *compress_parms(Matrix *M, unsigned nparam)
 
 struct parallel_polytopes {
     gf_base *red;
+    Polyhedron *context;
     Matrix *Constraints;
     Matrix *CP, *T;
     int dim;
     int nparam;
     vector<cone>    cones;
 
-    parallel_polytopes(int n, Polyhedron *context, int dim, int nparam) :
-			dim(dim), nparam(nparam) {
-	red = gf_base::create(Polyhedron_Copy(context), dim, nparam);
+    parallel_polytopes(int n, Polyhedron *context, int nparam) :
+			context(context), dim(-1), nparam(nparam) {
+	red = NULL;
 	Constraints = NULL;
 	CP = NULL;
 	T = NULL;
@@ -301,18 +302,20 @@ struct parallel_polytopes {
 	    Q = remove_equalities_p(R, R->Dimension-nparam, NULL);
 	}
 	assert(Q->NbEq == 0);
-	assert(Q->Dimension == dim);
 
 	if (First_Non_Zero(Q->Constraint[Q->NbConstraints-1]+1, Q->Dimension) == -1)
 	    Q->NbConstraints--;
 
 	if (!Constraints) {
+	    dim = Q->Dimension;
+	    red = gf_base::create(Polyhedron_Copy(context), dim, nparam);
 	    red->base->init(Q);
 	    Constraints = Matrix_Alloc(Q->NbConstraints, Q->Dimension);
 	    for (int i = 0; i < Q->NbConstraints; ++i) {
 		Vector_Copy(Q->Constraint[i]+1, Constraints->p[i], Q->Dimension);
 	    }
 	} else {
+	    assert(Q->Dimension == dim);
 	    for (int i = 0; i < Q->NbConstraints; ++i) {
 		int j;
 		for (j = 0; j < Constraints->NbRows; ++j)
@@ -451,7 +454,7 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 
 	    parallel_polytopes pp(term[i]->n.power.NumRows() *
 				  gf->term[i2]->n.power.NumRows(),
-				  sum->context, k1+k2-d, d);
+				  sum->context, d);
 
 	    for (int j = 0; j < term[i]->n.power.NumRows(); ++j) {
 		for (int j2 = 0; j2 < gf->term[i2]->n.power.NumRows(); ++j2) {
