@@ -3540,19 +3540,19 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, unsigned MaxRays)
 	barvinok_count(P, &c, MaxRays);
 	gf = new gen_fun(c);
 	value_clear(c);
-	return gf;
+    } else {
+	gf_base *red;
+	red = gf_base::create(Polyhedron_Project(P, nparam),
+			      P->Dimension, nparam);
+	POL_ENSURE_VERTICES(P);
+	red->start_gf(P, MaxRays);
+	gf = red->gf;
+	delete red;
     }
-
-    gf_base *red;
-    red = gf_base::create(Polyhedron_Project(P, nparam), P->Dimension, nparam);
-    POL_ENSURE_VERTICES(P);
-    red->start_gf(P, MaxRays);
     if (CP) {
-	red->gf->substitute(CP);
+	gf->substitute(CP);
 	Matrix_Free(CP);
     }
-    gf = red->gf;
-    delete red;
     Polyhedron_Free(P);
     return gf;
 }
