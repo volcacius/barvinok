@@ -116,7 +116,7 @@ bool short_rat::reduced()
 
 gen_fun::gen_fun(Value c)
 {
-    context = NULL;
+    context = Universe_Polyhedron(0);
     term.push_back(new short_rat);
     term[0]->n.coeff.SetLength(1);
     value2zz(c, term[0]->n.coeff[0].n);
