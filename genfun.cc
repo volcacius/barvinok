@@ -278,13 +278,22 @@ struct parallel_polytopes {
 	CP = NULL;
 	T = NULL;
     }
-    void add(const QQ& c, Polyhedron *P, unsigned MaxRays) {
+    bool add(const QQ& c, Polyhedron *P, unsigned MaxRays) {
+	int i;
+
+	for (i = 0; i < P->NbEq; ++i)
+	    if (First_Non_Zero(P->Constraint[i]+1,
+			       P->Dimension-nparam) == -1)
+		break;
+	if (i < P->NbEq)
+	    return false;
+
 	Polyhedron *Q = remove_equalities_p(Polyhedron_Copy(P), P->Dimension-nparam,
 					    NULL);
 	POL_ENSURE_VERTICES(Q);
 	if (emptyQ(Q)) {
 	    Polyhedron_Free(Q);
-	    return;
+	    return true;
 	}
 
 	if (Q->NbEq != 0) {
@@ -384,8 +393,11 @@ struct parallel_polytopes {
 	}
 
 	Polyhedron_Free(Q);
+	return true;
     }
     gen_fun *compute(unsigned MaxRays) {
+	if (!red)
+	    return NULL;
 	for (int i = 0; i < cones.size(); ++i) {
 	    Matrix *M = Matrix_Alloc(cones[i].pos[0], 1+Constraints->NbColumns+1);
 	    Polyhedron *Cone;
@@ -482,15 +494,21 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 
 		    QQ c = term[i]->n.coeff[j];
 		    c *= gf->term[i2]->n.coeff[j2];
-		    pp.add(c, P, MaxRays);
+		    if (!pp.add(c, P, MaxRays)) {
+			gen_fun *t = barvinok_series(P, U, MaxRays);
+			sum->add(c, t);
+			delete t;
+		    }
 
 		    Polyhedron_Free(P);
 		}
 	    }
 
 	    gen_fun *t = pp.compute(MaxRays);
-	    sum->add(one, t);
-	    delete t;
+	    if (t) {
+		sum->add(one, t);
+		delete t;
+	    }
 	}
     }
     Polyhedron_Free(U);
