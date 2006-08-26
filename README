@@ -57,7 +57,7 @@ Configure this library using
 
 or
 
-./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt --enable-fractional
+./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt --disable-fractional
 
 Then
 
