@@ -3512,16 +3512,11 @@ static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
 }
 #endif
 
-gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+/* frees P */
+static gen_fun *series(Polyhedron *P, unsigned nparam, unsigned MaxRays)
 {
     Matrix *CP = NULL;
-    Polyhedron *CA;
-    unsigned nparam = C->Dimension;
     gen_fun *gf;
-
-    CA = align_context(C, P->Dimension, MaxRays);
-    P = DomainIntersection(P, CA, MaxRays);
-    Polyhedron_Free(CA);
 
     if (emptyQ2(P)) {
 	Polyhedron_Free(P);
@@ -3545,19 +3540,35 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 	barvinok_count(P, &c, MaxRays);
 	gf = new gen_fun(c);
 	value_clear(c);
-	return gf;
+    } else {
+	gf_base *red;
+	red = gf_base::create(Polyhedron_Project(P, nparam),
+			      P->Dimension, nparam);
+	POL_ENSURE_VERTICES(P);
+	red->start_gf(P, MaxRays);
+	gf = red->gf;
+	delete red;
     }
-
-    gf_base *red;
-    red = gf_base::create(Polyhedron_Project(P, nparam), P->Dimension, nparam);
-    red->start_gf(P, MaxRays);
-    Polyhedron_Free(P);
     if (CP) {
-	red->gf->substitute(CP);
+	gf->substitute(CP);
 	Matrix_Free(CP);
     }
-    gf = red->gf;
-    delete red;
+    Polyhedron_Free(P);
+    return gf;
+}
+
+gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+{
+    Polyhedron *CA;
+    unsigned nparam = C->Dimension;
+    gen_fun *gf;
+
+    CA = align_context(C, P->Dimension, MaxRays);
+    P = DomainIntersection(P, CA, MaxRays);
+    Polyhedron_Free(CA);
+
+    gf = series(P, nparam, MaxRays);
+
     return gf;
 }
 
@@ -3610,26 +3621,28 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
 					 unsigned MaxRays)
 {
     Polyhedron *conv, *D2;
+    Polyhedron *CA;
     gen_fun *gf = NULL, *gf2;
     unsigned nparam = C->Dimension;
     ZZ one, mone;
     one = 1;
     mone = -1;
+
+    CA = align_context(C, D->Dimension, MaxRays);
+    D = DomainIntersection(D, CA, MaxRays);
+    Polyhedron_Free(CA);
+
     D2 = skew_into_positive_orthant(D, nparam, MaxRays);
     for (Polyhedron *P = D2; P; P = P->next) {
 	assert(P->Dimension == D2->Dimension);
-	POL_ENSURE_VERTICES(P);
-	/* it doesn't matter which reducer we use, since we don't actually
-	 * reduce anything here
-	 */
-	partial_reducer red(Polyhedron_Project(P, P->Dimension), P->Dimension, 
-			    P->Dimension);
-	red.start(P, MaxRays);
+	gen_fun *P_gf;
+
+	P_gf = series(Polyhedron_Copy(P), nparam, MaxRays);
 	if (!gf)
-	    gf = red.gf;
+	    gf = P_gf;
 	else {
-	    gf->add_union(red.gf, MaxRays);
-	    delete red.gf;
+	    gf->add_union(P_gf, MaxRays);
+	    delete P_gf;
 	}
     }
     /* we actually only need the convex union of the parameter space
@@ -3644,6 +3657,7 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
     delete gf;
     if (D != D2)
 	Domain_Free(D2);
+    Domain_Free(D);
     return gf2;
 }
 

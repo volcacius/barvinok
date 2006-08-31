@@ -1451,49 +1451,6 @@ static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
     return M;
 }
 
-Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
-{
-    int len = P->Dimension+2;
-    Polyhedron *T, *R = P;
-    Value g;
-    value_init(g);
-    Vector *row = Vector_Alloc(len);
-    value_set_si(row->p[0], 1);
-
-    R = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
-
-    Matrix *M = Matrix_Alloc(2, len-1);
-    value_set_si(M->p[1][len-2], 1);
-    for (int v = 0; v < P->Dimension; ++v) {
-	value_set_si(M->p[0][v], 1);
-	Polyhedron *I = Polyhedron_Image(R, M, 2+1);
-	value_set_si(M->p[0][v], 0);
-	for (int r = 0; r < I->NbConstraints; ++r) {
-	    if (value_zero_p(I->Constraint[r][0]))
-		continue;
-	    if (value_zero_p(I->Constraint[r][1]))
-		continue;
-	    if (value_one_p(I->Constraint[r][1]))
-		continue;
-	    if (value_mone_p(I->Constraint[r][1]))
-		continue;
-	    value_absolute(g, I->Constraint[r][1]);
-	    Vector_Set(row->p+1, 0, len-2);
-	    value_division(row->p[1+v], I->Constraint[r][1], g);
-	    mpz_fdiv_q(row->p[len-1], I->Constraint[r][2], g);
-	    T = R;
-	    R = AddConstraints(row->p, 1, R, MaxRays);
-	    if (T != P)
-		Polyhedron_Free(T);
-	}
-	Polyhedron_Free(I);
-    }
-    Matrix_Free(M);
-    Vector_Free(row);
-    value_clear(g);
-    return R;
-}
-
 static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays);
 
 Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)

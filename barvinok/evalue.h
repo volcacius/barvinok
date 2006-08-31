@@ -1,5 +1,7 @@
-#ifndef EV_OPERATIONS_H
-#define EV_OPERATIONS_H
+#ifndef EVALUE_H
+#define EVALUE_H
+
+#include <gmp.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -7,6 +9,7 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 #undef divide
+#undef value_compare
 
 #define polynomial new_polynomial
 #define periodic new_periodic

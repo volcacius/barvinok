@@ -57,7 +57,11 @@ Configure this library using
 
 or
 
-./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt --enable-fractional
+./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt --disable-fractional
+
+If you want shared libraries, then configure with the --enable-shared option.
+Note that this doesn't work on some systems because we link in libntl, which
+is only avaiable as a static library.
 
 Then
 

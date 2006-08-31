@@ -2,6 +2,7 @@
 #include <gmp.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
+#undef divide
 }
 #include <barvinok/NTL_QQ.h>
 #include "reducer.h"

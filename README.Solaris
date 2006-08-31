@@ -1,2 +1,0 @@
-Due to a bug in libtool, linking fails on Solaris.
-As a temporary stopgap move "-lntl" from LIBS to LDADD in Makefile.

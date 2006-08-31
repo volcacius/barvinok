@@ -17,6 +17,7 @@ case $host in
 	;;
 esac
 
+AC_DISABLE_SHARED
 AC_PROG_LIBTOOL
 
 AC_CHECK_HEADERS(getopt.h)
@@ -327,6 +328,7 @@ if test "$have_glpk" = "true"; then
     AC_LIBOBJ(basis_reduction)
     AC_LIBOBJ(sample)
     bv_extra_programs="polyhedron_sample 4coins lexmin $bv_extra_programs"
+    bv_extra_programs="polytope_scan $bv_extra_programs"
 fi
 
 AC_SUBST(GIT_HEAD_ID)
