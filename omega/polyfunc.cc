@@ -1,6 +1,6 @@
-#include <barvinok/bernstein.h>
 #include <bernstein/bernstein.h>
 #include <bernstein/piecewise_lst.h>
+#include <barvinok/bernstein.h>
 #include "polyfunc.h"
 #include "omega/convert.h"
 
