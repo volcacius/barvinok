@@ -15,7 +15,7 @@ using namespace bernstein;
 
 namespace barvinok {
 
-static ex evalue2ex(evalue *e, const exvector& vars)
+ex evalue2ex(evalue *e, const exvector& vars)
 {
     if (value_notzero_p(e->d))
 	return value2numeric(e->x.n)/value2numeric(e->d);
