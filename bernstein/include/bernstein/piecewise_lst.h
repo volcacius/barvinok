@@ -22,6 +22,7 @@ struct piecewise_lst_s {
     void maximize();
     void simplify_domains(Polyhedron *ctx);
     GiNaC::numeric evaluate(const GiNaC::exvector& values);
+    void add(const GiNaC::ex& poly);
 
     ~piecewise_lst_s() {
 	free_list_domains();

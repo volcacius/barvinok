@@ -237,4 +237,15 @@ numeric piecewise_lst_s::evaluate(const exvector& values)
     return result;
 }
 
+void piecewise_lst_s::add(const GiNaC::ex& poly)
+{
+    for (int i = 0; i < list.size(); ++i) {
+	lst::const_iterator j;
+	lst new_coeff;
+	for (j = list[i].second.begin(); j != list[i].second.end(); ++j)
+	    new_coeff.append(*j + poly);
+	list[i].second = new_coeff;
+    }
+}
+
 }
