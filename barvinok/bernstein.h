@@ -1,5 +1,6 @@
 #include <ginac/ginac.h>
 #include <bernstein/piecewise_lst.h>
+#include <barvinok/evalue.h>
 
 namespace barvinok {
 
