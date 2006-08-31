@@ -1,5 +1,5 @@
-#ifndef EV_OPERATIONS_H
-#define EV_OPERATIONS_H
+#ifndef EVALUE_H
+#define EVALUE_H
 
 #include <gmp.h>
 
