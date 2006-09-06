@@ -65,7 +65,7 @@ static void printdomain(std::ostream& o, Polyhedron *D, const exvector& p)
     }
 }
 
-std::ostream & operator<< (std::ostream & os, const piecewise_lst_s & pl)
+std::ostream & operator<< (std::ostream & os, const piecewise_lst & pl)
 {
     if (pl.list.size() == 1 && universeQ(pl.list[0].first))
 	print_max(os, pl.list[0].second);
@@ -149,7 +149,7 @@ ostream & operator<< (ostream & os, const exvector & v)
     return os;
 }
 
-piecewise_lst_s& piecewise_lst_s::combine(const piecewise_lst_s& other)
+piecewise_lst& piecewise_lst::combine(const piecewise_lst& other)
 {
     assert(vars == other.vars);
     list = bernstein::combine(list, other.list);
@@ -157,7 +157,7 @@ piecewise_lst_s& piecewise_lst_s::combine(const piecewise_lst_s& other)
 }
 
 
-void piecewise_lst_s::maximize()
+void piecewise_lst::maximize()
 {
     exvector params;
     for (int i = 0; i < list.size(); ++i) {
@@ -165,7 +165,7 @@ void piecewise_lst_s::maximize()
     }
 }
 
-void piecewise_lst_s::simplify_domains(Polyhedron *ctx)
+void piecewise_lst::simplify_domains(Polyhedron *ctx)
 {
     for (int i = 0; i < list.size(); ++i) {
 	Polyhedron *D = list[i].first;
@@ -203,7 +203,7 @@ static void numeric2value(numeric n, Value& v)
     v[0]._mp_size = n < 0 ? -abs_sa : abs_sa;
 }
 
-numeric piecewise_lst_s::evaluate(const exvector& values)
+numeric piecewise_lst::evaluate(const exvector& values)
 {
     Value *v = new Value[values.size()];
     numeric result = 0;
@@ -237,7 +237,7 @@ numeric piecewise_lst_s::evaluate(const exvector& values)
     return result;
 }
 
-void piecewise_lst_s::add(const GiNaC::ex& poly)
+void piecewise_lst::add(const GiNaC::ex& poly)
 {
     for (int i = 0; i < list.size(); ++i) {
 	lst::const_iterator j;

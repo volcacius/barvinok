@@ -54,7 +54,7 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
     }
 
     PP = Polyhedron2Param_Domain(D, ctx, 0);
-    piecewise_lst_s *pl = new piecewise_lst_s(exparams);
+    piecewise_lst *pl = new piecewise_lst(exparams);
     for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
 	GiNaC::matrix VM = domainVertices(PP, Q, exparams);
 	lst coeffs = bernsteinExpansion(VM, polyfunc->poly, exvars, exparams);

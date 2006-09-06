@@ -92,7 +92,7 @@ static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly)
     *poly = &e->x.p->arr[1];
 }
 
-piecewise_lst_s *evalue_bernstein_coefficients(piecewise_lst_s *pl_all, evalue *e, 
+piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e, 
 				      Polyhedron *ctx, const exvector& params)
 {
     unsigned nparam = ctx->Dimension;
@@ -121,7 +121,7 @@ piecewise_lst_s *evalue_bernstein_coefficients(piecewise_lst_s *pl_all, evalue *
 	}
 	for (Polyhedron *P = E; P; P = P->next) {
 	    Polyhedron *next = P->next;
-	    piecewise_lst_s *pl = new piecewise_lst_s(params);
+	    piecewise_lst *pl = new piecewise_lst(params);
 	    Polyhedron *P1 = P;
 	    P->next = NULL;
 	    PP = Polyhedron2Param_Domain(P, ctx, 0);
