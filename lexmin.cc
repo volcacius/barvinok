@@ -172,6 +172,7 @@ struct indicator_term {
     }
     void print(ostream& os, char **p);
     void substitute(Matrix *T);
+    void normalize();
     void substitute(evalue *fract, evalue *val);
     void substitute(int pos, evalue *val);
     void reduce_in_domain(Polyhedron *D);
@@ -260,6 +261,44 @@ void indicator_term::substitute(Matrix *T)
     vertex = newvertex;
 }
 
+static void evalue_add_constant(evalue *e, ZZ v)
+{
+    Value tmp;
+    value_init(tmp);
+
+    /* go down to constant term */
+    while (value_zero_p(e->d))
+	e = &e->x.p->arr[type_offset(e->x.p)];
+    /* and add v */
+    zz2value(v, tmp);
+    value_multiply(tmp, tmp, e->d);
+    value_addto(e->x.n, e->x.n, tmp);
+
+    value_clear(tmp);
+}
+
+/* Make all powers in denominator lexico-positive */
+void indicator_term::normalize()
+{
+    vec_ZZ extra_vertex;
+    extra_vertex.SetLength(den.NumCols());
+    for (int r = 0; r < den.NumRows(); ++r) {
+	for (int k = 0; k < den.NumCols(); ++k) {
+	    if (den[r][k] == 0)
+		continue;
+	    if (den[r][k] > 0)
+		break;
+	    sign = -sign;
+	    den[r] = -den[r];
+	    extra_vertex += den[r];
+	    break;
+	}
+    }
+    for (int k = 0; k < extra_vertex.length(); ++k)
+	if (extra_vertex[k] != 0)
+	    evalue_add_constant(vertex[k], extra_vertex[k]);
+}
+
 static void substitute(evalue *e, evalue *fract, evalue *val)
 {
     evalue *t;
@@ -328,9 +367,10 @@ void indicator_term::substitute(int pos, evalue *val)
 struct indicator_constructor : public polar_decomposer, public vertex_decomposer {
     vec_ZZ vertex;
     vector<indicator_term*> *terms;
+    Matrix *T;	/* Transformation to original space */
 
-    indicator_constructor(Polyhedron *P, unsigned dim, unsigned nbV) :
-		vertex_decomposer(P, nbV, this) {
+    indicator_constructor(Polyhedron *P, unsigned dim, unsigned nbV, Matrix *T) :
+		vertex_decomposer(P, nbV, this), T(T) {
 	vertex.SetLength(dim);
 	terms = new vector<indicator_term*>[nbV];
     }
@@ -346,22 +386,6 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
 
     virtual void handle_polar(Polyhedron *P, int sign);
 };
-
-static void evalue_add_constant(evalue *e, ZZ v)
-{
-    Value tmp;
-    value_init(tmp);
-
-    /* go down to constant term */
-    while (value_zero_p(e->d))
-	e = &e->x.p->arr[type_offset(e->x.p)];
-    /* and add v */
-    zz2value(v, tmp);
-    value_multiply(tmp, tmp, e->d);
-    value_addto(e->x.n, e->x.n, tmp);
-
-    value_clear(tmp);
-}
 
 void indicator_constructor::handle_polar(Polyhedron *C, int s)
 {
@@ -388,7 +412,6 @@ void indicator_constructor::handle_polar(Polyhedron *C, int s)
 	    break;
 	}
     }
-    lex_order_rows(term->den);
 
     for (int i = 0; i < dim; ++i) {
 	if (!term->vertex[i]) {
@@ -403,13 +426,13 @@ void indicator_constructor::handle_polar(Polyhedron *C, int s)
 	    continue;
 	evalue_add_constant(term->vertex[i], vertex[i]);
     }
-}
 
-void indicator_constructor::substitute(Matrix *T)
-{
-    for (int i = 0; i < nbV; ++i)
-	for (int j = 0; j < terms[i].size(); ++j)
-	    terms[i][j]->substitute(T);
+    if (T) {
+	term->substitute(T);
+	term->normalize();
+    }
+
+    lex_order_rows(term->den);
 }
 
 void indicator_constructor::print(ostream& os, char **p)
@@ -1973,14 +1996,10 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
     Polyhedron **fVD = new Polyhedron*[nd];
 
-    indicator_constructor ic(P, dim, PP->nbV);
+    indicator_constructor ic(P, dim, PP->nbV, T);
 
     for (i = 0, V = PP->V; V; V = V->next, i++) {
 	ic.decompose_at_vertex(V, i, MaxRays);
-    }
-    if (T) {
-	ic.substitute(T);
-	ic.normalize();
     }
 
     for (nd = 0, D=PP->D; D; D=next) {
