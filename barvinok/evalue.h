@@ -76,7 +76,7 @@ typedef struct _enumeration {
 
 void evalue_set_si(evalue *ev, int n, int d);
 void evalue_set(evalue *ev, Value n, Value d);
-void evalue_copy(evalue *dst, evalue *src);
+void evalue_copy(evalue *dst, const evalue *src);
 evalue *evalue_zero();
 enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);
@@ -90,7 +90,7 @@ void aep_evalue(evalue *e, int *ref);
 void addeliminatedparams_evalue(evalue *e,Matrix *CT);
 void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
 			      unsigned MaxRays, unsigned nparam);
-void eadd(evalue *e1,evalue *res);
+void eadd(const evalue *e1, evalue *res);
 void emul (evalue *e1, evalue *res );
 void emask(evalue *mask, evalue *res);
 int in_domain(Polyhedron *P, Value *list_args);

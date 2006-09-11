@@ -179,7 +179,7 @@ static int mod_term_smaller_r(evalue *e1, evalue *e2)
     }
 }
 
-static int mod_term_smaller(evalue *e1, evalue *e2)
+static int mod_term_smaller(const evalue *e1, const evalue *e2)
 {
     assert(value_zero_p(e1->d));
     assert(value_zero_p(e2->d));
@@ -970,7 +970,7 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   return;
 } /* print_enode */ 
 
-static void eadd_rev(evalue *e1, evalue *res)
+static void eadd_rev(const evalue *e1, evalue *res)
 {
     evalue ev;
     value_init(ev.d);
@@ -980,7 +980,7 @@ static void eadd_rev(evalue *e1, evalue *res)
     *res = ev;
 }
 
-static void eadd_rev_cst (evalue *e1, evalue *res)
+static void eadd_rev_cst(const evalue *e1, evalue *res)
 {
     evalue ev;
     value_init(ev.d);
@@ -1006,7 +1006,7 @@ static int is_zero_on(evalue *e, Polyhedron *D)
 
 struct section { Polyhedron * D; evalue E; };
 
-void eadd_partitions (evalue *e1,evalue *res)
+void eadd_partitions(const evalue *e1, evalue *res)
 {
     int n, i, j;
     Polyhedron *d, *fd;
@@ -1115,8 +1115,8 @@ static void explicit_complement(evalue *res)
     res->x.p = rel;
 }
 
-void eadd(evalue *e1,evalue *res) {
-
+void eadd(const evalue *e1, evalue *res)
+{
  int i; 
     if (value_notzero_p(e1->d) && value_notzero_p(res->d)) {
          /* Add two rational numbers */
@@ -1195,9 +1195,7 @@ void eadd(evalue *e1,evalue *res) {
 		eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
 		    if (res->x.p->size < 3 && e1->x.p->size == 3)
 			explicit_complement(res);
-		    if (e1->x.p->size < 3 && res->x.p->size == 3)
-			explicit_complement(e1);
-		    for (i = 1; i < res->x.p->size; ++i)
+		    for (i = 1; i < e1->x.p->size; ++i)
 			eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
 		    return;
 	    }
@@ -1234,7 +1232,7 @@ void eadd(evalue *e1,evalue *res) {
 			switch (res->x.p->type) {
 			case flooring:
 			case fractional:
-			    if(mod_term_smaller(res, e1))
+			    if (mod_term_smaller(res, e1))
 				eadd(e1,&res->x.p->arr[1]);
 			    else
 				eadd_rev_cst(e1, res);
@@ -1781,7 +1779,7 @@ void emask(evalue *mask, evalue *res) {
     free(s);
 }
 
-void evalue_copy(evalue *dst, evalue *src)
+void evalue_copy(evalue *dst, const evalue *src)
 {
     value_assign(dst->d, src->d);
     if(value_notzero_p(src->d)) {
