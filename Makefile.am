@@ -14,7 +14,8 @@ pkginclude_HEADERS = \
     barvinok/barvinok.h \
     barvinok/util.h \
     barvinok/evalue.h \
-    barvinok/genfun.h
+    barvinok/genfun.h \
+    barvinok/options.h
 LINK = $(CXXLINK)
 
 libbarvinok_la_SOURCES = \
@@ -38,6 +39,7 @@ libbarvinok_la_SOURCES = \
     genfun_constructor.h \
     lattice_point.cc \
     lattice_point.h \
+    options.c \
     reduce_domain.c \
     reduce_domain.h \
     reducer.cc \
