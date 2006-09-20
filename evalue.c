@@ -805,6 +805,14 @@ static void _reduce_evalue_in_domain(evalue *e, Polyhedron *D, struct subst *s)
 void reduce_evalue_in_domain(evalue *e, Polyhedron *D)
 {
     struct subst s = { NULL, 0, 0 };
+    if (emptyQ2(D)) {
+	if (EVALUE_IS_ZERO(*e))
+	    return;
+	free_evalue_refs(e);
+	value_init(e->d);
+	evalue_set_si(e, 0, 1);
+	return;
+    }
     _reduce_evalue_in_domain(e, D, &s);
     if (s.max != 0)
 	free(s.fixed);
