@@ -470,6 +470,222 @@ void indicator_constructor::normalize()
 	}
 }
 
+struct EDomain {
+    Polyhedron		*D;
+    Vector		*sample;
+    vector<evalue *>	floors;
+
+    EDomain(Polyhedron *D) {
+	this->D = Polyhedron_Copy(D);
+	sample = NULL;
+    }
+    EDomain(Polyhedron *D, vector<evalue *>floors) {
+	this->D = Polyhedron_Copy(D);
+	add_floors(floors);
+	sample = NULL;
+    }
+    EDomain(Polyhedron *D, EDomain *ED, vector<evalue *>floors) {
+	this->D = Polyhedron_Copy(D);
+	add_floors(ED->floors);
+	add_floors(floors);
+	sample = NULL;
+    }
+    void add_floors(vector<evalue *>floors) {
+	for (int i = 0; i < floors.size(); ++i) {
+	    evalue *f = new evalue;
+	    value_init(f->d);
+	    evalue_copy(f, floors[i]);
+	    this->floors.push_back(f);
+	}
+    }
+    int find_floor(evalue *needle) {
+	for (int i = 0; i < floors.size(); ++i)
+	    if (eequal(needle, floors[i]))
+		return i;
+	return -1;
+    }
+    void print(FILE *out, char **p);
+    ~EDomain() {
+	for (int i = 0; i < floors.size(); ++i) {
+	    free_evalue_refs(floors[i]);
+	    delete floors[i];
+	}
+	Polyhedron_Free(D);
+	if (sample)
+	    Vector_Free(sample);
+    }
+};
+
+void EDomain::print(FILE *out, char **p)
+{
+    fdostream os(dup(fileno(out)));
+    for (int i = 0; i < floors.size(); ++i) {
+	os << "floor " << i << ": [";
+	evalue_print(os, floors[i], p);
+	os << "]" << endl;
+    }
+    Polyhedron_Print(out, P_VALUE_FMT, D);
+}
+
+static void add_coeff(Value *cons, int len, evalue *coeff, int pos)
+{
+    Value tmp;
+
+    assert(value_notzero_p(coeff->d));
+
+    value_init(tmp);
+
+    value_lcm(cons[0], coeff->d, &tmp);
+    value_division(tmp, tmp, cons[0]);
+    Vector_Scale(cons, cons, tmp, len);
+    value_division(tmp, cons[0], coeff->d);
+    value_addmul(cons[pos], tmp, coeff->x.n);
+
+    value_clear(tmp);
+}
+
+static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len);
+
+static void add_fract(evalue *e, Value *cons, int len, int pos)
+{
+    evalue mone;
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+
+    /* contribution of alpha * fract(X) is 
+     *      alpha * X ...
+     */
+    assert(e->x.p->size == 3);
+    evalue argument;
+    value_init(argument.d);
+    evalue_copy(&argument, &e->x.p->arr[0]);
+    emul(&e->x.p->arr[2], &argument);
+    evalue2constraint_r(NULL, &argument, cons, len);
+    free_evalue_refs(&argument);
+
+    /*	    - alpha * floor(X) */
+    emul(&mone, &e->x.p->arr[2]);
+    add_coeff(cons, len, &e->x.p->arr[2], pos);
+    emul(&mone, &e->x.p->arr[2]);
+
+    free_evalue_refs(&mone); 
+}
+
+static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len)
+{
+    int r = 0;
+    if (value_zero_p(E->d) && E->x.p->type == fractional) {
+	int i;
+	assert(E->x.p->size == 3);
+	r = evalue2constraint_r(D, &E->x.p->arr[1], cons, len);
+	assert(value_notzero_p(E->x.p->arr[2].d));
+	if (D && (i = D->find_floor(&E->x.p->arr[0])) >= 0) {
+	    add_fract(E, cons, len, 1+D->D->Dimension-D->floors.size()+i);
+	} else {
+	    if (value_pos_p(E->x.p->arr[2].x.n)) {
+		evalue coeff;
+		value_init(coeff.d);
+		value_init(coeff.x.n);
+		value_set_si(coeff.d, 1);
+		evalue_denom(&E->x.p->arr[0], &coeff.d);
+		value_decrement(coeff.x.n, coeff.d);
+		emul(&E->x.p->arr[2], &coeff);
+		add_coeff(cons, len, &coeff, len-1);
+		free_evalue_refs(&coeff);
+	    }
+	    r = 1;
+	}
+    } else if (value_zero_p(E->d)) {
+	assert(E->x.p->type == polynomial);
+	assert(E->x.p->size == 2);
+	r = evalue2constraint_r(D, &E->x.p->arr[0], cons, len) || r;
+	add_coeff(cons, len, &E->x.p->arr[1], E->x.p->pos);
+    } else {
+	add_coeff(cons, len, E, len-1);
+    }
+    return r;
+}
+
+static int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len)
+{
+    Vector_Set(cons, 0, len);
+    value_set_si(cons[0], 1);
+    return evalue2constraint_r(D, E, cons, len);
+}
+
+static void interval_minmax(Polyhedron *I, int *min, int *max)
+{
+    assert(I->Dimension == 1);
+    *min = 1;
+    *max = -1;
+    POL_ENSURE_VERTICES(I);
+    for (int i = 0; i < I->NbRays; ++i) {
+	if (value_pos_p(I->Ray[i][1]))
+	    *max = 1;
+	else if (value_neg_p(I->Ray[i][1]))
+	    *min = -1;
+	else {
+	    if (*max < 0)
+		*max = 0;
+	    if (*min > 0)
+		*min = 0;
+	}
+    }
+}
+
+static void interval_minmax(Polyhedron *D, Matrix *T, int *min, int *max, 
+			    unsigned MaxRays)
+{
+    Polyhedron *I = Polyhedron_Image(D, T, MaxRays);
+    I = DomainConstraintSimplify(I, MaxRays);
+    if (emptyQ2(I)) {
+	Polyhedron_Free(I);
+	I = Polyhedron_Image(D, T, MaxRays);
+    }
+    interval_minmax(I, min, max);
+    Polyhedron_Free(I);
+}
+
+struct max_term {
+    unsigned dim;
+    Polyhedron *domain;
+    vector<evalue *> max;
+
+    void print(ostream& os, char **p) const;
+    void resolve_existential_vars() const;
+    void substitute(Matrix *T, unsigned MaxRays);
+    Vector *eval(Value *val, unsigned MaxRays) const;
+
+    ~max_term() {
+	for (int i = 0; i < max.size(); ++i) {
+	    free_evalue_refs(max[i]);
+	    delete max[i];
+	}
+	Polyhedron_Free(domain);
+    }
+};
+
+/*
+ * Project on first dim dimensions
+ */
+Polyhedron* Polyhedron_Project_Initial(Polyhedron *P, int dim)
+{
+    int i;
+    Matrix *T;
+    Polyhedron *I;
+
+    if (P->Dimension == dim)
+	return Polyhedron_Copy(P);
+
+    T = Matrix_Alloc(dim+1, P->Dimension+1);
+    for (i = 0; i < dim; ++i)
+	value_set_si(T->p[i][i], 1);
+    value_set_si(T->p[dim][P->Dimension], 1);
+    I = Polyhedron_Image(P, T, P->NbConstraints);
+    Matrix_Free(T);
+    return I;
+}
+
 struct indicator {
     vector<indicator_term*> term;
 
@@ -490,6 +706,84 @@ struct indicator {
     void substitute(evalue *equation);
     void reduce_in_domain(Polyhedron *D);
 };
+
+static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
+				 vector<evalue *>& new_floors)
+{
+    Polyhedron *D = ED->D;
+    evalue mone;
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+    int fract = 0;
+    for (evalue *e = constraint; value_zero_p(e->d); 
+	 e = &e->x.p->arr[type_offset(e->x.p)]) {
+	int i;
+	if (e->x.p->type != fractional)
+	    continue;
+	for (i = 0; i < ED->floors.size(); ++i)
+	    if (eequal(&e->x.p->arr[0], ED->floors[i]))
+		break;
+	if (i < ED->floors.size())
+	    continue;
+	++fract;
+    }
+
+    int rows = D->NbConstraints+2*fract+1;
+    int cols = 2+D->Dimension+fract;
+    Matrix *M = Matrix_Alloc(rows, cols);
+    for (int i = 0; i < D->NbConstraints; ++i) {
+	Vector_Copy(D->Constraint[i], M->p[i], 1+D->Dimension);
+	value_assign(M->p[i][1+D->Dimension+fract], 
+		     D->Constraint[i][1+D->Dimension]);
+    }
+    value_set_si(M->p[rows-1][0], 1);
+    fract = 0;
+    evalue *e;
+    for (e = constraint; value_zero_p(e->d); e = &e->x.p->arr[type_offset(e->x.p)]) {
+	if (e->x.p->type == fractional) {
+	    int i, pos;
+
+	    i = ED->find_floor(&e->x.p->arr[0]);
+	    if (i >= 0)
+		pos = D->Dimension-ED->floors.size()+i;
+	    else
+		pos = D->Dimension+fract;
+
+	    add_fract(e, M->p[rows-1], cols, 1+pos);
+
+	    if (pos < D->Dimension)
+		continue;
+
+	    /* constraints for the new floor */
+	    int row = D->NbConstraints+2*fract;
+	    value_set_si(M->p[row][0], 1);
+	    evalue2constraint_r(NULL, &e->x.p->arr[0], M->p[row], cols);
+	    value_oppose(M->p[row][1+D->Dimension+fract], M->p[row][0]);
+	    value_set_si(M->p[row][0], 1);
+
+	    Vector_Scale(M->p[row]+1, M->p[row+1]+1, mone.x.n, cols-1);
+	    value_set_si(M->p[row+1][0], 1);
+	    value_addto(M->p[row+1][cols-1], M->p[row+1][cols-1],
+			M->p[row+1][1+D->Dimension+fract]);
+	    value_decrement(M->p[row+1][cols-1], M->p[row+1][cols-1]);
+
+	    evalue *arg = new evalue;
+	    value_init(arg->d);
+	    evalue_copy(arg, &e->x.p->arr[0]);
+	    new_floors.push_back(arg);
+
+	    ++fract;
+	} else {
+	    assert(e->x.p->type == polynomial);
+	    assert(e->x.p->size == 2);
+	    add_coeff(M->p[rows-1], cols, &e->x.p->arr[1], e->x.p->pos);
+	}
+    }
+    add_coeff(M->p[rows-1], cols, e, cols-1);
+    value_set_si(M->p[rows-1][0], 1);
+    free_evalue_refs(&mone); 
+    return M;
+}
 
 void indicator::reduce_in_domain(Polyhedron *D)
 {
@@ -753,201 +1047,6 @@ void indicator::substitute(evalue *equation)
 
     free(p);
 }
-
-static void add_coeff(Value *cons, int len, evalue *coeff, int pos)
-{
-    Value tmp;
-
-    assert(value_notzero_p(coeff->d));
-
-    value_init(tmp);
-
-    value_lcm(cons[0], coeff->d, &tmp);
-    value_division(tmp, tmp, cons[0]);
-    Vector_Scale(cons, cons, tmp, len);
-    value_division(tmp, cons[0], coeff->d);
-    value_addmul(cons[pos], tmp, coeff->x.n);
-
-    value_clear(tmp);
-}
-
-struct EDomain {
-    Polyhedron		*D;
-    Vector		*sample;
-    vector<evalue *>	floors;
-
-    EDomain(Polyhedron *D) {
-	this->D = Polyhedron_Copy(D);
-	sample = NULL;
-    }
-    EDomain(Polyhedron *D, vector<evalue *>floors) {
-	this->D = Polyhedron_Copy(D);
-	add_floors(floors);
-	sample = NULL;
-    }
-    EDomain(Polyhedron *D, EDomain *ED, vector<evalue *>floors) {
-	this->D = Polyhedron_Copy(D);
-	add_floors(ED->floors);
-	add_floors(floors);
-	sample = NULL;
-    }
-    void add_floors(vector<evalue *>floors) {
-	for (int i = 0; i < floors.size(); ++i) {
-	    evalue *f = new evalue;
-	    value_init(f->d);
-	    evalue_copy(f, floors[i]);
-	    this->floors.push_back(f);
-	}
-    }
-    int find_floor(evalue *needle) {
-	for (int i = 0; i < floors.size(); ++i)
-	    if (eequal(needle, floors[i]))
-		return i;
-	return -1;
-    }
-    void print(FILE *out, char **p);
-    ~EDomain() {
-	for (int i = 0; i < floors.size(); ++i) {
-	    free_evalue_refs(floors[i]);
-	    delete floors[i];
-	}
-	Polyhedron_Free(D);
-	if (sample)
-	    Vector_Free(sample);
-    }
-};
-
-void EDomain::print(FILE *out, char **p)
-{
-    fdostream os(dup(fileno(out)));
-    for (int i = 0; i < floors.size(); ++i) {
-	os << "floor " << i << ": [";
-	evalue_print(os, floors[i], p);
-	os << "]" << endl;
-    }
-    Polyhedron_Print(out, P_VALUE_FMT, D);
-}
-
-static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len);
-
-static void add_fract(evalue *e, Value *cons, int len, int pos)
-{
-    evalue mone;
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-
-    /* contribution of alpha * fract(X) is 
-     *      alpha * X ...
-     */
-    assert(e->x.p->size == 3);
-    evalue argument;
-    value_init(argument.d);
-    evalue_copy(&argument, &e->x.p->arr[0]);
-    emul(&e->x.p->arr[2], &argument);
-    evalue2constraint_r(NULL, &argument, cons, len);
-    free_evalue_refs(&argument);
-
-    /*	    - alpha * floor(X) */
-    emul(&mone, &e->x.p->arr[2]);
-    add_coeff(cons, len, &e->x.p->arr[2], pos);
-    emul(&mone, &e->x.p->arr[2]);
-
-    free_evalue_refs(&mone); 
-}
-
-static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len)
-{
-    int r = 0;
-    if (value_zero_p(E->d) && E->x.p->type == fractional) {
-	int i;
-	assert(E->x.p->size == 3);
-	r = evalue2constraint_r(D, &E->x.p->arr[1], cons, len);
-	assert(value_notzero_p(E->x.p->arr[2].d));
-	if (D && (i = D->find_floor(&E->x.p->arr[0])) >= 0) {
-	    add_fract(E, cons, len, 1+D->D->Dimension-D->floors.size()+i);
-	} else {
-	    if (value_pos_p(E->x.p->arr[2].x.n)) {
-		evalue coeff;
-		value_init(coeff.d);
-		value_init(coeff.x.n);
-		value_set_si(coeff.d, 1);
-		evalue_denom(&E->x.p->arr[0], &coeff.d);
-		value_decrement(coeff.x.n, coeff.d);
-		emul(&E->x.p->arr[2], &coeff);
-		add_coeff(cons, len, &coeff, len-1);
-		free_evalue_refs(&coeff);
-	    }
-	    r = 1;
-	}
-    } else if (value_zero_p(E->d)) {
-	assert(E->x.p->type == polynomial);
-	assert(E->x.p->size == 2);
-	r = evalue2constraint_r(D, &E->x.p->arr[0], cons, len) || r;
-	add_coeff(cons, len, &E->x.p->arr[1], E->x.p->pos);
-    } else {
-	add_coeff(cons, len, E, len-1);
-    }
-    return r;
-}
-
-static int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len)
-{
-    Vector_Set(cons, 0, len);
-    value_set_si(cons[0], 1);
-    return evalue2constraint_r(D, E, cons, len);
-}
-
-static void interval_minmax(Polyhedron *I, int *min, int *max)
-{
-    assert(I->Dimension == 1);
-    *min = 1;
-    *max = -1;
-    POL_ENSURE_VERTICES(I);
-    for (int i = 0; i < I->NbRays; ++i) {
-	if (value_pos_p(I->Ray[i][1]))
-	    *max = 1;
-	else if (value_neg_p(I->Ray[i][1]))
-	    *min = -1;
-	else {
-	    if (*max < 0)
-		*max = 0;
-	    if (*min > 0)
-		*min = 0;
-	}
-    }
-}
-
-static void interval_minmax(Polyhedron *D, Matrix *T, int *min, int *max, 
-			    unsigned MaxRays)
-{
-    Polyhedron *I = Polyhedron_Image(D, T, MaxRays);
-    I = DomainConstraintSimplify(I, MaxRays);
-    if (emptyQ2(I)) {
-	Polyhedron_Free(I);
-	I = Polyhedron_Image(D, T, MaxRays);
-    }
-    interval_minmax(I, min, max);
-    Polyhedron_Free(I);
-}
-
-struct max_term {
-    unsigned dim;
-    Polyhedron *domain;
-    vector<evalue *> max;
-
-    void print(ostream& os, char **p) const;
-    void resolve_existential_vars() const;
-    void substitute(Matrix *T, unsigned MaxRays);
-    Vector *eval(Value *val, unsigned MaxRays) const;
-
-    ~max_term() {
-	for (int i = 0; i < max.size(); ++i) {
-	    free_evalue_refs(max[i]);
-	    delete max[i];
-	}
-	Polyhedron_Free(domain);
-    }
-};
 
 static void print_varlist(ostream& os, int n, char **names)
 {
@@ -1407,84 +1506,6 @@ Vector *max_term::eval(Value *val, unsigned MaxRays) const
     return res;
 }
 
-static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
-				 vector<evalue *>& new_floors)
-{
-    Polyhedron *D = ED->D;
-    evalue mone;
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-    int fract = 0;
-    for (evalue *e = constraint; value_zero_p(e->d); 
-	 e = &e->x.p->arr[type_offset(e->x.p)]) {
-	int i;
-	if (e->x.p->type != fractional)
-	    continue;
-	for (i = 0; i < ED->floors.size(); ++i)
-	    if (eequal(&e->x.p->arr[0], ED->floors[i]))
-		break;
-	if (i < ED->floors.size())
-	    continue;
-	++fract;
-    }
-
-    int rows = D->NbConstraints+2*fract+1;
-    int cols = 2+D->Dimension+fract;
-    Matrix *M = Matrix_Alloc(rows, cols);
-    for (int i = 0; i < D->NbConstraints; ++i) {
-	Vector_Copy(D->Constraint[i], M->p[i], 1+D->Dimension);
-	value_assign(M->p[i][1+D->Dimension+fract], 
-		     D->Constraint[i][1+D->Dimension]);
-    }
-    value_set_si(M->p[rows-1][0], 1);
-    fract = 0;
-    evalue *e;
-    for (e = constraint; value_zero_p(e->d); e = &e->x.p->arr[type_offset(e->x.p)]) {
-	if (e->x.p->type == fractional) {
-	    int i, pos;
-
-	    i = ED->find_floor(&e->x.p->arr[0]);
-	    if (i >= 0)
-		pos = D->Dimension-ED->floors.size()+i;
-	    else
-		pos = D->Dimension+fract;
-
-	    add_fract(e, M->p[rows-1], cols, 1+pos);
-
-	    if (pos < D->Dimension)
-		continue;
-
-	    /* constraints for the new floor */
-	    int row = D->NbConstraints+2*fract;
-	    value_set_si(M->p[row][0], 1);
-	    evalue2constraint_r(NULL, &e->x.p->arr[0], M->p[row], cols);
-	    value_oppose(M->p[row][1+D->Dimension+fract], M->p[row][0]);
-	    value_set_si(M->p[row][0], 1);
-
-	    Vector_Scale(M->p[row]+1, M->p[row+1]+1, mone.x.n, cols-1);
-	    value_set_si(M->p[row+1][0], 1);
-	    value_addto(M->p[row+1][cols-1], M->p[row+1][cols-1],
-			M->p[row+1][1+D->Dimension+fract]);
-	    value_decrement(M->p[row+1][cols-1], M->p[row+1][cols-1]);
-
-	    evalue *arg = new evalue;
-	    value_init(arg->d);
-	    evalue_copy(arg, &e->x.p->arr[0]);
-	    new_floors.push_back(arg);
-
-	    ++fract;
-	} else {
-	    assert(e->x.p->type == polynomial);
-	    assert(e->x.p->size == 2);
-	    add_coeff(M->p[rows-1], cols, &e->x.p->arr[1], e->x.p->pos);
-	}
-    }
-    add_coeff(M->p[rows-1], cols, e, cols-1);
-    value_set_si(M->p[rows-1][0], 1);
-    free_evalue_refs(&mone); 
-    return M;
-}
-
 static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays);
 
 Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
@@ -1634,25 +1655,74 @@ ostream & operator<< (ostream & os, const vector<int> & v)
     return os;
 }
 
-/*
- * Project on first dim dimensions
- */
-Polyhedron* Polyhedron_Project_Initial(Polyhedron *P, int dim)
+static bool isTranslation(Matrix *M)
 {
-    int i;
-    Matrix *T;
-    Polyhedron *I;
+    unsigned i, j;
+    if (M->NbRows != M->NbColumns)
+	return False;
 
-    if (P->Dimension == dim)
-	return Polyhedron_Copy(P);
+    for (i = 0;i < M->NbRows; i ++)
+	for (j = 0; j < M->NbColumns-1; j ++)
+	    if (i == j) {
+		if(value_notone_p(M->p[i][j]))
+		    return False;
+	    } else {
+		if(value_notzero_p(M->p[i][j]))
+		    return False;
+	    }
+    return value_one_p(M->p[M->NbRows-1][M->NbColumns-1]);
+}
 
-    T = Matrix_Alloc(dim+1, P->Dimension+1);
-    for (i = 0; i < dim; ++i)
-	value_set_si(T->p[i][i], 1);
-    value_set_si(T->p[dim][P->Dimension], 1);
-    I = Polyhedron_Image(P, T, P->NbConstraints);
+static Matrix *compress_parameters(Polyhedron **P, Polyhedron **C,
+				   unsigned nparam, unsigned MaxRays)
+{
+    Matrix *M, *T, *CP;
+
+    /* compress_parms doesn't like equalities that only involve parameters */
+    for (int i = 0; i < (*P)->NbEq; ++i)
+	assert(First_Non_Zero((*P)->Constraint[i]+1, (*P)->Dimension-nparam) != -1);
+
+    M = Matrix_Alloc((*P)->NbEq, (*P)->Dimension+2);
+    Vector_Copy((*P)->Constraint[0], M->p[0], (*P)->NbEq * ((*P)->Dimension+2));
+    CP = compress_parms(M, nparam);
+    Matrix_Free(M);
+
+    if (isTranslation(CP)) {
+	Matrix_Free(CP);
+	return NULL;
+    }
+
+    T = align_matrix(CP, (*P)->Dimension+1);
+    *P = Polyhedron_Preimage(*P, T, MaxRays);
     Matrix_Free(T);
-    return I;
+
+    *C = Polyhedron_Preimage(*C, CP, MaxRays);
+
+    return CP;
+}
+
+static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays)
+{
+    /* Matrix "view" of equalities */
+    Matrix M;
+    M.NbRows = (*P)->NbEq;
+    M.NbColumns = (*P)->Dimension+2;
+    M.p_Init = (*P)->p_Init;
+    M.p = (*P)->Constraint;
+
+    Matrix *T = compress_variables(&M, nparam);
+
+    if (!T) {
+	*P = NULL;
+	return NULL;
+    }
+    if (isIdentity(T)) {
+	Matrix_Free(T);
+	T = NULL;
+    } else
+	*P = Polyhedron_Preimage(*P, T, MaxRays);
+
+    return T;
 }
 
 static vector<max_term*> lexmin(indicator& ind, EDomain *D, unsigned nparam,
@@ -1864,76 +1934,6 @@ static vector<max_term*> lexmin(indicator& ind, EDomain *D, unsigned nparam,
     if (D != Dorig)
 	delete D;
     return maxima;
-}
-
-static bool isTranslation(Matrix *M)
-{
-    unsigned i, j;
-    if (M->NbRows != M->NbColumns)
-	return False;
-
-    for (i = 0;i < M->NbRows; i ++)
-	for (j = 0; j < M->NbColumns-1; j ++)
-	    if (i == j) {
-		if(value_notone_p(M->p[i][j]))
-		    return False;
-	    } else {
-		if(value_notzero_p(M->p[i][j]))
-		    return False;
-	    }
-    return value_one_p(M->p[M->NbRows-1][M->NbColumns-1]);
-}
-
-static Matrix *compress_parameters(Polyhedron **P, Polyhedron **C,
-				   unsigned nparam, unsigned MaxRays)
-{
-    Matrix *M, *T, *CP;
-
-    /* compress_parms doesn't like equalities that only involve parameters */
-    for (int i = 0; i < (*P)->NbEq; ++i)
-	assert(First_Non_Zero((*P)->Constraint[i]+1, (*P)->Dimension-nparam) != -1);
-
-    M = Matrix_Alloc((*P)->NbEq, (*P)->Dimension+2);
-    Vector_Copy((*P)->Constraint[0], M->p[0], (*P)->NbEq * ((*P)->Dimension+2));
-    CP = compress_parms(M, nparam);
-    Matrix_Free(M);
-
-    if (isTranslation(CP)) {
-	Matrix_Free(CP);
-	return NULL;
-    }
-
-    T = align_matrix(CP, (*P)->Dimension+1);
-    *P = Polyhedron_Preimage(*P, T, MaxRays);
-    Matrix_Free(T);
-
-    *C = Polyhedron_Preimage(*C, CP, MaxRays);
-
-    return CP;
-}
-
-static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays)
-{
-    /* Matrix "view" of equalities */
-    Matrix M;
-    M.NbRows = (*P)->NbEq;
-    M.NbColumns = (*P)->Dimension+2;
-    M.p_Init = (*P)->p_Init;
-    M.p = (*P)->Constraint;
-
-    Matrix *T = compress_variables(&M, nparam);
-
-    if (!T) {
-	*P = NULL;
-	return NULL;
-    }
-    if (isIdentity(T)) {
-	Matrix_Free(T);
-	T = NULL;
-    } else
-	*P = Polyhedron_Preimage(*P, T, MaxRays);
-
-    return T;
 }
 
 static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
