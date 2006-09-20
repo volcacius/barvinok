@@ -10,6 +10,7 @@ extern "C" {
 }
 #include <barvinok/barvinok.h>
 #include <barvinok/evalue.h>
+#include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "decomposer.h"
@@ -32,12 +33,6 @@ using std::cout;
 using std::endl;
 using std::ostream;
 
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    (POL_NO_DUAL | POL_INTEGER)
-#else
-#define MAXRAYS  600
-#endif
-
 /* RANGE : normal range for evalutations (-RANGE -> RANGE) */
 #define RANGE 50
 
@@ -57,7 +52,7 @@ using std::ostream;
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
 #else
 #include <getopt.h>
-struct option options[] = {
+struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
     { "min",   	    required_argument,  0,  'm' },
@@ -870,13 +865,13 @@ struct indicator {
     EDomain	 *D;
     Polyhedron	 *P;
     Param_Domain *PD;
-    unsigned	  MaxRays;
+    barvinok_options	*options;
 
     indicator(indicator_constructor& ic, Param_Domain *PD, EDomain *D,
-	      unsigned MaxRays) :
-	ic(ic), PD(PD), D(D), order(this), MaxRays(MaxRays), P(NULL) {}
+	      barvinok_options *options) :
+	ic(ic), PD(PD), D(D), order(this), options(options), P(NULL) {}
     indicator(const indicator& ind, EDomain *D) :
-	    ic(ind.ic), PD(ind.PD), D(NULL), order(this), MaxRays(ind.MaxRays),
+	    ic(ind.ic), PD(ind.PD), D(NULL), order(this), options(ind.options),
 	    P(Polyhedron_Copy(ind.P)) {
 	map< indicator_term *, indicator_term * > old2new;
 	for (int i = 0; i < ind.term.size(); ++i) {
@@ -902,7 +897,7 @@ struct indicator {
 	this->D = D;
 	int nparam = ic.P->Dimension - ic.vertex.length();
 	Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
-	Q = DomainConstraintSimplify(Q, MaxRays);
+	Q = DomainConstraintSimplify(Q, options->MaxRays);
 	if (!P || !PolyhedronIncludes(Q, P))
 	    reduce_in_domain(Q);
 	if (P)
@@ -1092,7 +1087,7 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
     unsigned dim = a->den.NumCols();
     order_sign sign = order_eq;
     EDomain *D = ind->D;
-    unsigned MaxRays = ind->MaxRays;
+    unsigned MaxRays = ind->options->MaxRays;
     if (MaxRays & POL_INTEGER && (a->sign == 0 || b->sign == 0))
 	MaxRays = 0;
 
@@ -1409,7 +1404,7 @@ void indicator::expand_rational_vertex(indicator_term *initial)
 	Param_Vertices *V;
 	FORALL_PVertex_in_ParamPolyhedron(V, PD, ic.PP) // _i is internal counter
 	    if (_i == pos) {
-		ic.decompose_at_vertex(V, pos, MaxRays);
+		ic.decompose_at_vertex(V, pos, options->MaxRays);
 		break;
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;
@@ -2605,7 +2600,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	order_sign sign;
 	for (int k = 0; k < dim; ++k) {
 	    diff = ediff(best->vertex[k], second->vertex[k]);
-	    sign = evalue_sign(diff, ind.D, ind.MaxRays);
+	    sign = evalue_sign(diff, ind.D, ind.options->MaxRays);
 
 	    /* neg can never be smaller than best, unless it may still cancel */
 	    if (second == neg &&
@@ -2641,7 +2636,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 		       sign == order_ge ? split::ge : split::lge);
 
 	EDomain *Dlt, *Deq, *Dgt;
-	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.MaxRays);
+	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.options->MaxRays);
 	assert(Dlt || Deq || Dgt);
 	if (Deq && (Dlt || Dgt)) {
 	    int locsize = loc.size();
@@ -2690,7 +2685,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
     return maxima;
 }
 
-static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
+				barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
     Param_Polyhedron *PP = NULL;
@@ -2703,6 +2699,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
     Polyhedron *Corig = C;
     vector<max_term*> all_max;
     Polyhedron *Q;
+    unsigned P2PSD_MaxRays;
 
     if (emptyQ2(P))
 	return all_max;
@@ -2716,9 +2713,9 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 
     if (P->NbEq > 0) {
 	if (nparam > 0)
-	    CP = compress_parameters(&P, &C, nparam, MaxRays);
+	    CP = compress_parameters(&P, &C, nparam, options->MaxRays);
 	Q = P;
-	T = remove_equalities(&P, nparam, MaxRays);
+	T = remove_equalities(&P, nparam, options->MaxRays);
 	if (P != Q && Q != Porig)
 	    Polyhedron_Free(Q);
 	if (!P) {
@@ -2728,10 +2725,13 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	}
     }
 
+    if (options->MaxRays & POL_NO_DUAL)
+	P2PSD_MaxRays = 0;
+    else
+	P2PSD_MaxRays = options->MaxRays;
+
     Q = P;
-    PP = Polyhedron2Param_SimplifiedDomain(&P,C,
-					   (MaxRays & POL_NO_DUAL) ? 0 : MaxRays,
-					   &CEq,&CT);
+    PP = Polyhedron2Param_SimplifiedDomain(&P, C, P2PSD_MaxRays, &CEq, &CT);
     if (P != Q && Q != Porig)
 	Polyhedron_Free(Q);
 
@@ -2760,14 +2760,14 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	next = D->next;
 
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, MaxRays);
+					fVD, nd, options->MaxRays);
 	if (!rVD)
 	    continue;
 
-	pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
+	pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
 
 	EDomain *epVD = new EDomain(pVD);
-	indicator ind(ic, D, epVD, MaxRays);
+	indicator ind(ic, D, epVD, options);
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    ind.add(all_vertices[_i]);
@@ -2779,7 +2779,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	vector<max_term*> maxima = lexmin(ind, nparam, loc);
 	if (CP)
 	    for (int j = 0; j < maxima.size(); ++j)
-		maxima[j]->substitute(CP, MaxRays);
+		maxima[j]->substitute(CP, options->MaxRays);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
 	++nd;
@@ -2824,8 +2824,11 @@ int main(int argc, char **argv)
     int print_all = 0;
     int m = INT_MAX, M = INT_MIN, r;
     int print_solution = 1;
+    struct barvinok_options *options;
 
-    while ((c = getopt_long(argc, argv, "TAm:M:r:V", options, &ind)) != -1) {
+    options = barvinok_options_new_with_defaults();
+
+    while ((c = getopt_long(argc, argv, "TAm:M:r:V", lexmin_options, &ind)) != -1) {
 	switch (c) {
 	case 'T':
 	    verify = 1;
@@ -2854,12 +2857,12 @@ int main(int argc, char **argv)
     }
 
     MA = Matrix_Read();
-    C = Constraints2Polyhedron(MA, MAXRAYS);
+    C = Constraints2Polyhedron(MA, options->MaxRays);
     Matrix_Free(MA);
     fscanf(stdin, " %d", &bignum);
     assert(bignum == -1);
     MA = Matrix_Read();
-    A = Constraints2Polyhedron(MA, MAXRAYS);
+    A = Constraints2Polyhedron(MA, options->MaxRays);
     Matrix_Free(MA);
 
     if (A->Dimension >= VBIGDIM)
@@ -2886,13 +2889,13 @@ int main(int argc, char **argv)
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	Polyhedron_Print(stdout, P_VALUE_FMT, C);
     }
-    vector<max_term*> maxima = lexmin(A, C, MAXRAYS);
+    vector<max_term*> maxima = lexmin(A, C, options);
     if (print_solution)
 	for (int i = 0; i < maxima.size(); ++i)
 	    maxima[i]->print(cout, param_names);
 
     if (verify)
-	verify_results(A, C, maxima, m, M, print_all, MAXRAYS);
+	verify_results(A, C, maxima, m, M, print_all, options->MaxRays);
 
     for (int i = 0; i < maxima.size(); ++i)
 	delete maxima[i];
@@ -2901,6 +2904,8 @@ int main(int argc, char **argv)
     util_free_names(C->Dimension, param_names);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
+
+    free(options);
 
     return 0;
 }
@@ -3045,7 +3050,7 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
     int st;
 
     CC = Polyhedron_Project(A, nparam);
-    CC2 = DomainIntersection(C, CC, MAXRAYS);
+    CC2 = DomainIntersection(C, CC, MaxRays);
     Domain_Free(CC);
     CC = CC2;
 
@@ -3063,9 +3068,9 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
 	    value_set_si(MM->p[2*i+1][1+i], -1);
 	    value_set_si(MM->p[2*i+1][1+C->Dimension], M);
 	}
-	CC2 = AddConstraints(MM->p[0], 2*CC->Dimension, CC, MAXRAYS);
+	CC2 = AddConstraints(MM->p[0], 2*CC->Dimension, CC, MaxRays);
 	U = Universe_Polyhedron(0);
-	CS = Polyhedron_Scan(CC2, U, MAXRAYS & POL_NO_DUAL ? 0 : MAXRAYS);
+	CS = Polyhedron_Scan(CC2, U, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
 	Polyhedron_Free(U);
 	Polyhedron_Free(CC2);
 	Matrix_Free(MM);
@@ -3080,7 +3085,7 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
     value_init(p[i]);
     value_set_si(p[i], 1);
 
-    S = Polyhedron_Scan(A, C, MAXRAYS & POL_NO_DUAL ? 0 : MAXRAYS);
+    S = Polyhedron_Scan(A, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
 
     if (!print_all && C->Dimension > 0) {
 	if (M-m > 80)
