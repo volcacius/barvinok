@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <map>
+#include <set>
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>
 #include <NTL/mat_ZZ.h>
@@ -24,6 +26,7 @@ using namespace NTL;
 #endif
 
 using std::vector;
+using std::map;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -144,15 +147,24 @@ static void evalue_print(std::ostream& o, evalue *e, char **p)
 
 struct indicator_term {
     int sign;
+    int pos;
     mat_ZZ den;
     evalue **vertex;
 
+    indicator_term(unsigned dim, int pos) {
+	den.SetDims(0, dim);
+	vertex = new evalue* [dim];
+	this->pos = pos;
+	sign = 0;
+    }
     indicator_term(unsigned dim) {
 	den.SetDims(dim, dim);
 	vertex = new evalue* [dim];
+	pos = -1;
     }
     indicator_term(const indicator_term& src) {
 	sign = src.sign;
+	pos = src.pos;
 	den = src.den;
 	unsigned dim = den.NumCols();
 	vertex = new evalue* [dim];
@@ -170,13 +182,26 @@ struct indicator_term {
 	}
 	delete [] vertex;
     }
-    void print(ostream& os, char **p);
+    void print(ostream& os, char **p) const;
     void substitute(Matrix *T);
     void normalize();
     void substitute(evalue *fract, evalue *val);
     void substitute(int pos, evalue *val);
     void reduce_in_domain(Polyhedron *D);
+    bool is_opposite(indicator_term *neg);
 };
+
+bool indicator_term::is_opposite(indicator_term *neg)
+{
+    if (sign + neg->sign != 0)
+	return false;
+    if (den != neg->den)
+	return false;
+    for (int k = 0; k < den.NumCols(); ++k)
+	if (!eequal(vertex[k], neg->vertex[k]))
+	    return false;
+    return true;
+}
 
 void indicator_term::reduce_in_domain(Polyhedron *D)
 {
@@ -187,11 +212,13 @@ void indicator_term::reduce_in_domain(Polyhedron *D)
     }
 }
 
-void indicator_term::print(ostream& os, char **p)
+void indicator_term::print(ostream& os, char **p) const
 {
     unsigned dim = den.NumCols();
     unsigned factors = den.NumRows();
-    if (sign > 0)
+    if (sign == 0)
+	os << " s ";
+    else if (sign > 0)
 	os << " + ";
     else
 	os << " - ";
@@ -211,6 +238,8 @@ void indicator_term::print(ostream& os, char **p)
 	}
 	os << "]";
     }
+    if (sign == 0)
+	os << " (" << pos << ")";
 }
 
 /* Perform the substitution specified by T on the variables.
@@ -368,9 +397,11 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
     vec_ZZ vertex;
     vector<indicator_term*> *terms;
     Matrix *T;	/* Transformation to original space */
+    Param_Polyhedron *PP;
 
-    indicator_constructor(Polyhedron *P, unsigned dim, unsigned nbV, Matrix *T) :
-		vertex_decomposer(P, nbV, this), T(T) {
+    indicator_constructor(Polyhedron *P, unsigned dim, Param_Polyhedron *PP,
+			  Matrix *T) :
+		vertex_decomposer(P, PP->nbV, this), T(T), PP(PP) {
 	vertex.SetLength(dim);
 	terms = new vector<indicator_term*>[nbV];
     }
@@ -484,6 +515,11 @@ struct EDomain {
 	add_floors(floors);
 	sample = NULL;
     }
+    EDomain(EDomain *ED) {
+	this->D = Polyhedron_Copy(ED->D);
+	add_floors(ED->floors);
+	sample = NULL;
+    }
     EDomain(Polyhedron *D, EDomain *ED, vector<evalue *>floors) {
 	this->D = Polyhedron_Copy(D);
 	add_floors(ED->floors);
@@ -525,6 +561,146 @@ void EDomain::print(FILE *out, char **p)
 	os << "]" << endl;
     }
     Polyhedron_Print(out, P_VALUE_FMT, D);
+}
+
+struct indicator;
+
+enum order_sign { order_lt, order_le, order_eq, order_ge, order_gt, order_unknown };
+
+struct partial_order {
+    indicator *ind;
+
+    map<indicator_term *, int > pred;
+    map<indicator_term *, vector<indicator_term * > > lt;
+    map<indicator_term *, vector<indicator_term * > > le;
+    map<indicator_term *, vector<indicator_term * > > eq;
+
+    map<indicator_term *, vector<indicator_term * > > pending;
+
+    partial_order(indicator *ind) : ind(ind) {}
+    void copy(const partial_order& order, 
+	      map< indicator_term *, indicator_term * > old2new);
+
+    order_sign compare(indicator_term *a, indicator_term *b);
+    void set_equal(indicator_term *a, indicator_term *b);
+    void unset_le(indicator_term *a, indicator_term *b);
+
+    bool compared(indicator_term* a, indicator_term* b);
+    void add(indicator_term* it, std::set<indicator_term *> *filter);
+    void remove(indicator_term* it);
+
+    void print(ostream& os, char **p);
+};
+
+void partial_order::unset_le(indicator_term *a, indicator_term *b)
+{
+    vector<indicator_term *>::iterator i;
+    i = find(le[a].begin(), le[a].end(), b);
+    le[a].erase(i);
+    pred[b]--;
+    i = find(pending[a].begin(), pending[a].end(), b);
+    if (i != pending[a].end())
+	pending[a].erase(i);
+}
+
+void partial_order::set_equal(indicator_term *a, indicator_term *b)
+{
+    if (eq[a].size() == 0)
+	eq[a].push_back(a);
+    if (eq[b].size() == 0)
+	eq[b].push_back(b);
+    a = eq[a][0];
+    b = eq[b][0];
+    assert(a != b);
+    if (b < a) {
+	indicator_term *c = a;
+	a = b;
+	b = c;
+    }
+
+    indicator_term *base = a;
+
+    map<indicator_term *, vector<indicator_term * > >::iterator i;
+
+    for (int j = 0; j < eq[b].size(); ++j) {
+	eq[base].push_back(eq[b][j]);
+	eq[eq[b][j]][0] = base;
+    }
+    eq[b].resize(1);
+
+    i = lt.find(b);
+    if (i != lt.end()) {
+	for (int j = 0; j < lt[b].size(); ++j) {
+	    if (find(eq[base].begin(), eq[base].end(), lt[b][j]) != eq[base].end())
+		pred[lt[b][j]]--;
+	    else if (find(lt[base].begin(), lt[base].end(), lt[b][j])
+			!= lt[base].end())
+		pred[lt[b][j]]--;
+	    else
+		lt[base].push_back(lt[b][j]);
+	}
+	lt.erase(i);
+    }
+
+    i = le.find(b);
+    if (i != le.end()) {
+	for (int j = 0; j < le[b].size(); ++j) {
+	    if (find(eq[base].begin(), eq[base].end(), le[b][j]) != eq[base].end())
+		pred[le[b][j]]--;
+	    else if (find(le[base].begin(), le[base].end(), le[b][j])
+			!= le[base].end())
+		pred[le[b][j]]--;
+	    else
+		le[base].push_back(le[b][j]);
+	}
+	le.erase(i);
+    }
+
+    i = pending.find(base);
+    if (i != pending.end()) {
+	vector<indicator_term * > old = pending[base];
+	pending[base].clear();
+	for (int j = 0; j < old.size(); ++j) {
+	    if (find(eq[base].begin(), eq[base].end(), old[j]) == eq[base].end())
+		pending[base].push_back(old[j]);
+	}
+    }
+
+    i = pending.find(b);
+    if (i != pending.end()) {
+	for (int j = 0; j < pending[b].size(); ++j) {
+	    if (find(eq[base].begin(), eq[base].end(), pending[b][j]) == eq[base].end())
+		pending[base].push_back(pending[b][j]);
+	}
+	pending.erase(i);
+    }
+}
+
+void partial_order::copy(const partial_order& order, 
+		         map< indicator_term *, indicator_term * > old2new)
+{
+    map<indicator_term *, vector<indicator_term * > >::const_iterator i;
+    map<indicator_term *, int >::const_iterator j;
+
+    for (j = order.pred.begin(); j != order.pred.end(); ++j)
+	pred[old2new[(*j).first]] = (*j).second;
+
+    for (i = order.lt.begin(); i != order.lt.end(); ++i) {
+	for (int j = 0; j < (*i).second.size(); ++j)
+	    lt[old2new[(*i).first]].push_back(old2new[(*i).second[j]]);
+    }
+    for (i = order.le.begin(); i != order.le.end(); ++i) {
+	for (int j = 0; j < (*i).second.size(); ++j)
+	    le[old2new[(*i).first]].push_back(old2new[(*i).second[j]]);
+    }
+    for (i = order.eq.begin(); i != order.eq.end(); ++i) {
+	for (int j = 0; j < (*i).second.size(); ++j)
+	    eq[old2new[(*i).first]].push_back(old2new[(*i).second[j]]);
+    }
+    for (i = order.pending.begin(); i != order.pending.end(); ++i) {
+	for (int j = 0; j < (*i).second.size(); ++j)
+	    pending[old2new[(*i).first]].push_back(old2new[(*i).second[j]]);
+    }
 }
 
 static void add_coeff(Value *cons, int len, evalue *coeff, int pos)
@@ -637,7 +813,8 @@ static void interval_minmax(Polyhedron *D, Matrix *T, int *min, int *max,
 			    unsigned MaxRays)
 {
     Polyhedron *I = Polyhedron_Image(D, T, MaxRays);
-    I = DomainConstraintSimplify(I, MaxRays);
+    if (MaxRays & POL_INTEGER)
+	I = DomainConstraintSimplify(I, MaxRays);
     if (emptyQ2(I)) {
 	Polyhedron_Free(I);
 	I = Polyhedron_Image(D, T, MaxRays);
@@ -688,24 +865,84 @@ Polyhedron* Polyhedron_Project_Initial(Polyhedron *P, int dim)
 
 struct indicator {
     vector<indicator_term*> term;
+    indicator_constructor& ic;
+    partial_order order;
+    EDomain	 *D;
+    Polyhedron	 *P;
+    Param_Domain *PD;
+    unsigned	  MaxRays;
 
-    indicator() {}
-    indicator(const indicator& ind) {
-	for (int i = 0; i < ind.term.size(); ++i)
-	    term.push_back(new indicator_term(*ind.term[i]));
+    indicator(indicator_constructor& ic, Param_Domain *PD, EDomain *D,
+	      unsigned MaxRays) :
+	ic(ic), PD(PD), D(D), order(this), MaxRays(MaxRays), P(NULL) {}
+    indicator(const indicator& ind, EDomain *D) :
+	    ic(ind.ic), PD(ind.PD), D(NULL), order(this), MaxRays(ind.MaxRays),
+	    P(Polyhedron_Copy(ind.P)) {
+	map< indicator_term *, indicator_term * > old2new;
+	for (int i = 0; i < ind.term.size(); ++i) {
+	    indicator_term *it = new indicator_term(*ind.term[i]);
+	    old2new[ind.term[i]] = it;
+	    term.push_back(it);
+	}
+	order.copy(ind.order, old2new);
+	set_domain(D);
     }
     ~indicator() {
 	for (int i = 0; i < term.size(); ++i)
 	    delete term[i];
+	if (D)
+	    delete D;
+	if (P)
+	    Polyhedron_Free(P);
     }
+
+    void set_domain(EDomain *D) {
+	if (this->D)
+	    delete this->D;
+	this->D = D;
+	int nparam = ic.P->Dimension - ic.vertex.length();
+	Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
+	Q = DomainConstraintSimplify(Q, MaxRays);
+	if (!P || !PolyhedronIncludes(Q, P))
+	    reduce_in_domain(Q);
+	if (P)
+	    Polyhedron_Free(P);
+	P = Q;
+    }
+
+    void add(const indicator_term* it);
+    void remove(indicator_term* it);
+    void remove_initial_rational_vertices();
+    void expand_rational_vertex(indicator_term *initial);
 
     void print(ostream& os, char **p);
     void simplify();
     void peel(int i, int j);
-    void combine(int i, int j);
+    void combine(indicator_term *a, indicator_term *b);
     void substitute(evalue *equation);
     void reduce_in_domain(Polyhedron *D);
+    void handle_equal_numerators(indicator_term *base);
+
+    max_term* create_max_term(indicator_term *it);
 };
+
+max_term* indicator::create_max_term(indicator_term *it)
+{
+    int dim = it->den.NumCols();
+    int nparam = ic.P->Dimension - ic.vertex.length();
+    max_term *maximum = new max_term;
+    maximum->dim = nparam;
+    maximum->domain = Polyhedron_Copy(D->D);
+    for (int j = 0; j < dim; ++j) {
+	evalue *E = new evalue;
+	value_init(E->d);
+	evalue_copy(E, it->vertex[j]);
+	if (evalue_frac2floor_in_domain(E, D->D))
+	    reduce_evalue(E);
+	maximum->max.push_back(E);
+    }
+    return maximum;
+}
 
 static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
 				 vector<evalue *>& new_floors)
@@ -785,6 +1022,424 @@ static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
     return M;
 }
 
+/* compute a - b */
+static evalue *ediff(const evalue *a, const evalue *b)
+{
+    evalue mone;
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+    evalue *diff = new evalue;
+    value_init(diff->d);
+    evalue_copy(diff, b);
+    emul(&mone, diff);
+    eadd(a, diff);
+    reduce_evalue(diff);
+    free_evalue_refs(&mone); 
+    return diff;
+}
+
+static order_sign evalue_sign(evalue *diff, EDomain *D, unsigned MaxRays)
+{
+    order_sign sign = order_eq;
+    evalue mone;
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+    int len = 1 + D->D->Dimension + 1;
+    Vector *c = Vector_Alloc(len);
+    Matrix *T = Matrix_Alloc(2, len-1);
+
+    int fract = evalue2constraint(D, diff, c->p, len);
+    Vector_Copy(c->p+1, T->p[0], len-1);
+    value_assign(T->p[1][len-2], c->p[0]);
+
+    int min, max;
+    interval_minmax(D->D, T, &min, &max, MaxRays);
+    if (max < 0)
+	sign = order_lt;
+    else {
+	if (fract) {
+	    emul(&mone, diff);
+	    evalue2constraint(D, diff, c->p, len);
+	    emul(&mone, diff);
+	    Vector_Copy(c->p+1, T->p[0], len-1);
+	    value_assign(T->p[1][len-2], c->p[0]);
+
+	    int negmin, negmax;
+	    interval_minmax(D->D, T, &negmin, &negmax, MaxRays);
+	    min = -negmax;
+	}
+	if (min > 0)
+	    sign = order_gt;
+	else if (max == 0 && min == 0)
+	    sign = order_eq;
+	else if (min < 0 && max > 0)
+	    sign = order_unknown;
+	else if (min < 0)
+	    sign = order_le;
+	else
+	    sign = order_ge;
+    }
+
+    Matrix_Free(T);
+    Vector_Free(c);
+    free_evalue_refs(&mone); 
+
+    return sign;
+}
+
+order_sign partial_order::compare(indicator_term *a, indicator_term *b)
+{
+    unsigned dim = a->den.NumCols();
+    order_sign sign = order_eq;
+    EDomain *D = ind->D;
+    unsigned MaxRays = ind->MaxRays;
+    if (MaxRays & POL_INTEGER && (a->sign == 0 || b->sign == 0))
+	MaxRays = 0;
+
+    for (int k = 0; k < dim; ++k) {
+	/* compute a->vertex[k] - b->vertex[k] */
+	evalue *diff = ediff(a->vertex[k], b->vertex[k]);
+	order_sign diff_sign = evalue_sign(diff, D, MaxRays);
+
+	if (diff_sign == order_lt) {
+	    if (sign == order_eq || sign == order_le)
+		sign = order_lt;
+	    else
+		sign = order_unknown;
+	    free_evalue_refs(diff); 
+	    delete diff;
+	    break;
+	}
+	if (diff_sign == order_gt) {
+	    if (sign == order_eq || sign == order_ge)
+		sign = order_gt;
+	    else
+		sign = order_unknown;
+	    free_evalue_refs(diff); 
+	    delete diff;
+	    break;
+	}
+	if (diff_sign == order_eq) {
+	    if (D == ind->D && !EVALUE_IS_ZERO(*diff))
+		ind->substitute(diff);
+	    free_evalue_refs(diff); 
+	    delete diff;
+	    continue;
+	}
+	if ((diff_sign == order_unknown) ||
+	    ((diff_sign == order_lt || diff_sign == order_le) && sign == order_ge) ||
+	    ((diff_sign == order_gt || diff_sign == order_ge) && sign == order_le)) {
+	    free_evalue_refs(diff); 
+	    delete diff;
+	    sign = order_unknown;
+	    break;
+	}
+
+	sign = diff_sign;
+
+	Matrix *M;
+	vector<evalue *> new_floors;
+	M = add_ge_constraint(D, diff, new_floors);
+	value_set_si(M->p[M->NbRows-1][0], 0);
+	Polyhedron *D2 = Constraints2Polyhedron(M, MaxRays);
+	EDomain *EDeq = new EDomain(D2, D, new_floors);
+	Polyhedron_Free(D2);
+	Matrix_Free(M);
+	for (int i = 0; i < new_floors.size(); ++i) {
+	    free_evalue_refs(new_floors[i]);
+	    delete new_floors[i];
+	}
+
+	if (D != ind->D)
+	    delete D;
+	D = EDeq;
+
+	free_evalue_refs(diff); 
+	delete diff;
+    }
+
+    if (D != ind->D)
+	delete D;
+
+    return sign;
+}
+
+bool partial_order::compared(indicator_term* a, indicator_term* b)
+{
+    map<indicator_term *, vector<indicator_term * > >::iterator j;
+
+    j = lt.find(a);
+    if (j != lt.end() && find(lt[a].begin(), lt[a].end(), b) != lt[a].end())
+	return true;
+
+    j = le.find(a);
+    if (j != le.end() && find(le[a].begin(), le[a].end(), b) != le[a].end())
+	return true;
+
+    return false;
+}
+
+void partial_order::add(indicator_term* it, std::set<indicator_term *> *filter)
+{
+    if (eq.find(it) != eq.end() && eq[it].size() == 1)
+	return;
+
+    int it_pred = filter ? pred[it] : 0;
+
+    map<indicator_term *, int >::iterator i;
+    for (i = pred.begin(); i != pred.end(); ++i) {
+	if ((*i).second != 0)
+	    continue;
+	if (eq.find((*i).first) != eq.end() && eq[(*i).first].size() == 1)
+	    continue;
+	if (filter) {
+	    if ((*i).first == it)
+		continue;
+	    if (filter->find((*i).first) == filter->end())
+		continue;
+	    if (compared((*i).first, it))
+		continue;
+	}
+	order_sign sign = compare(it, (*i).first);
+	if (sign == order_lt) {
+	    lt[it].push_back((*i).first);
+	    (*i).second++;
+	} else if (sign == order_le) {
+	    le[it].push_back((*i).first);
+	    (*i).second++;
+	} else if (sign == order_eq) {
+	    pred[it] = it_pred;
+	    set_equal(it, (*i).first);
+	    return;
+	} else if (sign == order_gt) {
+	    pending[(*i).first].push_back(it);
+	    lt[(*i).first].push_back(it);
+	    ++it_pred;
+	} else if (sign == order_ge) {
+	    pending[(*i).first].push_back(it);
+	    le[(*i).first].push_back(it);
+	    ++it_pred;
+	}
+    }
+    pred[it] = it_pred;
+}
+
+void partial_order::remove(indicator_term* it)
+{
+    std::set<indicator_term *> filter;
+    map<indicator_term *, vector<indicator_term * > >::iterator i;
+
+    assert(pred[it] == 0);
+
+    i = eq.find(it);
+    if (i != eq.end()) {
+	assert(eq[it].size() >= 1);
+	indicator_term *base;
+	if (eq[it].size() == 1) {
+	    base = eq[it][0];
+	    eq.erase(i);
+
+	    vector<indicator_term * >::iterator j;
+	    j = find(eq[base].begin(), eq[base].end(), it);
+	    assert(j != eq[base].end());
+	    eq[base].erase(j);
+	} else {
+	    /* "it" may no longer be the smallest, since the order
+	     * structure may have been copied from another one.
+	     */
+	    sort(eq[it].begin()+1, eq[it].end());
+	    assert(eq[it][0] == it);
+	    eq[it].erase(eq[it].begin());
+	    base = eq[it][0];
+	    eq[base] = eq[it];
+	    eq.erase(i);
+
+	    for (int j = 1; j < eq[base].size(); ++j)
+		eq[eq[base][j]][0] = base;
+
+	    i = lt.find(it);
+	    if (i != lt.end()) {
+		lt[base] = lt[it];
+		lt.erase(i);
+	    }
+	
+	    i = le.find(it);
+	    if (i != le.end()) {
+		le[base] = le[it];
+		le.erase(i);
+	    }
+	
+	    i = pending.find(it);
+	    if (i != pending.end()) {
+		pending[base] = pending[it];
+		pending.erase(i);
+	    }
+	}
+
+	if (eq[base].size() == 1)
+	    eq.erase(base);
+
+	map<indicator_term *, int >::iterator j;
+	j = pred.find(it);
+	pred.erase(j);
+
+	return;
+    }
+
+    i = lt.find(it);
+    if (i != lt.end()) {
+	for (int j = 0; j < lt[it].size(); ++j) {
+	    filter.insert(lt[it][j]);
+	    pred[lt[it][j]]--;
+	}
+	lt.erase(i);
+    }
+
+    i = le.find(it);
+    if (i != le.end()) {
+	for (int j = 0; j < le[it].size(); ++j) {
+	    filter.insert(le[it][j]);
+	    pred[le[it][j]]--;
+	}
+	le.erase(i);
+    }
+
+    map<indicator_term *, int >::iterator j;
+    j = pred.find(it);
+    pred.erase(j);
+
+    i = pending.find(it);
+    if (i != pending.end()) {
+	for (int j = 0; j < pending[it].size(); ++j) {
+	    filter.erase(pending[it][j]);
+	    add(pending[it][j], &filter);
+	}
+	pending.erase(i);
+    }
+}
+
+void partial_order::print(ostream& os, char **p)
+{
+    map<indicator_term *, vector<indicator_term * > >::iterator i;
+    for (i = lt.begin(); i != lt.end(); ++i) {
+	(*i).first->print(os, p);
+	assert(pred.find((*i).first) != pred.end());
+	os << "(" << pred[(*i).first] << ")";
+	os << " < ";
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    if (j)
+		os << ", ";
+	    (*i).second[j]->print(os, p);
+	    assert(pred.find((*i).second[j]) != pred.end());
+	    os << "(" << pred[(*i).second[j]] << ")";
+	}
+	os << endl;
+    }
+    for (i = le.begin(); i != le.end(); ++i) {
+	(*i).first->print(os, p);
+	assert(pred.find((*i).first) != pred.end());
+	os << "(" << pred[(*i).first] << ")";
+	os << " <= ";
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    if (j)
+		os << ", ";
+	    (*i).second[j]->print(os, p);
+	    assert(pred.find((*i).second[j]) != pred.end());
+	    os << "(" << pred[(*i).second[j]] << ")";
+	}
+	os << endl;
+    }
+    for (i = eq.begin(); i != eq.end(); ++i) {
+	if ((*i).second.size() <= 1)
+	    continue;
+	(*i).first->print(os, p);
+	assert(pred.find((*i).first) != pred.end());
+	os << "(" << pred[(*i).first] << ")";
+	for (int j = 1; j < (*i).second.size(); ++j) {
+	    if (j)
+		os << " = ";
+	    (*i).second[j]->print(os, p);
+	    assert(pred.find((*i).second[j]) != pred.end());
+	    os << "(" << pred[(*i).second[j]] << ")";
+	}
+	os << endl;
+    }
+    for (i = pending.begin(); i != pending.end(); ++i) {
+	os << "pending on ";
+	(*i).first->print(os, p);
+	assert(pred.find((*i).first) != pred.end());
+	os << "(" << pred[(*i).first] << ")";
+	os << ": ";
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    if (j)
+		os << ", ";
+	    (*i).second[j]->print(os, p);
+	    assert(pred.find((*i).second[j]) != pred.end());
+	    os << "(" << pred[(*i).second[j]] << ")";
+	}
+	os << endl;
+    }
+}
+
+void indicator::add(const indicator_term* it)
+{
+    indicator_term *nt = new indicator_term(*it);
+    nt->reduce_in_domain(P ? P : D->D);
+    term.push_back(nt);
+    order.add(nt, NULL);
+    assert(term.size() == order.pred.size());
+}
+
+void indicator::remove(indicator_term* it)
+{
+    vector<indicator_term *>::iterator i;
+    i = find(term.begin(), term.end(), it);
+    assert(i!= term.end());
+    order.remove(it);
+    term.erase(i);
+    assert(term.size() == order.pred.size());
+    delete it;
+}
+
+void indicator::expand_rational_vertex(indicator_term *initial)
+{
+    int pos = initial->pos;
+    remove(initial);
+    if (ic.terms[pos].size() == 0) {
+	Param_Vertices *V;
+	FORALL_PVertex_in_ParamPolyhedron(V, PD, ic.PP) // _i is internal counter
+	    if (_i == pos) {
+		ic.decompose_at_vertex(V, pos, MaxRays);
+		break;
+	    }
+	END_FORALL_PVertex_in_ParamPolyhedron;
+    }
+    for (int j = 0; j < ic.terms[pos].size(); ++j)
+	add(ic.terms[pos][j]);
+}
+
+void indicator::remove_initial_rational_vertices()
+{
+    do {
+	indicator_term *initial = NULL;
+	map<indicator_term *, int >::iterator i;
+	for (i = order.pred.begin(); i != order.pred.end(); ++i) {
+	    if ((*i).second != 0)
+		continue;
+	    if ((*i).first->sign != 0)
+		continue;
+	    if (order.eq.find((*i).first) != order.eq.end() &&
+		order.eq[(*i).first].size() <= 1)
+		continue;
+	    initial = (*i).first;
+	    break;
+	}
+	if (!initial)
+	    break;
+	expand_rational_vertex(initial);
+    } while(1);
+}
+
 void indicator::reduce_in_domain(Polyhedron *D)
 {
     for (int i = 0; i < term.size(); ++i)
@@ -793,10 +1448,12 @@ void indicator::reduce_in_domain(Polyhedron *D)
 
 void indicator::print(ostream& os, char **p)
 {
+    assert(term.size() == order.pred.size());
     for (int i = 0; i < term.size(); ++i) {
 	term[i]->print(os, p);
 	os << endl;
     }
+    order.print(os, p);
 }
 
 /* Remove pairs of opposite terms */
@@ -894,41 +1551,35 @@ void indicator::peel(int i, int j)
     term.erase(term.begin()+i);
 }
 
-void indicator::combine(int i, int j)
+void indicator::combine(indicator_term *a, indicator_term *b)
 {
-    if (j < i) {
-	int tmp = i;
-	i = j;
-	j = tmp;
-    }
-    assert (i < j);
-    int dim = term[i]->den.NumCols();
+    int dim = a->den.NumCols();
 
     mat_ZZ common;
     mat_ZZ rest_i;
     mat_ZZ rest_j;
     int n_common = 0, n_i = 0, n_j = 0;
 
-    common.SetDims(min(term[i]->den.NumRows(), term[j]->den.NumRows()), dim);
-    rest_i.SetDims(term[i]->den.NumRows(), dim);
-    rest_j.SetDims(term[j]->den.NumRows(), dim);
+    common.SetDims(min(a->den.NumRows(), b->den.NumRows()), dim);
+    rest_i.SetDims(a->den.NumRows(), dim);
+    rest_j.SetDims(b->den.NumRows(), dim);
 
     int k, l;
-    for (k = 0, l = 0; k < term[i]->den.NumRows() && l < term[j]->den.NumRows(); ) {
-	int s = lex_cmp(term[i]->den[k], term[j]->den[l]);
+    for (k = 0, l = 0; k < a->den.NumRows() && l < b->den.NumRows(); ) {
+	int s = lex_cmp(a->den[k], b->den[l]);
 	if (s == 0) {
-	    common[n_common++] = term[i]->den[k];
+	    common[n_common++] = a->den[k];
 	    ++k;
 	    ++l;
 	} else if (s < 0)
-	    rest_i[n_i++] = term[i]->den[k++];
+	    rest_i[n_i++] = a->den[k++];
 	else
-	    rest_j[n_j++] = term[j]->den[l++];
+	    rest_j[n_j++] = b->den[l++];
     }
-    while (k < term[i]->den.NumRows())
-	rest_i[n_i++] = term[i]->den[k++];
-    while (l < term[j]->den.NumRows())
-	rest_j[n_j++] = term[j]->den[l++];
+    while (k < a->den.NumRows())
+	rest_i[n_i++] = a->den[k++];
+    while (l < b->den.NumRows())
+	rest_j[n_j++] = b->den[l++];
     common.SetDims(n_common, dim);
     rest_i.SetDims(n_i, dim);
     rest_j.SetDims(n_j, dim);
@@ -936,8 +1587,8 @@ void indicator::combine(int i, int j)
     assert(n_i < 30);
     assert(n_j < 30);
 
-    for (k = 0; k < (1 << n_i); ++k) {
-	indicator_term *it = new indicator_term(*term[j]);
+    for (k = (1 << n_i)-1; k >= 0; --k) {
+	indicator_term *it = k ? new indicator_term(*b) : b;
 	it->den.SetDims(n_common + n_i + n_j, dim);
 	for (l = 0; l < n_common; ++l)
 	    it->den[l] = common[l];
@@ -956,11 +1607,14 @@ void indicator::combine(int i, int j)
 	}
 	if (change)
 	    it->sign = -it->sign;
-	term.push_back(it);
+	if (it != b) {
+	    term.push_back(it);
+	    order.add(it, NULL);
+	}
     }
 
-    for (k = 0; k < (1 << n_j); ++k) {
-	indicator_term *it = new indicator_term(*term[i]);
+    for (k = (1 << n_j)-1; k >= 0; --k) {
+	indicator_term *it = k ? new indicator_term(*a) : a;
 	it->den.SetDims(n_common + n_i + n_j, dim);
 	for (l = 0; l < n_common; ++l)
 	    it->den[l] = common[l];
@@ -979,12 +1633,30 @@ void indicator::combine(int i, int j)
 	}
 	if (change)
 	    it->sign = -it->sign;
-	term.push_back(it);
+	if (it != a) {
+	    term.push_back(it);
+	    order.add(it, NULL);
+	}
     }
-    delete term[i];
-    delete term[j];
-    term.erase(term.begin()+j);
-    term.erase(term.begin()+i);
+}
+
+void indicator::handle_equal_numerators(indicator_term *base)
+{
+    for (int i = 0; i < order.eq[base].size(); ++i) {
+	for (int j = i+1; j < order.eq[base].size(); ++j) {
+	    if (order.eq[base][i]->is_opposite(order.eq[base][j])) {
+		remove(order.eq[base][j]);
+		remove(i ? order.eq[base][i] : base);
+		return;
+	    }
+	}
+    }
+    for (int j = 1; j < order.eq[base].size(); ++j)
+	if (order.eq[base][j]->sign != base->sign) {
+	    combine(base, order.eq[base][j]);
+	    return;
+	}
+    assert(0);
 }
 
 void indicator::substitute(evalue *equation)
@@ -1725,214 +2397,296 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
     return T;
 }
 
-static vector<max_term*> lexmin(indicator& ind, EDomain *D, unsigned nparam,
-				unsigned MaxRays, vector<int> loc)
+void construct_rational_vertices(Param_Polyhedron *PP, Matrix *T, unsigned dim, 
+				 int nparam, vector<indicator_term *>& vertices)
+{
+    int i;
+    Param_Vertices *PV;
+    Value lcm, tmp;
+    value_init(lcm);
+    value_init(tmp);
+
+    vec_ZZ v;
+    v.SetLength(nparam+1);
+
+    evalue factor;
+    value_init(factor.d);
+    value_init(factor.x.n);
+    value_set_si(factor.x.n, 1);
+    value_set_si(factor.d, 1);
+
+    for (i = 0, PV = PP->V; PV; ++i, PV = PV->next) {
+	indicator_term *term = new indicator_term(dim, i);
+	vertices.push_back(term);
+	Matrix *M = Matrix_Alloc(PV->Vertex->NbRows+nparam+1, nparam+1);
+	value_set_si(lcm, 1);
+	for (int j = 0; j < PV->Vertex->NbRows; ++j)
+	    value_lcm(lcm, PV->Vertex->p[j][nparam+1], &lcm);
+	value_assign(M->p[M->NbRows-1][M->NbColumns-1], lcm);
+	for (int j = 0; j < PV->Vertex->NbRows; ++j) {
+	    value_division(tmp, lcm, PV->Vertex->p[j][nparam+1]);
+	    Vector_Scale(PV->Vertex->p[j], M->p[j], tmp, nparam+1);
+	}
+	for (int j = 0; j < nparam; ++j)
+	    value_assign(M->p[PV->Vertex->NbRows+j][j], lcm);
+	if (T) {
+	    Matrix *M2 = Matrix_Alloc(T->NbRows, M->NbColumns);
+	    Matrix_Product(T, M, M2);
+	    Matrix_Free(M);
+	    M = M2;
+	}
+	for (int j = 0; j < dim; ++j) {
+	    values2zz(M->p[j], v, nparam+1);
+	    term->vertex[j] = multi_monom(v);
+	    value_assign(factor.d, lcm);
+	    emul(&factor, term->vertex[j]);
+	}
+	Matrix_Free(M);
+    }
+    assert(i == PP->nbV);
+    free_evalue_refs(&factor);
+    value_clear(lcm);
+    value_clear(tmp);
+}
+
+/* An auxiliary class that keeps a reference to an evalue
+ * and frees it when it goes out of scope.
+ */
+struct temp_evalue {
+    evalue *E;
+    temp_evalue() : E(NULL) {}
+    temp_evalue(evalue *e) : E(e) {}
+    operator evalue* () const { return E; }
+    evalue *operator=(evalue *e) {
+	if (E) {
+	    free_evalue_refs(E); 
+	    delete E;
+	}
+	E = e;
+	return E;
+    }
+    ~temp_evalue() {
+	if (E) {
+	    free_evalue_refs(E); 
+	    delete E;
+	}
+    }
+};
+
+static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
+				    vector<int> loc)
 {
     vector<max_term*> maxima;
-    int len = 1 + D->D->Dimension + 1;
-    Value lcm, a, b;
-    evalue mone;
-    EDomain *Dorig = D;
+    map<indicator_term *, int >::iterator i;
+    vector<int> best_score;
+    vector<int> second_score;
+    vector<int> neg_score;
 
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-    value_init(lcm);
-    value_init(a);
-    value_init(b);
-    Vector *c = Vector_Alloc(len);
-    Matrix *T = Matrix_Alloc(2, len-1);
-    for (int i = 0; i < ind.term.size(); ++i) {
-	bool restart = false;	/* true if we have modified ind from i up */
-	bool stop = false;  	/* true if i can never be smallest */
-	int peel = -1;	    	/* term to peel against */
-	vector<split> splits;
-	if (ind.term[i]->sign < 0)
-	    continue;
-	int dim = ind.term[i]->den.NumCols();
-	int j;
-	for (j = 0; j < ind.term.size(); ++j) {
-	    if (i == j)
+    do {
+	indicator_term *best = NULL, *second = NULL, *neg = NULL,
+		       *neg_eq = NULL, *neg_le = NULL;
+	for (i = ind.order.pred.begin(); i != ind.order.pred.end(); ++i) {
+	    vector<int> score;
+	    if ((*i).second != 0)
 		continue;
-	    int k;
-	    for (k = 0; k < dim; ++k) {
-		/* compute ind.term->[i]->vertex[k] - ind.term->[j]->vertex[k] */
-		evalue *diff = new evalue;
-		value_init(diff->d);
-		evalue_copy(diff, ind.term[j]->vertex[k]);
-		emul(&mone, diff);
-		eadd(ind.term[i]->vertex[k], diff);
-		reduce_evalue(diff);
-		int fract = evalue2constraint(D, diff, c->p, len);
-		Vector_Copy(c->p+1, T->p[0], len-1);
-		value_assign(T->p[1][len-2], c->p[0]);
+	    indicator_term *term = (*i).first;
+	    if (term->sign == 0) {
+		ind.expand_rational_vertex(term);
+		break;
+	    }
 
-		int min, max;
-		interval_minmax(D->D, T, &min, &max, MaxRays);
-		if (max < 0) {
-		    free_evalue_refs(diff); 
-		    delete diff;
-		    break;
-		}
-		if (fract) {
-		    emul(&mone, diff);
-		    evalue2constraint(D, diff, c->p, len);
-		    emul(&mone, diff);
-		    Vector_Copy(c->p+1, T->p[0], len-1);
-		    value_assign(T->p[1][len-2], c->p[0]);
-
-		    int negmin, negmax;
-		    interval_minmax(D->D, T, &negmin, &negmax, MaxRays);
-		    min = -negmax;
-		}
-		if (min > 0) {
-		    free_evalue_refs(diff); 
-		    delete diff;
-		    stop = true;
-		    break;
-		}
-		if (max == 0 && min == 0) {
-		    if (!EVALUE_IS_ZERO(*diff)) {
-			ind.substitute(diff);
-			ind.simplify();
-			restart = true;
-		    }
-		    free_evalue_refs(diff); 
-		    delete diff;
-		    if (restart)
+	    if (ind.order.eq.find(term) != ind.order.eq.end()) {
+		int j;
+		if (ind.order.eq[term].size() <= 1)
+		    continue;
+		for (j = 1; j < ind.order.eq[term].size(); ++j)
+		    if (ind.order.pred[ind.order.eq[term][j]] != 0)
 			break;
+		if (j < ind.order.eq[term].size())
+		    continue;
+		score.push_back(ind.order.eq[term].size());
+	    } else
+		score.push_back(0);
+	    if (ind.order.le.find(term) != ind.order.le.end())
+		score.push_back(ind.order.le[term].size());
+	    else
+		score.push_back(0);
+	    if (ind.order.lt.find(term) != ind.order.lt.end())
+		score.push_back(-ind.order.lt[term].size());
+	    else
+		score.push_back(0);
+
+	    if (term->sign > 0) {
+		if (!best || score < best_score) {
+		    second = best;
+		    second_score = best_score;
+		    best = term;
+		    best_score = score;
+		} else if (!second || score < second_score) {
+		    second = term;
+		    second_score = score;
+		}
+	    } else {
+		if (!neg_eq && ind.order.eq.find(term) != ind.order.eq.end()) {
+		    for (int j = 1; j < ind.order.eq[term].size(); ++j)
+			if (ind.order.eq[term][j]->sign != term->sign) {
+			    neg_eq = term;
+			    break;
+			}
+		}
+		if (!neg_le && ind.order.le.find(term) != ind.order.le.end())
+		    neg_le = term;
+		if (!neg || score < neg_score) {
+		    neg = term;
+		    neg_score = score;
+		}
+	    }
+	}
+	if (i != ind.order.pred.end())
+	    continue;
+
+	if (!best && neg_eq) {
+	    assert(ind.order.eq[neg_eq].size() != 0);
+	    ind.handle_equal_numerators(neg_eq);
+	    continue;
+	}
+
+	if (!best && neg_le) {
+	    /* The smallest term is negative and <= some positive term */
+	    best = neg_le;
+	    neg = NULL;
+	}
+
+	if (!best) {
+	    assert(!neg);
+	    break;
+	}
+
+	if (!second && !neg) {
+	    indicator_term *rat = NULL;
+	    assert(best);
+	    if (ind.order.le[best].size() == 0) {
+		if (ind.order.eq[best].size() != 0) {
+		    ind.handle_equal_numerators(best);
 		    continue;
 		}
-		if (min < 0 && max == 0)
-		    splits.push_back(split(diff, split::le));
-		else if (max > 0 && min == 0)
-		    splits.push_back(split(diff, split::ge));
-		else
-		    splits.push_back(split(diff, split::lge));
+		maxima.push_back(ind.create_max_term(best));
 		break;
 	    }
-	    if (k == dim && ind.term[j]->sign < 0)
-		peel = j;
-	    if (stop || restart)
-		break;
-	}
-	if (restart) {
-	    /* The ith entry may have been removed, so we have to consider
-	     * it again.
-	     */
-	    --i;
-	    for (j = 0; j < splits.size(); ++j) {
-		free_evalue_refs(splits[j].constraint);
-		delete splits[j].constraint;
-	    }
-	    continue;
-	}
-	if (stop) {
-	    for (j = 0; j < splits.size(); ++j) {
-		free_evalue_refs(splits[j].constraint);
-		delete splits[j].constraint;
-	    }
-	    continue;
-	}
-	if (peel != -1) {
-	    // ind.peel(i, peel);
-	    ind.combine(i, peel);
-	    ind.simplify();
-	    i = -1;		    /* start over */
-	    for (j = 0; j < splits.size(); ++j) {
-		free_evalue_refs(splits[j].constraint);
-		delete splits[j].constraint;
-	    }
-	    continue;
-	} 
-	if (splits.size() != 0) {
-	    for (j = 0; j < splits.size(); ++j)
-		if (splits[j].sign == split::le)
+	    for (int j = 0; j < ind.order.le[best].size(); ++j) {
+		if (ind.order.le[best][j]->sign == 0) {
+		    if (!rat && ind.order.pred[ind.order.le[best][j]] == 1)
+			rat = ind.order.le[best][j];
+		} else if (ind.order.le[best][j]->sign > 0) {
+		    second = ind.order.le[best][j];
 		    break;
-	    if (j == splits.size())
-		j = 0;
-		EDomain *Dlt, *Deq, *Dgt;
-		split_on(splits[j], D, &Dlt, &Deq, &Dgt, MaxRays);
-		assert(Dlt || Deq || Dgt);
-		if (Deq) {
-		    loc.push_back(0);
-		    indicator indeq(ind);
-		    indeq.substitute(splits[j].constraint);
-		    Polyhedron *P = Polyhedron_Project_Initial(Deq->D, nparam);
-		    P = DomainConstraintSimplify(P, MaxRays);
-		    indeq.reduce_in_domain(P);
-		    Polyhedron_Free(P);
-		    indeq.simplify();
-		    vector<max_term*> maxeq = lexmin(indeq, Deq, nparam,
-						     MaxRays, loc);
-		    maxima.insert(maxima.end(), maxeq.begin(), maxeq.end());
-		    loc.pop_back();
-		    delete Deq;
-		}
-		if (Dgt) {
-		    loc.push_back(1);
-		    indicator indgt(ind);
-		    Polyhedron *P = Polyhedron_Project_Initial(Dgt->D, nparam);
-		    P = DomainConstraintSimplify(P, MaxRays);
-		    indgt.reduce_in_domain(P);
-		    Polyhedron_Free(P);
-		    indgt.simplify();
-		    vector<max_term*> maxeq = lexmin(indgt, Dgt, nparam,
-						     MaxRays, loc);
-		    maxima.insert(maxima.end(), maxeq.begin(), maxeq.end());
-		    loc.pop_back();
-		    delete Dgt;
-		}
-		if (Dlt) {
-		    loc.push_back(-1);
-		    Polyhedron *P = Polyhedron_Project_Initial(Dlt->D, nparam);
-		    P = DomainConstraintSimplify(P, MaxRays);
-		    ind.reduce_in_domain(P);
-		    Polyhedron_Free(P);
-		    ind.simplify();
-		    if (D != Dorig)
-			delete D;
-		    D = Dlt;
-		    if (splits.size() > 1) {
-			vector<max_term*> maxeq = lexmin(ind, Dlt, nparam,
-							 MaxRays, loc);
-			maxima.insert(maxima.end(), maxeq.begin(), maxeq.end());
-			for (j = 0; j < splits.size(); ++j) {
-			    free_evalue_refs(splits[j].constraint);
-			    delete splits[j].constraint;
-			}
-			break;
-		    }
-		}
-	    /* the vertex turned out not to be minimal */
-	    for (j = 0; j < splits.size(); ++j) {
-		free_evalue_refs(splits[j].constraint);
-		delete splits[j].constraint;
+		} else if (!neg)
+		    neg = ind.order.le[best][j];
 	    }
-	    if (!Dlt)
-		break;
+
+	    if (!second && !neg) {
+		assert(rat);
+		ind.order.unset_le(best, rat);
+		ind.expand_rational_vertex(rat);
+		continue;
+	    }
+
+	    if (!second)
+		second = neg;
+
+	    ind.order.unset_le(best, second);
 	}
-	    max_term *maximum = new max_term;
-	    maxima.push_back(maximum);
-	    maximum->dim = nparam;
-	    maximum->domain = Polyhedron_Copy(D->D);
-	    for (int j = 0; j < dim; ++j) {
-		evalue *E = new evalue;
-		value_init(E->d);
-		evalue_copy(E, ind.term[i]->vertex[j]);
-		if (evalue_frac2floor_in_domain(E, D->D))
-		    reduce_evalue(E);
-		maximum->max.push_back(E);
+
+	if (!second)
+	    second = neg;
+
+	unsigned dim = best->den.NumCols();
+	temp_evalue diff;
+	order_sign sign;
+	for (int k = 0; k < dim; ++k) {
+	    diff = ediff(best->vertex[k], second->vertex[k]);
+	    sign = evalue_sign(diff, ind.D, ind.MaxRays);
+
+	    /* neg can never be smaller than best, unless it may still cancel */
+	    if (second == neg &&
+		ind.order.eq.find(neg) == ind.order.eq.end() &&
+		ind.order.le.find(neg) == ind.order.le.end()) {
+		if (sign == order_ge)
+		    sign = order_eq;
+		if (sign == order_unknown)
+		    sign = order_le;
 	    }
-	    break;
-    }
-    Matrix_Free(T);
-    Vector_Free(c);
-    value_clear(lcm);
-    value_clear(a);
-    value_clear(b);
-    free_evalue_refs(&mone); 
-    if (D != Dorig)
-	delete D;
+
+	    if (sign != order_eq)
+		break;
+	    if (!EVALUE_IS_ZERO(*diff))
+		ind.substitute(diff);
+	}
+	if (sign == order_eq) {
+	    ind.order.set_equal(best, second);
+	    continue;
+	}
+	if (sign == order_lt) {
+	    ind.order.lt[best].push_back(second);
+	    ind.order.pred[second]++;
+	    continue;
+	}
+	if (sign == order_gt) {
+	    ind.order.lt[second].push_back(best);
+	    ind.order.pred[best]++;
+	    continue;
+	}
+
+	split sp(diff, sign == order_le ? split::le :
+		       sign == order_ge ? split::ge : split::lge);
+
+	EDomain *Dlt, *Deq, *Dgt;
+	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.MaxRays);
+	assert(Dlt || Deq || Dgt);
+	if (Deq && (Dlt || Dgt)) {
+	    int locsize = loc.size();
+	    loc.push_back(0);
+	    indicator indeq(ind, Deq);
+	    Deq = NULL;
+	    indeq.substitute(diff);
+	    vector<max_term*> maxeq = lexmin(indeq, nparam, loc);
+	    maxima.insert(maxima.end(), maxeq.begin(), maxeq.end());
+	    loc.resize(locsize);
+	}
+	if (Dgt && Dlt) {
+	    int locsize = loc.size();
+	    loc.push_back(1);
+	    indicator indgt(ind, Dgt);
+	    Dgt = NULL;
+	    /* we don't know the new location of these terms in indgt */
+	    /*
+	    indgt.order.lt[second].push_back(best);
+	    indgt.order.pred[best]++;
+	    */
+	    vector<max_term*> maxgt = lexmin(indgt, nparam, loc);
+	    maxima.insert(maxima.end(), maxgt.begin(), maxgt.end());
+	    loc.resize(locsize);
+	}
+
+	if (Deq) {
+	    loc.push_back(0);
+	    ind.substitute(diff);
+	    ind.set_domain(Deq);
+	}
+	if (Dlt) {
+	    loc.push_back(-1);
+	    ind.order.lt[best].push_back(second);
+	    ind.order.pred[second]++;
+	    ind.set_domain(Dlt);
+	}
+	if (Dgt) {
+	    loc.push_back(1);
+	    ind.order.lt[second].push_back(best);
+	    ind.order.pred[best]++;
+	    ind.set_domain(Dgt);
+	}
+    } while(1);
+
     return maxima;
 }
 
@@ -1947,7 +2701,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
     Param_Vertices *V;
     Polyhedron *Porig = P;
     Polyhedron *Corig = C;
-    int i;
     vector<max_term*> all_max;
     Polyhedron *Q;
 
@@ -1989,6 +2742,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	} else
 	    nparam = CT->NbRows - 1;
     }
+    assert(!CT);
 
     unsigned dim = P->Dimension - nparam;
 
@@ -1996,11 +2750,11 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
     Polyhedron **fVD = new Polyhedron*[nd];
 
-    indicator_constructor ic(P, dim, PP->nbV, T);
+    indicator_constructor ic(P, dim, PP, T);
 
-    for (i = 0, V = PP->V; V; V = V->next, i++) {
-	ic.decompose_at_vertex(V, i, MaxRays);
-    }
+    vector<indicator_term *> all_vertices;
+    construct_rational_vertices(PP, T, T ? T->NbRows-nparam-1 : dim,
+				nparam, all_vertices);
 
     for (nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
@@ -2012,21 +2766,17 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 
 	pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
 
-	indicator ind;
+	EDomain *epVD = new EDomain(pVD);
+	indicator ind(ic, D, epVD, MaxRays);
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
-	    for (int j = 0; j < ic.terms[_i].size(); ++j) {
-		indicator_term *term = new indicator_term(*ic.terms[_i][j]);
-		term->reduce_in_domain(pVD);
-		ind.term.push_back(term);
-	    }
+	    ind.add(all_vertices[_i]);
 	END_FORALL_PVertex_in_ParamPolyhedron;
 
-	ind.simplify();
+	ind.remove_initial_rational_vertices();
 
-	EDomain epVD(pVD);
 	vector<int> loc;
-	vector<max_term*> maxima = lexmin(ind, &epVD, nparam, MaxRays, loc);
+	vector<max_term*> maxima = lexmin(ind, nparam, loc);
 	if (CP)
 	    for (int j = 0; j < maxima.size(); ++j)
 		maxima[j]->substitute(CP, MaxRays);
@@ -2037,6 +2787,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 	    Domain_Free(pVD);
 	Domain_Free(rVD);
     }
+    for (int i = 0; i < all_vertices.size(); ++i)
+	delete all_vertices[i];
     if (CP)
 	Matrix_Free(CP);
     if (T)
