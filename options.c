@@ -19,5 +19,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->MaxRays = MAXRAYS;
 
+    options->emptiness_check = 1;
+
     return options;
 }

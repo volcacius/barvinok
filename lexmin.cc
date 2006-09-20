@@ -52,9 +52,11 @@ using std::ostream;
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
 #else
 #include <getopt.h>
+#define NO_EMPTINESS_CHECK  256
 struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
+    { "no-emptiness-check", no_argument, 0, NO_EMPTINESS_CHECK },
     { "min",   	    required_argument,  0,  'm' },
     { "max",   	    required_argument,  0,  'M' },
     { "range",      required_argument,  0,  'r' },
@@ -916,7 +918,7 @@ struct indicator {
     void combine(indicator_term *a, indicator_term *b);
     void substitute(evalue *equation);
     void reduce_in_domain(Polyhedron *D);
-    void handle_equal_numerators(indicator_term *base);
+    bool handle_equal_numerators(indicator_term *base);
 
     max_term* create_max_term(indicator_term *it);
 };
@@ -1635,23 +1637,23 @@ void indicator::combine(indicator_term *a, indicator_term *b)
     }
 }
 
-void indicator::handle_equal_numerators(indicator_term *base)
+bool indicator::handle_equal_numerators(indicator_term *base)
 {
     for (int i = 0; i < order.eq[base].size(); ++i) {
 	for (int j = i+1; j < order.eq[base].size(); ++j) {
 	    if (order.eq[base][i]->is_opposite(order.eq[base][j])) {
 		remove(order.eq[base][j]);
 		remove(i ? order.eq[base][i] : base);
-		return;
+		return true;
 	    }
 	}
     }
     for (int j = 1; j < order.eq[base].size(); ++j)
 	if (order.eq[base][j]->sign != base->sign) {
 	    combine(base, order.eq[base][j]);
-	    return;
+	    return true;
 	}
-    assert(0);
+    return false;
 }
 
 void indicator::substitute(evalue *equation)
@@ -2219,10 +2221,10 @@ struct split {
 
 static void split_on(const split& sp, EDomain *D, 
 		     EDomain **Dlt, EDomain **Deq, EDomain **Dgt,
-		     unsigned MaxRays)
+		     barvinok_options *options)
 {
     Matrix *M, *M2;
-    EDomain *EDlt = NULL, *EDeq = NULL, *EDgt = NULL;
+    EDomain *ED[3];
     Polyhedron *D2;
     Value mone;
     value_init(mone);
@@ -2236,27 +2238,29 @@ static void split_on(const split& sp, EDomain *D,
 	M2 = Matrix_Copy(M);
 	value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
 			M2->p[M2->NbRows-1][M2->NbColumns-1]);
-	D2 = Constraints2Polyhedron(M2, MaxRays);
-	EDgt = new EDomain(D2, D, new_floors);
+	D2 = Constraints2Polyhedron(M2, options->MaxRays);
+	ED[2] = new EDomain(D2, D, new_floors);
 	Polyhedron_Free(D2);
 	Matrix_Free(M2);
-    }
+    } else
+	ED[2] = NULL;
     if (sp.sign == split::lge || sp.sign == split::le) {
 	M2 = Matrix_Copy(M);
 	Vector_Scale(M2->p[M2->NbRows-1]+1, M2->p[M2->NbRows-1]+1,
 		     mone, M2->NbColumns-1);
 	value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
 			M2->p[M2->NbRows-1][M2->NbColumns-1]);
-	D2 = Constraints2Polyhedron(M2, MaxRays);
-	EDlt = new EDomain(D2, D, new_floors);
+	D2 = Constraints2Polyhedron(M2, options->MaxRays);
+	ED[0] = new EDomain(D2, D, new_floors);
 	Polyhedron_Free(D2);
 	Matrix_Free(M2);
-    }
+    } else
+	ED[0] = NULL;
 
     assert(sp.sign == split::lge || sp.sign == split::ge || sp.sign == split::le);
     value_set_si(M->p[M->NbRows-1][0], 0);
-    D2 = Constraints2Polyhedron(M, MaxRays);
-    EDeq = new EDomain(D2, D, new_floors);
+    D2 = Constraints2Polyhedron(M, options->MaxRays);
+    ED[1] = new EDomain(D2, D, new_floors);
     Polyhedron_Free(D2);
     Matrix_Free(M);
 
@@ -2275,36 +2279,24 @@ static void split_on(const split& sp, EDomain *D,
 	delete new_floors[i];
     }
 
-    if (EDeq) {
-	if (sample && in_domain(EDeq->D, sample->p, sample->Size-1, MaxRays)) {
-	    EDeq->sample = Vector_Alloc(sample->Size);
-	    Vector_Copy(sample->p, EDeq->sample->p, sample->Size);
-	} else if (!(EDeq->sample = Polyhedron_not_empty(EDeq->D, MaxRays))) {
-	    delete EDeq;
-	    EDeq = NULL;
+    for (int i = 0; i < 3; ++i) {
+	if (!ED[i])
+	    continue;
+	if (sample &&
+		in_domain(ED[i]->D, sample->p, sample->Size-1, options->MaxRays)) {
+	    ED[i]->sample = Vector_Alloc(sample->Size);
+	    Vector_Copy(sample->p, ED[i]->sample->p, sample->Size);
+	} else if (emptyQ2(ED[i]->D) ||
+		    (options->emptiness_check == 1 &&
+		     !(ED[i]->sample = Polyhedron_not_empty(ED[i]->D,
+							    options->MaxRays)))) {
+	    delete ED[i];
+	    ED[i] = NULL;
 	}
     }
-    if (EDgt) {
-	if (sample && in_domain(EDgt->D, sample->p, sample->Size-1, MaxRays)) {
-	    EDgt->sample = Vector_Alloc(sample->Size);
-	    Vector_Copy(sample->p, EDgt->sample->p, sample->Size);
-	} else if (!(EDgt->sample = Polyhedron_not_empty(EDgt->D, MaxRays))) {
-	    delete EDgt;
-	    EDgt = NULL;
-	}
-    }
-    if (EDlt) {
-	if (sample && in_domain(EDlt->D, sample->p, sample->Size-1, MaxRays)) {
-	    EDlt->sample = Vector_Alloc(sample->Size);
-	    Vector_Copy(sample->p, EDlt->sample->p, sample->Size);
-	} else if (!(EDlt->sample = Polyhedron_not_empty(EDlt->D, MaxRays))) {
-	    delete EDlt;
-	    EDlt = NULL;
-	}
-    }
-    *Dlt = EDlt;
-    *Deq = EDeq;
-    *Dgt = EDgt;
+    *Dlt = ED[0];
+    *Deq = ED[1];
+    *Dgt = ED[2];
     value_clear(mone);
     if (sample != D->sample)
 	Vector_Free(sample);
@@ -2542,7 +2534,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	if (!best && neg_eq) {
 	    assert(ind.order.eq[neg_eq].size() != 0);
-	    ind.handle_equal_numerators(neg_eq);
+	    bool handled = ind.handle_equal_numerators(neg_eq);
+	    assert(handled);
 	    continue;
 	}
 
@@ -2553,7 +2546,9 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	}
 
 	if (!best) {
-	    assert(!neg);
+	    /* apparently there can be negative initial term on empty domains */
+	    if (ind.options->emptiness_check == 1)
+		assert(!neg);
 	    break;
 	}
 
@@ -2562,8 +2557,16 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    assert(best);
 	    if (ind.order.le[best].size() == 0) {
 		if (ind.order.eq[best].size() != 0) {
-		    ind.handle_equal_numerators(best);
-		    continue;
+		    bool handled = ind.handle_equal_numerators(best);
+		    if (ind.options->emptiness_check == 1)
+			assert(handled);
+		    /* If !handled then the leading coefficient is bigger than one;
+		     * must be an empty domain
+		     */
+		    if (handled)
+			continue;
+		    else
+			break;
 		}
 		maxima.push_back(ind.create_max_term(best));
 		break;
@@ -2636,8 +2639,13 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 		       sign == order_ge ? split::ge : split::lge);
 
 	EDomain *Dlt, *Deq, *Dgt;
-	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.options->MaxRays);
-	assert(Dlt || Deq || Dgt);
+	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.options);
+	if (ind.options->emptiness_check == 1)
+	    assert(Dlt || Deq || Dgt);
+	else if (!(Dlt || Deq || Dgt))
+	    /* Must have been empty all along */
+	    break;
+
 	if (Deq && (Dlt || Dgt)) {
 	    int locsize = loc.size();
 	    loc.push_back(0);
@@ -2830,6 +2838,9 @@ int main(int argc, char **argv)
 
     while ((c = getopt_long(argc, argv, "TAm:M:r:V", lexmin_options, &ind)) != -1) {
 	switch (c) {
+	case NO_EMPTINESS_CHECK:
+	    options->emptiness_check = 0;
+	    break;
 	case 'T':
 	    verify = 1;
 	    break;
