@@ -270,15 +270,18 @@ struct parallel_polytopes {
     int dim;
     int nparam;
     vector<cone>    cones;
+    barvinok_options	*options;
 
-    parallel_polytopes(int n, Polyhedron *context, int nparam) :
-			context(context), dim(-1), nparam(nparam) {
+    parallel_polytopes(int n, Polyhedron *context, int nparam,
+		       barvinok_options *options) :
+			context(context), dim(-1), nparam(nparam),
+			options(options) {
 	red = NULL;
 	Constraints = NULL;
 	CP = NULL;
 	T = NULL;
     }
-    bool add(const QQ& c, Polyhedron *P, unsigned MaxRays) {
+    bool add(const QQ& c, Polyhedron *P) {
 	int i;
 
 	for (i = 0; i < P->NbEq; ++i)
@@ -306,7 +309,7 @@ struct parallel_polytopes {
 		T = align_matrix(CP, Q->Dimension+1);
 		Matrix_Free(M);
 	    }
-	    R = Polyhedron_Preimage(Q, T, MaxRays);
+	    R = Polyhedron_Preimage(Q, T, options->MaxRays);
 	    Polyhedron_Free(Q);
 	    Q = remove_equalities_p(R, R->Dimension-nparam, NULL);
 	}
@@ -317,7 +320,7 @@ struct parallel_polytopes {
 
 	if (!Constraints) {
 	    dim = Q->Dimension;
-	    red = gf_base::create(Polyhedron_Copy(context), dim, nparam);
+	    red = gf_base::create(Polyhedron_Copy(context), dim, nparam, options);
 	    red->base->init(Q);
 	    Constraints = Matrix_Alloc(Q->NbConstraints, Q->Dimension);
 	    for (int i = 0; i < Q->NbConstraints; ++i) {
@@ -395,7 +398,7 @@ struct parallel_polytopes {
 	Polyhedron_Free(Q);
 	return true;
     }
-    gen_fun *compute(unsigned MaxRays) {
+    gen_fun *compute() {
 	if (!red)
 	    return NULL;
 	for (int i = 0; i < cones.size(); ++i) {
@@ -406,13 +409,13 @@ struct parallel_polytopes {
 		Vector_Copy(Constraints->p[cones[i].pos[1+j]], M->p[j]+1,
 			    Constraints->NbColumns);
 	    }
-	    Cone = Constraints2Polyhedron(M, MaxRays);
+	    Cone = Constraints2Polyhedron(M, options->MaxRays);
 	    Matrix_Free(M);
 	    for (int j = 0; j < cones[i].vertices.size(); ++j) {
 		red->base->do_vertex_cone(cones[i].vertices[j].second,
 					  Polyhedron_Copy(Cone),
 					  cones[i].vertices[j].first->p,
-					  MaxRays);
+					  options->MaxRays);
 	    }
 	    Polyhedron_Free(Cone);
 	}
@@ -451,10 +454,10 @@ struct parallel_polytopes {
     }
 };
 
-gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
+gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 {
     QQ one(1, 1);
-    Polyhedron *C = DomainIntersection(context, gf->context, MaxRays);
+    Polyhedron *C = DomainIntersection(context, gf->context, options->MaxRays);
     Polyhedron *U = Universe_Polyhedron(C->Dimension);
     gen_fun *sum = new gen_fun(C);
     for (int i = 0; i < term.size(); ++i) {
@@ -466,7 +469,7 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 
 	    parallel_polytopes pp(term[i]->n.power.NumRows() *
 				  gf->term[i2]->n.power.NumRows(),
-				  sum->context, d);
+				  sum->context, d, options);
 
 	    for (int j = 0; j < term[i]->n.power.NumRows(); ++j) {
 		for (int j2 = 0; j2 < gf->term[i2]->n.power.NumRows(); ++j2) {
@@ -489,13 +492,13 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 			    zz2value(gf->term[i2]->d.power[l][k], 
 				     M->p[k1+k2+d+k][1+k1+l]);
 		    }
-		    Polyhedron *P = Constraints2Polyhedron(M, MaxRays);
+		    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
 		    Matrix_Free(M);
 
 		    QQ c = term[i]->n.coeff[j];
 		    c *= gf->term[i2]->n.coeff[j2];
-		    if (!pp.add(c, P, MaxRays)) {
-			gen_fun *t = barvinok_series(P, U, MaxRays);
+		    if (!pp.add(c, P)) {
+			gen_fun *t = barvinok_series(P, U, options->MaxRays);
 			sum->add(c, t);
 			delete t;
 		    }
@@ -504,7 +507,7 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
 		}
 	    }
 
-	    gen_fun *t = pp.compute(MaxRays);
+	    gen_fun *t = pp.compute();
 	    if (t) {
 		sum->add(one, t);
 		delete t;
@@ -515,11 +518,11 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, unsigned MaxRays)
     return sum;
 }
 
-void gen_fun::add_union(gen_fun *gf, unsigned MaxRays)
+void gen_fun::add_union(gen_fun *gf, barvinok_options *options)
 {
     QQ one(1, 1), mone(-1, 1);
 
-    gen_fun *hp = Hadamard_product(gf, MaxRays);
+    gen_fun *hp = Hadamard_product(gf, options);
     add(one, gf);
     add(mone, hp);
     delete hp;
@@ -767,21 +770,24 @@ void gen_fun::coefficient(Value* params, Value* c) const
     value_clear(sum.x.n);
 }
 
-gen_fun *gen_fun::summate(int nvar) const
+gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const
 {
     int dim = context->Dimension;
     int nparam = dim - nvar;
+    reducer *red;
+    gen_fun *gf;
 
-#ifdef USE_INCREMENTAL_DF
-    partial_ireducer red(Polyhedron_Project(context, nparam), dim, nparam);
-#else
-    partial_reducer red(Polyhedron_Project(context, nparam), dim, nparam);
-#endif
-    red.init(context);
+    if (options->incremental_specialization == 1) {
+    	red = new partial_ireducer(Polyhedron_Project(context, nparam), dim, nparam);
+    } else
+    	red = new partial_reducer(Polyhedron_Project(context, nparam), dim, nparam);
+    red->init(context);
     for (int i = 0; i < term.size(); ++i)
 	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
-	    red.reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
-    return red.gf;
+	    red->reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
+    gf = red->get_gf();
+    delete red;
+    return gf;
 }
 
 /* returns true if the set was finite and false otherwise */

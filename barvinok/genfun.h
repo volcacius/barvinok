@@ -10,6 +10,7 @@ extern "C" {
 #include <barvinok/evalue.h>
 }
 #include <barvinok/NTL_QQ.h>
+#include <barvinok/options.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -38,14 +39,14 @@ struct gen_fun {
     /* add cn/cd times gf */
     void add(const QQ& c, const gen_fun *gf);
     void substitute(Matrix *CP);
-    gen_fun *Hadamard_product(const gen_fun *gf, unsigned MaxRays);
-    void add_union(gen_fun *gf, unsigned MaxRays);
+    gen_fun *Hadamard_product(const gen_fun *gf, barvinok_options *options);
+    void add_union(gen_fun *gf, barvinok_options *options);
     void shift(const vec_ZZ& offset);
     void divide(const vec_ZZ& power);
     void print(std::ostream& os, unsigned int nparam, char **param_name) const;
     operator evalue *() const;
     void coefficient(Value* params, Value* c) const;
-    gen_fun *summate(int nvar) const;
+    gen_fun *summate(int nvar, barvinok_options *options) const;
     bool summate(Value *sum) const;
 
     gen_fun(const gen_fun *gf) {

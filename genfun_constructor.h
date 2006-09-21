@@ -5,6 +5,7 @@ extern "C" {
 }
 #include <barvinok/util.h>
 #include <barvinok/genfun.h>
+#include <barvinok/options.h>
 #include "reducer.h"
 #include "bfcounter.h"
 
@@ -22,7 +23,8 @@ struct gf_base {
     }
     virtual ~gf_base() {
     };
-    static gf_base *create(Polyhedron *context, unsigned dim, unsigned nparam);
+    static gf_base *create(Polyhedron *context, unsigned dim, unsigned nparam,
+			   barvinok_options *options);
 
     void start_gf(Polyhedron *P, unsigned MaxRays) {
 	base->start(P, MaxRays);
@@ -37,6 +39,9 @@ struct partial_ireducer : public ireducer, public gf_base {
     ~partial_ireducer() {
     }
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual gen_fun *get_gf() {
+	return gf;
+    }
 };
 
 struct partial_reducer : public reducer, public gf_base {
@@ -58,6 +63,9 @@ struct partial_reducer : public reducer, public gf_base {
 
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
+    virtual gen_fun *get_gf() {
+	return gf;
+    }
 };
 
 struct partial_bfcounter : public bfcounter_base, public gf_base {

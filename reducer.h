@@ -10,6 +10,8 @@
 using namespace NTL;
 #endif
 
+struct gen_fun;
+
 /* base for non-parametric counting */
 struct np_base : public polar_decomposer {
     unsigned dim;
@@ -22,7 +24,7 @@ struct np_base : public polar_decomposer {
 
     virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c) = 0;
     virtual void handle_polar(Polyhedron *C, int s);
-    void start(Polyhedron *P, unsigned MaxRays);
+    virtual void start(Polyhedron *P, unsigned MaxRays);
     void do_vertex_cone(const QQ& factor, Polyhedron *Cone, 
 			Value *vertex, unsigned MaxRays) {
 	current_vertex = vertex;
@@ -30,6 +32,9 @@ struct np_base : public polar_decomposer {
 	decompose(Cone, MaxRays);
     }
     virtual void init(Polyhedron *P) {
+    }
+    virtual void get_count(Value *result) {
+	assert(0);
     }
 
 private:
@@ -64,6 +69,9 @@ struct reducer : public np_base {
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
+    virtual gen_fun *get_gf() {
+	assert(0);
+    }
 };
 
 struct ireducer : public reducer {
@@ -88,6 +96,10 @@ struct icounter : public ireducer {
 	mpq_clear(count);
     }
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual void get_count(Value *result) {
+	assert(value_one_p(&count[0]._mp_den));
+	value_assign(*result, &count[0]._mp_num);
+    }
 };
 
 void normalize(ZZ& sign, ZZ& num, vec_ZZ& den);

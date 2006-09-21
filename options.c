@@ -19,6 +19,14 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->MaxRays = MAXRAYS;
 
+#ifdef USE_INCREMENTAL_BF
+    options->incremental_specialization = 2;
+#elif defined USE_INCREMENTAL_DF
+    options->incremental_specialization = 1;
+#else
+    options->incremental_specialization = 0;
+#endif
+
     options->emptiness_check = 1;
 
     return options;

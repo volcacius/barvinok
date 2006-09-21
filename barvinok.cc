@@ -16,6 +16,7 @@ extern "C" {
 #include "config.h"
 #include <barvinok/barvinok.h>
 #include <barvinok/genfun.h>
+#include <barvinok/options.h>
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
@@ -409,13 +410,17 @@ struct counter : public np_base {
 	mpq_init(count);
     }
 
-    void start(Polyhedron *P, unsigned MaxRays);
+    virtual void start(Polyhedron *P, unsigned MaxRays);
 
     ~counter() {
 	mpq_clear(count);
     }
 
     virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c);
+    virtual void get_count(Value *result) {
+	assert(value_one_p(&count[0]._mp_den));
+	value_assign(*result, &count[0]._mp_num);
+    }
 };
 
 struct OrthogonalException {} Orthogonal;
@@ -530,6 +535,10 @@ struct bfcounter : public bfcounter_base {
 	mpq_clear(count);
     }
     virtual void base(mat_ZZ& factors, bfc_vec& v);
+    virtual void get_count(Value *result) {
+	assert(value_one_p(&count[0]._mp_den));
+	value_assign(*result, &count[0]._mp_num);
+    }
 };
 
 void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
@@ -691,9 +700,11 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRay
 
 typedef Polyhedron * Polyhedron_p;
 
-static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons);
+static void barvinok_count_f(Polyhedron *P, Value* result,
+			     barvinok_options *options);
 
-void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
+void barvinok_count_with_options(Polyhedron *P, Value* result,
+				 struct barvinok_options *options)
 {
     unsigned dim;
     int allocated = 0;
@@ -708,7 +719,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	Q = NULL;
 	do {
 	    P = remove_equalities(P);
-	    P = DomainConstraintSimplify(P, NbMaxCons);
+	    P = DomainConstraintSimplify(P, options->MaxRays);
 	    if (Q)
 		Polyhedron_Free(Q);
 	    Q = P;
@@ -720,7 +731,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	}
 	allocated = 1;
     }
-    if (Polyhedron_is_infinite(P, result, NbMaxCons)) {
+    if (Polyhedron_is_infinite(P, result, options->MaxRays)) {
 	if (allocated)
 	    Polyhedron_Free(P);
 	return;
@@ -733,7 +744,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	    Polyhedron_Free(P);
 	return;
     }
-    Q = Polyhedron_Factor(P, 0, NbMaxCons);
+    Q = Polyhedron_Factor(P, 0, options->MaxRays);
     if (Q) {
 	if (allocated)
 	    Polyhedron_Free(P);
@@ -741,7 +752,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	allocated = 1;
     }
 
-    barvinok_count_f(P, result, NbMaxCons);
+    barvinok_count_f(P, result, options);
     if (value_neg_p(*result))
 	infinite = true;
     if (Q && P->next && value_notzero_p(*result)) {
@@ -749,7 +760,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	value_init(factor);
 
 	for (Q = P->next; Q; Q = Q->next) {
-	    barvinok_count_f(Q, &factor, NbMaxCons);
+	    barvinok_count_f(Q, &factor, options);
 	    if (value_neg_p(factor)) {
 		infinite = true;
 		continue;
@@ -769,7 +780,16 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
 	value_set_si(*result, -1);
 }
 
-static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
+void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
+{
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = NbMaxCons;
+    barvinok_count_with_options(P, result, options);
+    free(options);
+}
+
+static void barvinok_count_f(Polyhedron *P, Value* result,
+			     barvinok_options *options)
 {
     if (emptyQ2(P)) {
 	value_set_si(*result, 0);
@@ -782,24 +802,24 @@ static void barvinok_count_f(Polyhedron *P, Value* result, unsigned NbMaxCons)
     int c = P->NbConstraints;
     POL_ENSURE_FACETS(P);
     if (c != P->NbConstraints || P->NbEq != 0)
-	return barvinok_count(P, result, NbMaxCons);
+	return barvinok_count_with_options(P, result, options);
 
     POL_ENSURE_VERTICES(P);
 
-    if (Polyhedron_is_infinite(P, result, NbMaxCons))
+    if (Polyhedron_is_infinite(P, result, options->MaxRays))
 	return;
 
-#ifdef USE_INCREMENTAL_BF
-    bfcounter cnt(P->Dimension);
-#elif defined USE_INCREMENTAL_DF
-    icounter cnt(P->Dimension);
-#else
-    counter cnt(P->Dimension);
-#endif
-    cnt.start(P, NbMaxCons);
+    np_base *cnt;
+    if (options->incremental_specialization == 2)
+	cnt = new bfcounter(P->Dimension);
+    else if (options->incremental_specialization == 1)
+	cnt = new icounter(P->Dimension);
+    else
+	cnt = new counter(P->Dimension);
+    cnt->start(P, options->MaxRays);
 
-    assert(value_one_p(&cnt.count[0]._mp_den));
-    value_assign(*result, &cnt.count[0]._mp_num);
+    cnt->get_count(result);
+    delete cnt;
 }
 
 static void uni_polynom(int param, Vector *c, evalue *EP)
@@ -1675,7 +1695,8 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
     return eres;
 }
 
-evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
+					struct barvinok_options *options)
 {
     //P = unfringe(P, MaxRays);
     Polyhedron *Corig = C;
@@ -1688,8 +1709,8 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     value_init(factor.d);
     evalue_set_si(&factor, 1, 1);
 
-    CA = align_context(C, P->Dimension, MaxRays);
-    P = DomainIntersection(P, CA, MaxRays);
+    CA = align_context(C, P->Dimension, options->MaxRays);
+    P = DomainIntersection(P, CA, options->MaxRays);
     Polyhedron_Free(CA);
 
     /* for now */
@@ -1701,7 +1722,7 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
 	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), 
-				      MaxRays);
+				      options->MaxRays);
 out:
 	emul(&factor, eres);
 	reduce_evalue(eres);
@@ -1727,7 +1748,7 @@ out:
 	goto constant;
     }
 
-    Polyhedron *T = Polyhedron_Factor(P, nparam, MaxRays);
+    Polyhedron *T = Polyhedron_Factor(P, nparam, options->MaxRays);
     if (T || (P->Dimension == nparam+1)) {
 	Polyhedron *Q;
 	Polyhedron *C2;
@@ -1740,7 +1761,7 @@ out:
 		QC = Polyhedron_Project(Q, nparam);
 
 	    C2 = C;
-	    C = DomainIntersection(C, QC, MaxRays);
+	    C = DomainIntersection(C, QC, options->MaxRays);
 	    if (C2 != Corig)
 		Polyhedron_Free(C2);
 	    if (QC != Q)
@@ -1761,7 +1782,7 @@ out:
 
     Polyhedron *next = P->next;
     P->next = NULL;
-    eres = barvinok_enumerate_ev_f(P, C, MaxRays);
+    eres = barvinok_enumerate_ev_f(P, C, options->MaxRays);
     P->next = next;
 
     if (P->next) {
@@ -1772,7 +1793,7 @@ out:
 	    Polyhedron *next = Q->next;
 	    Q->next = NULL;
 
-	    f = barvinok_enumerate_ev_f(Q, C, MaxRays);
+	    f = barvinok_enumerate_ev_f(Q, C, options->MaxRays);
 	    emul(f, eres);
 	    free_evalue_refs(f);
 	    free(f);
@@ -1782,6 +1803,16 @@ out:
     }
 
     goto out;
+}
+
+evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+{
+    evalue *E;
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = MaxRays;
+    E = barvinok_enumerate_with_options(P, C, options);
+    free(options);
+    return E;
 }
 
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
@@ -3513,7 +3544,7 @@ static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
 #endif
 
 /* frees P */
-static gen_fun *series(Polyhedron *P, unsigned nparam, unsigned MaxRays)
+static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options)
 {
     Matrix *CP = NULL;
     gen_fun *gf;
@@ -3529,7 +3560,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, unsigned MaxRays)
     if (P->NbEq != 0)
 	P = remove_equalities_p(P, P->Dimension-nparam, NULL);
     if (P->NbEq != 0)
-	P = remove_more_equalities(P, nparam, &CP, MaxRays);
+	P = remove_more_equalities(P, nparam, &CP, options->MaxRays);
     assert(P->NbEq == 0);
     if (CP)
 	nparam = CP->NbColumns-1;
@@ -3537,15 +3568,15 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, unsigned MaxRays)
     if (nparam == 0) {
 	Value c;
 	value_init(c);
-	barvinok_count(P, &c, MaxRays);
+	barvinok_count(P, &c, options->MaxRays);
 	gf = new gen_fun(c);
 	value_clear(c);
     } else {
 	gf_base *red;
 	red = gf_base::create(Polyhedron_Project(P, nparam),
-			      P->Dimension, nparam);
+			      P->Dimension, nparam, options);
 	POL_ENSURE_VERTICES(P);
-	red->start_gf(P, MaxRays);
+	red->start_gf(P, options->MaxRays);
 	gf = red->gf;
 	delete red;
     }
@@ -3557,18 +3588,29 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, unsigned MaxRays)
     return gf;
 }
 
-gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
+				       barvinok_options *options)
 {
     Polyhedron *CA;
     unsigned nparam = C->Dimension;
     gen_fun *gf;
 
-    CA = align_context(C, P->Dimension, MaxRays);
-    P = DomainIntersection(P, CA, MaxRays);
+    CA = align_context(C, P->Dimension, options->MaxRays);
+    P = DomainIntersection(P, CA, options->MaxRays);
     Polyhedron_Free(CA);
 
-    gf = series(P, nparam, MaxRays);
+    gf = series(P, nparam, options);
 
+    return gf;
+}
+
+gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
+{
+    gen_fun *gf;
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = MaxRays;
+    gf = barvinok_series_with_options(P, C, options);
+    free(options);
     return gf;
 }
 
@@ -3617,8 +3659,8 @@ static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam,
     return D;
 }
 
-gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
-					 unsigned MaxRays)
+gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron* C, 
+						      barvinok_options *options)
 {
     Polyhedron *conv, *D2;
     Polyhedron *CA;
@@ -3628,20 +3670,20 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
     one = 1;
     mone = -1;
 
-    CA = align_context(C, D->Dimension, MaxRays);
-    D = DomainIntersection(D, CA, MaxRays);
+    CA = align_context(C, D->Dimension, options->MaxRays);
+    D = DomainIntersection(D, CA, options->MaxRays);
     Polyhedron_Free(CA);
 
-    D2 = skew_into_positive_orthant(D, nparam, MaxRays);
+    D2 = skew_into_positive_orthant(D, nparam, options->MaxRays);
     for (Polyhedron *P = D2; P; P = P->next) {
 	assert(P->Dimension == D2->Dimension);
 	gen_fun *P_gf;
 
-	P_gf = series(Polyhedron_Copy(P), nparam, MaxRays);
+	P_gf = series(Polyhedron_Copy(P), nparam, options);
 	if (!gf)
 	    gf = P_gf;
 	else {
-	    gf->add_union(P_gf, MaxRays);
+	    gf->add_union(P_gf, options);
 	    delete P_gf;
 	}
     }
@@ -3650,15 +3692,26 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
      * the combined space
      */
     Polyhedron_Free(gf->context);
-    gf->context = DomainConvex(D2, MaxRays);
+    gf->context = DomainConvex(D2, options->MaxRays);
 
-    gf2 = gf->summate(D2->Dimension - nparam);
+    gf2 = gf->summate(D2->Dimension - nparam, options);
 
     delete gf;
     if (D != D2)
 	Domain_Free(D2);
     Domain_Free(D);
     return gf2;
+}
+
+gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
+					 unsigned MaxRays)
+{
+    gen_fun *gf;
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = MaxRays;
+    gf = barvinok_enumerate_union_series_with_options(D, C, options);
+    free(options);
+    return gf;
 }
 
 evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)

@@ -10,12 +10,6 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    (POL_NO_DUAL | POL_INTEGER)
-#else
-#define MAXRAYS  600
-#endif
-
 static Polyhedron *uncone(Polyhedron *C, unsigned MaxRays)
 {
     Matrix *Constraints;
@@ -59,12 +53,12 @@ void static scan(gen_fun *S)
     Vector_Free(params);
 }
 
-bool is_indicator(gen_fun *gf, unsigned MaxRays)
+bool is_indicator(gen_fun *gf, barvinok_options *options)
 {
     gen_fun *test;
     QQ mone(-1, 1);
 
-    test = gf->Hadamard_product(gf, MaxRays);
+    test = gf->Hadamard_product(gf, options);
     test->add(mone, gf);
 
     test->print(std::cerr, 0, NULL);
@@ -83,6 +77,7 @@ int main(int argc, char **argv)
     bool ok;
     QQ mone(-1, 1);
     Vector *coins;
+    barvinok_options *options = barvinok_options_new_with_defaults();
 
     coins = Vector_Read();
     assert(coins);
@@ -96,13 +91,13 @@ int main(int argc, char **argv)
 	value_set_si(M->p[1+i][0], 1);
 	value_set_si(M->p[1+i][1+i], 1);
     }
-    C = Constraints2Polyhedron(M, MAXRAYS);
+    C = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
     C = remove_equalities_p(C, 4, NULL);
     assert(C->NbEq == 0);
     Polyhedron_Print(stderr, P_VALUE_FMT, C);
 
-    B = uncone(C, MAXRAYS);
+    B = uncone(C, options->MaxRays);
 
     basis = reduced_basis(B);
     small = Vector_Alloc(B->Dimension + 2);
@@ -116,7 +111,7 @@ int main(int argc, char **argv)
     Matrix_Print(stderr, P_VALUE_FMT, T);
 
     Polyhedron_Print(stderr, P_VALUE_FMT, C);
-    P = Polyhedron_Image(C, T, MAXRAYS);
+    P = Polyhedron_Image(C, T, options->MaxRays);
     Matrix_Free(T);
     Polyhedron_Free(C);
 
@@ -126,7 +121,7 @@ int main(int argc, char **argv)
     up[0] = 1;
     up[1] = 0;
 
-    S = barvinok_enumerate_scarf_series(P, 2, 2, MAXRAYS);
+    S = barvinok_enumerate_scarf_series(P, 2, 2, options->MaxRays);
     S->print(std::cerr, 0, NULL);
     cerr << endl;
 
@@ -139,12 +134,12 @@ int main(int argc, char **argv)
 
     do {
 	S_shift->shift(up);
-	hp = S->Hadamard_product(S_shift, MAXRAYS);
+	hp = S->Hadamard_product(S_shift, options);
 	S->add(mone, hp);
 	delete hp;
 
 	S_divide->shift(up);
-	hp = S->Hadamard_product(S_divide, MAXRAYS);
+	hp = S->Hadamard_product(S_divide, options);
 	ok = hp->summate(&c);
 	if (ok)
 	    assert(value_zero_p(c));
@@ -153,7 +148,7 @@ int main(int argc, char **argv)
 
     value_clear(c);
 
-    frob = S->summate(1);
+    frob = S->summate(1, options);
     frob->print(std::cout, 0, NULL);
     cout << endl;
     delete frob;
@@ -163,4 +158,5 @@ int main(int argc, char **argv)
     delete S;
 
     Polyhedron_Free(P);
+    free(options);
 }

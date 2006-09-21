@@ -1,15 +1,15 @@
 #include "genfun_constructor.h"
 
-gf_base *gf_base::create(Polyhedron *context, unsigned dim, unsigned nparam)
+gf_base *gf_base::create(Polyhedron *context, unsigned dim, unsigned nparam,
+			 barvinok_options *options)
 {
     gf_base *red;
-#ifdef USE_INCREMENTAL_BF
-    red = new partial_bfcounter(context, dim, nparam);
-#elif defined USE_INCREMENTAL_DF
-    red = new partial_ireducer(context, dim, nparam);
-#else
-    red = new partial_reducer(context, dim, nparam);
-#endif
+    if (options->incremental_specialization == 2)
+	red = new partial_bfcounter(context, dim, nparam);
+    else if (options->incremental_specialization == 1)
+	red = new partial_ireducer(context, dim, nparam);
+    else
+	red = new partial_reducer(context, dim, nparam);
     return red;
 }
 

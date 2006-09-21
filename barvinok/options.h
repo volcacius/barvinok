@@ -9,6 +9,14 @@ struct barvinok_options {
     /* PolyLib options */
     unsigned	MaxRays;
 
+    /* barvinok options */
+		/*
+		 * 0: no
+		 * 1: depth first
+		 * 2: breadth frist
+		 */
+    int		incremental_specialization;
+
     /* lexmin options */
 		/* Check for integer point in domain
 		 * 0: no
