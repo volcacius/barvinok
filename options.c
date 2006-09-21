@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <polylib/polylibgmp.h>
 #include <barvinok/options.h>
+#include <barvinok/util.h>
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
