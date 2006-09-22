@@ -36,6 +36,8 @@ struct np_base : public polar_decomposer {
     virtual void get_count(Value *result) {
 	assert(0);
     }
+    virtual ~np_base() {
+    }
 
 private:
     QQ factor;
