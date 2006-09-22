@@ -72,7 +72,16 @@ barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 4coins_SOURCES = 4coins.cc scarf.cc
-lexmin_SOURCES = lexmin.cc combine.c combine.h fdstream.cc fdstream.h
+lexmin_SOURCES = \
+	lexmin.cc \
+	combine.c \
+	combine.h \
+	edomain.cc \
+	edomain.h \
+	evalue_util.cc \
+	evalue_util.h \
+	fdstream.cc \
+	fdstream.h
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 

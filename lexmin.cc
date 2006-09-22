@@ -18,8 +18,9 @@ extern "C" {
 #include "reduce_domain.h"
 #include "mat_util.h"
 #include "combine.h"
+#include "edomain.h"
+#include "evalue_util.h"
 #include "sample.h"
-#include "fdstream.h"
 #include "config.h"
 
 #ifdef NTL_STD_CXX
@@ -71,75 +72,6 @@ static int type_offset(enode *p)
 {
    return p->type == fractional ? 1 : 
 	  p->type == flooring ? 1 : 0;
-}
-
-static void evalue_denom(evalue *e, Value *d)
-{
-    if (value_notzero_p(e->d)) {
-	value_lcm(*d, e->d, d);
-	return;
-    }
-    int offset = type_offset(e->x.p);
-    for (int i = e->x.p->size-1; i >= offset; --i)
-	evalue_denom(&e->x.p->arr[i], d);
-}
-
-static void evalue_print(std::ostream& o, evalue *e, char **p);
-static void evalue_print(std::ostream& o, evalue *e, char **p, int d)
-{
-    if (value_notzero_p(e->d)) {
-	o << VALUE_TO_INT(e->x.n) * (d / VALUE_TO_INT(e->d));
-	return;
-    }
-    assert(e->x.p->type == polynomial || e->x.p->type == flooring ||
-	   e->x.p->type == fractional);
-    int offset = type_offset(e->x.p);
-    for (int i = e->x.p->size-1; i >= offset; --i) {
-	if (EVALUE_IS_ZERO(e->x.p->arr[i]))
-	    continue;
-	if (i != e->x.p->size-1 && 
-		(value_zero_p(e->x.p->arr[i].d) ||
-		value_pos_p(e->x.p->arr[i].x.n)))
-	    o << "+";
-	if (i == offset || !(value_one_p(e->x.p->arr[i].x.n) && 
-			     d == VALUE_TO_INT(e->x.p->arr[i].d))) {
-	    if (value_zero_p(e->x.p->arr[i].d))
-		o << "(";
-	    evalue_print(o, &e->x.p->arr[i], p, d);
-	    if (value_zero_p(e->x.p->arr[i].d))
-		o << ")";
-	    if (i != offset)
-		o << "*";
-	}
-	for (int j = 0; j < i-offset; ++j) {
-	    if (j != 0)
-		o << "*";
-	    if (e->x.p->type == flooring) {
-		o << "[";
-		evalue_print(o, &e->x.p->arr[0], p);
-		o << "]";
-	    } else if (e->x.p->type == fractional) {
-		o << "{";
-		evalue_print(o, &e->x.p->arr[0], p);
-		o << "}";
-	    } else
-		o << p[e->x.p->pos-1];
-	}
-    }
-}
-
-static void evalue_print(std::ostream& o, evalue *e, char **p)
-{
-    Value d;
-    value_init(d);
-    value_set_si(d, 1);
-    evalue_denom(e, &d);
-    if (value_notone_p(d))
-	o << "(";
-    evalue_print(o, e, p, VALUE_TO_INT(d));
-    if (value_notone_p(d))
-	o << ")/" << VALUE_TO_INT(d);
-    value_clear(d);
 }
 
 struct indicator_term {
@@ -496,68 +428,6 @@ void indicator_constructor::normalize()
 		if (vertex[k] != 0)
 		    evalue_add_constant(terms[i][j]->vertex[k], vertex[k]);
 	}
-}
-
-struct EDomain {
-    Polyhedron		*D;
-    Vector		*sample;
-    vector<evalue *>	floors;
-
-    EDomain(Polyhedron *D) {
-	this->D = Polyhedron_Copy(D);
-	sample = NULL;
-    }
-    EDomain(Polyhedron *D, vector<evalue *>floors) {
-	this->D = Polyhedron_Copy(D);
-	add_floors(floors);
-	sample = NULL;
-    }
-    EDomain(EDomain *ED) {
-	this->D = Polyhedron_Copy(ED->D);
-	add_floors(ED->floors);
-	sample = NULL;
-    }
-    EDomain(Polyhedron *D, EDomain *ED, vector<evalue *>floors) {
-	this->D = Polyhedron_Copy(D);
-	add_floors(ED->floors);
-	add_floors(floors);
-	sample = NULL;
-    }
-    void add_floors(vector<evalue *>floors) {
-	for (int i = 0; i < floors.size(); ++i) {
-	    evalue *f = new evalue;
-	    value_init(f->d);
-	    evalue_copy(f, floors[i]);
-	    this->floors.push_back(f);
-	}
-    }
-    int find_floor(evalue *needle) {
-	for (int i = 0; i < floors.size(); ++i)
-	    if (eequal(needle, floors[i]))
-		return i;
-	return -1;
-    }
-    void print(FILE *out, char **p);
-    ~EDomain() {
-	for (int i = 0; i < floors.size(); ++i) {
-	    free_evalue_refs(floors[i]);
-	    delete floors[i];
-	}
-	Polyhedron_Free(D);
-	if (sample)
-	    Vector_Free(sample);
-    }
-};
-
-void EDomain::print(FILE *out, char **p)
-{
-    fdostream os(dup(fileno(out)));
-    for (int i = 0; i < floors.size(); ++i) {
-	os << "floor " << i << ": [";
-	evalue_print(os, floors[i], p);
-	os << "]" << endl;
-    }
-    Polyhedron_Print(out, P_VALUE_FMT, D);
 }
 
 struct indicator;
