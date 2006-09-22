@@ -692,7 +692,7 @@ static void interval_minmax(Polyhedron *D, Matrix *T, int *min, int *max,
 
 struct max_term {
     unsigned dim;
-    Polyhedron *domain;
+    EDomain *domain;
     vector<evalue *> max;
 
     void print(ostream& os, char **p) const;
@@ -705,7 +705,7 @@ struct max_term {
 	    free_evalue_refs(max[i]);
 	    delete max[i];
 	}
-	Polyhedron_Free(domain);
+	delete domain;
     }
 };
 
@@ -799,7 +799,7 @@ max_term* indicator::create_max_term(indicator_term *it)
     int nparam = ic.P->Dimension - ic.vertex.length();
     max_term *maximum = new max_term;
     maximum->dim = nparam;
-    maximum->domain = Polyhedron_Copy(D->D);
+    maximum->domain = new EDomain(D);
     for (int j = 0; j < dim; ++j) {
 	evalue *E = new evalue;
 	value_init(E->d);
@@ -1673,19 +1673,19 @@ void resolve_existential_vars(Polyhedron *domain, unsigned dim)
 
 void max_term::resolve_existential_vars() const
 {
-    ::resolve_existential_vars(domain, dim);
+    ::resolve_existential_vars(domain->D, dim);
 }
 
 void max_term::print(ostream& os, char **p) const
 {
     char **names = p;
-    if (dim < domain->Dimension) {
+    if (dim < domain->D->Dimension) {
 	resolve_existential_vars();
-	names = new char * [domain->Dimension];
+	names = new char * [domain->D->Dimension];
 	int i;
 	for (i = 0; i < dim; ++i)
 	    names[i] = p[i];
-	for ( ; i < domain->Dimension; ++i) {
+	for ( ; i < domain->D->Dimension; ++i) {
 	    names[i] = new char[10];
 	    snprintf(names[i], 10, "a%d", i - dim);
 	}
@@ -1704,48 +1704,48 @@ void max_term::print(ostream& os, char **p) const
     }
     os << "]";
     os << " : ";
-    if (dim < domain->Dimension) {
+    if (dim < domain->D->Dimension) {
 	os << "exists ";
-	print_varlist(os, domain->Dimension-dim, names+dim);
+	print_varlist(os, domain->D->Dimension-dim, names+dim);
 	os << " : ";
     }
-    for (int i = 0; i < domain->NbConstraints; ++i) {
+    for (int i = 0; i < domain->D->NbConstraints; ++i) {
 	int first = 1;
-	int v = First_Non_Zero(domain->Constraint[i]+1, domain->Dimension);
+	int v = First_Non_Zero(domain->D->Constraint[i]+1, domain->D->Dimension);
 	if (v == -1)
 	    continue;
 	if (i)
 	    os << " && ";
-	if (value_pos_p(domain->Constraint[i][v+1])) {
-	    print_term(os, domain->Constraint[i][v+1], v, domain->Dimension,
+	if (value_pos_p(domain->D->Constraint[i][v+1])) {
+	    print_term(os, domain->D->Constraint[i][v+1], v, domain->D->Dimension,
 		       names, NULL);
-	    if (value_zero_p(domain->Constraint[i][0]))
+	    if (value_zero_p(domain->D->Constraint[i][0]))
 		os << " = ";
 	    else
 		os << " >= ";
-	    for (int j = v+1; j <= domain->Dimension; ++j) {
-		value_oppose(tmp, domain->Constraint[i][1+j]);
-		print_term(os, tmp, j, domain->Dimension,
+	    for (int j = v+1; j <= domain->D->Dimension; ++j) {
+		value_oppose(tmp, domain->D->Constraint[i][1+j]);
+		print_term(os, tmp, j, domain->D->Dimension,
 			   names, &first);
 	    }
 	} else {
-	    value_oppose(tmp, domain->Constraint[i][1+v]);
-	    print_term(os, tmp, v, domain->Dimension,
+	    value_oppose(tmp, domain->D->Constraint[i][1+v]);
+	    print_term(os, tmp, v, domain->D->Dimension,
 		       names, NULL);
-	    if (value_zero_p(domain->Constraint[i][0]))
+	    if (value_zero_p(domain->D->Constraint[i][0]))
 		os << " = ";
 	    else
 		os << " <= ";
-	    for (int j = v+1; j <= domain->Dimension; ++j)
-		print_term(os, domain->Constraint[i][1+j], j, domain->Dimension,
+	    for (int j = v+1; j <= domain->D->Dimension; ++j)
+		print_term(os, domain->D->Constraint[i][1+j], j, domain->D->Dimension,
 			   names, &first);
 	}
     }
     os << " }" << endl;
     value_clear(tmp);
 
-    if (dim < domain->Dimension) {
-	for (int i = dim; i < domain->Dimension; ++i)
+    if (dim < domain->D->Dimension) {
+	for (int i = dim; i < domain->D->Dimension; ++i)
 	    delete [] names[i];
 	delete [] names;
     }
@@ -1819,12 +1819,12 @@ static Matrix *align_matrix_initial(Matrix *M, int nrows)
  */
 void max_term::substitute(Matrix *T, unsigned MaxRays)
 {
-    int nexist = domain->Dimension - (T->NbColumns-1);
+    int nexist = domain->D->Dimension - (T->NbColumns-1);
     Matrix *M = align_matrix_initial(T, T->NbRows+nexist);
 
-    Polyhedron *D = DomainImage(domain, M, MaxRays);
-    Polyhedron_Free(domain);
-    domain = D;
+    Polyhedron *D = DomainImage(domain->D, M, MaxRays);
+    Polyhedron_Free(domain->D);
+    domain->D = D;
     Matrix_Free(M);
 
     assert(T->NbRows == T->NbColumns);
@@ -2031,11 +2031,11 @@ void compute_evalue(evalue *e, Value *val, Value *res)
 
 Vector *max_term::eval(Value *val, unsigned MaxRays) const
 {
-    if (dim == domain->Dimension) {
-	if (!in_domain(domain, val))
+    if (dim == domain->D->Dimension) {
+	if (!in_domain(domain->D, val))
 	    return NULL;
     } else {
-	if (!in_domain(domain, val, dim, MaxRays))
+	if (!in_domain(domain->D, val, dim, MaxRays))
 	    return NULL;
     }
     Vector *res = Vector_Alloc(max.size());
