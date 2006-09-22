@@ -9,7 +9,7 @@ void EDomain::print(FILE *out, char **p)
     fdostream os(dup(fileno(out)));
     for (int i = 0; i < floors.size(); ++i) {
 	os << "floor " << i << ": [";
-	evalue_print(os, floors[i], p);
+	evalue_print(os, floors[i]->e, p);
 	os << "]" << endl;
     }
     Polyhedron_Print(out, P_VALUE_FMT, D);

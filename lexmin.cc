@@ -812,7 +812,7 @@ max_term* indicator::create_max_term(indicator_term *it)
 }
 
 static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
-				 vector<evalue *>& new_floors)
+				 vector<EDomain_floor *>& new_floors)
 {
     Polyhedron *D = ED->D;
     evalue mone;
@@ -824,12 +824,8 @@ static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
 	int i;
 	if (e->x.p->type != fractional)
 	    continue;
-	for (i = 0; i < ED->floors.size(); ++i)
-	    if (eequal(&e->x.p->arr[0], ED->floors[i]))
-		break;
-	if (i < ED->floors.size())
-	    continue;
-	++fract;
+	if (ED->find_floor(&e->x.p->arr[0]) == -1)
+	    ++fract;
     }
 
     int rows = D->NbConstraints+2*fract+1;
@@ -871,10 +867,7 @@ static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
 			M->p[row+1][1+D->Dimension+fract]);
 	    value_decrement(M->p[row+1][cols-1], M->p[row+1][cols-1]);
 
-	    evalue *arg = new evalue;
-	    value_init(arg->d);
-	    evalue_copy(arg, &e->x.p->arr[0]);
-	    new_floors.push_back(arg);
+	    new_floors.push_back(new EDomain_floor(&e->x.p->arr[0]));
 
 	    ++fract;
 	} else {
@@ -1005,17 +998,15 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
 	sign = diff_sign;
 
 	Matrix *M;
-	vector<evalue *> new_floors;
+	vector<EDomain_floor *> new_floors;
 	M = add_ge_constraint(D, diff, new_floors);
 	value_set_si(M->p[M->NbRows-1][0], 0);
 	Polyhedron *D2 = Constraints2Polyhedron(M, MaxRays);
 	EDomain *EDeq = new EDomain(D2, D, new_floors);
 	Polyhedron_Free(D2);
 	Matrix_Free(M);
-	for (int i = 0; i < new_floors.size(); ++i) {
-	    free_evalue_refs(new_floors[i]);
-	    delete new_floors[i];
-	}
+	for (int i = 0; i < new_floors.size(); ++i)
+	    EDomain_floor::unref(new_floors[i]);
 
 	if (D != ind->D)
 	    delete D;
@@ -2102,7 +2093,7 @@ static void split_on(const split& sp, EDomain *D,
     *Dlt = NULL;
     *Deq = NULL;
     *Dgt = NULL;
-    vector<evalue *> new_floors;
+    vector<EDomain_floor *> new_floors;
     M = add_ge_constraint(D, sp.constraint, new_floors);
     if (sp.sign == split::lge || sp.sign == split::ge) {
 	M2 = Matrix_Copy(M);
@@ -2141,13 +2132,11 @@ static void split_on(const split& sp, EDomain *D,
 	Vector_Copy(D->sample->p, sample->p, D->D->Dimension);
 	value_set_si(sample->p[D->D->Dimension+new_floors.size()], 1);
 	for (int i = 0; i < new_floors.size(); ++i)
-	    compute_evalue(new_floors[i], sample->p, sample->p+D->D->Dimension+i);
+	    compute_evalue(new_floors[i]->e, sample->p, sample->p+D->D->Dimension+i);
     }
 
-    for (int i = 0; i < new_floors.size(); ++i) {
-	free_evalue_refs(new_floors[i]);
-	delete new_floors[i];
-    }
+    for (int i = 0; i < new_floors.size(); ++i)
+	EDomain_floor::unref(new_floors[i]);
 
     for (int i = 0; i < 3; ++i) {
 	if (!ED[i])
