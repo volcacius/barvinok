@@ -570,92 +570,6 @@ void partial_order::copy(const partial_order& order,
     }
 }
 
-static void add_coeff(Value *cons, int len, evalue *coeff, int pos)
-{
-    Value tmp;
-
-    assert(value_notzero_p(coeff->d));
-
-    value_init(tmp);
-
-    value_lcm(cons[0], coeff->d, &tmp);
-    value_division(tmp, tmp, cons[0]);
-    Vector_Scale(cons, cons, tmp, len);
-    value_division(tmp, cons[0], coeff->d);
-    value_addmul(cons[pos], tmp, coeff->x.n);
-
-    value_clear(tmp);
-}
-
-static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len);
-
-static void add_fract(evalue *e, Value *cons, int len, int pos)
-{
-    evalue mone;
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-
-    /* contribution of alpha * fract(X) is 
-     *      alpha * X ...
-     */
-    assert(e->x.p->size == 3);
-    evalue argument;
-    value_init(argument.d);
-    evalue_copy(&argument, &e->x.p->arr[0]);
-    emul(&e->x.p->arr[2], &argument);
-    evalue2constraint_r(NULL, &argument, cons, len);
-    free_evalue_refs(&argument);
-
-    /*	    - alpha * floor(X) */
-    emul(&mone, &e->x.p->arr[2]);
-    add_coeff(cons, len, &e->x.p->arr[2], pos);
-    emul(&mone, &e->x.p->arr[2]);
-
-    free_evalue_refs(&mone); 
-}
-
-static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len)
-{
-    int r = 0;
-    if (value_zero_p(E->d) && E->x.p->type == fractional) {
-	int i;
-	assert(E->x.p->size == 3);
-	r = evalue2constraint_r(D, &E->x.p->arr[1], cons, len);
-	assert(value_notzero_p(E->x.p->arr[2].d));
-	if (D && (i = D->find_floor(&E->x.p->arr[0])) >= 0) {
-	    add_fract(E, cons, len, 1+D->D->Dimension-D->floors.size()+i);
-	} else {
-	    if (value_pos_p(E->x.p->arr[2].x.n)) {
-		evalue coeff;
-		value_init(coeff.d);
-		value_init(coeff.x.n);
-		value_set_si(coeff.d, 1);
-		evalue_denom(&E->x.p->arr[0], &coeff.d);
-		value_decrement(coeff.x.n, coeff.d);
-		emul(&E->x.p->arr[2], &coeff);
-		add_coeff(cons, len, &coeff, len-1);
-		free_evalue_refs(&coeff);
-	    }
-	    r = 1;
-	}
-    } else if (value_zero_p(E->d)) {
-	assert(E->x.p->type == polynomial);
-	assert(E->x.p->size == 2);
-	r = evalue2constraint_r(D, &E->x.p->arr[0], cons, len) || r;
-	add_coeff(cons, len, &E->x.p->arr[1], E->x.p->pos);
-    } else {
-	add_coeff(cons, len, E, len-1);
-    }
-    return r;
-}
-
-static int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len)
-{
-    Vector_Set(cons, 0, len);
-    value_set_si(cons[0], 1);
-    return evalue2constraint_r(D, E, cons, len);
-}
-
 static void interval_minmax(Polyhedron *I, int *min, int *max)
 {
     assert(I->Dimension == 1);
@@ -811,77 +725,6 @@ max_term* indicator::create_max_term(indicator_term *it)
     return maximum;
 }
 
-static Matrix *add_ge_constraint(EDomain *ED, evalue *constraint,
-				 vector<EDomain_floor *>& new_floors)
-{
-    Polyhedron *D = ED->D;
-    evalue mone;
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-    int fract = 0;
-    for (evalue *e = constraint; value_zero_p(e->d); 
-	 e = &e->x.p->arr[type_offset(e->x.p)]) {
-	int i;
-	if (e->x.p->type != fractional)
-	    continue;
-	if (ED->find_floor(&e->x.p->arr[0]) == -1)
-	    ++fract;
-    }
-
-    int rows = D->NbConstraints+2*fract+1;
-    int cols = 2+D->Dimension+fract;
-    Matrix *M = Matrix_Alloc(rows, cols);
-    for (int i = 0; i < D->NbConstraints; ++i) {
-	Vector_Copy(D->Constraint[i], M->p[i], 1+D->Dimension);
-	value_assign(M->p[i][1+D->Dimension+fract], 
-		     D->Constraint[i][1+D->Dimension]);
-    }
-    value_set_si(M->p[rows-1][0], 1);
-    fract = 0;
-    evalue *e;
-    for (e = constraint; value_zero_p(e->d); e = &e->x.p->arr[type_offset(e->x.p)]) {
-	if (e->x.p->type == fractional) {
-	    int i, pos;
-
-	    i = ED->find_floor(&e->x.p->arr[0]);
-	    if (i >= 0)
-		pos = D->Dimension-ED->floors.size()+i;
-	    else
-		pos = D->Dimension+fract;
-
-	    add_fract(e, M->p[rows-1], cols, 1+pos);
-
-	    if (pos < D->Dimension)
-		continue;
-
-	    /* constraints for the new floor */
-	    int row = D->NbConstraints+2*fract;
-	    value_set_si(M->p[row][0], 1);
-	    evalue2constraint_r(NULL, &e->x.p->arr[0], M->p[row], cols);
-	    value_oppose(M->p[row][1+D->Dimension+fract], M->p[row][0]);
-	    value_set_si(M->p[row][0], 1);
-
-	    Vector_Scale(M->p[row]+1, M->p[row+1]+1, mone.x.n, cols-1);
-	    value_set_si(M->p[row+1][0], 1);
-	    value_addto(M->p[row+1][cols-1], M->p[row+1][cols-1],
-			M->p[row+1][1+D->Dimension+fract]);
-	    value_decrement(M->p[row+1][cols-1], M->p[row+1][cols-1]);
-
-	    new_floors.push_back(new EDomain_floor(&e->x.p->arr[0]));
-
-	    ++fract;
-	} else {
-	    assert(e->x.p->type == polynomial);
-	    assert(e->x.p->size == 2);
-	    add_coeff(M->p[rows-1], cols, &e->x.p->arr[1], e->x.p->pos);
-	}
-    }
-    add_coeff(M->p[rows-1], cols, e, cols-1);
-    value_set_si(M->p[rows-1][0], 1);
-    free_evalue_refs(&mone); 
-    return M;
-}
-
 /* compute a - b */
 static evalue *ediff(const evalue *a, const evalue *b)
 {
@@ -999,7 +842,7 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
 
 	Matrix *M;
 	vector<EDomain_floor *> new_floors;
-	M = add_ge_constraint(D, diff, new_floors);
+	M = D->add_ge_constraint(diff, new_floors);
 	value_set_si(M->p[M->NbRows-1][0], 0);
 	Polyhedron *D2 = Constraints2Polyhedron(M, MaxRays);
 	EDomain *EDeq = new EDomain(D2, D, new_floors);
@@ -2094,7 +1937,7 @@ static void split_on(const split& sp, EDomain *D,
     *Deq = NULL;
     *Dgt = NULL;
     vector<EDomain_floor *> new_floors;
-    M = add_ge_constraint(D, sp.constraint, new_floors);
+    M = D->add_ge_constraint(sp.constraint, new_floors);
     if (sp.sign == split::lge || sp.sign == split::ge) {
 	M2 = Matrix_Copy(M);
 	value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],

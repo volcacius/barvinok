@@ -58,7 +58,7 @@ struct EDomain {
 	for (int i = 0; i < floors.size(); ++i)
 	    this->floors.push_back(floors[i]->ref());
     }
-    int find_floor(evalue *needle) {
+    int find_floor(evalue *needle) const {
 	for (int i = 0; i < floors.size(); ++i)
 	    if (eequal(needle, floors[i]->e))
 		return i;
@@ -72,4 +72,9 @@ struct EDomain {
 	if (sample)
 	    Vector_Free(sample);
     }
+
+    Matrix *add_ge_constraint(evalue *constraint,
+				 std::vector<EDomain_floor *>& new_floors) const;
 };
+
+int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len);
