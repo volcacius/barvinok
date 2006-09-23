@@ -8,16 +8,13 @@ extern "C" {
 struct EDomain_floor {
     int	     refcount;
     evalue  *e;
+    Vector  *v;
 
-    EDomain_floor(const evalue *f) {
-	e = new evalue;
-	value_init(e->d);
-	evalue_copy(e, f);
-	refcount = 1;
-    }
+    EDomain_floor(const evalue *f, int dim);
     ~EDomain_floor() {
 	free_evalue_refs(e);
 	delete e;
+	Vector_Free(v);
     }
     EDomain_floor *ref() {
 	++refcount;
@@ -71,6 +68,10 @@ struct EDomain {
 	Polyhedron_Free(D);
 	if (sample)
 	    Vector_Free(sample);
+    }
+
+    unsigned dimension() const {
+	return D->Dimension - floors.size();
     }
 
     Matrix *add_ge_constraint(evalue *constraint,

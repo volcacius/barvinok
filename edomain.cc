@@ -102,6 +102,17 @@ static int evalue2constraint_r(EDomain *D, evalue *E, Value *cons, int len)
     return r;
 }
 
+EDomain_floor::EDomain_floor(const evalue *f, int dim)
+{
+    e = new evalue;
+    value_init(e->d);
+    evalue_copy(e, f);
+    v = Vector_Alloc(1+dim+1);
+    value_set_si(v->p[0], 1);
+    evalue2constraint_r(NULL, e, v->p, v->Size);
+    refcount = 1;
+}
+
 int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len)
 {
     Vector_Set(cons, 0, len);
@@ -151,12 +162,17 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
 	    if (pos < D->Dimension)
 		continue;
 
+	    EDomain_floor *new_floor;
+	    new_floor = new EDomain_floor(&e->x.p->arr[0], dimension());
+
 	    /* constraints for the new floor */
 	    int row = D->NbConstraints+2*fract;
+	    Vector_Copy(new_floor->v->p+1, M->p[row]+1, dimension());
+	    value_assign(M->p[row][cols-1], new_floor->v->p[1+dimension()]);
+	    value_oppose(M->p[row][1+D->Dimension+fract], new_floor->v->p[0]);
 	    value_set_si(M->p[row][0], 1);
-	    evalue2constraint_r(NULL, &e->x.p->arr[0], M->p[row], cols);
-	    value_oppose(M->p[row][1+D->Dimension+fract], M->p[row][0]);
-	    value_set_si(M->p[row][0], 1);
+	    assert(value_eq(M->p[row][cols-1], new_floor->v->p[1+dimension()]));
+	    assert(Vector_Equal(new_floor->v->p+1, M->p[row]+1, dimension()));
 
 	    Vector_Scale(M->p[row]+1, M->p[row+1]+1, mone.x.n, cols-1);
 	    value_set_si(M->p[row+1][0], 1);
@@ -164,7 +180,7 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
 			M->p[row+1][1+D->Dimension+fract]);
 	    value_decrement(M->p[row+1][cols-1], M->p[row+1][cols-1]);
 
-	    new_floors.push_back(new EDomain_floor(&e->x.p->arr[0]));
+	    new_floors.push_back(new_floor);
 
 	    ++fract;
 	} else {
