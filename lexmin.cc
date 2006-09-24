@@ -609,7 +609,7 @@ struct max_term {
     EDomain *domain;
     vector<evalue *> max;
 
-    void print(ostream& os, char **p) const;
+    void print(ostream& os, char **p, barvinok_options *options) const;
     void resolve_existential_vars() const;
     void substitute(Matrix *T, unsigned MaxRays);
     Vector *eval(Value *val, unsigned MaxRays) const;
@@ -1433,30 +1433,6 @@ static void print_varlist(ostream& os, int n, char **names)
     os << "]";
 }
 
-static void print_term(ostream& os, Value v, int pos, int dim,
-		        char **names, int *first)
-{
-    if (value_zero_p(v)) {
-	if (first && *first && pos >= dim)
-	    os << "0";
-	return;
-    }
-
-    if (first) {
-	if (!*first && value_pos_p(v))
-	    os << "+";
-	*first = 0;
-    }
-    if (pos < dim) {
-	if (value_mone_p(v)) {
-	    os << "-";
-	} else if (!value_one_p(v))
-	    os << VALUE_TO_INT(v);
-	os << names[pos];
-    } else
-	os << VALUE_TO_INT(v);
-}
-
 /* We put all possible existentially quantified variables at the back
  * and so if any equalities exist between these variables and the
  * other variables, then PolyLib will replace all occurrences of some
@@ -1510,23 +1486,8 @@ void max_term::resolve_existential_vars() const
     ::resolve_existential_vars(domain->D, dim);
 }
 
-void max_term::print(ostream& os, char **p) const
+void max_term::print(ostream& os, char **p, barvinok_options *options) const
 {
-    char **names = p;
-    if (dim < domain->D->Dimension) {
-	resolve_existential_vars();
-	names = new char * [domain->D->Dimension];
-	int i;
-	for (i = 0; i < dim; ++i)
-	    names[i] = p[i];
-	for ( ; i < domain->D->Dimension; ++i) {
-	    names[i] = new char[10];
-	    snprintf(names[i], 10, "a%d", i - dim);
-	}
-    }
-
-    Value tmp;
-    value_init(tmp);
     os << "{ ";
     print_varlist(os, dim, p);
     os << " -> ";
@@ -1538,51 +1499,8 @@ void max_term::print(ostream& os, char **p) const
     }
     os << "]";
     os << " : ";
-    if (dim < domain->D->Dimension) {
-	os << "exists ";
-	print_varlist(os, domain->D->Dimension-dim, names+dim);
-	os << " : ";
-    }
-    for (int i = 0; i < domain->D->NbConstraints; ++i) {
-	int first = 1;
-	int v = First_Non_Zero(domain->D->Constraint[i]+1, domain->D->Dimension);
-	if (v == -1)
-	    continue;
-	if (i)
-	    os << " && ";
-	if (value_pos_p(domain->D->Constraint[i][v+1])) {
-	    print_term(os, domain->D->Constraint[i][v+1], v, domain->D->Dimension,
-		       names, NULL);
-	    if (value_zero_p(domain->D->Constraint[i][0]))
-		os << " = ";
-	    else
-		os << " >= ";
-	    for (int j = v+1; j <= domain->D->Dimension; ++j) {
-		value_oppose(tmp, domain->D->Constraint[i][1+j]);
-		print_term(os, tmp, j, domain->D->Dimension,
-			   names, &first);
-	    }
-	} else {
-	    value_oppose(tmp, domain->D->Constraint[i][1+v]);
-	    print_term(os, tmp, v, domain->D->Dimension,
-		       names, NULL);
-	    if (value_zero_p(domain->D->Constraint[i][0]))
-		os << " = ";
-	    else
-		os << " <= ";
-	    for (int j = v+1; j <= domain->D->Dimension; ++j)
-		print_term(os, domain->D->Constraint[i][1+j], j, domain->D->Dimension,
-			   names, &first);
-	}
-    }
+    domain->print_constraints(os, p, options);
     os << " }" << endl;
-    value_clear(tmp);
-
-    if (dim < domain->D->Dimension) {
-	for (int i = dim; i < domain->D->Dimension; ++i)
-	    delete [] names[i];
-	delete [] names;
-    }
 }
 
 static void evalue_substitute(evalue *e, evalue **subs)
@@ -2610,7 +2528,7 @@ int main(int argc, char **argv)
     vector<max_term*> maxima = lexmin(A, C, options);
     if (print_solution)
 	for (int i = 0; i < maxima.size(); ++i)
-	    maxima[i]->print(cout, param_names);
+	    maxima[i]->print(cout, param_names, options);
 
     if (verify)
 	verify_results(A, C, maxima, m, M, print_all, options->MaxRays);

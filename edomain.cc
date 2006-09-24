@@ -1,3 +1,4 @@
+#include <sstream>
 #include "fdstream.h"
 #include <barvinok/util.h>
 #include "edomain.h"
@@ -5,6 +6,125 @@
 
 using std::vector;
 using std::endl;
+using std::ostream;
+
+static void print_term(ostream& os, Value v, int pos, int dim,
+		        char **names, int *first)
+{
+    if (value_zero_p(v)) {
+	if (first && *first && pos >= dim)
+	    os << "0";
+	return;
+    }
+
+    if (first) {
+	if (!*first && value_pos_p(v))
+	    os << "+";
+	*first = 0;
+    }
+    if (pos < dim) {
+	if (value_mone_p(v)) {
+	    os << "-";
+	} else if (!value_one_p(v))
+	    os << VALUE_TO_INT(v);
+	os << names[pos];
+    } else
+	os << VALUE_TO_INT(v);
+}
+
+void EDomain_floor::print(ostream& os, char **p) const
+{
+    int first = 1;
+    os << "[";
+    os << "(";
+    for (int i = 0; i < v->Size-2; ++i)
+	print_term(os, v->p[1+i], i, v->Size-2, p, &first);
+    os << ")";
+    os << "/";
+    print_term(os, v->p[0], v->Size-2, v->Size-2, p, NULL);
+    os << "]";
+}
+
+void EDomain::print_constraints(ostream& os, char **p,
+				barvinok_options *options) const
+{
+    Value tmp;
+    value_init(tmp);
+
+    Matrix *M = Matrix_Alloc(2*floors.size(), 1+D->Dimension+1);
+    value_set_si(tmp, -1);
+    for (int i = 0; i < floors.size(); ++i) {
+	value_set_si(M->p[2*i][0], 1);
+	Vector_Copy(floors[i]->v->p+1, M->p[2*i]+1, dimension());
+	value_assign(M->p[2*i][1+D->Dimension], floors[i]->v->p[1+dimension()]);
+	value_oppose(M->p[2*i][1+dimension()+i], floors[i]->v->p[0]);
+
+	Vector_Scale(M->p[2*i]+1, M->p[2*i+1]+1, tmp, D->Dimension+1);
+	value_addto(M->p[2*i+1][1+D->Dimension], M->p[2*i+1][1+D->Dimension],
+		    M->p[2*i+1][1+dimension()+i]);
+	value_decrement(M->p[2*i+1][1+D->Dimension], M->p[2*i+1][1+D->Dimension]);
+	value_set_si(M->p[2*i+1][0], 1);
+    }
+    Polyhedron *E = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    Polyhedron *SD = DomainSimplify(D, E, options->MaxRays);
+    Polyhedron_Free(E);
+
+    char **names = p;
+    unsigned dim = dimension();
+    if (dim < SD->Dimension) {
+	names = new char * [SD->Dimension];
+	int i;
+	for (i = 0; i < dim; ++i)
+	    names[i] = p[i];
+	for ( ; i < SD->Dimension; ++i) {
+	    std::ostringstream strm;
+	    floors[i-dim]->print(strm, p);
+	    names[i] = strdup(strm.str().c_str());
+	}
+    }
+
+    for (int i = 0; i < SD->NbConstraints; ++i) {
+	int first = 1;
+	int v = First_Non_Zero(SD->Constraint[i]+1, SD->Dimension);
+	if (v == -1)
+	    continue;
+	if (i)
+	    os << " && ";
+	if (value_pos_p(SD->Constraint[i][v+1])) {
+	    print_term(os, SD->Constraint[i][v+1], v, SD->Dimension,
+		       names, NULL);
+	    if (value_zero_p(SD->Constraint[i][0]))
+		os << " = ";
+	    else
+		os << " >= ";
+	    for (int j = v+1; j <= SD->Dimension; ++j) {
+		value_oppose(tmp, SD->Constraint[i][1+j]);
+		print_term(os, tmp, j, SD->Dimension,
+			   names, &first);
+	    }
+	} else {
+	    value_oppose(tmp, SD->Constraint[i][1+v]);
+	    print_term(os, tmp, v, SD->Dimension,
+		       names, NULL);
+	    if (value_zero_p(SD->Constraint[i][0]))
+		os << " = ";
+	    else
+		os << " <= ";
+	    for (int j = v+1; j <= SD->Dimension; ++j)
+		print_term(os, SD->Constraint[i][1+j], j, SD->Dimension,
+			   names, &first);
+	}
+    }
+    value_clear(tmp);
+    Domain_Free(SD);
+
+    if (dim < D->Dimension) {
+	for (int i = dim; i < D->Dimension; ++i)
+	    free(names[i]);
+	delete [] names;
+    }
+}
 
 void EDomain::print(FILE *out, char **p)
 {

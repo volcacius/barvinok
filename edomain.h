@@ -1,9 +1,11 @@
+#include <iostream>
 #include <vector>
 #include <gmp.h>
 extern "C" {
 #include <polylib/polylibgmp.h>
 }
 #include <barvinok/evalue.h>
+#include <barvinok/options.h>
 
 struct EDomain_floor {
     int	     refcount;
@@ -24,6 +26,7 @@ struct EDomain_floor {
 	if (!--floor->refcount)
 	    delete floor;
     }
+    void print(std::ostream& os, char **p) const;
 };
 
 struct EDomain {
@@ -62,6 +65,8 @@ struct EDomain {
 	return -1;
     }
     void print(FILE *out, char **p);
+    void print_constraints(std::ostream& os, char **p,
+			   barvinok_options *options) const;
     ~EDomain() {
 	for (int i = 0; i < floors.size(); ++i)
 	    EDomain_floor::unref(floors[i]);
