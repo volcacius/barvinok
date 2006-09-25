@@ -27,6 +27,7 @@ struct EDomain_floor {
 	    delete floor;
     }
     void print(std::ostream& os, char **p) const;
+    void eval(Value *values, Value *res) const;
 };
 
 struct EDomain {
@@ -78,6 +79,7 @@ struct EDomain {
     unsigned dimension() const {
 	return D->Dimension - floors.size();
     }
+    bool contains(Value *point, int len) const;
 
     Matrix *add_ge_constraint(evalue *constraint,
 				 std::vector<EDomain_floor *>& new_floors) const;

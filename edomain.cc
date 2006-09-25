@@ -233,11 +233,33 @@ EDomain_floor::EDomain_floor(const evalue *f, int dim)
     refcount = 1;
 }
 
+void EDomain_floor::eval(Value *values, Value *res) const
+{
+    Inner_Product(v->p+1, values, v->Size-2, res);
+    value_addto(*res, *res, v->p[v->Size-1]);
+    value_pdivision(*res, *res, v->p[0]);
+}
+
 int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len)
 {
     Vector_Set(cons, 0, len);
     value_set_si(cons[0], 1);
     return evalue2constraint_r(D, E, cons, len);
+}
+
+bool EDomain::contains(Value *point, int len) const
+{
+    assert(len <= D->Dimension);
+    if (len == D->Dimension)
+	return in_domain(D, point);
+
+    Vector *all_val = Vector_Alloc(D->Dimension);
+    Vector_Copy(point, all_val->p, len);
+    for (int i = len-dimension(); i < floors.size(); ++i)
+	floors[i]->eval(all_val->p, &all_val->p[dimension()+i]);
+    bool in = in_domain(D, all_val->p);
+    Vector_Free(all_val);
+    return in;
 }
 
 Matrix *EDomain::add_ge_constraint(evalue *constraint,

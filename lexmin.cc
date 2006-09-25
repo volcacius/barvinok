@@ -610,7 +610,6 @@ struct max_term {
     vector<evalue *> max;
 
     void print(ostream& os, char **p, barvinok_options *options) const;
-    void resolve_existential_vars() const;
     void substitute(Matrix *T, unsigned MaxRays);
     Vector *eval(Value *val, unsigned MaxRays) const;
 
@@ -1433,59 +1432,6 @@ static void print_varlist(ostream& os, int n, char **names)
     os << "]";
 }
 
-/* We put all possible existentially quantified variables at the back
- * and so if any equalities exist between these variables and the
- * other variables, then PolyLib will replace all occurrences of some
- * of the other variables by some existentially quantified variables.
- * We want the output to have as few as possible references to the
- * existentially quantified variables, so we undo what PolyLib did here.
- */
-void resolve_existential_vars(Polyhedron *domain, unsigned dim)
-{
-    int last = domain->NbEq - 1;
-    /* Matrix "view" of domain for ExchangeRows */
-    Matrix M;
-    M.NbRows = domain->NbConstraints;
-    M.NbColumns = domain->Dimension+2;
-    M.p_Init = domain->p_Init;
-    M.p = domain->Constraint;
-    Value mone;
-    value_init(mone);
-    value_set_si(mone, -1);
-    for (int e = domain->Dimension-1; e >= dim; --e) {
-	int r;
-	for (r = last; r >= 0; --r)
-	    if (value_notzero_p(domain->Constraint[r][1+e]))
-		break;
-	if (r < 0)
-	    continue;
-	if (r != last)
-	    ExchangeRows(&M, r, last);
-
-	/* Combine uses the coefficient as a multiplier, so it must
-	 * be positive, since we are modifying an inequality.
-	 */
-	if (value_neg_p(domain->Constraint[last][1+e]))
-	    Vector_Scale(domain->Constraint[last]+1, domain->Constraint[last]+1,
-			 mone, domain->Dimension+1);
-
-	for (int c = 0; c < domain->NbConstraints; ++c) {
-	    if (c == last)
-		continue;
-	    if (value_notzero_p(domain->Constraint[c][1+e]))
-		Combine(domain->Constraint[c], domain->Constraint[last],
-			domain->Constraint[c], 1+e, domain->Dimension+1);
-	}
-	--last;
-    }
-    value_clear(mone);
-}
-
-void max_term::resolve_existential_vars() const
-{
-    ::resolve_existential_vars(domain->D, dim);
-}
-
 void max_term::print(ostream& os, char **p, barvinok_options *options) const
 {
     os << "{ ";
@@ -1634,143 +1580,6 @@ static void SwapColumns(Polyhedron *P, int i, int j)
     SwapColumns(P->Ray, P->NbRays, i, j);
 }
 
-bool in_domain(Polyhedron *P, Value *val, unsigned dim, unsigned MaxRays)
-{
-    int nexist = P->Dimension - dim;
-    int last[P->NbConstraints];
-    Value tmp, min, max;
-    Vector *all_val = Vector_Alloc(P->Dimension+1);
-    bool in = false;
-    int i;
-    int alternate;
-
-    resolve_existential_vars(P, dim);
-
-    Vector_Copy(val, all_val->p, dim);
-    value_set_si(all_val->p[P->Dimension], 1);
-
-    value_init(tmp);
-    for (int i = 0; i < P->NbConstraints; ++i) {
-	last[i] = Last_Non_Zero(P->Constraint[i]+1+dim, nexist);
-	if (last[i] == -1) {
-	    Inner_Product(P->Constraint[i]+1, all_val->p, P->Dimension+1, &tmp);
-	    if (value_neg_p(tmp))
-		goto out;
-	    if (i < P->NbEq && value_pos_p(tmp))
-		goto out;
-	}
-    }
-
-    value_init(min);
-    value_init(max);
-    alternate = nexist - 1;
-    for (i = 0; i < nexist; ++i) {
-	bool min_set = false;
-	bool max_set = false;
-	for (int j = 0; j < P->NbConstraints; ++j) {
-	    if (last[j] != i)
-		continue;
-	    Inner_Product(P->Constraint[j]+1, all_val->p, P->Dimension+1, &tmp);
-	    value_oppose(tmp, tmp);
-	    if (j < P->NbEq) {
-		if (!mpz_divisible_p(tmp, P->Constraint[j][1+dim+i]))
-		    goto out2;
-		value_division(tmp, tmp, P->Constraint[j][1+dim+i]);
-		if (!max_set || value_lt(tmp, max)) {
-		    max_set = true;
-		    value_assign(max, tmp);
-		}
-		if (!min_set || value_gt(tmp, min)) {
-		    min_set = true;
-		    value_assign(min, tmp);
-		}
-	    } else {
-		if (value_pos_p(P->Constraint[j][1+dim+i])) {
-		    mpz_cdiv_q(tmp, tmp, P->Constraint[j][1+dim+i]);
-		    if (!min_set || value_gt(tmp, min)) {
-			min_set = true;
-			value_assign(min, tmp);
-		    }
-		} else {
-		    mpz_fdiv_q(tmp, tmp, P->Constraint[j][1+dim+i]);
-		    if (!max_set || value_lt(tmp, max)) {
-			max_set = true;
-			value_assign(max, tmp);
-		    }
-		}
-	    }
-	}
-	/* Move another existential variable in current position */
-	if (!max_set || !min_set) {
-	    if (!(alternate > i)) {
-		Matrix *M = Matrix_Alloc(dim+i, 1+P->Dimension+1);
-		for (int j = 0; j < dim+i; ++j) {
-		    value_set_si(M->p[j][1+j], -1);
-		    value_assign(M->p[j][1+P->Dimension], all_val->p[j]);
-		}
-		Polyhedron *Q = AddConstraints(M->p[0], dim+i, P, MaxRays);
-		Matrix_Free(M);
-		Q = DomainConstraintSimplify(Q, MaxRays);
-		Vector *sample = Polyhedron_Sample(Q, MaxRays);
-		in = !!sample;
-		if (sample)
-		    Vector_Free(sample);
-		Polyhedron_Free(Q);
-		goto out2;
-	    }
-	    assert(alternate > i);
-	    SwapColumns(P, 1+dim+i, 1+dim+alternate);
-	    resolve_existential_vars(P, dim);
-	    for (int j = 0; j < P->NbConstraints; ++j) {
-		if (j >= P->NbEq && last[j] < i)
-		    continue;
-		last[j] = Last_Non_Zero(P->Constraint[j]+1+dim, nexist);
-		if (last[j] < i) {
-		    Inner_Product(P->Constraint[j]+1, all_val->p, P->Dimension+1, 
-				  &tmp);
-		    if (value_neg_p(tmp))
-			goto out2;
-		    if (j < P->NbEq && value_pos_p(tmp))
-			goto out2;
-		}
-	    }
-	    --alternate;
-	    --i;
-	    continue;
-	}
-	assert(max_set && min_set);
-	if (value_lt(max, min))
-	    goto out2;
-	if (value_ne(max, min)) {
-	    Matrix *M = Matrix_Alloc(dim+i, 1+P->Dimension+1);
-	    for (int j = 0; j < dim+i; ++j) {
-		value_set_si(M->p[j][1+j], -1);
-		value_assign(M->p[j][1+P->Dimension], all_val->p[j]);
-	    }
-	    Polyhedron *Q = AddConstraints(M->p[0], dim+i, P, MaxRays);
-	    Matrix_Free(M);
-	    Q = DomainConstraintSimplify(Q, MaxRays);
-	    Vector *sample = Polyhedron_Sample(Q, MaxRays);
-	    in = !!sample;
-	    if (sample)
-		Vector_Free(sample);
-	    Polyhedron_Free(Q);
-	    goto out2;
-	}
-	assert(value_eq(max, min));
-	value_assign(all_val->p[dim+i], max);
-	alternate = nexist - 1;
-    }
-    in = true;
-out2:
-    value_clear(min);
-    value_clear(max);
-out:
-    Vector_Free(all_val);
-    value_clear(tmp);
-    return in || (P->next && in_domain(P->next, val, dim, MaxRays));
-}
-
 void compute_evalue(evalue *e, Value *val, Value *res)
 {
     double d = compute_evalue(e, val);
@@ -1783,13 +1592,8 @@ void compute_evalue(evalue *e, Value *val, Value *res)
 
 Vector *max_term::eval(Value *val, unsigned MaxRays) const
 {
-    if (dim == domain->D->Dimension) {
-	if (!in_domain(domain->D, val))
-	    return NULL;
-    } else {
-	if (!in_domain(domain->D, val, dim, MaxRays))
-	    return NULL;
-    }
+    if (!domain->contains(val, dim))
+	return NULL;
     Vector *res = Vector_Alloc(max.size());
     for (int i = 0; i < max.size(); ++i) {
 	compute_evalue(max[i], val, &res->p[i]);
@@ -1893,7 +1697,7 @@ static void split_on(const split& sp, EDomain *D,
 	Vector_Copy(D->sample->p, sample->p, D->D->Dimension);
 	value_set_si(sample->p[D->D->Dimension+new_floors.size()], 1);
 	for (int i = 0; i < new_floors.size(); ++i)
-	    compute_evalue(new_floors[i]->e, sample->p, sample->p+D->D->Dimension+i);
+	    new_floors[i]->eval(sample->p, &sample->p[D->D->Dimension+i]);
     }
 
     for (int i = 0; i < new_floors.size(); ++i)
@@ -1902,8 +1706,7 @@ static void split_on(const split& sp, EDomain *D,
     for (int i = 0; i < 3; ++i) {
 	if (!ED[i])
 	    continue;
-	if (sample &&
-		in_domain(ED[i]->D, sample->p, sample->Size-1, options->MaxRays)) {
+	if (sample && ED[i]->contains(sample->p, sample->Size-1)) {
 	    ED[i]->sample = Vector_Alloc(sample->Size);
 	    Vector_Copy(sample->p, ED[i]->sample->p, sample->Size);
 	} else if (emptyQ2(ED[i]->D) ||
