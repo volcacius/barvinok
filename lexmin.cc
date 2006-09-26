@@ -2028,15 +2028,11 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    diff = ediff(best->vertex[k], second->vertex[k]);
 	    sign = evalue_sign(diff, ind.D, ind.options->MaxRays);
 
-	    /* neg can never be smaller than best, unless it may still cancel
-	     * This optimization is disabled for now since we can't know
-	     * for sure that neg won't cancel.  It may not have been compared
-	     * yet to another negative term that is equal of less than or eqaul
-	     * to some positive terms.
+	    /* neg can never be smaller than best, unless it may still cancel.
+	     * This can happen if positive terms have been determined to
+	     * be equal or less than or equal to some negative term.
 	     */
-	    if (0 && second == neg &&
-		ind.order.eq.find(neg) == ind.order.eq.end() &&
-		ind.order.le.find(neg) == ind.order.le.end()) {
+	    if (second == neg && !neg_eq && !neg_le) {
 		if (sign == order_ge)
 		    sign = order_eq;
 		if (sign == order_unknown)
