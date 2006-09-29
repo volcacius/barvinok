@@ -1,3 +1,13 @@
+/***********************************************************************/
+/*                copyright 1997, Doran Wilde                          */
+/*                copyright 1997-2000, Vincent Loechner                */
+/*                copyright 2003-2006, Sven Verdoolaege                */
+/*       Permission is granted to copy, use, and distribute            */
+/*       for any commercial or noncommercial purpose under the terms   */
+/*       of the GNU General Public license, version 2, June 1991       */
+/*       (see file : LICENSE).                                         */
+/***********************************************************************/
+
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
