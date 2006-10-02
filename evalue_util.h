@@ -5,5 +5,4 @@ extern "C" {
 }
 #include <barvinok/evalue.h>
 
-void evalue_denom(evalue *e, Value *d);
 void evalue_print(std::ostream& o, evalue *e, char **p);

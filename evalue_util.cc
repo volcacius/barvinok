@@ -7,17 +7,6 @@ static int type_offset(enode *p)
 	  p->type == flooring ? 1 : 0;
 }
 
-void evalue_denom(evalue *e, Value *d)
-{
-    if (value_notzero_p(e->d)) {
-	value_lcm(*d, e->d, d);
-	return;
-    }
-    int offset = type_offset(e->x.p);
-    for (int i = e->x.p->size-1; i >= offset; --i)
-	evalue_denom(&e->x.p->arr[i], d);
-}
-
 static void evalue_print(std::ostream& o, evalue *e, char **p, int d)
 {
     if (value_notzero_p(e->d)) {

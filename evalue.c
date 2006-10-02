@@ -3317,3 +3317,18 @@ void eor(evalue *e1, evalue *res)
     free_evalue_refs(&E); 
     free_evalue_refs(&mone);
 }
+
+/* computes denominator of polynomial evalue 
+ * d should point to an initialized value
+ */
+void evalue_denom(evalue *e, Value *d)
+{
+    int i;
+    if (value_notzero_p(e->d)) {
+	value_lcm(*d, e->d, d);
+	return;
+    }
+    int offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	evalue_denom(&e->x.p->arr[i], d);
+}
