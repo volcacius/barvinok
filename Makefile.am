@@ -126,9 +126,9 @@ dist-hook:
 	fi
 
 if HAVE_PIPLIB
-BEE_TESTDIRS = ehrhart_e ehrhart_e/piplib
+BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
 else
-BEE_TESTDIRS = ehrhart_e
+BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
 endif
 
 check-series:
@@ -154,6 +154,12 @@ check:
 		    fi \
 		done \
 	    done \
+	done
+	@for i in $(top_srcdir)/tests/ehrhart_e/scarf/*; do \
+	    if test -f $$i; then \
+		echo $$i --scarf; \
+		./barvinok_enumerate_e --verify --scarf < $$i; \
+	    fi \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \

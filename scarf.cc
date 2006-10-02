@@ -49,7 +49,7 @@ static void set_pos(int pos[4], int actual, int wanted)
     pos[wanted] = t;
 }
 
-static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
+static Matrix *normalize_matrix(Matrix *A, int pos[4], int *n)
 {
     Matrix *T, *B;
     Value tmp, tmp2, factor;
@@ -72,12 +72,16 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
     Matrix_Product(T, A, B);
     Matrix_Free(T);
 
+    /* Make zero in first position negative */
     if (lex_sign(B->p[1], B->NbColumns) > 0) {
 	value_set_si(tmp, -1);
 	Vector_Scale(B->p[1], B->p[1], tmp, B->NbColumns);
     }
 
-    if (n == 3) {
+    /* First determine whether the matrix is of sign pattern I or II
+     * (Theorem 1.11)
+     */
+    if (*n == 3) {
 	assert(value_neg_p(B->p[1][pos[1]]));
 	assert(value_pos_p(B->p[1][pos[2]]));
 
@@ -93,6 +97,9 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
 	Vector_Combine(B->p[0], B->p[1], B->p[0],
 		       tmp, factor, B->NbColumns);
 	Vector_Exchange(B->p[0], B->p[1], B->NbColumns);
+	/* problems with three constraints are considered
+	 * to be of sign pattern II
+	 */
 	type = 2;
     } else {
 	int i;
@@ -124,6 +131,8 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
 	    type = value_pos_p(B->p[0][pos[3]]) ? 1 : 2;
 	} else {
 	    int neg = 0;
+	    int sign = lex_sign(B->p[1], B->NbColumns);
+	    assert(sign < 0);
 	    for (int i = 1; i <= 3; ++i)
 		if (value_neg_p(B->p[1][pos[i]]))
 		    ++neg;
@@ -258,6 +267,7 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
 	switch(neg) {
 	    int i;
 	case 1:
+	    /* cases 4 and 5 in Theorem 11.1 */
 	    value_set_si(tmp, 1);
 	    Vector_Combine(B->p[0], B->p[1], B->p[1], tmp, tmp, B->NbColumns);
 
@@ -266,15 +276,25 @@ static Matrix *normalize_matrix(Matrix *A, int pos[4], int n)
 		if (value_pos_p(B->p[0][pos[i]]) && value_pos_p(B->p[1][pos[i]]))
 		    break;
 	    assert(i <= 3);
-	    if (i != 3) {
-		int t = pos[i];
-		pos[i] = pos[3];
-		pos[3] = t;
-	    }
+	    set_pos(pos, i, 3);
 
 	    break;
-	case 0:
 	case 2:
+	    /* cases 1 and 2 in Theorem 11.1 */
+	    value_set_si(tmp, 1);
+	    Vector_Combine(B->p[0], B->p[1], B->p[0], tmp, tmp, B->NbColumns);
+
+	    /* put positive one in position 2 */
+	    for (i = 1; i <= 3; ++i)
+		if (value_pos_p(B->p[0][pos[i]]))
+		    break;
+	    assert(i <= 3);
+	    set_pos(pos, i, 2);
+
+	    /* fourth constraint is redundant with respect to neighborhoods */
+	    *n = 3;
+	    break;
+	case 0:
 	    /* We will deal with these later */
 	    assert(0);
 	}
@@ -875,7 +895,7 @@ static void scarf(Polyhedron *P, unsigned exist, unsigned nparam, unsigned MaxRa
     }
 
     assert(l >= 3 && l <= 4);
-    B = normalize_matrix(A, pos, l);
+    B = normalize_matrix(A, pos, &l);
 
     scarf_complex scarf;
     scarf.add(B, pos, l);
