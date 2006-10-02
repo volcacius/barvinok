@@ -1406,6 +1406,7 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
     Matrix *M, *H, *Q, *U, *C, *ratH, *invH, *Ul, *T1, *T2, *T;
     Value mone;
     int n, i;
+    int ok;
 
     for (n = 0; n < Equalities->NbRows; ++n)
 	if (First_Non_Zero(Equalities->p[n]+1, dim) == -1)
@@ -1436,10 +1437,10 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
     for (i = 0; i < n; ++i)
 	Vector_Copy(H->p[i], ratH->p[i], n);
     value_set_si(ratH->p[n][n], 1);
-    int ok = Matrix_Inverse(ratH, invH);
+    ok = Matrix_Inverse(ratH, invH);
+    assert(ok);
     Matrix_Free(H);
     Matrix_Free(ratH);
-    assert(ok);
     T1 = Matrix_Alloc(n+1, nparam+1);
     Matrix_Product(invH, C, T1);
     Matrix_Free(C);
