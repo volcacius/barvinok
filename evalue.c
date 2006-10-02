@@ -3324,11 +3324,13 @@ void eor(evalue *e1, evalue *res)
 void evalue_denom(evalue *e, Value *d)
 {
     int i;
+    int offset;
+
     if (value_notzero_p(e->d)) {
 	value_lcm(*d, e->d, d);
 	return;
     }
-    int offset = type_offset(e->x.p);
+    offset = type_offset(e->x.p);
     for (i = e->x.p->size-1; i >= offset; --i)
 	evalue_denom(&e->x.p->arr[i], d);
 }
