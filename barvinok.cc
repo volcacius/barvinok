@@ -410,7 +410,7 @@ struct counter : public np_base {
 	mpq_init(count);
     }
 
-    virtual void start(Polyhedron *P, unsigned MaxRays);
+    virtual void start(Polyhedron *P, barvinok_options *options);
 
     ~counter() {
 	mpq_clear(count);
@@ -452,12 +452,12 @@ void counter::handle_polar(Polyhedron *C, Value *V, QQ c)
     d.div(n, count, sign);
 }
 
-void counter::start(Polyhedron *P, unsigned MaxRays)
+void counter::start(Polyhedron *P, barvinok_options *options)
 {
     for (;;) {
 	try {
 	    randomvector(P, lambda, dim);
-	    np_base::start(P, MaxRays);
+	    np_base::start(P, options);
 	    break;
 	} catch (OrthogonalException &e) {
 	    mpq_set_si(count, 0, 0);
@@ -816,7 +816,7 @@ static void barvinok_count_f(Polyhedron *P, Value* result,
 	cnt = new icounter(P->Dimension);
     else
 	cnt = new counter(P->Dimension);
-    cnt->start(P, options->MaxRays);
+    cnt->start(P, options);
 
     cnt->get_count(result);
     delete cnt;
@@ -956,7 +956,7 @@ struct enumerator : public polar_decomposer {
 	mpq_init(count);
     }
 
-    void decompose_at(Param_Vertices *V, int _i, unsigned MaxRays) {
+    void decompose_at(Param_Vertices *V, int _i, barvinok_options *options) {
 	Polyhedron *C = supporting_cone_p(P, V);
 	this->_i = _i;
 	this->V = V;
@@ -965,7 +965,7 @@ struct enumerator : public polar_decomposer {
 	value_init(vE[_i]->d);
 	evalue_set_si(vE[_i], 0, 1);
 
-	decompose(C, MaxRays);
+	decompose(C, options);
     }
 
     ~enumerator() {
@@ -1055,14 +1055,14 @@ struct enumerator_base {
 	evalue_set_si(&mone, -1, 1);
     }
 
-    void decompose_at(Param_Vertices *V, int _i, unsigned MaxRays/*, Polyhedron *pVD*/) {
+    void decompose_at(Param_Vertices *V, int _i, barvinok_options *options) {
 	//this->pVD = pVD;
 
 	vE[_i] = new evalue;
 	value_init(vE[_i]->d);
 	evalue_set_si(vE[_i], 0, 1);
 
-	vpd->decompose_at_vertex(V, _i, MaxRays);
+	vpd->decompose_at_vertex(V, _i, options);
     }
 
     ~enumerator_base() {
@@ -1672,7 +1672,7 @@ static Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
 #endif
 
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
-				       unsigned MaxRays);
+				       barvinok_options *options);
 
 /* Destroys C */
 static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C, 
@@ -1782,7 +1782,7 @@ out:
 
     Polyhedron *next = P->next;
     P->next = NULL;
-    eres = barvinok_enumerate_ev_f(P, C, options->MaxRays);
+    eres = barvinok_enumerate_ev_f(P, C, options);
     P->next = next;
 
     if (P->next) {
@@ -1793,7 +1793,7 @@ out:
 	    Polyhedron *next = Q->next;
 	    Q->next = NULL;
 
-	    f = barvinok_enumerate_ev_f(Q, C, options->MaxRays);
+	    f = barvinok_enumerate_ev_f(Q, C, options);
 	    emul(f, eres);
 	    free_evalue_refs(f);
 	    free(f);
@@ -1816,12 +1816,12 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 }
 
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
-				       unsigned MaxRays)
+				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
 
     if (P->Dimension - nparam == 1)
-	return ParamLine_Length(P, C, MaxRays);
+	return ParamLine_Length(P, C, options->MaxRays);
 
     Param_Polyhedron *PP = NULL;
     Polyhedron *CEq = NULL, *pVD;
@@ -1831,7 +1831,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     evalue *eres;
     Polyhedron *Porig = P;
 
-    PP = Polyhedron2Param_SD(&P,C,MaxRays,&CEq,&CT);
+    PP = Polyhedron2Param_SD(&P,C,options->MaxRays,&CEq,&CT);
 
     if (isIdentity(CT)) {
 	Matrix_Free(CT);
@@ -1839,7 +1839,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     } else {
 	assert(CT->NbRows != CT->NbColumns);
 	if (CT->NbRows == 1) {		// no more parameters
-	    eres = barvinok_enumerate_cst(P, CEq, MaxRays);
+	    eres = barvinok_enumerate_cst(P, CEq, options->MaxRays);
 out:
 	    if (CT)
 		Matrix_Free(CT);
@@ -1878,11 +1878,11 @@ try_again:
 	next = D->next;
 
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, MaxRays);
+					fVD, nd, options->MaxRays);
 	if (!rVD)
 	    continue;
 
-	pVD = CT ? DomainImage(rVD,CT,MaxRays) : rVD;
+	pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
 
 	value_init(s[nd].E.d);
 	evalue_set_si(&s[nd].E, 0, 1);
@@ -1891,7 +1891,7 @@ try_again:
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    if (!et.vE[_i])
 		try {
-		    et.decompose_at(V, _i, MaxRays);
+		    et.decompose_at(V, _i, options);
 		} catch (OrthogonalException &e) {
 		    if (rVD != pVD)
 			Domain_Free(pVD);
@@ -3576,7 +3576,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
 	red = gf_base::create(Polyhedron_Project(P, nparam),
 			      P->Dimension, nparam, options);
 	POL_ENSURE_VERTICES(P);
-	red->start_gf(P, options->MaxRays);
+	red->start_gf(P, options);
 	gf = red->gf;
 	delete red;
     }

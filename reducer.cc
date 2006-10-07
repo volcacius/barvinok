@@ -13,7 +13,7 @@ void np_base::handle_polar(Polyhedron *C, int s)
     factor.n *= s;
 }
 
-void np_base::start(Polyhedron *P, unsigned MaxRays)
+void np_base::start(Polyhedron *P, barvinok_options *options)
 {
     QQ factor(1, 1);
     init(P);
@@ -22,7 +22,7 @@ void np_base::start(Polyhedron *P, unsigned MaxRays)
 	    continue;
 
 	Polyhedron *C = supporting_cone(P, i);
-	do_vertex_cone(factor, C, P->Ray[i]+1, MaxRays);
+	do_vertex_cone(factor, C, P->Ray[i]+1, options);
     }
 }
 

@@ -9,6 +9,11 @@ struct barvinok_options {
     /* PolyLib options */
     unsigned	MaxRays;
 
+    /* NTL options */
+		/* LLL reduction parameter delta=LLL_a/LLL_b */
+    long	LLL_a;
+    long	LLL_b;
+
     /* barvinok options */
 		/*
 		 * 0: no

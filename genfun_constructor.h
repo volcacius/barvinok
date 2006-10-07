@@ -26,8 +26,8 @@ struct gf_base {
     static gf_base *create(Polyhedron *context, unsigned dim, unsigned nparam,
 			   barvinok_options *options);
 
-    void start_gf(Polyhedron *P, unsigned MaxRays) {
-	base->start(P, MaxRays);
+    void start_gf(Polyhedron *P, barvinok_options *options) {
+	base->start(P, options);
     }
 };
 

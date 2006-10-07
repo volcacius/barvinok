@@ -1109,7 +1109,7 @@ void indicator::expand_rational_vertex(indicator_term *initial)
 	Param_Vertices *V;
 	FORALL_PVertex_in_ParamPolyhedron(V, PD, ic.PP) // _i is internal counter
 	    if (_i == pos) {
-		ic.decompose_at_vertex(V, pos, options->MaxRays);
+		ic.decompose_at_vertex(V, pos, options);
 		break;
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;

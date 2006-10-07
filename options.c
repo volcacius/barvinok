@@ -18,6 +18,9 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     if (!options)
 	return NULL;
 
+    options->LLL_a = 3;
+    options->LLL_b = 4;
+
     options->MaxRays = MAXRAYS;
 
 #ifdef USE_INCREMENTAL_BF

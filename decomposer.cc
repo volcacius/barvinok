@@ -45,7 +45,7 @@ public:
 	det = determinant(A);
     }
 
-    Vector* short_vector(vec_ZZ& lambda) {
+    Vector* short_vector(vec_ZZ& lambda, barvinok_options *options) {
 	Matrix *M = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
@@ -56,7 +56,7 @@ public:
 	mat_ZZ B;
 	mat_ZZ U;
 	matrix2zz(inv, B, inv->NbRows - 1, inv->NbColumns - 1);
-	long r = LLL(det2, B, U);
+	long r = LLL(det2, B, U, options->LLL_a, options->LLL_b);
 
 	ZZ min = max(B[0]);
 	int index = 0;
@@ -119,7 +119,7 @@ public:
     Matrix *Rays;
 };
 
-void decomposer::decompose(Polyhedron *C)
+void decomposer::decompose(Polyhedron *C, barvinok_options *options)
 {
     vector<cone *> nonuni;
     cone * c = new cone(C);
@@ -141,7 +141,7 @@ void decomposer::decompose(Polyhedron *C)
     while (!nonuni.empty()) {
 	c = nonuni.back();
 	nonuni.pop_back();
-	Vector* v = c->short_vector(lambda);
+	Vector* v = c->short_vector(lambda, options);
 	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
 	    if (lambda[i] == 0)
 		continue;
@@ -176,18 +176,18 @@ void decomposer::decompose(Polyhedron *C)
     }
 }
 
-void polar_decomposer::decompose(Polyhedron *cone, unsigned MaxRays)
+void polar_decomposer::decompose(Polyhedron *cone, barvinok_options *options)
 {
     POL_ENSURE_VERTICES(cone);
     Polyhedron_Polarize(cone);
     if (cone->NbRays - 1 != cone->Dimension) {
 	Polyhedron *tmp = cone;
-	cone = triangulate_cone(cone, MaxRays);
+	cone = triangulate_cone(cone, options->MaxRays);
 	Polyhedron_Free(tmp);
     }
     try {
 	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	    decomposer::decompose(Polar);
+	    decomposer::decompose(Polar, options);
 	Domain_Free(cone);
     } catch (...) {
 	Domain_Free(cone);
@@ -202,13 +202,13 @@ void polar_decomposer::handle(Polyhedron *P, int sign)
 }
 
 void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i, 
-					    unsigned MaxRays)
+					    barvinok_options *options)
 {
     Polyhedron *C = supporting_cone_p(P, V);
     vert = _i;
     this->V = V;
 
-    pd->decompose(C, MaxRays);
+    pd->decompose(C, options);
 }
 
 /*
@@ -218,6 +218,7 @@ void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i,
  */
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 {
+    barvinok_options *options = barvinok_options_new_with_defaults();
     Polyhedron *pos = *ppos, *neg = *pneg;
     vector<cone *> nonuni;
     cone * c = new cone(C);
@@ -236,7 +237,7 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     while (!nonuni.empty()) {
 	c = nonuni.back();
 	nonuni.pop_back();
-	Vector* v = c->short_vector(lambda);
+	Vector* v = c->short_vector(lambda, options);
 	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
 	    if (lambda[i] == 0)
 		continue;
@@ -266,5 +267,6 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     }
     *ppos = pos;
     *pneg = neg;
+    free(options);
 }
 

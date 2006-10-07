@@ -3,6 +3,7 @@
 
 #include <NTL/mat_ZZ.h>
 #include <barvinok/NTL_QQ.h>
+#include <barvinok/options.h>
 #include "decomposer.h"
 #include "dpoly.h"
 
@@ -24,12 +25,12 @@ struct np_base : public polar_decomposer {
 
     virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c) = 0;
     virtual void handle_polar(Polyhedron *C, int s);
-    virtual void start(Polyhedron *P, unsigned MaxRays);
+    virtual void start(Polyhedron *P, barvinok_options *options);
     void do_vertex_cone(const QQ& factor, Polyhedron *Cone, 
-			Value *vertex, unsigned MaxRays) {
+			Value *vertex, barvinok_options *options) {
 	current_vertex = vertex;
 	this->factor = factor;
-	decompose(Cone, MaxRays);
+	decompose(Cone, options);
     }
     virtual void init(Polyhedron *P) {
     }

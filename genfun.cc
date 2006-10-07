@@ -414,8 +414,7 @@ struct parallel_polytopes {
 	    for (int j = 0; j < cones[i].vertices.size(); ++j) {
 		red->base->do_vertex_cone(cones[i].vertices[j].second,
 					  Polyhedron_Copy(Cone),
-					  cones[i].vertices[j].first->p,
-					  options->MaxRays);
+					  cones[i].vertices[j].first->p, options);
 	    }
 	    Polyhedron_Free(Cone);
 	}
