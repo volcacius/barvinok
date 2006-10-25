@@ -1,7 +1,6 @@
 #!/bin/sh
 libtoolize -c --force
-aclocal -I m4
+aclocal
 autoheader
 automake -a -c --foreign
 autoconf
-(cd bernstein; ./autogen.sh)

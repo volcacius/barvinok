@@ -3323,13 +3323,15 @@ void eor(evalue *e1, evalue *res)
  */
 void evalue_denom(evalue *e, Value *d)
 {
-    int i;
-    int offset;
+    int i, offset;
 
     if (value_notzero_p(e->d)) {
 	value_lcm(*d, e->d, d);
 	return;
     }
+    assert(e->x.p->type == polynomial ||
+	   e->x.p->type == fractional ||
+	   e->x.p->type == flooring);
     offset = type_offset(e->x.p);
     for (i = e->x.p->size-1; i >= offset; --i)
 	evalue_denom(&e->x.p->arr[i], d);
