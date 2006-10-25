@@ -1,3 +1,9 @@
+The input of the bernstein executable consists of
+- the parametric polytope in PolyLib notation
+- the context in PolyLib notation
+- a list of the names of the variables and the parameters
+- the parametric polynomial in GiNac notation
+
 ---------------------------------------------------------------------------
 Brief description of examples:
 
