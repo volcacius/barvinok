@@ -19,6 +19,7 @@ Additionally, the following packages can optionally be used
 - Omega (http://www.cs.umd.edu/projects/omega/ or 
     http://www.liacs.nl/~sverdool/gitweb.cgi?p=omega.git;a=summary)
 - GLPK (http://www.gnu.org/software/glpk/)
+- GiNaC (http://www.ginac.de/) (needed for the bernstein library)
 
 Both NTL and PolyLib need to have been compiled with GMP
 support.
