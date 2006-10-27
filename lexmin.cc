@@ -1710,7 +1710,7 @@ static void split_on(const split& sp, EDomain *D,
 	    ED[i]->sample = Vector_Alloc(sample->Size);
 	    Vector_Copy(sample->p, ED[i]->sample->p, sample->Size);
 	} else if (emptyQ2(ED[i]->D) ||
-		    (options->emptiness_check == 1 &&
+		    (options->lexmin_emptiness_check == 1 &&
 		     !(ED[i]->sample = Polyhedron_not_empty(ED[i]->D,
 							    options->MaxRays)))) {
 	    delete ED[i];
@@ -1970,7 +1970,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	if (!best) {
 	    /* apparently there can be negative initial term on empty domains */
-	    if (ind.options->emptiness_check == 1)
+	    if (ind.options->lexmin_emptiness_check == 1)
 		assert(!neg);
 	    break;
 	}
@@ -1981,7 +1981,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    if (ind.order.le[best].size() == 0) {
 		if (ind.order.eq[best].size() != 0) {
 		    bool handled = ind.handle_equal_numerators(best);
-		    if (ind.options->emptiness_check == 1)
+		    if (ind.options->lexmin_emptiness_check == 1)
 			assert(handled);
 		    /* If !handled then the leading coefficient is bigger than one;
 		     * must be an empty domain
@@ -2064,7 +2064,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	EDomain *Dlt, *Deq, *Dgt;
 	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.options);
-	if (ind.options->emptiness_check == 1)
+	if (ind.options->lexmin_emptiness_check == 1)
 	    assert(Dlt || Deq || Dgt);
 	else if (!(Dlt || Deq || Dgt))
 	    /* Must have been empty all along */
@@ -2263,7 +2263,7 @@ int main(int argc, char **argv)
     while ((c = getopt_long(argc, argv, "TAm:M:r:V", lexmin_options, &ind)) != -1) {
 	switch (c) {
 	case NO_EMPTINESS_CHECK:
-	    options->emptiness_check = 0;
+	    options->lexmin_emptiness_check = 0;
 	    break;
 	case 'T':
 	    verify = 1;

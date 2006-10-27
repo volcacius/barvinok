@@ -23,11 +23,11 @@ struct barvinok_options {
     int		incremental_specialization;
 
     /* lexmin options */
-		/* Check for integer point in domain
+		/* Check for integer points in domain
 		 * 0: no
 		 * 1: yes
 		 */
-    int		emptiness_check;
+    int		lexmin_emptiness_check;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();

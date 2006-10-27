@@ -31,7 +31,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->incremental_specialization = 0;
 #endif
 
-    options->emptiness_check = 1;
+    options->lexmin_emptiness_check = 1;
 
     return options;
 }
