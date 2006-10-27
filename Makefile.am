@@ -53,6 +53,7 @@ libbarvinok_la_SOURCES = \
     reduce_domain.h \
     reducer.cc \
     reducer.h \
+    scarf.cc \
     mat_util.cc \
     mat_util.h \
     barvinok.cc \
@@ -79,13 +80,12 @@ BEEO_SOURCES =
 endif
 barvinok_enumerate_e_SOURCES = \
 	barvinok_enumerate_e.cc \
-	scarf.cc \
 	$(BEEO_SOURCES)
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ @CPPFLAGS@
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
-4coins_SOURCES = 4coins.cc scarf.cc
+4coins_SOURCES = 4coins.cc
 lexmin_SOURCES = \
 	lexmin.cc \
 	combine.c \

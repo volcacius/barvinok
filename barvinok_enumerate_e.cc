@@ -3,7 +3,6 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"
-#include "scarf.h"
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
 #endif

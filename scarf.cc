@@ -1,7 +1,6 @@
 #include <vector>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
-#include "scarf.h"
 
 using std::vector;
 

@@ -2,8 +2,8 @@
 #include <polylib/polylibgmp.h>
 #include <barvinok/genfun.h>
 #include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 #include "basis_reduction.h"
-#include "scarf.h"
 #include "config.h"
 
 using std::cout;

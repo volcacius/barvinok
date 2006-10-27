@@ -22,6 +22,9 @@ evalue* barvinok_enumerate_e(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 evalue *barvinok_enumerate_pip(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
+evalue *barvinok_enumerate_scarf(Polyhedron *P,
+			  unsigned exist, unsigned nparam,
+			  struct barvinok_options *options);
 evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays);
 
 /* private function */
@@ -39,6 +42,9 @@ void zz2value(const ZZ& z, Value& v);
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
 				       barvinok_options *options);
+gen_fun *barvinok_enumerate_scarf_series(Polyhedron *P,
+			  unsigned exist, unsigned nparam,
+			  barvinok_options *options);
 gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
 					 unsigned MaxRays);
 gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron* C, 
