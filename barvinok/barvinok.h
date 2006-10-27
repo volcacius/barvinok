@@ -7,12 +7,17 @@
 extern "C" {
 #endif
 
+#include <barvinok/options.h>
 #include <barvinok/evalue.h>
 
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons);
+void barvinok_count_with_options(Polyhedron *P, Value* result,
+				 struct barvinok_options *options);
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
+evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
+					struct barvinok_options *options);
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 evalue *barvinok_enumerate_pip(Polyhedron *P,
@@ -32,8 +37,12 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P);
 
 void zz2value(const ZZ& z, Value& v);
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
+gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
+				       barvinok_options *options);
 gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
 					 unsigned MaxRays);
+gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron* C, 
+						      barvinok_options *options);
 
 #endif
 
