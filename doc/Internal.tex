@@ -206,6 +206,93 @@ $.
 \end{figure}
 \end{example}
 
+\subsection{Options}
+\label{a:options}
+
+The \ai[\tt]{barvinok\_options} structure contains various
+options that influence the behavior of the library.
+
+\begin{verbatim}
+struct barvinok_options {
+    /* PolyLib options */
+    unsigned    MaxRays;
+
+    /* NTL options */
+                /* LLL reduction parameter delta=LLL_a/LLL_b */
+    long        LLL_a;
+    long        LLL_b;
+
+    /* barvinok options */
+                /*
+                 * 0: no
+                 * 1: depth first
+                 * 2: breadth frist
+                 */
+    int         incremental_specialization;
+};
+
+struct barvinok_options *barvinok_options_new_with_defaults();
+\end{verbatim}
+
+The function \ai[\tt]{barvinok\_options\_new\_with\_defaults}
+can be used to create a \ai[\tt]{barvinok\_options} structure
+with default values.
+
+\begin{itemize}
+\item \PolyLib/ options
+
+\begin{itemize}
+
+\item \ai[\tt]{MaxRays}
+
+The value of \ai[\tt]{MaxRays} is passed to various \PolyLib/
+functions and defines the
+maximum size of a table used in the \ai{double description} computation
+in the \PolyLib/ function \ai[\tt]{Chernikova}.
+In earlier versions of \PolyLib/,
+this parameter had to be conservatively set
+to a high number to ensure successful operation,
+resulting in significant memory overhead.
+Our change to allow this table to grow
+dynamically is available in recent versions of \PolyLib/.
+In these versions, the value no longer indicates the maximal
+table size, but rather the size of the initial allocation.
+This value may be set to \verb+0+ or left as set
+by \ai[\tt]{barvinok\_options\_new\_with\_defaults}.
+
+\end{itemize}
+
+\item \ai[\tt]{NTL} options
+
+\begin{itemize}
+
+\item \ai[\tt]{LLL\_a}
+\item \ai[\tt]{LLL\_b}
+
+The values used for the \ai{reduction parameter}
+in the call to \ai[\tt]{NTL}'s implemenation of \indac{LLL}.
+
+\end{itemize}
+
+\item \ai[\tt]{barvinok} specific options
+
+\begin{itemize}
+
+\item \ai[\tt]{incremental\_specialization}
+
+Selects the \ai{specialization} algorithm to be used.
+If set to {\tt 0} then a direct specialization is performed
+using a random vector.
+Value {\tt 1} selects a depth first incremental specialization,
+while value {\tt 2} selects a breadth first incremental specialization.
+The default is selected by the \ai[\tt]{--enable-incremental}
+\ai[\tt]{configure} option.
+For more information we refer to~\citeN[Section~4.4.3]{Verdoolaege2005PhD}.
+
+\end{itemize}
+
+\end{itemize}
+
 \subsection{Data Structures for Quasi-polynomials}
 \label{a:data}
 
@@ -651,28 +738,24 @@ region with lexico-positive rays.
 Our library provides essentially three different counting functions:
 one for non-parametric polytopes, one for parametric polytopes
 and one for parametric sets with existential variables.
+The old versions of these functions have a ``\ai[\tt]{MaxRays}''
+argument, while the new versions have a more general
+\ai[\tt]{barvinok\_options} argument.
+For more infomation on \ai[\tt]{barvinok\_options}, see Section~\ref{a:options}.
 
 \begin{verbatim}
 void barvinok_count(Polyhedron *P, Value* result, 
                     unsigned NbMaxCons);
+void barvinok_count_with_options(Polyhedron *P, Value* result,
+                                 struct barvinok_options *options);
 \end{verbatim}
-The function \ai[\tt]{barvinok\_count} enumerates the non-parametric
+The function \ai[\tt]{barvinok\_count} or
+\ai[\tt]{barvinok\_count\_with\_options} enumerates the non-parametric
 polytope \verb+P+ and returns the result in the \ai[\tt]{Value}
 pointed to by \verb+result+, which needs to have been allocated
 and initialized.
-The argument \verb+NbMaxCons+ is passed to various \PolyLib/
-functions and defines the
-maximum size of a table used in the double description computation
-in the \PolyLib/ function \ai[\tt]{Chernikova}.
-In earlier versions of \PolyLib/,
-this parameter had to be conservatively set
-to a high number to ensure successful operation,
-resulting in significant memory overhead.
-Our change to allow this table to grow
-dynamically is available in recent versions of \PolyLib/.
-In these versions, the value no longer indicates the maximal
-table size, but rather the size of the initial allocation.
-This value may be set to \verb+0+.
+For the meaning of the argument \verb+NbMaxCons+, see
+the discussion on \ai[\tt]{MaxRays} in Section~\ref{a:options}.
 
 The function \ai[\tt]{barvinok\_enumerate} for enumerating
 parametric polytopes was meant to be
@@ -699,11 +782,14 @@ Note that the dimensions referring to the parameters should
 appear {\em last}.
 The result is a newly allocated \ai[\tt]{Enumeration}.
 As an alternative we also provide a function 
-(\ai[\tt]{barvinok\_enumerate\_ev}) that returns
+(\ai[\tt]{barvinok\_enumerate\_ev} or
+\ai[\tt]{barvinok\_enumerate\_with\_options}) that returns
 an \ai[\tt]{evalue}.
 \begin{verbatim}
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, 
                               unsigned MaxRays);
+evalue* barvinok_enumerate_with_options(Polyhedron *P,
+        Polyhedron* C, struct barvinok_options *options);
 \end{verbatim}
 
 For enumerating parametric sets with existentially quantified variables,
@@ -730,13 +816,16 @@ counted variables first, then existential variables and finally
 the parameters.
 
 The function 
-\ai[\tt]{barvinok\_series} enumerates parametric polytopes
+\ai[\tt]{barvinok\_series} or
+\ai[\tt]{barvinok\_series\_with\_options} enumerates parametric polytopes
 in the form of a \rgf/.
 The polyhedron \verb+P+ is assumed to have only
 lexico-positive rays.
 \begin{verbatim}
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, 
                           unsigned MaxRays);
+gen_fun * barvinok_series_with_options(Polyhedron *P,
+    Polyhedron* C, barvinok_options *options);
 \end{verbatim}
 
 \subsection{Auxiliary Functions}
