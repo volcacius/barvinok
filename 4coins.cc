@@ -121,7 +121,7 @@ int main(int argc, char **argv)
     up[0] = 1;
     up[1] = 0;
 
-    S = barvinok_enumerate_scarf_series(P, 2, 2, options->MaxRays);
+    S = barvinok_enumerate_scarf_series(P, 2, 2, options);
     S->print(std::cerr, 0, NULL);
     cerr << endl;
 

@@ -863,11 +863,12 @@ void scarf_complex::print(FILE *out)
 }
 
 struct scarf_collector {
-    virtual void add(Polyhedron *P, int sign, Polyhedron *C, unsigned MaxRays) = 0;
+    virtual void add(Polyhedron *P, int sign, Polyhedron *C,
+		     barvinok_options *options) = 0;
 };
 
-static void scarf(Polyhedron *P, unsigned exist, unsigned nparam, unsigned MaxRays,
-		  scarf_collector& col)
+static void scarf(Polyhedron *P, unsigned exist, unsigned nparam,
+		  barvinok_options *options, scarf_collector& col)
 {
     Matrix *A, *B;
     int dim = P->Dimension - exist - nparam;
@@ -901,12 +902,12 @@ static void scarf(Polyhedron *P, unsigned exist, unsigned nparam, unsigned MaxRa
     scarf.add(B, pos, l);
 
     U = Universe_Polyhedron(nparam);
-    col.add(P, 0, U, MaxRays);
+    col.add(P, 0, U, options);
     for (int i = 0; i < scarf.simplices.size(); ++i) {
 	Polyhedron *Q;
 	int sign = (scarf.simplices[i].M->NbRows % 2) ? -1 : 1;
-	Q = scarf.simplices[i].shrunk_polyhedron(P, dim, A, MaxRays);
-	col.add(Q, sign, U, MaxRays);
+	Q = scarf.simplices[i].shrunk_polyhedron(P, dim, A, options->MaxRays);
+	col.add(Q, sign, U, options);
 	Polyhedron_Free(Q);
     }
     Polyhedron_Free(U);
@@ -923,28 +924,29 @@ struct scarf_collector_gf : public scarf_collector {
     scarf_collector_gf() {
 	c.d = 1;
     }
-    virtual void add(Polyhedron *P, int sign, Polyhedron *C, unsigned MaxRays);
+    virtual void add(Polyhedron *P, int sign, Polyhedron *C,
+		     barvinok_options *options);
 };
 
 void scarf_collector_gf::add(Polyhedron *P, int sign, Polyhedron *C, 
-			     unsigned MaxRays)
+			     barvinok_options *options)
 {
     if (!sign)
-	gf = barvinok_series(P, C, MaxRays);
+	gf = barvinok_series_with_options(P, C, options);
     else {
 	gen_fun *gf2;
 	c.n = sign;
-	gf2 = barvinok_series(P, C, MaxRays);
+	gf2 = barvinok_series_with_options(P, C, options);
 	gf->add(c, gf2);
 	delete gf2;
     }
 }
 
 gen_fun *barvinok_enumerate_scarf_series(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+			  unsigned exist, unsigned nparam, barvinok_options *options)
 {
     scarf_collector_gf scgf;
-    scarf(P, exist, nparam, MaxRays, scgf);
+    scarf(P, exist, nparam, options, scgf);
     return scgf.gf;
 }
 
@@ -959,17 +961,18 @@ struct scarf_collector_ev : public scarf_collector {
     ~scarf_collector_ev() {
 	free_evalue_refs(&mone); 
     }
-    virtual void add(Polyhedron *P, int sign, Polyhedron *C, unsigned MaxRays);
+    virtual void add(Polyhedron *P, int sign, Polyhedron *C,
+		     barvinok_options *options);
 };
 
 void scarf_collector_ev::add(Polyhedron *P, int sign, Polyhedron *C, 
-			     unsigned MaxRays)
+			     barvinok_options *options)
 {
     if (!sign)
-	EP = barvinok_enumerate_ev(P, C, MaxRays);
+	EP = barvinok_enumerate_with_options(P, C, options);
     else {
 	evalue *E2;
-	E2 = barvinok_enumerate_ev(P, C, MaxRays);
+	E2 = barvinok_enumerate_with_options(P, C, options);
 	if (sign < 0)
 	    emul(&mone, E2);
 	eadd(E2, EP);
@@ -979,9 +982,9 @@ void scarf_collector_ev::add(Polyhedron *P, int sign, Polyhedron *C,
 }
 
 evalue *barvinok_enumerate_scarf(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+			  unsigned exist, unsigned nparam, barvinok_options *options)
 {
     scarf_collector_ev scev;
-    scarf(P, exist, nparam, MaxRays, scev);
+    scarf(P, exist, nparam, options, scev);
     return scev.EP;
 }

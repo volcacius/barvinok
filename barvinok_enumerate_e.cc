@@ -226,16 +226,20 @@ int main(int argc, char **argv)
     }
     if (series) {
 	gen_fun *gf;
+	barvinok_options *options = barvinok_options_new_with_defaults();
 	assert(scarf);
-	gf = barvinok_enumerate_scarf_series(A, exist, nparam, MAXRAYS);
+	gf = barvinok_enumerate_scarf_series(A, exist, nparam, options);
 	if (print_solution) {
 	    gf->print(std::cout, nparam, param_name);
 	    puts("");
 	}
 	delete gf;
+	free(options);
     } else {
 	if (scarf) {
-	    EP = barvinok_enumerate_scarf(A, exist, nparam, MAXRAYS);
+	    barvinok_options *options = barvinok_options_new_with_defaults();
+	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
+	    free(options);
 	} else if (pip && exist > 0)
 	    EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
 	else
