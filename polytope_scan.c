@@ -3,7 +3,7 @@
 #include <strings.h>
 #include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
-#include "basis_reduction.h"
+#include <barvinok/basis_reduction.h>
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 	inv = Identity(A->Dimension+1);
 	P = A;
     } else {
-	basis = reduced_basis(A);
+	basis = Polyhedron_Reduced_Basis(A);
 
 	T = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
 	inv = Matrix_Alloc(A->Dimension+1, A->Dimension+1);

@@ -12,6 +12,7 @@ extern "C" {
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
+#include <barvinok/sample.h>
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
@@ -20,7 +21,6 @@ extern "C" {
 #include "combine.h"
 #include "edomain.h"
 #include "evalue_util.h"
-#include "sample.h"
 #include "config.h"
 
 #ifdef NTL_STD_CXX

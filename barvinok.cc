@@ -17,12 +17,12 @@ extern "C" {
 #include <barvinok/barvinok.h>
 #include <barvinok/genfun.h>
 #include <barvinok/options.h>
+#include <barvinok/sample.h>
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
 #include "reduce_domain.h"
 #include "genfun_constructor.h"
-#include "sample.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;

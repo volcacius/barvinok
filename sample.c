@@ -1,7 +1,7 @@
 #include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
-#include "basis_reduction.h"
-#include "sample.h"
+#include <barvinok/basis_reduction.h>
+#include <barvinok/sample.h>
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -272,7 +272,7 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	return sample;
     }
 
-    Matrix *basis = reduced_basis(P);
+    Matrix *basis = Polyhedron_Reduced_Basis(P);
 
     T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
     inv = Matrix_Alloc(P->Dimension+1, P->Dimension+1);

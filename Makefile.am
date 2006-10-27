@@ -21,6 +21,8 @@ pkginclude_HEADERS = \
     barvinok/evalue.h \
     barvinok/genfun.h \
     barvinok/options.h \
+    barvinok/sample.h \
+    barvinok/basis_reduction.h \
     barvinok/bernstein.h
 LINK = $(CXXLINK)
 

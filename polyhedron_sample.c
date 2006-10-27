@@ -1,5 +1,5 @@
 #include <polylib/polylibgmp.h>
-#include "sample.h"
+#include <barvinok/sample.h>
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA

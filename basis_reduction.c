@@ -94,7 +94,7 @@ static void save_alpha(LPX *lp, int first, int n, double *alpha)
  *  for Integer Programming" of Cook el al. to compute a reduced basis.
  * We use \epsilon = 1/4.
  */
-Matrix *reduced_basis(Polyhedron *P)
+Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
 {
     int dim = P->Dimension;
     int i;

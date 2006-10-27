@@ -3,7 +3,7 @@
 #include <barvinok/genfun.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "basis_reduction.h"
+#include <barvinok/basis_reduction.h>
 #include "config.h"
 
 using std::cout;
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 
     B = uncone(C, options->MaxRays);
 
-    basis = reduced_basis(B);
+    basis = Polyhedron_Reduced_Basis(B);
     small = Vector_Alloc(B->Dimension + 2);
     Vector_Copy(basis->p[0], small->p, B->Dimension);
     Matrix_Free(basis);
