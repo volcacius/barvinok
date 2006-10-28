@@ -36,6 +36,7 @@ extern "C" {
 
 void value_lcm(Value i, Value j, Value* lcm);
 int random_int(int max);
+Polyhedron *Polyhedron_Read(unsigned MaxRays);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
 void Polyhedron_Polarize(Polyhedron *P);
 Polyhedron* supporting_cone(Polyhedron *P, int v);

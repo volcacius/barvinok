@@ -25,34 +25,6 @@ struct option options[] = {
 };
 #endif
 
-static Polyhedron *Polyhedron_Read()
-{
-    int vertices = 0; 
-    unsigned NbRows, NbColumns;
-    Matrix *M;
-    Polyhedron *P;
-    char s[128];
-
-    while (fgets(s, sizeof(s), stdin)) {
-	if (*s == '#')
-	    continue;
-	if (strncasecmp(s, "vertices", sizeof("vertices")-1) == 0)
-	    vertices = 1;
-	if (sscanf(s, "%u %u", &NbRows, &NbColumns) == 2)
-	    break;
-    }
-    if (feof(stdin))
-	return NULL;
-    M = Matrix_Alloc(NbRows,NbColumns);
-    Matrix_Read_Input(M);
-    if (vertices)
-	P = Rays2Polyhedron(M, MAXRAYS);
-    else
-	P = Constraints2Polyhedron(M, MAXRAYS);
-    Matrix_Free(M);
-    return P;
-}
-
 static void scan_poly(Polyhedron *S, int pos, Value *z, Matrix *T)
 {
     if (!S) {
@@ -108,7 +80,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    A = Polyhedron_Read();
+    A = Polyhedron_Read(MAXRAYS);
 
     if (direct) {
 	inv = Identity(A->Dimension+1);

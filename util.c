@@ -46,6 +46,34 @@ int random_int(int max) {
     return (int) (((double)(max))*rand()/(RAND_MAX+1.0));
 }
 
+Polyhedron *Polyhedron_Read(unsigned MaxRays)
+{
+    int vertices = 0; 
+    unsigned NbRows, NbColumns;
+    Matrix *M;
+    Polyhedron *P;
+    char s[128];
+
+    while (fgets(s, sizeof(s), stdin)) {
+	if (*s == '#')
+	    continue;
+	if (strncasecmp(s, "vertices", sizeof("vertices")-1) == 0)
+	    vertices = 1;
+	if (sscanf(s, "%u %u", &NbRows, &NbColumns) == 2)
+	    break;
+    }
+    if (feof(stdin))
+	return NULL;
+    M = Matrix_Alloc(NbRows,NbColumns);
+    Matrix_Read_Input(M);
+    if (vertices)
+	P = Rays2Polyhedron(M, MaxRays);
+    else
+	P = Constraints2Polyhedron(M, MaxRays);
+    Matrix_Free(M);
+    return P;
+}
+
 /* Inplace polarization
  */
 void Polyhedron_Polarize(Polyhedron *P)

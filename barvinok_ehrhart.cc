@@ -39,34 +39,6 @@ struct option options[] = {
 };
 #endif
 
-static Polyhedron *Polyhedron_Read()
-{
-    int vertices = 0; 
-    unsigned NbRows, NbColumns;
-    Matrix *M;
-    Polyhedron *P;
-    char s[128];
-
-    while (fgets(s, sizeof(s), stdin)) {
-	if (*s == '#')
-	    continue;
-	if (strncasecmp(s, "vertices", sizeof("vertices")-1) == 0)
-	    vertices = 1;
-	if (sscanf(s, "%u %u", &NbRows, &NbColumns) == 2)
-	    break;
-    }
-    if (feof(stdin))
-	return NULL;
-    M = Matrix_Alloc(NbRows,NbColumns);
-    Matrix_Read_Input(M);
-    if (vertices)
-	P = Rays2Polyhedron(M, MAXRAYS);
-    else
-	P = Constraints2Polyhedron(M, MAXRAYS);
-    Matrix_Free(M);
-    return P;
-}
-
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C, *U;
@@ -94,7 +66,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    A = Polyhedron_Read();
+    A = Polyhedron_Read(MAXRAYS);
     param_name = Read_ParamNames(stdin, 1);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     C = Cone_over_Polyhedron(A);
