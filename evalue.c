@@ -12,7 +12,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include "config.h"
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
