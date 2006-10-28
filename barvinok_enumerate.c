@@ -13,12 +13,6 @@
  * Both polytopes are in PolyLib notation.
  */
 
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
-
 #ifndef HAVE_GETOPT_H
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
 #else
@@ -42,6 +36,7 @@ int main(int argc, char **argv)
     int convert = 0;
     int floor = 0;
     int size = 0;
+    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
     while ((c = getopt_long(argc, argv, "fcsV", options, &ind)) != -1) {
 	switch (c) {
@@ -62,15 +57,15 @@ int main(int argc, char **argv)
     }
 
     M = Matrix_Read();
-    A = Constraints2Polyhedron(M, MAXRAYS);
+    A = Constraints2Polyhedron(M, bv_options->MaxRays);
     Matrix_Free(M);
     M = Matrix_Read();
-    C = Constraints2Polyhedron(M, MAXRAYS);
+    C = Constraints2Polyhedron(M, bv_options->MaxRays);
     Matrix_Free(M);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     Polyhedron_Print(stdout, P_VALUE_FMT, C);
     param_name = Read_ParamNames(stdin, C->Dimension);
-    EP = barvinok_enumerate_ev(A, C, MAXRAYS);
+    EP = barvinok_enumerate_with_options(A, C, bv_options);
     print_evalue(stdout, EP, param_name);
     if (size)
 	printf("\nSize: %d\n", evalue_size(EP));
@@ -89,5 +84,6 @@ int main(int argc, char **argv)
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
+    free(bv_options);
     return 0;
 }

@@ -20,12 +20,6 @@
  * should always be 1.
  */
 
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
-
 #ifndef HAVE_GETOPT_H
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
 #else
@@ -47,6 +41,7 @@ int main(int argc, char **argv)
     int convert = 0;
     int floor = 0;
     int series = 0;
+    barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
     while ((c = getopt_long(argc, argv, "sfcV", options, &ind)) != -1) {
 	switch (c) {
@@ -66,14 +61,14 @@ int main(int argc, char **argv)
 	}
     }
 
-    A = Polyhedron_Read(MAXRAYS);
+    A = Polyhedron_Read(bv_options->MaxRays);
     param_name = Read_ParamNames(stdin, 1);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     C = Cone_over_Polyhedron(A);
     U = Universe_Polyhedron(1);
     if (series) {
 	gen_fun *gf;
-	gf = barvinok_series(C, U, MAXRAYS);
+	gf = barvinok_series_with_options(C, U, bv_options);
 	gf->print(std::cout, U->Dimension, param_name);
 	puts("");
 	delete gf;
@@ -84,7 +79,7 @@ int main(int argc, char **argv)
 	 * vertices, rather than letting barvinok_enumerate_ev (re)compute
 	 * them through Polyhedron2Param_SimplifiedDomain.
 	 */
-	EP = barvinok_enumerate_ev(C, U, MAXRAYS);
+	EP = barvinok_enumerate_with_options(C, U, bv_options);
 	print_evalue(stdout, EP, param_name);
 	if (floor) {
 	    fprintf(stderr, "WARNING: floor conversion not supported\n");
@@ -101,5 +96,6 @@ int main(int argc, char **argv)
     Polyhedron_Free(A);
     Polyhedron_Free(C);
     Polyhedron_Free(U);
+    free(bv_options);
     return 0;
 }

@@ -3,14 +3,9 @@
 #include <strings.h>
 #include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
+#include <barvinok/options.h>
 #include <barvinok/basis_reduction.h>
 #include "config.h"
-
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    (POL_NO_DUAL | POL_INTEGER)
-#else
-#define MAXRAYS  600
-#endif
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -67,6 +62,7 @@ int main(int argc, char **argv)
     Matrix *basis, *T, *inv;
     int c, ind = 0;
     int direct = 0;
+    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
     while ((c = getopt_long(argc, argv, "dV", options, &ind)) != -1) {
 	switch (c) {
@@ -80,7 +76,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    A = Polyhedron_Read(MAXRAYS);
+    A = Polyhedron_Read(bv_options->MaxRays);
 
     if (direct) {
 	inv = Identity(A->Dimension+1);
@@ -100,12 +96,12 @@ int main(int argc, char **argv)
 	assert(ok);
 	Matrix_Free(T);
 
-	P = Polyhedron_Preimage(A, inv, MAXRAYS);
+	P = Polyhedron_Preimage(A, inv, bv_options->MaxRays);
 	Polyhedron_Free(A);
     }
 
     U = Universe_Polyhedron(0);
-    S = Polyhedron_Scan(P, U, MAXRAYS);
+    S = Polyhedron_Scan(P, U, bv_options->MaxRays);
 
     p = ALLOCN(Value, P->Dimension+2);
     for(i=0;i<=P->Dimension;i++) {
@@ -124,5 +120,6 @@ int main(int argc, char **argv)
     Domain_Free(S);
     Polyhedron_Free(P);
     Polyhedron_Free(U);
+    free(bv_options);
     return 0;
 }
