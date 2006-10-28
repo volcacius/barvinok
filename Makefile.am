@@ -38,6 +38,7 @@ libbarvinok_la_SOURCES = \
     evalue.c \
     genfun.cc \
     util.c \
+    version.c \
     bfcounter.cc \
     bfcounter.h \
     conversion.cc \
