@@ -29,6 +29,21 @@ const char *barvinok_version(void)
 #else
 	" -PIPLIB"
 #endif
+#ifdef HAVE_OMEGA
+	" +OMEGA"
+#else
+	" -OMEGA"
+#endif
+#ifdef HAVE_LIBGLPK
+	" +GLPK"
+#else
+	" -GLPK"
+#endif
+#ifdef HAVE_GINAC
+	" +GINAC"
+#else
+	" -GINAC"
+#endif
     "\n"
     ;
 }
