@@ -2229,7 +2229,7 @@ ROT_NEG = 1 << 3
 };
 
 static evalue* enumerate_or(Polyhedron *D,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: Or\n");
@@ -2238,7 +2238,7 @@ static evalue* enumerate_or(Polyhedron *D,
     Polyhedron *N = D->next;
     D->next = 0;
     evalue *EP = 
-	barvinok_enumerate_e(D, exist, nparam, MaxRays);
+	barvinok_enumerate_e_with_options(D, exist, nparam, options);
     Polyhedron_Free(D);
 
     for (D = N; D; D = N) {
@@ -2246,7 +2246,7 @@ static evalue* enumerate_or(Polyhedron *D,
 	D->next = 0;
 
 	evalue *EN = 
-	    barvinok_enumerate_e(D, exist, nparam, MaxRays);
+	    barvinok_enumerate_e_with_options(D, exist, nparam, options);
 
 	eor(EN, EP);
 	free_evalue_refs(EN); 
@@ -2260,7 +2260,7 @@ static evalue* enumerate_or(Polyhedron *D,
 }
 
 static evalue* enumerate_sum(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     int nvar = P->Dimension - exist - nparam;
     int toswap = nvar < exist ? nvar : exist;
@@ -2272,7 +2272,7 @@ static evalue* enumerate_sum(Polyhedron *P,
     fprintf(stderr, "\nER: Sum\n");
 #endif /* DEBUG_ER */
 
-    evalue *EP = barvinok_enumerate_e(P, exist, nparam, MaxRays);
+    evalue *EP = barvinok_enumerate_e_with_options(P, exist, nparam, options);
 
     for (int i = 0; i < /* nvar */ nparam; ++i) {
 	Matrix *C = Matrix_Alloc(1, 1 + nparam + 1);
@@ -2284,13 +2284,13 @@ static evalue* enumerate_sum(Polyhedron *P,
 	value_set_si(C->p[0][1+i], 1);
 	Matrix *C2 = Matrix_Copy(C);
 	EVALUE_SET_DOMAIN(split.x.p->arr[0],
-	    Constraints2Polyhedron(C2, MaxRays));
+	    Constraints2Polyhedron(C2, options->MaxRays));
 	Matrix_Free(C2);
 	evalue_set_si(&split.x.p->arr[1], 1, 1);
 	value_set_si(C->p[0][1+i], -1);
 	value_set_si(C->p[0][1+nparam], -1);
 	EVALUE_SET_DOMAIN(split.x.p->arr[2],
-	    Constraints2Polyhedron(C, MaxRays));
+	    Constraints2Polyhedron(C, options->MaxRays));
 	evalue_set_si(&split.x.p->arr[3], 1, 1);
 	emul(&split, EP);
 	free_evalue_refs(&split);
@@ -2313,7 +2313,7 @@ static evalue* enumerate_sum(Polyhedron *P,
 }
 
 static evalue* split_sure(Polyhedron *P, Polyhedron *S,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     int nvar = P->Dimension - exist - nparam;
 
@@ -2321,12 +2321,12 @@ static evalue* split_sure(Polyhedron *P, Polyhedron *S,
     for (int i = 0; i < exist; ++i)
 	value_set_si(M->p[i][nvar+i+1], 1);
     Polyhedron *O = S;
-    S = DomainAddRays(S, M, MaxRays);
+    S = DomainAddRays(S, M, options->MaxRays);
     Polyhedron_Free(O);
-    Polyhedron *F = DomainAddRays(P, M, MaxRays);
-    Polyhedron *D = DomainDifference(F, S, MaxRays);
+    Polyhedron *F = DomainAddRays(P, M, options->MaxRays);
+    Polyhedron *D = DomainDifference(F, S, options->MaxRays);
     O = D;
-    D = Disjoint_Domain(D, 0, MaxRays);
+    D = Disjoint_Domain(D, 0, options->MaxRays);
     Polyhedron_Free(F);
     Domain_Free(O);
     Matrix_Free(M);
@@ -2336,8 +2336,8 @@ static evalue* split_sure(Polyhedron *P, Polyhedron *S,
 	value_set_si(M->p[j][j], 1);
     for (int j = 0; j < nparam+1; ++j)
 	value_set_si(M->p[nvar+j][nvar+exist+j], 1);
-    Polyhedron *T = Polyhedron_Image(S, M, MaxRays);
-    evalue *EP = barvinok_enumerate_e(T, 0, nparam, MaxRays);
+    Polyhedron *T = Polyhedron_Image(S, M, options->MaxRays);
+    evalue *EP = barvinok_enumerate_e_with_options(T, 0, nparam, options);
     Polyhedron_Free(S);
     Polyhedron_Free(T);
     Matrix_Free(M);
@@ -2345,8 +2345,8 @@ static evalue* split_sure(Polyhedron *P, Polyhedron *S,
     for (Polyhedron *Q = D; Q; Q = Q->next) {
 	Polyhedron *N = Q->next;
 	Q->next = 0;
-	T = DomainIntersection(P, Q, MaxRays);
-	evalue *E = barvinok_enumerate_e(T, exist, nparam, MaxRays);
+	T = DomainIntersection(P, Q, options->MaxRays);
+	evalue *E = barvinok_enumerate_e_with_options(T, exist, nparam, options);
 	eadd(E, EP);
 	free_evalue_refs(E); 
 	free(E);
@@ -2358,7 +2358,7 @@ static evalue* split_sure(Polyhedron *P, Polyhedron *S,
 }
 
 static evalue* enumerate_sure(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     int i;
     Polyhedron *S = P;
@@ -2395,7 +2395,7 @@ static evalue* enumerate_sure(Polyhedron *P,
 	    ++c;
 	}
 	Polyhedron *O = S;
-	S = AddConstraints(M->p[0], c, S, MaxRays);
+	S = AddConstraints(M->p[0], c, S, options->MaxRays);
 	if (O != P)
 	    Polyhedron_Free(O);
 	Matrix_Free(M);
@@ -2413,11 +2413,11 @@ static evalue* enumerate_sure(Polyhedron *P,
     fprintf(stderr, "\nER: Sure\n");
 #endif /* DEBUG_ER */
 
-    return split_sure(P, S, exist, nparam, MaxRays);
+    return split_sure(P, S, exist, nparam, options);
 }
 
 static evalue* enumerate_sure2(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     int nvar = P->Dimension - exist - nparam;
     int r;
@@ -2437,17 +2437,17 @@ static evalue* enumerate_sure2(Polyhedron *P,
     Vector_Copy(P->Ray[r]+1+nvar, M->p[nvar+nparam]+1+nvar, exist);
     value_set_si(M->p[nvar+nparam][0], 1);
     value_set_si(M->p[nvar+nparam][P->Dimension+1], 1);
-    Polyhedron * F = Rays2Polyhedron(M, MaxRays);
+    Polyhedron * F = Rays2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
 
-    Polyhedron *I = DomainIntersection(F, P, MaxRays);
+    Polyhedron *I = DomainIntersection(F, P, options->MaxRays);
     Polyhedron_Free(F);
 
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: Sure2\n");
 #endif /* DEBUG_ER */
 
-    return split_sure(P, I, exist, nparam, MaxRays);
+    return split_sure(P, I, exist, nparam, options);
 }
 
 static evalue* enumerate_cyclic(Polyhedron *P,
@@ -2503,7 +2503,7 @@ static void enumerate_vd_add_ray(evalue *EP, Matrix *Rays, unsigned MaxRays)
 }
 
 static evalue* enumerate_line(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     if (P->NbBid == 0)
 	return 0;
@@ -2530,12 +2530,12 @@ static evalue* enumerate_line(Polyhedron *P,
     value_set_si(M->p[1][1+nvar+exist+i], -1);
     value_absolute(M->p[1][1+P->Dimension], P->Ray[0][1+nvar+exist+i]);
     value_decrement(M->p[1][1+P->Dimension], M->p[1][1+P->Dimension]);
-    Polyhedron *S = AddConstraints(M->p[0], 2, P, MaxRays);
-    evalue *EP = barvinok_enumerate_e(S, exist, nparam, MaxRays);
+    Polyhedron *S = AddConstraints(M->p[0], 2, P, options->MaxRays);
+    evalue *EP = barvinok_enumerate_e_with_options(S, exist, nparam, options);
     Polyhedron_Free(S);
     Matrix_Free(M);
 
-    return enumerate_cyclic(P, exist, nparam, EP, 0, i, MaxRays);
+    return enumerate_cyclic(P, exist, nparam, EP, 0, i, options->MaxRays);
 }
 
 static int single_param_pos(Polyhedron*P, unsigned exist, unsigned nparam, 
@@ -2553,7 +2553,7 @@ static int single_param_pos(Polyhedron*P, unsigned exist, unsigned nparam,
 }
 
 static evalue* enumerate_remove_ray(Polyhedron *P, int r,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
 #ifdef DEBUG_ER
     fprintf(stderr, "\nER: RedundantRay\n");
@@ -2573,9 +2573,9 @@ static evalue* enumerate_remove_ray(Polyhedron *P, int r,
 		       one, P->Ray[j][P->Dimension+1], P->Dimension+2);
     }
 
-    P = Rays2Polyhedron(M, MaxRays);
+    P = Rays2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
-    evalue *EP = barvinok_enumerate_e(P, exist, nparam, MaxRays);
+    evalue *EP = barvinok_enumerate_e_with_options(P, exist, nparam, options);
     Polyhedron_Free(P);
     value_clear(one);
 
@@ -2583,7 +2583,7 @@ static evalue* enumerate_remove_ray(Polyhedron *P, int r,
 }
 
 static evalue* enumerate_redundant_ray(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     assert(P->NbBid == 0);
     int nvar = P->Dimension - exist - nparam;
@@ -2611,7 +2611,7 @@ static evalue* enumerate_redundant_ray(Polyhedron *P,
 	    /* r2 divides r => r redundant */
 	    if (value_eq(m, P->Ray[r][1+nvar+exist+i1])) {
 		value_clear(m);
-		return enumerate_remove_ray(P, r, exist, nparam, MaxRays);
+		return enumerate_remove_ray(P, r, exist, nparam, options);
 	    }
 
 	    value_division(m, P->Ray[r2][1+nvar+exist+i1], 
@@ -2620,7 +2620,7 @@ static evalue* enumerate_redundant_ray(Polyhedron *P,
 	    /* r divides r2 => r2 redundant */
 	    if (value_eq(m, P->Ray[r2][1+nvar+exist+i1])) {
 		value_clear(m);
-		return enumerate_remove_ray(P, r2, exist, nparam, MaxRays);
+		return enumerate_remove_ray(P, r2, exist, nparam, options);
 	    }
 	}
     }
@@ -2666,7 +2666,7 @@ static Polyhedron *upper_bound(Polyhedron *P,
 }
 
 static evalue* enumerate_ray(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     assert(P->NbBid == 0);
     int nvar = P->Dimension - exist - nparam;
@@ -2684,7 +2684,7 @@ static evalue* enumerate_ray(Polyhedron *P,
 	    break;
     if (r2 < P->NbRays) {
 	if (nvar > 0)
-	    return enumerate_sum(P, exist, nparam, MaxRays);
+	    return enumerate_sum(P, exist, nparam, options);
     }
 
 #ifdef DEBUG_ER
@@ -2704,9 +2704,9 @@ static evalue* enumerate_ray(Polyhedron *P,
 	Vector_Combine(P->Ray[j], P->Ray[r], M->p[j], 
 		       one, P->Ray[j][P->Dimension+1], P->Dimension+2);
     }
-    Polyhedron *S = Rays2Polyhedron(M, MaxRays);
+    Polyhedron *S = Rays2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
-    Polyhedron *D = DomainDifference(P, S, MaxRays);
+    Polyhedron *D = DomainDifference(P, S, options->MaxRays);
     Polyhedron_Free(S);
     // Polyhedron_Print(stderr, P_VALUE_FMT, D);
     assert(value_pos_p(P->Ray[r][1+nvar+exist+i])); // for now
@@ -2726,32 +2726,32 @@ static evalue* enumerate_ray(Polyhedron *P,
 		P->Ray[r][1+nvar+exist+i]);
     value_decrement(M->p[1][1+P->Dimension], M->p[1][1+P->Dimension]);
     // Matrix_Print(stderr, P_VALUE_FMT, M);
-    D = AddConstraints(M->p[0], 2, P, MaxRays);
+    D = AddConstraints(M->p[0], 2, P, options->MaxRays);
     // Polyhedron_Print(stderr, P_VALUE_FMT, D);
     value_subtract(M->p[0][1+P->Dimension], M->p[0][1+P->Dimension], 
 		    P->Ray[r][1+nvar+exist+i]);
     // Matrix_Print(stderr, P_VALUE_FMT, M);
-    S = AddConstraints(M->p[0], 1, P, MaxRays);
+    S = AddConstraints(M->p[0], 1, P, options->MaxRays);
     // Polyhedron_Print(stderr, P_VALUE_FMT, S);
     Matrix_Free(M);
 
-    evalue *EP = barvinok_enumerate_e(D, exist, nparam, MaxRays);
+    evalue *EP = barvinok_enumerate_e_with_options(D, exist, nparam, options);
     Polyhedron_Free(D);
     value_clear(one);
     value_clear(m);
 
     if (value_notone_p(P->Ray[r][1+nvar+exist+i]))
-	EP = enumerate_cyclic(P, exist, nparam, EP, r, i, MaxRays);
+	EP = enumerate_cyclic(P, exist, nparam, EP, r, i, options->MaxRays);
     else {
 	M = Matrix_Alloc(1, nparam+2);
 	value_set_si(M->p[0][0], 1);
 	value_set_si(M->p[0][1+i], 1);
-	enumerate_vd_add_ray(EP, M, MaxRays);
+	enumerate_vd_add_ray(EP, M, options->MaxRays);
 	Matrix_Free(M);
     }
 
     if (!emptyQ(S)) {
-	evalue *E = barvinok_enumerate_e(S, exist, nparam, MaxRays);
+	evalue *E = barvinok_enumerate_e_with_options(S, exist, nparam, options);
 	eadd(E, EP);
 	free_evalue_refs(E);
 	free(E);
@@ -2760,7 +2760,7 @@ static evalue* enumerate_ray(Polyhedron *P,
 
     if (R) {
 	assert(nvar == 0);
-	evalue *ER = enumerate_or(R, exist, nparam, MaxRays);
+	evalue *ER = enumerate_or(R, exist, nparam, options);
 	eor(ER, EP);
 	free_evalue_refs(ER);
 	free(ER);
@@ -2770,7 +2770,7 @@ static evalue* enumerate_ray(Polyhedron *P,
 }
 
 static evalue* enumerate_vd(Polyhedron **PA,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+		      unsigned exist, unsigned nparam, barvinok_options *options)
 {
     Polyhedron *P = *PA;
     int nvar = P->Dimension - exist - nparam;
@@ -2779,7 +2779,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     Polyhedron *CEq;
     Matrix *CT;
     Polyhedron *PR = P;
-    PP = Polyhedron2Param_SimplifiedDomain(&PR,C,MaxRays,&CEq,&CT);
+    PP = Polyhedron2Param_SimplifiedDomain(&PR,C, options->MaxRays,&CEq,&CT);
     Polyhedron_Free(C);
 
     int nd;
@@ -2793,7 +2793,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     Polyhedron **fVD = new Polyhedron_p[nd];
     for(nd = 0, D=PP->D; D; D=D->next) {
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, MaxRays);
+					fVD, nd,  options->MaxRays);
 	if (!rVD)
 	    continue;
 
@@ -2808,9 +2808,9 @@ static evalue* enumerate_vd(Polyhedron **PA,
 
     /* This doesn't seem to have any effect */
     if (nd == 1) {
-	Polyhedron *CA = align_context(VD[0], P->Dimension, MaxRays);
+	Polyhedron *CA = align_context(VD[0], P->Dimension, options->MaxRays);
 	Polyhedron *O = P;
-	P = DomainIntersection(P, CA, MaxRays);
+	P = DomainIntersection(P, CA, options->MaxRays);
 	if (O != *PA)
 	    Polyhedron_Free(O);
 	Polyhedron_Free(CA);
@@ -2819,18 +2819,18 @@ static evalue* enumerate_vd(Polyhedron **PA,
     }
 
     if (!EP && CT->NbColumns != CT->NbRows) {
-	Polyhedron *CEqr = DomainImage(CEq, CT, MaxRays);
-	Polyhedron *CA = align_context(CEqr, PR->Dimension, MaxRays);
-	Polyhedron *I = DomainIntersection(PR, CA, MaxRays);
+	Polyhedron *CEqr = DomainImage(CEq, CT, options->MaxRays);
+	Polyhedron *CA = align_context(CEqr, PR->Dimension, options->MaxRays);
+	Polyhedron *I = DomainIntersection(PR, CA, options->MaxRays);
 	Polyhedron_Free(CEqr);
 	Polyhedron_Free(CA);
 #ifdef DEBUG_ER
 	fprintf(stderr, "\nER: Eliminate\n");
 #endif /* DEBUG_ER */
 	nparam -= CT->NbColumns - CT->NbRows;
-	EP = barvinok_enumerate_e(I, exist, nparam, MaxRays);
+	EP = barvinok_enumerate_e_with_options(I, exist, nparam, options);
 	nparam += CT->NbColumns - CT->NbRows;
-	addeliminatedparams_enum(EP, CT, CEq, MaxRays, nparam);
+	addeliminatedparams_enum(EP, CT, CEq, options->MaxRays, nparam);
 	Polyhedron_Free(I);
     }
     if (PR != *PA)
@@ -2842,13 +2842,14 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	fprintf(stderr, "\nER: VD\n");
 #endif /* DEBUG_ER */
 	for (int i = 0; i < nd; ++i) {
-	    Polyhedron *CA = align_context(VD[i], P->Dimension, MaxRays);
-	    Polyhedron *I = DomainIntersection(P, CA, MaxRays);
+	    Polyhedron *CA = align_context(VD[i], P->Dimension, options->MaxRays);
+	    Polyhedron *I = DomainIntersection(P, CA, options->MaxRays);
 
 	    if (i == 0)
-		EP = barvinok_enumerate_e(I, exist, nparam, MaxRays);
+		EP = barvinok_enumerate_e_with_options(I, exist, nparam, options);
 	    else {
-		evalue *E = barvinok_enumerate_e(I, exist, nparam, MaxRays);
+		evalue *E = barvinok_enumerate_e_with_options(I, exist, nparam,
+							      options);
 		eadd(E, EP);
 		free_evalue_refs(E); 
 		free(E);
@@ -2899,7 +2900,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 				       P->Dimension+2, &f);
 		    value_set_si(M->p[0][0], 0);
 		    Polyhedron *para = AddConstraints(M->p[0], 1, P,
-						      MaxRays);
+						      options->MaxRays);
 		    if (emptyQ(para)) {
 			Polyhedron_Free(para);
 			continue;
@@ -2908,7 +2909,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_set_si(M->p[0][0], 1);
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    neg = AddConstraints(M->p[0], 1, P, MaxRays);
+		    neg = AddConstraints(M->p[0], 1, P, options->MaxRays);
 		    value_set_si(f, -1);
 		    Vector_Scale(M->p[0]+1, M->p[0]+1, f, 
 				 P->Dimension+1);
@@ -2916,7 +2917,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 				    M->p[0][P->Dimension+1]);
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
 		    if (emptyQ(neg) && emptyQ(pos)) {
 			Polyhedron_Free(para);
 			Polyhedron_Free(pos);
@@ -2926,16 +2927,19 @@ static evalue* enumerate_vd(Polyhedron **PA,
 #ifdef DEBUG_ER
 		    fprintf(stderr, "\nER: Order\n");
 #endif /* DEBUG_ER */
-		    EP = barvinok_enumerate_e(para, exist, nparam, MaxRays);
+		    EP = barvinok_enumerate_e_with_options(para, exist, nparam,
+							   options);
 		    evalue *E;
 		    if (!emptyQ(pos)) {
-			E = barvinok_enumerate_e(pos, exist, nparam, MaxRays);
+			E = barvinok_enumerate_e_with_options(pos, exist, nparam,
+								options);
 			eadd(E, EP);
 			free_evalue_refs(E); 
 			free(E);
 		    }
 		    if (!emptyQ(neg)) {
-			E = barvinok_enumerate_e(neg, exist, nparam, MaxRays);
+			E = barvinok_enumerate_e_with_options(neg, exist, nparam,
+								options);
 			eadd(E, EP);
 			free_evalue_refs(E); 
 			free(E);
@@ -2974,7 +2978,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_set_si(M->p[0][0], 1);
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    neg = AddConstraints(M->p[0], 1, P, MaxRays);
+		    neg = AddConstraints(M->p[0], 1, P, options->MaxRays);
 		    value_set_si(f, -1);
 		    Vector_Scale(M->p[0]+1, M->p[0]+1, f, 
 				 P->Dimension+1);
@@ -2982,7 +2986,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 				    M->p[0][P->Dimension+1]);
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
 		    if (emptyQ(neg) || emptyQ(pos)) {
 			Polyhedron_Free(pos);
 			Polyhedron_Free(neg);
@@ -2991,12 +2995,12 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    Polyhedron_Free(pos);
 		    value_increment(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
 #ifdef DEBUG_ER
 		    fprintf(stderr, "\nER: Vertex\n");
 #endif /* DEBUG_ER */
 		    pos->next = neg;
-		    EP = enumerate_or(pos, exist, nparam, MaxRays);
+		    EP = enumerate_or(pos, exist, nparam, options);
 		    break;
 		}
 		if (EP)
@@ -3020,7 +3024,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_set_si(M->p[0][0], 1);
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    neg = AddConstraints(M->p[0], 1, P, MaxRays);
+		    neg = AddConstraints(M->p[0], 1, P, options->MaxRays);
 		    value_set_si(f, -1);
 		    Vector_Scale(M->p[0]+1, M->p[0]+1, f, 
 				 P->Dimension+1);
@@ -3028,7 +3032,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 				    M->p[0][P->Dimension+1]);
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
 		    if (emptyQ(neg) || emptyQ(pos)) {
 			Polyhedron_Free(pos);
 			Polyhedron_Free(neg);
@@ -3037,12 +3041,12 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    Polyhedron_Free(pos);
 		    value_increment(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
-		    pos = AddConstraints(M->p[0], 1, P, MaxRays);
+		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
 #ifdef DEBUG_ER
 		    fprintf(stderr, "\nER: ParamVertex\n");
 #endif /* DEBUG_ER */
 		    pos->next = neg;
-		    EP = enumerate_or(pos, exist, nparam, MaxRays);
+		    EP = enumerate_or(pos, exist, nparam, options);
 		    break;
 		}
 		if (EP)
@@ -3108,42 +3112,53 @@ static bool is_single(Value *row, int pos, int len)
 }
 
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
-			  unsigned exist, unsigned nparam, unsigned MaxRays);
+		      unsigned exist, unsigned nparam, barvinok_options *options);
 
 #ifdef DEBUG_ER
 static int er_level = 0;
 
-evalue* barvinok_enumerate_e(Polyhedron *P, 
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+evalue* barvinok_enumerate_e_with_options(Polyhedron *P, 
+			  unsigned exist, unsigned nparam, barvinok_options *options)
 {
     fprintf(stderr, "\nER: level %i\n", er_level);
 
     Polyhedron_PrintConstraints(stderr, P_VALUE_FMT, P);
     fprintf(stderr, "\nE %d\nP %d\n", exist, nparam);
     ++er_level;
-    P = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
-    evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, MaxRays);
+    P = DomainConstraintSimplify(Polyhedron_Copy(P), options->MaxRays);
+    evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, options);
     Polyhedron_Free(P);
     --er_level;
     return EP;
 }
 #else
-evalue* barvinok_enumerate_e(Polyhedron *P, 
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+evalue* barvinok_enumerate_e_with_options(Polyhedron *P, 
+			  unsigned exist, unsigned nparam, barvinok_options *options)
 {
-    P = DomainConstraintSimplify(Polyhedron_Copy(P), MaxRays);
-    evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, MaxRays);
+    P = DomainConstraintSimplify(Polyhedron_Copy(P), options->MaxRays);
+    evalue *EP = barvinok_enumerate_e_r(P, exist, nparam, options);
     Polyhedron_Free(P);
     return EP;
 }
 #endif
 
+evalue* barvinok_enumerate_e(Polyhedron *P, unsigned exist, unsigned nparam,
+			     unsigned MaxRays)
+{
+    evalue *E;
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = MaxRays;
+    E = barvinok_enumerate_e_with_options(P, exist, nparam, options);
+    free(options);
+    return E;
+}
+
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+			  unsigned exist, unsigned nparam, barvinok_options *options)
 {
     if (exist == 0) {
 	Polyhedron *U = Universe_Polyhedron(nparam);
-	evalue *EP = barvinok_enumerate_ev(P, U, MaxRays);
+	evalue *EP = barvinok_enumerate_with_options(P, U, options);
 	//char *param_name[] = {"P", "Q", "R", "S", "T" };
 	//print_evalue(stdout, EP, param_name);
 	Polyhedron_Free(U);
@@ -3162,7 +3177,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 
     if (nvar == 0 && nparam == 0) {
 	evalue *EP = evalue_zero();
-	barvinok_count(P, &EP->x.n, MaxRays);
+	barvinok_count_with_options(P, &EP->x.n, options);
 	if (value_pos_p(EP->x.n))
 	    value_set_si(EP->x.n, 1);
 	return EP;
@@ -3197,11 +3212,12 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
     if (r < P->NbEq) {
 	if (First_Non_Zero(P->Constraint[r]+1+nvar+first+1, 
 			   exist-first-1) != -1) {
-	    Polyhedron *T = rotate_along(P, r, nvar, exist, MaxRays);
+	    Polyhedron *T = rotate_along(P, r, nvar, exist, options->MaxRays);
 #ifdef DEBUG_ER
 	    fprintf(stderr, "\nER: Equality\n");
 #endif /* DEBUG_ER */
-	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+	    evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
+							   options);
 	    Polyhedron_Free(T);
 	    return EP;
 	} else {
@@ -3209,11 +3225,13 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 	    fprintf(stderr, "\nER: Fixed\n");
 #endif /* DEBUG_ER */
 	    if (first == 0)
-		return barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
+		return barvinok_enumerate_e_with_options(P, exist-1, nparam,
+							 options);
 	    else {
 		Polyhedron *T = Polyhedron_Copy(P);
 		SwapColumns(T, nvar+1, nvar+1+first);
-		evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+		evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
+							       options);
 		Polyhedron_Free(T);
 		return EP;
 	    }
@@ -3262,7 +3280,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		    value_set_si(f, -1);
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
 		    value_decrement(row->p[len-1], row->p[len-1]);
-		    Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
+		    Polyhedron *T = AddConstraints(row->p, 1, P, options->MaxRays);
 		    if (!emptyQ(T)) {
 			//printf("not all_pos: i: %d, l: %d, u: %d\n", i, l, u);
 			info[i] = (constraint)(info[i] ^ ALL_POS);
@@ -3277,7 +3295,8 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 						 P->Constraint[u],
 						 row->p, nvar+i, len, &f);
 			oppose_constraint(row->p, len, &f);
-			Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
+			Polyhedron *T = AddConstraints(row->p, 1, P,
+						       options->MaxRays);
 			if (emptyQ(T)) {
 			    //printf("one_neg i: %d, l: %d, u: %d\n", i, l, u);
 			    info[i] = (constraint)(info[i] | ONE_NEG);
@@ -3294,7 +3313,8 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 						     row->p, nvar, exist,
 						     len, &f);
 			    oppose_constraint(row->p, len, &f);
-			    Polyhedron *T = AddConstraints(row->p, 1, P, MaxRays);
+			    Polyhedron *T = AddConstraints(row->p, 1, P,
+							   options->MaxRays);
 			    if (emptyQ(T)) {
 				// printf("rot_neg i: %d, l: %d, u: %d\n", i, l, u);
 				info[i] = (constraint)(info[i] | ROT_NEG);
@@ -3330,9 +3350,10 @@ next:
 	    Matrix *M = Matrix_Alloc(P->Dimension, P->Dimension+1);
 	    for (int j = 0; j < P->Dimension; ++j)
 		value_set_si(M->p[j][j + (j >= i+nvar)], 1);
-	    Polyhedron *T = Polyhedron_Image(P, M, MaxRays);
+	    Polyhedron *T = Polyhedron_Image(P, M, options->MaxRays);
 	    Matrix_Free(M);
-	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+	    evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
+							   options);
 	    Polyhedron_Free(T);
 	    value_clear(f);
 	    Vector_Free(row);
@@ -3348,11 +3369,13 @@ next:
 	    value_clear(f);
 	    delete [] info;
 	    if (i == 0)
-		return barvinok_enumerate_e(P, exist-1, nparam, MaxRays);
+		return barvinok_enumerate_e_with_options(P, exist-1, nparam,
+							 options);
 	    else {
 		Polyhedron *T = Polyhedron_Copy(P);
 		SwapColumns(T, nvar+1, nvar+1+i);
-		evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+		evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
+							       options);
 		Polyhedron_Free(T);
 		return EP;
 	    }
@@ -3365,8 +3388,9 @@ next:
 	    Vector_Free(row);
 	    value_clear(f);
 	    delete [] info;
-	    Polyhedron *T = rotate_along(P, r, nvar, exist, MaxRays);
-	    evalue *EP = barvinok_enumerate_e(T, exist-1, nparam, MaxRays);
+	    Polyhedron *T = rotate_along(P, r, nvar, exist, options->MaxRays);
+	    evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
+							   options);
 	    Polyhedron_Free(T);
 	    return EP;
 	}
@@ -3376,16 +3400,16 @@ next:
 
 	    /* Find constraint again and split off negative part */
 
-	    if (SplitOnVar(P, i, nvar, exist, MaxRays,
+	    if (SplitOnVar(P, i, nvar, exist, options->MaxRays,
 			   row, f, true, &pos, &neg)) {
 #ifdef DEBUG_ER
 		fprintf(stderr, "\nER: Split\n");
 #endif /* DEBUG_ER */
 
 		evalue *EP = 
-		    barvinok_enumerate_e(neg, exist-1, nparam, MaxRays);
+		    barvinok_enumerate_e_with_options(neg, exist-1, nparam, options);
 		evalue *E = 
-		    barvinok_enumerate_e(pos, exist, nparam, MaxRays);
+		    barvinok_enumerate_e_with_options(pos, exist, nparam, options);
 		eadd(E, EP);
 		free_evalue_refs(E); 
 		free(E);
@@ -3404,48 +3428,48 @@ next:
 
     evalue *EP;
 
-    EP = enumerate_line(P, exist, nparam, MaxRays);
+    EP = enumerate_line(P, exist, nparam, options);
     if (EP)
 	goto out;
 
-    EP = barvinok_enumerate_pip(P, exist, nparam, MaxRays);
+    EP = barvinok_enumerate_pip(P, exist, nparam, options->MaxRays);
     if (EP)
 	goto out;
 
-    EP = enumerate_redundant_ray(P, exist, nparam, MaxRays);
+    EP = enumerate_redundant_ray(P, exist, nparam, options);
     if (EP)
 	goto out;
 
-    EP = enumerate_sure(P, exist, nparam, MaxRays);
+    EP = enumerate_sure(P, exist, nparam, options);
     if (EP)
 	goto out;
 
-    EP = enumerate_ray(P, exist, nparam, MaxRays);
+    EP = enumerate_ray(P, exist, nparam, options);
     if (EP)
 	goto out;
 
-    EP = enumerate_sure2(P, exist, nparam, MaxRays);
+    EP = enumerate_sure2(P, exist, nparam, options);
     if (EP)
 	goto out;
 
-    F = unfringe(P, MaxRays);
+    F = unfringe(P, options->MaxRays);
     if (!PolyhedronIncludes(F, P)) {
 #ifdef DEBUG_ER
 	fprintf(stderr, "\nER: Fringed\n");
 #endif /* DEBUG_ER */
-	EP = barvinok_enumerate_e(F, exist, nparam, MaxRays);
+	EP = barvinok_enumerate_e_with_options(F, exist, nparam, options);
 	Polyhedron_Free(F);
 	goto out;
     }
     Polyhedron_Free(F);
 
     if (nparam)
-	EP = enumerate_vd(&P, exist, nparam, MaxRays);
+	EP = enumerate_vd(&P, exist, nparam, options);
     if (EP)
 	goto out2;
 
     if (nvar != 0) {
-	EP = enumerate_sum(P, exist, nparam, MaxRays);
+	EP = enumerate_sum(P, exist, nparam, options);
 	goto out2;
     }
 
@@ -3454,14 +3478,14 @@ next:
     int i;
     Polyhedron *pos, *neg;
     for (i = 0; i < exist; ++i)
-	if (SplitOnVar(P, i, nvar, exist, MaxRays,
+	if (SplitOnVar(P, i, nvar, exist, options->MaxRays,
 		       row, f, false, &pos, &neg))
 	    break;
 
     assert (i < exist);
 
     pos->next = neg;
-    EP = enumerate_or(pos, exist, nparam, MaxRays);
+    EP = enumerate_or(pos, exist, nparam, options);
 
 out2:
     if (O != P)

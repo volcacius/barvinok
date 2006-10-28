@@ -20,6 +20,8 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options);
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
+evalue* barvinok_enumerate_e_with_options(Polyhedron *P, 
+		  unsigned exist, unsigned nparam, struct barvinok_options *options);
 evalue *barvinok_enumerate_pip(Polyhedron *P,
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 evalue *barvinok_enumerate_scarf(Polyhedron *P,
