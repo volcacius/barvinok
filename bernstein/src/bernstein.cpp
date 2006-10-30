@@ -23,7 +23,8 @@ static std::string int2String(int n);
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static matrix getAiMatrix(unsigned int nbVert);
 static ex getBasis(unsigned int nbVert, matrix &A);
-static ex replaceVariablesInPolynomial(ex &poly, const exvector& V, ex &variables);
+static ex replaceVariablesInPolynomial(const ex &poly, const exvector& V,
+				       ex &variables);
 static ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert,
 			 unsigned int maxDegree, ex &basis);
 static lst getCoefficients(ex hom, unsigned d, const matrix& A);
@@ -113,7 +114,7 @@ matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, const exvector& par
  *	vars: vector of variables
  *	Params: vector of parameter
  */
-lst bernsteinExpansion(const matrix &vert, ex poly, const exvector& vars,
+lst bernsteinExpansion(const matrix& vert, const ex& poly, const exvector& vars,
 		       const exvector& Params)
 {
 	unsigned maxDegree = findMaxDegree(poly, vars);
@@ -302,7 +303,8 @@ lst getCoefficients(ex hom, unsigned d, const matrix& A)
 
 
 // replace the variables in the polynomial
-ex replaceVariablesInPolynomial(ex &poly, const exvector &vars, ex &substitutions)
+ex replaceVariablesInPolynomial(const ex &poly, const exvector &vars,
+				ex &substitutions)
 {
 	lst replace;
 

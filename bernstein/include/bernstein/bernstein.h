@@ -25,7 +25,7 @@ GiNaC::exvector constructParameterVector(const char * const *param_names,
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);
 GiNaC::matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, 
 			     const GiNaC::exvector& params);
-GiNaC::lst bernsteinExpansion(const GiNaC::matrix &vert, GiNaC::ex poly, 
+GiNaC::lst bernsteinExpansion(const GiNaC::matrix& vert, const GiNaC::ex& poly, 
 			      const GiNaC::exvector& vars,
 			      const GiNaC::exvector& params);
 
