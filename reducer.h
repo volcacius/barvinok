@@ -115,12 +115,14 @@ void normalize(ZZ& sign, ZZ& num, vec_ZZ& den);
  */
 struct infinite_icounter : public ireducer {
     /* an array of coefficients; count[i] is the coeffient of
-     * the term wtih power -i.
+     * the term with power -i.
      */
     mpq_t *count;
     unsigned len;
 
     infinite_icounter(unsigned dim, unsigned maxlen) : ireducer(dim), len(maxlen+1) {
+	/* Not sure whether it works for dim != 1 */
+	assert(dim == 1);
 	count = new mpq_t[len];
 	for (int i = 0; i < len; ++i)
 	    mpq_init(count[i]);
