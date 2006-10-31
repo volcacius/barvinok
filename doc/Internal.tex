@@ -805,6 +805,9 @@ evalue* barvinok_enumerate_e_with_options(Polyhedron *P,
           struct barvinok_options *options);
 evalue *barvinok_enumerate_pip(Polyhedron *P,
           unsigned exist, unsigned nparam, unsigned MaxRays);
+evalue *barvinok_enumerate_scarf(Polyhedron *P,
+          unsigned exist, unsigned nparam,
+          struct barvinok_options *options);
 \end{verbatim}
 The first function tries the simplification rules from
 \citeN[Section~4.6.2]{Verdoolaege2005PhD} before resorting to the method
@@ -817,19 +820,33 @@ the argument \verb+nparam+ refers to the number of parameters.
 The order of the dimensions in \verb+P+ is:
 counted variables first, then existential variables and finally
 the parameters.
+The function \ai[\tt]{barvinok\_enumerate\_scarf} performs the same
+computation as the function \ai[\tt]{barvinok\_enumerate\_scarf\_series}
+below, but produces an explicit representation instead of a generating function.
 
+\begin{verbatim}
+gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, 
+                          unsigned MaxRays);
+gen_fun * barvinok_series_with_options(Polyhedron *P,
+    Polyhedron* C, barvinok_options *options);
+gen_fun *barvinok_enumerate_scarf_series(Polyhedron *P,
+                          unsigned exist, unsigned nparam,
+                          barvinok_options *options);
+\end{verbatim}
 The function 
 \ai[\tt]{barvinok\_series} or
 \ai[\tt]{barvinok\_series\_with\_options} enumerates parametric polytopes
 in the form of a \rgf/.
 The polyhedron \verb+P+ is assumed to have only
 lexico-positive rays.
-\begin{verbatim}
-gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, 
-                          unsigned MaxRays);
-gen_fun * barvinok_series_with_options(Polyhedron *P,
-    Polyhedron* C, barvinok_options *options);
-\end{verbatim}
+\\
+The function \ai[\tt]{barvinok\_enumerate\_scarf\_series} computes a
+generating function for the number of point in the parametric set
+defined by \verb+P+ with \verb+exist+ existentially quantified
+variables, which is assumed to be 2.
+This function implements the technique of
+\shortciteN{Scarf2006Neighborhood} using the \ai{neighborhood complex}
+description of \shortciteN{Scarf1981indivisibilities:II}.
 
 \subsection{Auxiliary Functions}
 
