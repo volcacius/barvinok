@@ -226,7 +226,7 @@ struct barvinok_options {
                 /*
                  * 0: no
                  * 1: depth first
-                 * 2: breadth frist
+                 * 2: breadth first
                  */
     int         incremental_specialization;
 };
@@ -270,7 +270,7 @@ by \ai[\tt]{barvinok\_options\_new\_with\_defaults}.
 \item \ai[\tt]{LLL\_b}
 
 The values used for the \ai{reduction parameter}
-in the call to \ai[\tt]{NTL}'s implemenation of \indac{LLL}.
+in the call to \ai[\tt]{NTL}'s implementation of \indac{LLL}.
 
 \end{itemize}
 
@@ -741,7 +741,7 @@ and one for parametric sets with existential variables.
 The old versions of these functions have a ``\ai[\tt]{MaxRays}''
 argument, while the new versions have a more general
 \ai[\tt]{barvinok\_options} argument.
-For more infomation on \ai[\tt]{barvinok\_options}, see Section~\ref{a:options}.
+For more information on \ai[\tt]{barvinok\_options}, see Section~\ref{a:options}.
 
 \begin{verbatim}
 void barvinok_count(Polyhedron *P, Value* result, 

@@ -18,7 +18,7 @@ struct barvinok_options {
 		/*
 		 * 0: no
 		 * 1: depth first
-		 * 2: breadth frist
+		 * 2: breadth first
 		 */
     int		incremental_specialization;
 
