@@ -372,3 +372,15 @@ Options:\\
 \ai[\tt]{--direct} & \ai[\tt]{-d} & 
 list the points in the lexicographical order
 \end{tabular}
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{lexmin}}{lexmin}}
+
+The program \ai[\tt]{lexmin} implements an algorithm for performing
+\indac{PIP} based on \rgf/s and provides an alternative for the
+technique of \shortciteN{Feautrier88parametric}, which is based
+on \ai{cutting plane}s \shortcite{Gomory1963}.
+The input is the same as that of the \ai[\tt]{example} program
+from \piplib/ \cite{Feautrier:PIP}, except that the value
+for the ``\ai{big parameter}'' needs to be $-1$, since there is
+no need for big parameters, and it does not read any options
+from the input file.
