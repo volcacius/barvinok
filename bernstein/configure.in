@@ -1,4 +1,5 @@
 AC_INIT
+AC_CONFIG_AUX_DIR(.)
 AM_INIT_AUTOMAKE(bernstein, 0.01)
 AC_SUBST(versioninfo)
 versioninfo=0:0:0
