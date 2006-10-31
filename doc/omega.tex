@@ -5,15 +5,28 @@ The \ai[\tt]{barvinok} distribution includes an interface
 to \Omegalib/ \shortcite{Omega_lib} \ai[\tt]{occ}, an extension
 of \ai[\tt]{oc} \shortcite{Omega_calc}.
 The extension adds the operations shown in Figure~\ref{f:unary}.
-The following is an example:
+Here are some examples:
 \begin{verbatim}
 symbolic n, m; 
 P := { [i,j] : 0 <= i <= n and i <= j <= m };
 card P;
+
+P := {[i,j] : 0 <= i < 4*n-1 and 0 <= j < n and
+              n-1 <= i+j <= 3*n-2 };
+C1 := {[i,j] : 0 <= i < 4*n-1 and 0 <= j < n and
+               2*n-1 <= i+j <= 4*n-2 and i <= 2*n-1 };
+
+count_lexsmaller P within C1;
+
+vertices C1;
+
+bmax { [i] -> 2*n*i - n*n + 3*n - 1/2*i*i - 3/2*i-1 :
+        (exists j : 0 <= i < 4*n-1 and 0 <= j < n and
+                    2*n-1 <= i+j <= 4*n-2 and i <= 2*n-1 ) };
 \end{verbatim}
 
 \begin{figure}
-\begin{tabular}{llp{0.7\textwidth}}
+\begin{tabular}{lp{0.25\textwidth}p{0.5\textwidth}}
 Name & Syntax & Explanation
 \\
 \hline
@@ -23,6 +36,21 @@ prints the result to standard output
 Ranking & \ai[\tt]{ranking} $r$ & Computes the rank function of $r$ and
 prints the result to standard output
 \shortcite{Loechner2002,Turjan2002}
+\\
+Predecessors & \ai[\tt]{count\_lexsmaller} $r$ \ai[\tt]{within} $d$ &
+Computes a function from the elements of $d$ to
+the number of elements of $r$ that are lexicographically
+smaller than that element and
+prints the result to standard output.
+\\
+Vertices & \ai[\tt]{vertices} $r$ &
+Computes the parametric vertices of $r$ using \PolyLib/ \shortcite{Loechner1999}.
+\\
+Bernstein & \ai[\tt]{bmax} $f$ &
+Computes the \ai{Bernstein coefficient}s of the function $f$ over its domain
+and removes the redundant coefficients by calling
+\ai[\tt]{piecewise\_lst::maximize}.  The results are printed to standard
+output.  See the example for how to specify the function $f$.
 \end{tabular}
 \caption{Extra relational operations of {\tt occ}}
 \label{f:unary}
