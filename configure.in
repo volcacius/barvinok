@@ -349,9 +349,9 @@ else
     head3=`echo $head2 | sed -e 's/........................................//'`
     base=`basename $mysrcdir | sed -e 's/-.*//'`
     if test "x$head3" = "x" -a "x$head" = "x$head2"; then
-	GIT_HEAD="barvinok-$VERSION-$head
+	GIT_HEAD_ID="barvinok-$VERSION-$head
     elif test "x$base" = "xbarvinok-$VERSION" -a "x$head" != "x"; then
-	GIT_HEAD="barvinok-$VERSION-$head
+	GIT_HEAD_ID="barvinok-$VERSION-$head
     else
 	GIT_HEAD_ID="UNKNOWN"
     fi
