@@ -3,6 +3,7 @@ export BIBINPUTS := $(srcdir):$(BIBINPUTS)
 export BSTINPUTS := $(srcdir):$(BSTINPUTS)
 
 barvinok.dvi: FORCE
+	(cd ..; echo "@GIT_HEAD_VERSION@") > version.tex
 	latex barvinok.tex
 	bibtex barvinok
 	makeindex barvinok.idx
