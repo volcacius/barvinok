@@ -4,8 +4,6 @@
 #include <bernstein/maximize.h>
 #include <bernstein/piecewise_lst.h>
 
-#define MAXRAYS    POL_NO_DUAL
-
 using std::cerr;
 using std::endl;
 
@@ -165,11 +163,11 @@ void piecewise_lst::maximize()
     }
 }
 
-void piecewise_lst::simplify_domains(Polyhedron *ctx)
+void piecewise_lst::simplify_domains(Polyhedron *ctx, unsigned MaxRays)
 {
     for (int i = 0; i < list.size(); ++i) {
 	Polyhedron *D = list[i].first;
-	list[i].first = DomainSimplify(D, ctx, MAXRAYS);
+	list[i].first = DomainSimplify(D, ctx, MaxRays);
 	Domain_Free(D);
     }
 }

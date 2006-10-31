@@ -20,7 +20,7 @@ struct piecewise_lst {
     piecewise_lst::piecewise_lst(const GiNaC::exvector& vars) : vars(vars) {}
     piecewise_lst& combine(const piecewise_lst& other);
     void maximize();
-    void simplify_domains(Polyhedron *ctx);
+    void simplify_domains(Polyhedron *ctx, unsigned MaxRays);
     GiNaC::numeric evaluate(const GiNaC::exvector& values);
     void add(const GiNaC::ex& poly);
 
