@@ -357,3 +357,18 @@ The program \ai[\tt]{polyhedron\_sample} takes a polytope
 in \PolyLib/ notation and prints an integer point in the polytope
 if there is one.  The point is computed using
 \ai[\tt]{Polyhedron\_Sample}.
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{polytope\_scan}}
+{polytope\_scan}}
+
+The program \ai[\tt]{polytope\_scan} takes a polytope in
+\PolyLib/ notation and prints a list of all integer points in the polytope.
+Unless the \ai[\tt]{--direct} options is given, the order is based
+on the \ai{reduced basis} computed with
+\ai[\tt]{Polyhedron\_Reduced\_Basis}.
+
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--direct} & \ai[\tt]{-d} & 
+list the points in the lexicographical order
+\end{tabular}
