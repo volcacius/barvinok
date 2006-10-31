@@ -103,16 +103,18 @@ lexmin_SOURCES = \
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = \
-    README.Solaris \
     ChangeLog \
     $(TESTFILES) \
     latte2polylib.pl \
     NTL_5_3_2.patch \
     doc/Internal.tex \
-    doc/Usage.tex \
+    doc/applications.tex \
+    doc/barvinok.tex \
+    doc/omega.tex \
+    doc/polymake.tex \
+    doc/reports.tex \
     doc/barvinok.bib \
     doc/barvinok.gdf \
-    doc/barvinok.tex \
     doc/chicago.bst \
     doc/chicago.sty \
     doc/mydefs.sty \

@@ -9,6 +9,7 @@ occ_SOURCES = \
 	count.h \
 	lex.yy.cc \
 	polyfunc.cc \
+	polyfunc.h \
 	vertices.cc \
 	vertices.h \
 	y.tab.cc \
