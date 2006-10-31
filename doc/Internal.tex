@@ -628,13 +628,24 @@ for representing arbitrary precision integers
 (\ai[\tt]{ZZ}) 
 as well as vectors (\ai[\tt]{vec\_ZZ}) and matrices (\ai[\tt]{mat\_ZZ})
 of such integers.
+We further introduces a type \ai[\tt]{QQ} for representing a rational
+number and use vectors (\ai[\tt]{vec\_QQ}) of such numbers.
+\begin{verbatim}
+struct QQ {
+    ZZ	n;
+    ZZ	d;
+};
+
+NTL_vector_decl(QQ,vec_QQ);
+\end{verbatim}
+
 Each term in a \rgf/ is represented by a \ai[\tt]{short\_rat}
 structure.
 \begin{verbatim}
 struct short_rat {
     struct {
         /* rows: terms in numerator */
-        mat_ZZ  coeff;
+        vec_QQ  coeff;
         mat_ZZ  power;
     } n;
     struct {
@@ -647,10 +658,9 @@ The fields \ai[\tt]{n} and \ai[\tt]{d} represent the
 numerator and the denominator respectively.
 Note that in our implementation we combine terms
 with the same denominator.
-In the numerator, each row of \ai[\tt]{coeff} and \ai[\tt]{power}
+In the numerator, each element of \ai[\tt]{coeff} and each row of \ai[\tt]{power}
 represents a single such term.
-The matrix \ai[\tt]{coeff} has two columns, one for the
-numerator and one for the denominator of the rational coefficient
+The vector \ai[\tt]{coeff} contains the rational coefficients
 $\alpha_i$ of each term.
 The columns of \ai[\tt]{power} correspond to the powers
 of the variables.
@@ -709,19 +719,36 @@ struct gen_fun {
     std::vector< short_rat * > term;
     Polyhedron *context;
 
-    void add(ZZ& cn, ZZ& cd, vec_ZZ& num, mat_ZZ& den);
-    void print(unsigned int nparam, char **param_name);
-    operator evalue *();
+    void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
+    void add(const QQ& c, const gen_fun *gf);
+    void substitute(Matrix *CP);
+    gen_fun *Hadamard_product(const gen_fun *gf,
+                              barvinok_options *options);
+    void print(std::ostream& os,
+               unsigned int nparam, char **param_name) const;
+    operator evalue *() const;
+    void coefficient(Value* params, Value* c) const;
 
-    gen_fun(Polyhedron *C = NULL) : context(C) {}
+    gen_fun(Polyhedron *C = NULL);
+    gen_fun(Value c);
+    gen_fun(const gen_fun *gf);
     ~gen_fun();
 };
 \end{verbatim}
-The method \ai[\tt]{gen\_fun::add} adds a new term to the \rgf/.
+A new \ai[\tt]{gen\_fun} can be constructed either as empty \rgf/ (possibly
+with a given context \verb+C+), as a copy of an existing \rgf/ \verb+gf+, or as 
+constant \rgf/ with value for the constant term specified by \verb+c+.
+\\
+The first \ai[\tt]{gen\_fun::add} method adds a new term to the \rgf/,
+described by the coefficient \verb+c+, the numerator \verb+num+ and the
+denominator \verb+den+.
 It makes all powers in the denominator lexico-positive,
 orders them in lexicographical order and inserts the new
 term in \ai[\tt]{term} according to the lexicographical
 order of the combined powers in the denominator.
+The second \ai[\tt]{gen\_fun::add} method adds \verb+c+ times \verb+gf+
+to the \rgf/.
+\\
 The method \ai[\tt]{gen\_fun::operator evalue *} performs
 the conversion from \rgf/ to \psp/ explained in 
 \citeN[Section~4.5.5]{Verdoolaege2005PhD}.
@@ -731,6 +758,44 @@ i.e., it is the set $Q$ from \citeN[Equation~4.31]{Verdoolaege2005PhD}.
 If  \ai[\tt]{context} is \verb+NULL+ the maximal
 allowed context is assumed, i.e., the maximal
 region with lexico-positive rays.  
+\\
+The method \ai[\tt]{gen\_fun::coefficient} computes the coefficient
+of the term with power given by \verb+params+ and stores the result
+in \verb+c+.
+This method performs essentially the same computations as
+\ai[\tt]{gen\_fun::operator evalue *}, except that it adds extra
+equality constraints based on the specified values for the power.
+\\
+The method \ai[\tt]{gen\_fun::substitute} performs the
+\ai{monomial substitution} specified by the homogeneous matrix \verb+CP+
+that maps a set of ``\ai{compressed parameter}s'' \shortcite{Meister2004PhD}
+to the original set of parameters.
+That is, if we are given a \rgf/ $G(\vec z)$ that encodes the
+explicit function $g(\vec i')$, where $\vec i'$ are the coordinates of
+the transformed space, and \verb+CP+ represents the map
+$\vec i = A \vec i' + \vec a$ back to the original space with coordinates $\vec i$,
+then this method transforms the \rgf/ to $F(\vec x)$ encoding the
+same explicit function $f(\vec i)$, i.e., 
+$$f(\vec i) = f(A \vec i' + \vec a) = g(\vec i ').$$
+This means that the coefficient of the term 
+$\vec x^{\vec i} = \vec x^{A \vec i' + \vec a}$ in $F(\vec x)$ should be equal to the
+coefficient of the term $\vec z^{\vec i'}$ in $G(\vec z)$.
+In other words, if
+$$
+G(\vec z) =
+\sum_i \epsilon_i \frac{\vec z^{\vec v_i}}{\prod_j (1-\vec z^{\vec b_{ij}})}
+$$
+then
+$$
+F(\vec x) =
+\sum_i \epsilon_i \frac{\vec x^{A \vec v_i + \vec a}}
+                       {\prod_j (1-\vec x^{A \vec b_{ij}})}
+.
+$$
+\\
+The method \ai[\tt]{gen\_fun::Hadamard\_product} computes the
+\ai{Hadamard product} of the current \rgf/ with the \rgf/ \verb+gf+,
+as explained in \citeN[Section~4.5.2]{Verdoolaege2005PhD}.
 
 \subsection{Counting Functions}
 \label{a:counting:functions}

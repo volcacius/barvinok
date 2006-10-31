@@ -36,7 +36,7 @@ struct gen_fun {
     Polyhedron *context;
 
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
-    /* add cn/cd times gf */
+    /* add c times gf */
     void add(const QQ& c, const gen_fun *gf);
     void substitute(Matrix *CP);
     gen_fun *Hadamard_product(const gen_fun *gf, barvinok_options *options);
