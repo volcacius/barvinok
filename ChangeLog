@@ -1,3 +1,23 @@
+version: 0.22
+date: Tue Oct 31 23:15:15 CET 2006
+changes:
+    - include bernstein library with interface to barvinok and occ
+    - some occ clean-ups
+    - barvinok_count now only returns -1 for unbounded polyhedra with integer points
+    - preliminary implementation of projection via neighborhood complexes
+    - implement generalized basis reduction
+    - add polyhedron_sample
+    - add polytope_scan
+    - add lexmin
+    - some internal reorganization
+    - some gen_fun clean-ups and optimizations
+    - plug some memory leaks
+    - fix some corner cases
+    - shared libraries are no longer built by default
+    - introduce barvinok_options to pass to functions instead of just MaxRays
+    - use same LLL reduction parameter that LattE uses
+    - add some documentation
+---
 version: 0.21
 date: Thu Jun 22 20:49:11 CEST 2006
 changes:
@@ -142,7 +162,7 @@ changes:
 version: 0.06
 changes:
     - remove part of Kristof's Ehrhart manipulation code
-    - partial support for modulo respresentation
+    - partial support for modulo representation
     - support cvs version of PolyLib
 ---
 version: 0.05
