@@ -3,7 +3,7 @@
 #include <NTL/mat_ZZ.h>
 #include "mat_util.h"
 
-int lex_cmp(vec_ZZ& a, vec_ZZ& b)
+int lex_cmp(const vec_ZZ& a, const vec_ZZ& b)
 {
     assert(a.length() == b.length());
 
