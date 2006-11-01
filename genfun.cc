@@ -14,6 +14,12 @@ using std::endl;
 using std::pair;
 using std::vector;
 
+bool short_rat_lex_smaller_denominator::operator()(const short_rat* r1,
+						   const short_rat* r2) const
+{
+    return lex_cmp(r1->d.power, r2->d.power) < 0;
+}
+
 static void lex_order_terms(struct short_rat* rat)
 {
     for (int i = 0; i < rat->n.power.NumRows(); ++i) {
@@ -146,7 +152,7 @@ gen_fun::gen_fun(Value c)
 {
     short_rat *r = new short_rat(c);
     context = Universe_Polyhedron(0);
-    term.push_back(r);
+    term.insert(r);
 }
 
 void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
@@ -156,41 +162,37 @@ void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
 
     short_rat * r = new short_rat(c, num, den);
 
-    for (int i = 0; i < term.size(); ++i)
-	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {
-	    term[i]->add(r);
-	    if (term[i]->n.coeff.length() == 0) {
-		delete term[i];
-		if (i != term.size()-1)
-		    term[i] = term[term.size()-1];
-		term.pop_back();
-	    } else if (term[i]->reduced()) {
-		delete r;
-		/* we've modified term[i], so removed it
-		 * and add it back again
-		 */
-		r = term[i];
-		if (i != term.size()-1)
-		    term[i] = term[term.size()-1];
-		term.pop_back();
-		i = -1;
-		continue;
-	    }
+    short_rat_list::iterator i = term.find(r);
+    while (i != term.end()) {
+	(*i)->add(r);
+	if ((*i)->n.coeff.length() == 0) {
+	    delete *i;
+	    term.erase(i);
+	} else if ((*i)->reduced()) {
 	    delete r;
-	    return;
+	    /* we've modified term[i], so remove it
+	     * and add it back again
+	     */
+	    r = *i;
+	    term.erase(i);
+	    i = term.find(r);
+	    continue;
 	}
+	delete r;
+	return;
+    }
 
-    term.push_back(r);
+    term.insert(r);
 }
 
 void gen_fun::add(const QQ& c, const gen_fun *gf)
 {
     QQ p;
-    for (int i = 0; i < gf->term.size(); ++i) {
-	for (int j = 0; j < gf->term[i]->n.power.NumRows(); ++j) {
+    for (short_rat_list::iterator i = gf->term.begin(); i != gf->term.end(); ++i) {
+	for (int j = 0; j < (*i)->n.power.NumRows(); ++j) {
 	    p = c;
-	    p *= gf->term[i]->n.coeff[j];
-	    add(p, gf->term[i]->n.power[j], gf->term[i]->d.power);
+	    p *= (*i)->n.coeff[j];
+	    add(p, (*i)->n.power[j], (*i)->d.power);
 	}
     }
 }
@@ -242,11 +244,11 @@ void gen_fun::substitute(Matrix *CP)
     Polyhedron *C = Polyhedron_Image(context, CP, 0);
     Polyhedron_Free(context);
     context = C;
-    for (int i = 0; i < term.size(); ++i) {
-	term[i]->d.power *= map;
-	term[i]->n.power *= map;
-	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
-	    term[i]->n.power[j] += offset;
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
+	(*i)->d.power *= map;
+	(*i)->n.power *= map;
+	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
+	    (*i)->n.power[j] += offset;
     }
 }
 
@@ -460,19 +462,20 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
     Polyhedron *C = DomainIntersection(context, gf->context, options->MaxRays);
     Polyhedron *U = Universe_Polyhedron(C->Dimension);
     gen_fun *sum = new gen_fun(C);
-    for (int i = 0; i < term.size(); ++i) {
-	for (int i2 = 0; i2 < gf->term.size(); ++i2) {
-	    int d = term[i]->d.power.NumCols();
-	    int k1 = term[i]->d.power.NumRows();
-	    int k2 = gf->term[i2]->d.power.NumRows();
-	    assert(term[i]->d.power.NumCols() == gf->term[i2]->d.power.NumCols());
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
+	for (short_rat_list::iterator i2 = gf->term.begin(); i2 != gf->term.end();
+							     ++i2) {
+	    int d = (*i)->d.power.NumCols();
+	    int k1 = (*i)->d.power.NumRows();
+	    int k2 = (*i2)->d.power.NumRows();
+	    assert((*i)->d.power.NumCols() == (*i2)->d.power.NumCols());
 
-	    parallel_polytopes pp(term[i]->n.power.NumRows() *
-				  gf->term[i2]->n.power.NumRows(),
+	    parallel_polytopes pp((*i)->n.power.NumRows() *
+				  (*i2)->n.power.NumRows(),
 				  sum->context, d, options);
 
-	    for (int j = 0; j < term[i]->n.power.NumRows(); ++j) {
-		for (int j2 = 0; j2 < gf->term[i2]->n.power.NumRows(); ++j2) {
+	    for (int j = 0; j < (*i)->n.power.NumRows(); ++j) {
+		for (int j2 = 0; j2 < (*i2)->n.power.NumRows(); ++j2) {
 		    Matrix *M = Matrix_Alloc(k1+k2+d+d, 1+k1+k2+d+1);
 		    for (int k = 0; k < k1+k2; ++k) {
 			value_set_si(M->p[k][0], 1);
@@ -480,23 +483,23 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 		    }
 		    for (int k = 0; k < d; ++k) {
 			value_set_si(M->p[k1+k2+k][1+k1+k2+k], -1);
-			zz2value(term[i]->n.power[j][k], M->p[k1+k2+k][1+k1+k2+d]);
+			zz2value((*i)->n.power[j][k], M->p[k1+k2+k][1+k1+k2+d]);
 			for (int l = 0; l < k1; ++l)
-			    zz2value(term[i]->d.power[l][k], M->p[k1+k2+k][1+l]);
+			    zz2value((*i)->d.power[l][k], M->p[k1+k2+k][1+l]);
 		    }
 		    for (int k = 0; k < d; ++k) {
 			value_set_si(M->p[k1+k2+d+k][1+k1+k2+k], -1);
-			zz2value(gf->term[i2]->n.power[j2][k], 
+			zz2value((*i2)->n.power[j2][k], 
 				 M->p[k1+k2+d+k][1+k1+k2+d]);
 			for (int l = 0; l < k2; ++l)
-			    zz2value(gf->term[i2]->d.power[l][k], 
+			    zz2value((*i2)->d.power[l][k], 
 				     M->p[k1+k2+d+k][1+k1+l]);
 		    }
 		    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
 		    Matrix_Free(M);
 
-		    QQ c = term[i]->n.coeff[j];
-		    c *= gf->term[i2]->n.coeff[j2];
+		    QQ c = (*i)->n.coeff[j];
+		    c *= (*i2)->n.coeff[j2];
 		    if (!pp.add(c, P)) {
 			gen_fun *t = barvinok_series(P, U, options->MaxRays);
 			sum->add(c, t);
@@ -550,9 +553,9 @@ static void Polyhedron_Shift(Polyhedron *P, Vector *offset)
 
 void gen_fun::shift(const vec_ZZ& offset)
 {
-    for (int i = 0; i < term.size(); ++i)
-	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
-	    term[i]->n.power[j] += offset;
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
+	    (*i)->n.power[j] += offset;
 
     Vector *v = Vector_Alloc(offset.length());
     zz2values(offset, v->p);
@@ -566,11 +569,11 @@ void gen_fun::shift(const vec_ZZ& offset)
  */
 void gen_fun::divide(const vec_ZZ& power)
 {
-    for (int i = 0; i < term.size(); ++i) {
-	int r = term[i]->d.power.NumRows();
-	int c = term[i]->d.power.NumCols();
-	term[i]->d.power.SetDims(r+1, c);
-	term[i]->d.power[r] = power;
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
+	int r = (*i)->d.power.NumRows();
+	int c = (*i)->d.power.NumCols();
+	(*i)->d.power.SetDims(r+1, c);
+	(*i)->d.power[r] = power;
     }
 
     Vector *v = Vector_Alloc(1+power.length()+1);
@@ -623,22 +626,22 @@ static void print_power(std::ostream& os, QQ& c, vec_ZZ& p,
 void gen_fun::print(std::ostream& os, unsigned int nparam, char **param_name) const
 {
     QQ mone(-1, 1);
-    for (int i = 0; i < term.size(); ++i) {
-	if (i != 0)
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
+	if (i != term.begin())
 	    os << " + ";
 	os << "(";
-	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
-	    if (j != 0 && term[i]->n.coeff[j].n > 0)
+	for (int j = 0; j < (*i)->n.coeff.length(); ++j) {
+	    if (j != 0 && (*i)->n.coeff[j].n > 0)
 		os << "+";
-	    print_power(os, term[i]->n.coeff[j], term[i]->n.power[j],
+	    print_power(os, (*i)->n.coeff[j], (*i)->n.power[j],
 			nparam, param_name);
 	}
 	os << ")/(";
-	for (int j = 0; j < term[i]->d.power.NumRows(); ++j) {
+	for (int j = 0; j < (*i)->d.power.NumRows(); ++j) {
 	    if (j != 0)
 		os << " * ";
 	    os << "(1";
-	    print_power(os, mone, term[i]->d.power[j], nparam, param_name);
+	    print_power(os, mone, (*i)->d.power[j], nparam, param_name);
 	    os << ")";
 	}
 	os << ")";
@@ -651,14 +654,14 @@ gen_fun::operator evalue *() const
     evalue factor;
     value_init(factor.d);
     value_init(factor.x.n);
-    for (int i = 0; i < term.size(); ++i) {
-	unsigned nvar = term[i]->d.power.NumRows();
-	unsigned nparam = term[i]->d.power.NumCols();
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
+	unsigned nvar = (*i)->d.power.NumRows();
+	unsigned nparam = (*i)->d.power.NumCols();
 	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + nparam + 1); 
-	mat_ZZ& d = term[i]->d.power;
+	mat_ZZ& d = (*i)->d.power;
 	Polyhedron *U = context ? context : Universe_Polyhedron(nparam);
 
-	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
+	for (int j = 0; j < (*i)->n.coeff.length(); ++j) {
 	    for (int r = 0; r < nparam; ++r) {
 		value_set_si(C->p[r][0], 0);
 		for (int c = 0; c < nvar; ++c) {
@@ -666,7 +669,7 @@ gen_fun::operator evalue *() const
 		}
 		Vector_Set(&C->p[r][1+nvar], 0, nparam);
 		value_set_si(C->p[r][1+nvar+r], -1);
-		zz2value(term[i]->n.power[j][r], C->p[r][1+nvar+nparam]);
+		zz2value((*i)->n.power[j][r], C->p[r][1+nvar+nparam]);
 	    }
 	    for (int r = 0; r < nvar; ++r) {
 		value_set_si(C->p[nparam+r][0], 1);
@@ -681,8 +684,8 @@ gen_fun::operator evalue *() const
 		free(E);
 		continue;
 	    }
-	    zz2value(term[i]->n.coeff[j].n, factor.x.n);
-	    zz2value(term[i]->n.coeff[j].d, factor.d);
+	    zz2value((*i)->n.coeff[j].n, factor.x.n);
+	    zz2value((*i)->n.coeff[j].d, factor.d);
 	    emul(&factor, E);
 	    /*
 	    Matrix_Print(stdout, P_VALUE_FMT, C);
@@ -722,20 +725,20 @@ void gen_fun::coefficient(Value* params, Value* c) const
     Value tmp;
     value_init(tmp);
 
-    for (int i = 0; i < term.size(); ++i) {
-	unsigned nvar = term[i]->d.power.NumRows();
-	unsigned nparam = term[i]->d.power.NumCols();
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
+	unsigned nvar = (*i)->d.power.NumRows();
+	unsigned nparam = (*i)->d.power.NumCols();
 	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + 1); 
-	mat_ZZ& d = term[i]->d.power;
+	mat_ZZ& d = (*i)->d.power;
 
-	for (int j = 0; j < term[i]->n.coeff.length(); ++j) {
+	for (int j = 0; j < (*i)->n.coeff.length(); ++j) {
 	    C->NbRows = nparam+nvar;
 	    for (int r = 0; r < nparam; ++r) {
 		value_set_si(C->p[r][0], 0);
 		for (int c = 0; c < nvar; ++c) {
 		    zz2value(d[c][r], C->p[r][1+c]);
 		}
-		zz2value(term[i]->n.power[j][r], C->p[r][1+nvar]);
+		zz2value((*i)->n.power[j][r], C->p[r][1+nvar]);
 		value_subtract(C->p[r][1+nvar], C->p[r][1+nvar], params[r]);
 	    }
 	    for (int r = 0; r < nvar; ++r) {
@@ -752,8 +755,8 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	    Polyhedron_Free(P);
 	    if (value_zero_p(tmp))
 		continue;
-	    zz2value(term[i]->n.coeff[j].n, part.x.n);
-	    zz2value(term[i]->n.coeff[j].d, part.d);
+	    zz2value((*i)->n.coeff[j].n, part.x.n);
+	    zz2value((*i)->n.coeff[j].d, part.d);
 	    value_multiply(part.x.n, part.x.n, tmp);
 	    eadd(&part, &sum);
 	}
@@ -782,9 +785,9 @@ gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const
     } else
     	red = new partial_reducer(Polyhedron_Project(context, nparam), dim, nparam);
     red->init(context);
-    for (int i = 0; i < term.size(); ++i)
-	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
-	    red->reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
+	    red->reduce((*i)->n.coeff[j], (*i)->n.power[j], (*i)->d.power);
     gf = red->get_gf();
     delete red;
     return gf;
@@ -799,14 +802,14 @@ bool gen_fun::summate(Value *sum) const
     }
 
     int maxlen = 0;
-    for (int i = 0; i < term.size(); ++i)
-	if (term[i]->d.power.NumRows() > maxlen)
-	    maxlen = term[i]->d.power.NumRows();
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+	if ((*i)->d.power.NumRows() > maxlen)
+	    maxlen = (*i)->d.power.NumRows();
 
-    infinite_icounter cnt(term[0]->d.power.NumCols(), maxlen);
-    for (int i = 0; i < term.size(); ++i)
-	for (int j = 0; j < term[i]->n.power.NumRows(); ++j)
-	    cnt.reduce(term[i]->n.coeff[j], term[i]->n.power[j], term[i]->d.power);
+    infinite_icounter cnt((*term.begin())->d.power.NumCols(), maxlen);
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
+	    cnt.reduce((*i)->n.coeff[j], (*i)->n.power[j], (*i)->d.power);
 
     for (int i = 1; i <= maxlen; ++i)
 	if (value_notzero_p(mpq_numref(cnt.count[i]))) {

@@ -1,7 +1,7 @@
 #ifndef GENFUN_H
 #define GENFUN_H
 
-#include <vector>
+#include <set>
 #include <iostream>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
@@ -31,8 +31,14 @@ struct short_rat {
     void normalize();
 };
 
+struct short_rat_lex_smaller_denominator {
+  bool operator()(const short_rat* r1, const short_rat* r2) const;
+};
+
+typedef std::set<short_rat *, short_rat_lex_smaller_denominator > short_rat_list;
+
 struct gen_fun {
-    std::vector< short_rat * > term;
+    short_rat_list term;
     Polyhedron *context;
 
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
@@ -59,8 +65,8 @@ struct gen_fun {
     ~gen_fun() {
 	if (context)
 	    Polyhedron_Free(context);
-	for (int i = 0; i < term.size(); ++i)
-	    delete term[i];
+	for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+	    delete *i;
     }
 };
 
