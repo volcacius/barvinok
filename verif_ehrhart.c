@@ -19,6 +19,7 @@
 #include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
+#include "verif_ehrhart.h"
 
 #include "config.h"
 #ifndef HAVE_COUNT_POINTS4
@@ -30,9 +31,7 @@
 
 char **params;
 
-#ifndef PRINT_ALL_RESULTS
 int st;
-#endif
 
 /****************************************************/
 /* function check_poly :                            */
@@ -43,8 +42,8 @@ int st;
 /****************************************************/
 
 int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
-	       int nparam,int pos,Value *z) {
-  
+	       int nparam, int pos, Value *z, int print_all)
+{
   int k;
   Value c,tmp,*ctmp;
   Value LB, UB;
@@ -62,7 +61,7 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
     /* if c=0 we may be out of context. */
     /* scanning is useless in this case*/
 
-#ifdef PRINT_ALL_RESULTS
+    if (print_all) {
       printf("EP( ");
       value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
       for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
@@ -72,15 +71,15 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
       printf(" ) = ");
       value_print(stdout,VALUE_FMT,c);
       printf(" ");
-#endif
+    }
 
       /* Manually count the number of points */
       count_points(1,S,z,&tmp);
-#ifdef PRINT_ALL_RESULTS
+    if (print_all) {
 	printf(", count = ");
 	value_print(stdout, P_VALUE_FMT, tmp);
 	printf(". ");
-#endif
+    }
 
       if(value_ne(tmp,c)) {
         printf("\n"); 
@@ -115,12 +114,8 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
 	value_clear(UB);
 	return(0);
 #endif
-      }
-
-#ifdef PRINT_ALL_RESULTS
-      else
+      } else if (print_all)
 	printf("OK.\n");
-#endif
   }
   else {
     int ok = 
@@ -128,16 +123,16 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
     assert(ok);
     for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
 
-#ifndef PRINT_ALL_RESULTS
+    if (!print_all) {
       k = VALUE_TO_INT(tmp);
       if(!pos && !(k%st)) {
 	printf("o");
 	fflush(stdout);
       }
-#endif
+    }
       
       value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if(!check_poly(S, CS->next, en, nparam, pos+1, z)) {
+      if (!check_poly(S, CS->next, en, nparam, pos+1, z, print_all)) {
 	value_clear(c); value_clear(tmp);
 	value_clear(LB);
 	value_clear(UB);

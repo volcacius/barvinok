@@ -23,6 +23,7 @@ extern "C" {
 struct option options[] = {
     { "explicit",  no_argument,  0,  'e' },
     { "series",  no_argument,  0,  's' },
+    { "print-all",  no_argument,  0,  'A' },
     { "verbose",  no_argument,  0,  'v' },
     { "version",   no_argument,  0,  'V' },
     { 0, 0, 0, 0 }
@@ -45,7 +46,7 @@ struct option options[] = {
 #define VBIGDIM 8
 
 int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
-	         int nparam,int pos,Value *z)
+	         int nparam, int pos, Value *z, int print_all)
 {
     int k;
     Value c, tmp;
@@ -63,7 +64,7 @@ int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 	/* if c=0 we may be out of context. */
 	/* scanning is useless in this case*/
 
-#ifdef PRINT_ALL_RESULTS
+	if (print_all) {
 	    printf("EP( ");
 	    value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
 	    for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
@@ -73,14 +74,14 @@ int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 	    printf(" ) = ");
 	    value_print(stdout,VALUE_FMT,c);
 	    printf(" ");
-#endif
+	}
 	    /* Manually count the number of points */
 	    count_points(1,S,z,&tmp);
-#ifdef PRINT_ALL_RESULTS
+	if (print_all) {
 	    printf(", count = ");
 	    value_print(stdout, P_VALUE_FMT, tmp);
 	    printf(". ");
-#endif
+	}
 
 	    if(value_ne(tmp,c)) {
 		printf("\n"); 
@@ -101,25 +102,22 @@ int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 		value_clear(c); value_clear(tmp);
 		return 0;
 #endif
-	    }
-#ifdef PRINT_ALL_RESULTS
-	    else
+	    } else if (print_all)
 		printf("OK.\n");
-#endif
     } else {
         int ok = 
 	  !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
         assert(ok);
 	for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-#ifndef PRINT_ALL_RESULTS
+	if (!print_all) {
 	  k = VALUE_TO_INT(tmp);
 	  if(!pos && !(k%st)) {
 	    printf("o");
 	    fflush(stdout);
 	  }
-#endif
+	}
 	  value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	  if(!check_series(S, CS->next, gf, nparam, pos+1, z)) {
+	  if (!check_series(S, CS->next, gf, nparam, pos+1, z, print_all)) {
 	    value_clear(c); value_clear(tmp);
 	    value_clear(LB);
 	    value_clear(UB);
@@ -151,9 +149,13 @@ int main(int argc,char *argv[]) {
     int verbose = 0;
     int function = 0;
     int result = 0;
+    int print_all = 0;
 
-    while ((c = getopt_long(argc, argv, "m:M:r:sveV", options, &ind)) != -1) {
+    while ((c = getopt_long(argc, argv, "m:M:r:sveVA", options, &ind)) != -1) {
 	switch (c) {
+	case 'A':
+	    print_all = 1;
+	    break;
 	case 'e':
 	    function = 1;
 	    break;
@@ -290,27 +292,26 @@ int main(int argc,char *argv[]) {
   /* S = scanning list of polyhedra */
   S = Polyhedron_Scan(P,C,MAXRAYS);
 
-#ifndef PRINT_ALL_RESULTS
-  if(C->Dimension > 0) {
-    value_subtract(tmp,Max,Min);
-    if (VALUE_TO_INT(tmp) > 80)
-      st = 1+(VALUE_TO_INT(tmp))/80;
-    else
-      st=1;
-    for(i=VALUE_TO_INT(Min);i<=VALUE_TO_INT(Max);i+=st)
-      printf(".");
-    printf( "\r" );
-    fflush(stdout);
-  }
-#endif
+    if (!print_all)
+	if (C->Dimension > 0) {
+	    value_subtract(tmp,Max,Min);
+	    if (VALUE_TO_INT(tmp) > 80)
+		st = 1+(VALUE_TO_INT(tmp))/80;
+	    else
+		st=1;
+	    for(i=VALUE_TO_INT(Min);i<=VALUE_TO_INT(Max);i+=st)
+		printf(".");
+	    printf( "\r" );
+	    fflush(stdout);
+	}
 
     /******* CHECK NOW *********/
     if(S) {
 	if (!series || function) {
-	    if (!check_poly(S, CS,en,C->Dimension,0,p))
+	    if (!check_poly(S, CS,en,C->Dimension,0,p, print_all))
 		result = -1;
 	} else {
-	    if (!check_series(S, CS,gf,C->Dimension,0,p))
+	    if (!check_series(S, CS,gf,C->Dimension,0,p, print_all))
 		result = -1;
 	}
 	Domain_Free(S);
@@ -319,9 +320,8 @@ int main(int argc,char *argv[]) {
     if (result == -1)
 	fprintf(stderr,"Check failed !\n");
     
-#ifndef PRINT_ALL_RESULTS
-  printf( "\n" );
-#endif
+    if (!print_all)
+	printf( "\n" );
   
     if (en)
 	Enumeration_Free(en);
