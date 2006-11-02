@@ -13,6 +13,8 @@ using namespace NTL;
 
 struct gen_fun;
 
+extern struct OrthogonalException {} Orthogonal;
+
 /* base for non-parametric counting */
 struct np_base : public signed_cone_consumer {
     unsigned dim;
@@ -34,6 +36,9 @@ struct np_base : public signed_cone_consumer {
 	barvinok_decompose(Cone, *this, options);
     }
     virtual void init(Polyhedron *P) {
+    }
+    virtual void reset() {
+	assert(0);
     }
     virtual void get_count(Value *result) {
 	assert(0);

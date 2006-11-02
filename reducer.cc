@@ -5,6 +5,8 @@
 
 using std::vector;
 
+struct OrthogonalException Orthogonal;
+
 void np_base::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(sc.rays.NumRows() == dim);
@@ -16,13 +18,20 @@ void np_base::handle(const signed_cone& sc, barvinok_options *options)
 void np_base::start(Polyhedron *P, barvinok_options *options)
 {
     QQ factor(1, 1);
-    init(P);
-    for (int i = 0; i < P->NbRays; ++i) {
-	if (!value_pos_p(P->Ray[i][dim+1]))
-	    continue;
+    for (;;) {
+	try {
+	    init(P);
+	    for (int i = 0; i < P->NbRays; ++i) {
+		if (!value_pos_p(P->Ray[i][dim+1]))
+		    continue;
 
-	Polyhedron *C = supporting_cone(P, i);
-	do_vertex_cone(factor, C, P->Ray[i]+1, options);
+		Polyhedron *C = supporting_cone(P, i);
+		do_vertex_cone(factor, C, P->Ray[i]+1, options);
+	    }
+	    break;
+	} catch (OrthogonalException &e) {
+	    reset();
+	}
     }
 }
 

@@ -28,12 +28,20 @@ void partial_reducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
     den_r.SetDims(len, lower);
 
     for (int r = 0; r < len; ++r) {
+	bool all_zero;
+
 	for (int k = 0; k < nvar; ++k)
 	    tmp[k] = den_f[r][k];
 	den_s[r] = tmp * lambda;
+	all_zero = den_s[r] == 0;
 
-	for (int k = nvar; k < dim; ++k)
+	for (int k = nvar; k < dim; ++k) {
 	    den_r[r][k-nvar] = den_f[r][k];
+	    if (all_zero)
+		all_zero = den_r[r][k-nvar] == 0;
+	}
+	if (all_zero)
+	    throw Orthogonal;
     }
 
     for (int k = 0; k < nvar; ++k)

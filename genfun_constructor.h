@@ -54,6 +54,9 @@ struct partial_reducer : public reducer, public gf_base {
     virtual void init(Polyhedron *P) {
 	randomvector(P, lambda, dim - lower);
     }
+    virtual void reset() {
+	gf->clear_terms();
+    }
     ~partial_reducer() {
     }
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);

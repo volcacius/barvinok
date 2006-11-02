@@ -790,10 +790,17 @@ gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const
     	red = new partial_ireducer(Polyhedron_Project(context, nparam), dim, nparam);
     } else
     	red = new partial_reducer(Polyhedron_Project(context, nparam), dim, nparam);
-    red->init(context);
-    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
-	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
-	    red->reduce((*i)->n.coeff[j], (*i)->n.power[j], (*i)->d.power);
+    for (;;) {
+	try {
+	    red->init(context);
+	    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+		for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
+		    red->reduce((*i)->n.coeff[j], (*i)->n.power[j], (*i)->d.power);
+	    break;
+	} catch (OrthogonalException &e) {
+	    red->reset();
+	}
+    }
     gf = red->get_gf();
     delete red;
     return gf;

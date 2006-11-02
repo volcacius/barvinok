@@ -395,7 +395,13 @@ struct counter : public np_base {
 	mpq_init(count);
     }
 
-    virtual void start(Polyhedron *P, barvinok_options *options);
+    virtual void init(Polyhedron *P) {
+	randomvector(P, lambda, dim);
+    }
+
+    virtual void reset() {
+	mpq_set_si(count, 0, 0);
+    }
 
     ~counter() {
 	mpq_clear(count);
@@ -408,8 +414,6 @@ struct counter : public np_base {
 	value_assign(*result, &count[0]._mp_num);
     }
 };
-
-struct OrthogonalException {} Orthogonal;
 
 void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed,
 		     barvinok_options *options)
@@ -435,19 +439,6 @@ void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed,
 	n *= fact;
     }
     d.div(n, count, sign);
-}
-
-void counter::start(Polyhedron *P, barvinok_options *options)
-{
-    for (;;) {
-	try {
-	    randomvector(P, lambda, dim);
-	    np_base::start(P, options);
-	    break;
-	} catch (OrthogonalException &e) {
-	    mpq_set_si(count, 0, 0);
-	}
-    }
 }
 
 struct bfe_term : public bfc_term_base {
