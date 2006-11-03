@@ -635,7 +635,7 @@ void gen_fun::divide(const vec_ZZ& power)
     context = C;
 }
 
-static void print_power(std::ostream& os, QQ& c, vec_ZZ& p, 
+static void print_power(std::ostream& os, const QQ& c, const vec_ZZ& p, 
 			unsigned int nparam, char **param_name)
 {
     bool first = true;
@@ -673,28 +673,32 @@ static void print_power(std::ostream& os, QQ& c, vec_ZZ& p,
     }
 }
 
-void gen_fun::print(std::ostream& os, unsigned int nparam, char **param_name) const
+void short_rat::print(std::ostream& os, unsigned int nparam, char **param_name) const
 {
     QQ mone(-1, 1);
+    os << "(";
+    for (int j = 0; j < n.coeff.length(); ++j) {
+	if (j != 0 && n.coeff[j].n > 0)
+	    os << "+";
+	print_power(os, n.coeff[j], n.power[j], nparam, param_name);
+    }
+    os << ")/(";
+    for (int j = 0; j < d.power.NumRows(); ++j) {
+	if (j != 0)
+	    os << " * ";
+	os << "(1";
+	print_power(os, mone, d.power[j], nparam, param_name);
+	os << ")";
+    }
+    os << ")";
+}
+
+void gen_fun::print(std::ostream& os, unsigned int nparam, char **param_name) const
+{
     for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
 	if (i != term.begin())
 	    os << " + ";
-	os << "(";
-	for (int j = 0; j < (*i)->n.coeff.length(); ++j) {
-	    if (j != 0 && (*i)->n.coeff[j].n > 0)
-		os << "+";
-	    print_power(os, (*i)->n.coeff[j], (*i)->n.power[j],
-			nparam, param_name);
-	}
-	os << ")/(";
-	for (int j = 0; j < (*i)->d.power.NumRows(); ++j) {
-	    if (j != 0)
-		os << " * ";
-	    os << "(1";
-	    print_power(os, mone, (*i)->d.power[j], nparam, param_name);
-	    os << ")";
-	}
-	os << ")";
+	(*i)->print(os, nparam, param_name);
     }
 }
 

@@ -30,6 +30,7 @@ struct short_rat {
     short_rat(Value c);
     short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
     void normalize();
+    void print(std::ostream& os, unsigned int nparam, char **param_name) const;
 };
 
 struct short_rat_lex_smaller_denominator {
