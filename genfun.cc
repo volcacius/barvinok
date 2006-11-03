@@ -759,14 +759,10 @@ gen_fun::operator evalue *() const
     return EP;
 }
 
-void gen_fun::coefficient(Value* params, Value* c) const
+ZZ gen_fun::coefficient(Value* params, barvinok_options *options) const
 {
-    if (context && !in_domain(context, params)) {
-	value_set_si(*c, 0);
-	return;
-    }
-
-    barvinok_options *options = barvinok_options_new_with_defaults();
+    if (context && !in_domain(context, params))
+	return ZZ::zero();
 
     QQ sum(0, 1);
 
@@ -774,7 +770,16 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	sum += (*i)->coefficient(params, options);
 
     assert(sum.d == 1);
-    zz2value(sum.n, *c);
+    return sum.n;
+}
+
+void gen_fun::coefficient(Value* params, Value* c) const
+{
+    barvinok_options *options = barvinok_options_new_with_defaults();
+
+    ZZ coeff = coefficient(params, options);
+
+    zz2value(coeff, *c);
 
     free(options);
 }

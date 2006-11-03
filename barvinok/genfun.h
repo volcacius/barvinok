@@ -52,6 +52,7 @@ struct gen_fun {
     void divide(const vec_ZZ& power);
     void print(std::ostream& os, unsigned int nparam, char **param_name) const;
     operator evalue *() const;
+    ZZ coefficient(Value* params, barvinok_options *options) const;
     void coefficient(Value* params, Value* c) const;
     gen_fun *summate(int nvar, barvinok_options *options) const;
     bool summate(Value *sum) const;
