@@ -244,12 +244,18 @@ void gen_fun::substitute(Matrix *CP)
     Polyhedron *C = Polyhedron_Image(context, CP, 0);
     Polyhedron_Free(context);
     context = C;
+
+    short_rat_list new_term;
     for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
-	(*i)->d.power *= map;
-	(*i)->n.power *= map;
-	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
-	    (*i)->n.power[j] += offset;
+	short_rat *r = (*i);
+	r->d.power *= map;
+	r->n.power *= map;
+	for (int j = 0; j < r->n.power.NumRows(); ++j)
+	    r->n.power[j] += offset;
+	r->normalize();
+	new_term.insert(r);
     }
+    term.swap(new_term);
 }
 
 struct cone {
