@@ -110,6 +110,50 @@ void short_rat::add(short_rat *r)
     }
 }
 
+QQ short_rat::coefficient(Value* params, barvinok_options *options) const
+{
+    unsigned nvar = d.power.NumRows();
+    unsigned nparam = d.power.NumCols();
+    Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + 1); 
+    Value tmp;
+    value_init(tmp);
+
+    QQ c(0, 1);
+
+    for (int j = 0; j < n.coeff.length(); ++j) {
+	C->NbRows = nparam+nvar;
+	for (int r = 0; r < nparam; ++r) {
+	    value_set_si(C->p[r][0], 0);
+	    for (int c = 0; c < nvar; ++c) {
+		zz2value(d.power[c][r], C->p[r][1+c]);
+	    }
+	    zz2value(n.power[j][r], C->p[r][1+nvar]);
+	    value_subtract(C->p[r][1+nvar], C->p[r][1+nvar], params[r]);
+	}
+	for (int r = 0; r < nvar; ++r) {
+	    value_set_si(C->p[nparam+r][0], 1);
+	    Vector_Set(&C->p[nparam+r][1], 0, nvar + 1);
+	    value_set_si(C->p[nparam+r][1+r], 1);
+	}
+	Polyhedron *P = Constraints2Polyhedron(C, options->MaxRays);
+	if (emptyQ2(P)) {
+	    Polyhedron_Free(P);
+	    continue;
+	}
+	barvinok_count_with_options(P, &tmp, options);
+	Polyhedron_Free(P);
+	if (value_zero_p(tmp))
+	    continue;
+	QQ c2(0, 1);
+	value2zz(tmp, c2.n);
+	c2 *= n.coeff[j];
+	c += c2;
+    }
+    Matrix_Free(C);
+    value_clear(tmp);
+    return c;
+}
+
 bool short_rat::reduced()
 {
     int dim = n.power.NumCols();
@@ -722,61 +766,17 @@ void gen_fun::coefficient(Value* params, Value* c) const
 	return;
     }
 
-    evalue part;
-    value_init(part.d);
-    value_init(part.x.n);
-    evalue sum;
-    value_init(sum.d);
-    evalue_set_si(&sum, 0, 1);
-    Value tmp;
-    value_init(tmp);
+    barvinok_options *options = barvinok_options_new_with_defaults();
 
-    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
-	unsigned nvar = (*i)->d.power.NumRows();
-	unsigned nparam = (*i)->d.power.NumCols();
-	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + 1); 
-	mat_ZZ& d = (*i)->d.power;
+    QQ sum(0, 1);
 
-	for (int j = 0; j < (*i)->n.coeff.length(); ++j) {
-	    C->NbRows = nparam+nvar;
-	    for (int r = 0; r < nparam; ++r) {
-		value_set_si(C->p[r][0], 0);
-		for (int c = 0; c < nvar; ++c) {
-		    zz2value(d[c][r], C->p[r][1+c]);
-		}
-		zz2value((*i)->n.power[j][r], C->p[r][1+nvar]);
-		value_subtract(C->p[r][1+nvar], C->p[r][1+nvar], params[r]);
-	    }
-	    for (int r = 0; r < nvar; ++r) {
-		value_set_si(C->p[nparam+r][0], 1);
-		Vector_Set(&C->p[nparam+r][1], 0, nvar + 1);
-		value_set_si(C->p[nparam+r][1+r], 1);
-	    }
-	    Polyhedron *P = Constraints2Polyhedron(C, 0);
-	    if (emptyQ(P)) {
-		Polyhedron_Free(P);
-		continue;
-	    }
-	    barvinok_count(P, &tmp, 0);
-	    Polyhedron_Free(P);
-	    if (value_zero_p(tmp))
-		continue;
-	    zz2value((*i)->n.coeff[j].n, part.x.n);
-	    zz2value((*i)->n.coeff[j].d, part.d);
-	    value_multiply(part.x.n, part.x.n, tmp);
-	    eadd(&part, &sum);
-	}
-	Matrix_Free(C);
-    }
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
+	sum += (*i)->coefficient(params, options);
 
-    assert(value_one_p(sum.d));
-    value_assign(*c, sum.x.n);
+    assert(sum.d == 1);
+    zz2value(sum.n, *c);
 
-    value_clear(tmp);
-    value_clear(part.d);
-    value_clear(part.x.n);
-    value_clear(sum.d);
-    value_clear(sum.x.n);
+    free(options);
 }
 
 gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const

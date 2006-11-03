@@ -25,6 +25,7 @@ struct short_rat {
 	mat_ZZ	power;
     } d;
     void add(short_rat *rat);
+    QQ coefficient(Value* params, barvinok_options *options) const;
     bool reduced();
     short_rat(Value c);
     short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
