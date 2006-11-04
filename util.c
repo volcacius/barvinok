@@ -1440,7 +1440,7 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
     unsigned dim = (Equalities->NbColumns-2) - nparam;
     Matrix *M, *H, *Q, *U, *C, *ratH, *invH, *Ul, *T1, *T2, *T;
     Value mone;
-    int n, i;
+    int n, i, j;
     int ok;
 
     for (n = 0; n < Equalities->NbRows; ++n)
@@ -1462,11 +1462,6 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
     Matrix_Free(Q);
     value_clear(mone);
 
-    /* we will need to treat scalings later */
-    if (nparam > 0)
-	for (i = 0; i < n; ++i)
-	    assert(value_one_p(H->p[i][i]));
-
     ratH = Matrix_Alloc(n+1, n+1);
     invH = Matrix_Alloc(n+1, n+1);
     for (i = 0; i < n; ++i)
@@ -1480,14 +1475,17 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
     Matrix_Product(invH, C, T1);
     Matrix_Free(C);
     Matrix_Free(invH);
-    if (nparam == 0 && value_notone_p(T1->p[n][nparam])) {
+    if (value_notone_p(T1->p[n][nparam])) {
 	for (i = 0; i < n; ++i) {
 	    if (!mpz_divisible_p(T1->p[i][nparam], T1->p[n][nparam])) {
 		Matrix_Free(T1);
 		Matrix_Free(U);
 		return NULL;
 	    }
-	    value_division(T1->p[i][nparam], T1->p[i][nparam], T1->p[n][nparam]);
+	    /* compress_params should have taken care of this */
+	    for (j = 0; j < nparam; ++j)
+		assert(mpz_divisible_p(T1->p[i][j], T1->p[n][nparam]));
+	    Vector_AntiScale(T1->p[i], T1->p[i], T1->p[n][nparam], nparam+1);
 	}
 	value_set_si(T1->p[n][nparam], 1);
     }
