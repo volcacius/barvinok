@@ -3497,6 +3497,30 @@ out:
     return EP;
 }
 
+static Polyhedron *remove_equalities(Polyhedron *P, unsigned nparam,
+				     unsigned MaxRays)
+{
+    /* Matrix "view" of equalities */
+    Matrix M;
+    M.NbRows = P->NbEq;
+    M.NbColumns = P->Dimension+2;
+    M.p_Init = P->p_Init;
+    M.p = P->Constraint;
+
+    Matrix *T = compress_variables(&M, nparam);
+
+    if (!T)
+	return NULL;
+    if (!isIdentity(T)) {
+	Polyhedron *Q = P;
+	P = Polyhedron_Preimage(P, T, MaxRays);
+	Polyhedron_Free(Q);
+    }
+    Matrix_Free(T);
+
+    return P;
+}
+
 /*
  * remove equalities that require a "compression" of the parameters
  */
@@ -3551,7 +3575,7 @@ static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
     Q = Polyhedron_Preimage(P, T, MaxRays);
     Polyhedron_Free(P);
     P = Q;
-    P = remove_equalities_p(P, P->Dimension-nparam, NULL);
+    P = remove_equalities(P, nparam, MaxRays);
     Matrix_Free(T);
     Matrix_Free(M);
 
@@ -3581,8 +3605,6 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
     assert(!Polyhedron_is_infinite_param(P, nparam));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_positive_rays(P, nparam));
-    if (P->NbEq != 0)
-	P = remove_equalities_p(P, P->Dimension-nparam, NULL);
     if (P->NbEq != 0)
 	P = remove_more_equalities(P, nparam, &CP, options->MaxRays);
     assert(P->NbEq == 0);
