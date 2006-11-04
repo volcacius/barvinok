@@ -1427,6 +1427,14 @@ Polyhedron *Cone_over_Polyhedron(Polyhedron *P)
     return C;
 }
 
+/* Returns a (dim+nparam+1)x((dim-n)+nparam+1) matrix
+ * mapping the transformed subspace back to the original space.
+ * n is the number of equalities involving the variables
+ * (i.e., not purely the parameters).
+ * The remaining n coordinates in the transformed space would
+ * have constant (parametric) values and are therefore not
+ * included in the variables of the new space.
+ */
 Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
 {
     unsigned dim = (Equalities->NbColumns-2) - nparam;
