@@ -278,7 +278,7 @@ try_again:
 	Domain_Free(R);
 	Polyhedron_Free(L);
 	for (r = 1; r < P->NbRays; ++r) {
-	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim)+1);
+	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim*P->NbRays)+1);
 	}
 	M3 = Matrix_Copy(M);
 	L = Rays2Polyhedron(M3, NbMaxCons);
