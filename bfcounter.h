@@ -137,5 +137,5 @@ struct bf_reducer {
 
     void reduce();
 
-    void update_powers(int *powers, int len);
+    void update_powers(const std::vector<int>& powers);
 };

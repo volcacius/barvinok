@@ -99,21 +99,22 @@ void dpoly::div(dpoly& d, mpq_t *count, const mpq_t& factor)
     clear_div(c);
 }
 
-void dpoly_r::add_term(int i, int * powers, ZZ& coeff)
+void dpoly_r::add_term(int i, const vector<int>& powers, const ZZ& coeff)
 {
     if (coeff == 0)
 	return;
-    for (int k = 0; k < c[i].size(); ++k) {
-	if (memcmp(c[i][k]->powers, powers, dim * sizeof(int)) == 0) {
-	    c[i][k]->coeff += coeff;
-	    return;
-	}
+
+    dpoly_r_term tmp;
+    tmp.powers = powers;
+    dpoly_r_term_list::iterator k = c[i].find(&tmp);
+    if (k != c[i].end()) {
+	(*k)->coeff += coeff;
+	return;
     }
     dpoly_r_term *t = new dpoly_r_term;
-    t->powers = new int[dim];
-    memcpy(t->powers, powers, dim * sizeof(int));
+    t->powers = powers;
     t->coeff = coeff;
-    c[i].push_back(t);
+    c[i].insert(t);
 }
 
 dpoly_r::dpoly_r(int len, int dim)
@@ -121,17 +122,16 @@ dpoly_r::dpoly_r(int len, int dim)
     denom = 1;
     this->len = len;
     this->dim = dim;
-    c = new vector< dpoly_r_term * > [len];
+    c = new dpoly_r_term_list[len];
 }
 
 dpoly_r::dpoly_r(dpoly& num, int dim)
 {
     denom = 1;
     len = num.coeff.length();
-    c = new vector< dpoly_r_term * > [len];
+    c = new dpoly_r_term_list[len];
     this->dim = dim;
-    int powers[dim];
-    memset(powers, 0, dim * sizeof(int));
+    vector<int> powers(dim, 0);
 
     for (int i = 0; i < len; ++i) {
 	ZZ coeff = num.coeff[i];
@@ -143,22 +143,23 @@ dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
 {
     denom = 1;
     len = num.coeff.length();
-    c = new vector< dpoly_r_term * > [len];
+    c = new dpoly_r_term_list[len];
     this->dim = dim;
     int powers[dim];
 
     for (int i = 0; i < len; ++i) {
 	ZZ coeff = num.coeff[i];
-	memset(powers, 0, dim * sizeof(int));
+	vector<int> powers(dim, 0);
 	powers[pos] = 1;
 
 	add_term(i, powers, coeff);
 
 	for (int j = 1; j <= i; ++j) {
-	    for (int k = 0; k < c[i-j].size(); ++k) {
-		memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
+	    dpoly_r_term_list::iterator k;
+	    for (k = c[i-j].begin(); k != c[i-j].end(); ++k) {
+		powers = (*k)->powers;
 		powers[pos]++;
-		coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
+		coeff = -den.coeff[j-1] * (*k)->coeff;
 		add_term(i, powers, coeff);
 	    }
 	}
@@ -170,23 +171,24 @@ dpoly_r::dpoly_r(dpoly_r* num, dpoly& den, int pos, int dim)
 {
     denom = num->denom;
     len = num->len;
-    c = new vector< dpoly_r_term * > [len];
+    c = new dpoly_r_term_list[len];
     this->dim = dim;
-    int powers[dim];
     ZZ coeff;
 
     for (int i = 0 ; i < len; ++i) {
-	for (int k = 0; k < num->c[i].size(); ++k) {
-	    memcpy(powers, num->c[i][k]->powers, dim*sizeof(int));
+	dpoly_r_term_list::iterator k;
+	for (k = num->c[i].begin(); k != num->c[i].end(); ++k) {
+	    vector<int> powers = (*k)->powers;
 	    powers[pos]++;
-	    add_term(i, powers, num->c[i][k]->coeff);
+	    add_term(i, powers, (*k)->coeff);
 	}
 
 	for (int j = 1; j <= i; ++j) {
-	    for (int k = 0; k < c[i-j].size(); ++k) {
-		memcpy(powers, c[i-j][k]->powers, dim*sizeof(int));
+	    dpoly_r_term_list::iterator k;
+	    for (k = c[i-j].begin(); k != c[i-j].end(); ++k) {
+		vector<int> powers = (*k)->powers;
 		powers[pos]++;
-		coeff = -den.coeff[j-1] * c[i-j][k]->coeff;
+		coeff = -den.coeff[j-1] * (*k)->coeff;
 		add_term(i, powers, coeff);
 	    }
 	}
@@ -196,9 +198,8 @@ dpoly_r::dpoly_r(dpoly_r* num, dpoly& den, int pos, int dim)
 dpoly_r::~dpoly_r()
 {
     for (int i = 0 ; i < len; ++i)
-	for (int k = 0; k < c[i].size(); ++k) {
-	    delete [] c[i][k]->powers;
-	    delete c[i][k];
+	for (dpoly_r_term_list::iterator k = c[i].begin(); k != c[i].end(); ++k) {
+	    delete (*k);
 	}
     delete [] c;
 }
@@ -211,15 +212,16 @@ dpoly_r *dpoly_r::div(dpoly& d)
     ZZ coeff;
 
     for (int i = 0; i < len; ++i) {
-	for (int k = 0; k < c[i].size(); ++k) {
-	    coeff = c[i][k]->coeff * inv_d;
-	    rc->add_term(i, c[i][k]->powers, coeff);
+	for (dpoly_r_term_list::iterator k = c[i].begin(); k != c[i].end(); ++k) {
+	    coeff = (*k)->coeff * inv_d;
+	    rc->add_term(i, (*k)->powers, coeff);
 	}
 
 	for (int j = 1; j <= i; ++j) {
-	    for (int k = 0; k < rc->c[i-j].size(); ++k) {
-		coeff = - d.coeff[j] * rc->c[i-j][k]->coeff / d.coeff[0];
-		rc->add_term(i, rc->c[i-j][k]->powers, coeff);
+	    dpoly_r_term_list::iterator k;
+	    for (k = rc->c[i-j].begin(); k != rc->c[i-j].end(); ++k) {
+		coeff = - d.coeff[j] * (*k)->coeff / d.coeff[0];
+		rc->add_term(i, (*k)->powers, coeff);
 	    }
 	}
     }
@@ -232,11 +234,11 @@ void dpoly_r::dump(void)
 	cerr << endl;
 	cerr << i << endl;
 	cerr << c[i].size() << endl;
-	for (int j = 0; j < c[i].size(); ++j) {
+	for (dpoly_r_term_list::iterator j = c[i].begin(); j != c[i].end(); ++j) {
 	    for (int k = 0; k < dim; ++k) {
-		cerr << c[i][j]->powers[k] << " ";
+		cerr << (*j)->powers[k] << " ";
 	    }
-	    cerr << ": " << c[i][j]->coeff << "/" << denom << endl;
+	    cerr << ": " << (*j)->coeff << "/" << denom << endl;
 	}
 	cerr << endl;
     }

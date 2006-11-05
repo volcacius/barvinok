@@ -1096,7 +1096,7 @@ struct cumulator {
 
     void cumulate();
 
-    virtual void add_term(int *powers, int len, evalue *f2) = 0;
+    virtual void add_term(const vector<int>& powers, evalue *f2) = 0;
 };
 
 void cumulator::cumulate()
@@ -1143,18 +1143,19 @@ void cumulator::cumulate()
 	    }
 	    emul(&t, &cum);
 	}
-	vector< dpoly_r_term * >& current = r->c[r->len-1-m];
-	for (int j = 0; j < current.size(); ++j) {
-	    if (current[j]->coeff == 0)
+	dpoly_r_term_list& current = r->c[r->len-1-m];
+	dpoly_r_term_list::iterator j;
+	for (j = current.begin(); j != current.end(); ++j) {
+	    if ((*j)->coeff == 0)
 		continue;
 	    evalue *f2 = new evalue;
 	    value_init(f2->d);
 	    value_init(f2->x.n);
-	    zz2value(current[j]->coeff, f2->x.n);
+	    zz2value((*j)->coeff, f2->x.n);
 	    zz2value(r->denom, f2->d);
 	    emul(&cum, f2);
 
-	    add_term(current[j]->powers, r->dim, f2);
+	    add_term((*j)->powers, f2);
 	}
     }
     free_evalue_refs(&f);
@@ -1166,7 +1167,7 @@ void cumulator::cumulate()
 }
 
 struct E_poly_term {
-    int	    *powers;
+    vector<int>	powers;
     evalue  *E;
 };
 
@@ -1175,14 +1176,14 @@ struct ie_cum : public cumulator {
 
     ie_cum(evalue *factor, evalue *v, dpoly_r *r) : cumulator(factor, v, r) {}
 
-    virtual void add_term(int *powers, int len, evalue *f2);
+    virtual void add_term(const vector<int>& powers, evalue *f2);
 };
 
-void ie_cum::add_term(int *powers, int len, evalue *f2)
+void ie_cum::add_term(const vector<int>& powers, evalue *f2)
 {
     int k;
     for (k = 0; k < terms.size(); ++k) {
-	if (memcmp(terms[k]->powers, powers, len * sizeof(int)) == 0) {
+	if (terms[k]->powers == powers) {
 	    eadd(f2, terms[k]->E);
 	    free_evalue_refs(f2); 
 	    delete f2;
@@ -1191,8 +1192,7 @@ void ie_cum::add_term(int *powers, int len, evalue *f2)
     }
     if (k >= terms.size()) {
 	E_poly_term *ET = new E_poly_term;
-	ET->powers = new int[len];
-	memcpy(ET->powers, powers, len * sizeof(int));
+	ET->powers = powers;
 	ET->E = f2;
 	terms.push_back(ET);
     }
@@ -1342,19 +1342,20 @@ void ienumerator::reduce(
 	r = rc;
 	if (E_num(0, dim) == 0) {
 	    int common = pden.NumRows();
-	    vector< dpoly_r_term * >& final = r->c[r->len-1];
+	    dpoly_r_term_list& final = r->c[r->len-1];
 	    int rows;
 	    evalue t;
 	    evalue f;
 	    value_init(f.d);
 	    value_init(f.x.n);
 	    zz2value(r->denom, f.d);
-	    for (int j = 0; j < final.size(); ++j) {
-		if (final[j]->coeff == 0)
+	    dpoly_r_term_list::iterator j;
+	    for (j = final.begin(); j != final.end(); ++j) {
+		if ((*j)->coeff == 0)
 		    continue;
 		rows = common;
 		for (int k = 0; k < r->dim; ++k) {
-		    int n = final[j]->powers[k];
+		    int n = (*j)->powers[k];
 		    if (n == 0)
 			continue;
 		    pden.SetDims(rows+n, pden.NumCols());
@@ -1364,7 +1365,7 @@ void ienumerator::reduce(
 		}
 		value_init(t.d);
 		evalue_copy(&t, factor);
-		zz2value(final[j]->coeff, f.x.n);
+		zz2value((*j)->coeff, f.x.n);
 		emul(&f, &t);
 		reduce(&t, num_p, pden);
 		free_evalue_refs(&t);
@@ -1391,7 +1392,6 @@ void ienumerator::reduce(
 		reduce(cum.terms[j]->E, num_p, pden);
 		free_evalue_refs(cum.terms[j]->E); 
 		delete cum.terms[j]->E;
-		delete [] cum.terms[j]->powers;
 		delete cum.terms[j];
 	    }
 	}
@@ -1560,12 +1560,12 @@ struct bfe_cum : public cumulator {
 	    bfr(bfr), bfe(e) {
     }
 
-    virtual void add_term(int *powers, int len, evalue *f2);
+    virtual void add_term(const vector<int>& powers, evalue *f2);
 };
 
-void bfe_cum::add_term(int *powers, int len, evalue *f2)
+void bfe_cum::add_term(const vector<int>& powers, evalue *f2)
 {
-    bfr->update_powers(powers, len);
+    bfr->update_powers(powers);
 
     bfc_term_base * t = bfe->find_bfc_term(bfr->vn, bfr->npowers, bfr->nnf);
     bfe->set_factor(f2, bfr->l_changes % 2);

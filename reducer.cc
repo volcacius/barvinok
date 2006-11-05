@@ -175,15 +175,16 @@ void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
 	    factor.d = rc->denom * c.d;
 
 	    int common = pden.NumRows();
-	    vector< dpoly_r_term * >& final = rc->c[rc->len-1];
+	    dpoly_r_term_list& final = rc->c[rc->len-1];
 	    int rows;
-	    for (int j = 0; j < final.size(); ++j) {
-		if (final[j]->coeff == 0)
+	    dpoly_r_term_list::iterator j;
+	    for (j = final.begin(); j != final.end(); ++j) {
+		if ((*j)->coeff == 0)
 		    continue;
 		rows = common;
 		pden.SetDims(rows, pden.NumCols());
 		for (int k = 0; k < rc->dim; ++k) {
-		    int n = final[j]->powers[k];
+		    int n = (*j)->powers[k];
 		    if (n == 0)
 			continue;
 		    pden.SetDims(rows+n, pden.NumCols());
@@ -191,7 +192,7 @@ void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
 			pden[rows+l] = den_r[k];
 		    rows += n;
 		}
-		factor.n = final[j]->coeff *= c.n;
+		factor.n = (*j)->coeff *= c.n;
 		reduce(factor, num_p, pden);
 	    }
 

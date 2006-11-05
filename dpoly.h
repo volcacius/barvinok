@@ -2,6 +2,7 @@
 #define DPOLY_H
 
 #include <assert.h>
+#include <set>
 #include <vector>
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>
@@ -25,21 +26,29 @@ private:
 };
 
 struct dpoly_r_term {
-    int	    *powers;
-    ZZ	    coeff;
+    std::vector<int>    powers;
+    ZZ	    	    	coeff;
 };
+
+struct dpoly_r_term_lex_smaller {
+    bool operator()(const dpoly_r_term* t1, const dpoly_r_term* t2) const {
+	return t1->powers < t2->powers;
+    }
+};
+
+typedef std::set<dpoly_r_term*, dpoly_r_term_lex_smaller> dpoly_r_term_list;
 
 /* len: number of elements in c
  * each element in c is the coefficient of a power of t
  * in the MacLaurin expansion
  */
 struct dpoly_r {
-    std::vector< dpoly_r_term * >	*c;
+    dpoly_r_term_list	*c;
     int len;
     int dim;
     ZZ denom;
 
-    void add_term(int i, int * powers, ZZ& coeff);
+    void add_term(int i, const std::vector<int>& powers, const ZZ& coeff);
     dpoly_r(int len, int dim);
     dpoly_r(dpoly& num, int dim);
     dpoly_r(dpoly& num, dpoly& den, int pos, int dim);

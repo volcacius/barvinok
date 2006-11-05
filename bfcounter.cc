@@ -210,7 +210,7 @@ void bf_reducer::compute_extra_num(int i)
     }
 }
 
-void bf_reducer::update_powers(int *powers, int len)
+void bf_reducer::update_powers(const std::vector<int>& powers)
 {
     for (int l = 0; l < nnf; ++l)
 	npowers[l] = bpowers[l];
@@ -218,7 +218,7 @@ void bf_reducer::update_powers(int *powers, int len)
     l_extra_num = extra_num;
     l_changes = changes;
 
-    for (int l = 0; l < len; ++l) {
+    for (int l = 0; l < powers.size(); ++l) {
 	int n = powers[l];
 	if (n == 0)
 	    continue;
@@ -398,16 +398,17 @@ void bf_reducer::reduce()
 		    factor.d = rc->denom;
 
 		    if (bf->constant_vertex(d)) {
-			vector< dpoly_r_term * >& final = rc->c[rc->len-1];
+			dpoly_r_term_list& final = rc->c[rc->len-1];
 
-			for (int k = 0; k < final.size(); ++k) {
-			    if (final[k]->coeff == 0)
+			dpoly_r_term_list::iterator k;
+			for (k = final.begin(); k != final.end(); ++k) {
+			    if ((*k)->coeff == 0)
 				continue;
 
-			    update_powers(final[k]->powers, rc->dim);
+			    update_powers((*k)->powers);
 
 			    bfc_term_base * t = bf->find_bfc_term(vn, npowers, nnf);
-			    factor.n = final[k]->coeff;
+			    factor.n = (*k)->coeff;
 			    bf->set_factor(v[i], j, factor, l_changes % 2);
 			    bf->add_term(t, v[i]->terms[j], l_extra_num);
 			}
