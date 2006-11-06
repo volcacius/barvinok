@@ -23,6 +23,7 @@ extern "C" {
 #include "lattice_point.h"
 #include "reduce_domain.h"
 #include "genfun_constructor.h"
+#include "remove_equalities.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -3497,99 +3498,18 @@ out:
     return EP;
 }
 
-static Polyhedron *remove_equalities(Polyhedron *P, unsigned nparam,
-				     unsigned MaxRays)
-{
-    /* Matrix "view" of equalities */
-    Matrix M;
-    M.NbRows = P->NbEq;
-    M.NbColumns = P->Dimension+2;
-    M.p_Init = P->p_Init;
-    M.p = P->Constraint;
-
-    Matrix *T = compress_variables(&M, nparam);
-
-    if (!T)
-	return NULL;
-    if (!isIdentity(T)) {
-	Polyhedron *Q = P;
-	P = Polyhedron_Preimage(P, T, MaxRays);
-	Polyhedron_Free(Q);
-    }
-    Matrix_Free(T);
-
-    return P;
-}
-
 /*
  * remove equalities that require a "compression" of the parameters
  */
-#ifndef HAVE_COMPRESS_PARMS
 static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
 					  Matrix **CP, unsigned MaxRays)
 {
+    Polyhedron *Q = P;
+    remove_all_equalities(&P, NULL, CP, NULL, nparam, MaxRays);
+    if (P != Q)
+	Polyhedron_Free(Q);
     return P;
 }
-#else
-static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
-					  Matrix **CP, unsigned MaxRays)
-{
-    Matrix *M, *T;
-    Polyhedron *Q;
-    Matrix *CV = NULL;
-    int i;
-
-    /* compress_parms doesn't like equalities that only involve parameters */
-    for (i = 0; i < P->NbEq; ++i)
-	if (First_Non_Zero(P->Constraint[i]+1, P->Dimension-nparam) == -1)
-	    break;
-
-    if (i < P->NbEq) {
-	Matrix *M = Matrix_Alloc(P->NbEq, 1+nparam+1);
-	int n = 0;
-	for (; i < P->NbEq; ++i) {
-	    if (First_Non_Zero(P->Constraint[i]+1, P->Dimension-nparam) == -1)
-		Vector_Copy(P->Constraint[i]+1+P->Dimension-nparam,
-			    M->p[n++]+1, nparam+1);
-	}
-	M->NbRows = n;
-	CV = compress_variables(M, 0);
-	T = align_matrix(CV, P->Dimension+1);
-	Q = Polyhedron_Preimage(P, T, MaxRays);
-	Matrix_Free(T);
-	Polyhedron_Free(P);
-	P = Q;
-	Matrix_Free(M);
-	nparam = CV->NbColumns-1;
-    }
-
-    if (P->NbEq == 0) {
-	*CP = CV;
-	return P;
-    }
-
-    M = Matrix_Alloc(P->NbEq, P->Dimension+2);
-    Vector_Copy(P->Constraint[0], M->p[0], P->NbEq * (P->Dimension+2));
-    *CP = compress_parms(M, nparam);
-    T = align_matrix(*CP, P->Dimension+1);
-    Q = Polyhedron_Preimage(P, T, MaxRays);
-    Polyhedron_Free(P);
-    P = Q;
-    P = remove_equalities(P, nparam, MaxRays);
-    Matrix_Free(T);
-    Matrix_Free(M);
-
-    if (CV) {
-	T = *CP;
-	*CP = Matrix_Alloc(CV->NbRows, T->NbColumns);
-	Matrix_Product(CV, T, *CP);
-	Matrix_Free(T);
-	Matrix_Free(CV);
-    }
-
-    return P;
-}
-#endif
 
 /* frees P */
 static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options)

@@ -73,7 +73,7 @@ AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
 AC_CHECK_FUNCS(Enumeration_Free)
-AC_CHECK_FUNCS(compress_parms)
+AC_CHECK_FUNCS(compress_parms, [AC_LIBOBJ(remove_equalities)])
 AC_SUBST(bv_extra_programs)
 AC_CHECK_FUNCS(LexSmaller,[
 	bv_extra_programs="verify_lexsmaller $bv_extra_programs"
