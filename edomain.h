@@ -8,8 +8,10 @@ extern "C" {
 #include <barvinok/options.h>
 
 struct EDomain_floor {
+    bool     substituted; // see substitute method
     int	     refcount;
     evalue  *e;
+    /* first element is denominator */
     Vector  *v;
 
     EDomain_floor(const evalue *f, int dim);
@@ -28,6 +30,7 @@ struct EDomain_floor {
     }
     void print(std::ostream& os, char **p) const;
     void eval(Value *values, Value *res) const;
+    void substitute(evalue **sub, Matrix *T);
 };
 
 struct EDomain {
@@ -83,6 +86,8 @@ struct EDomain {
 
     Matrix *add_ge_constraint(evalue *constraint,
 				 std::vector<EDomain_floor *>& new_floors) const;
+    void substitute(evalue **sub, Matrix *T, Matrix *Eq, unsigned MaxRays);
 };
 
 int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len);
+void evalue_substitute(evalue *e, evalue **subs);

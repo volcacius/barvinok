@@ -21,6 +21,7 @@ extern "C" {
 #include "combine.h"
 #include "edomain.h"
 #include "evalue_util.h"
+#include "remove_equalities.h"
 #include "config.h"
 
 #ifdef NTL_STD_CXX
@@ -605,12 +606,11 @@ static void interval_minmax(Polyhedron *D, Matrix *T, int *min, int *max,
 }
 
 struct max_term {
-    unsigned dim;
     EDomain *domain;
     vector<evalue *> max;
 
     void print(ostream& os, char **p, barvinok_options *options) const;
-    void substitute(Matrix *T, unsigned MaxRays);
+    void substitute(Matrix *T, barvinok_options *options);
     Vector *eval(Value *val, unsigned MaxRays) const;
 
     ~max_term() {
@@ -711,7 +711,6 @@ max_term* indicator::create_max_term(indicator_term *it)
     int dim = it->den.NumCols();
     int nparam = ic.P->Dimension - ic.vertex.length();
     max_term *maximum = new max_term;
-    maximum->dim = nparam;
     maximum->domain = new EDomain(D);
     for (int j = 0; j < dim; ++j) {
 	evalue *E = new evalue;
@@ -1435,7 +1434,7 @@ static void print_varlist(ostream& os, int n, char **names)
 void max_term::print(ostream& os, char **p, barvinok_options *options) const
 {
     os << "{ ";
-    print_varlist(os, dim, p);
+    print_varlist(os, domain->dimension(), p);
     os << " -> ";
     os << "[";
     for (int i = 0; i < max.size(); ++i) {
@@ -1449,88 +1448,65 @@ void max_term::print(ostream& os, char **p, barvinok_options *options) const
     os << " }" << endl;
 }
 
-static void evalue_substitute(evalue *e, evalue **subs)
+Matrix *left_inverse(Matrix *M, Matrix **Eq)
 {
-    evalue *v;
+    int i, ok;
+    Matrix *L, *H, *Q, *U, *ratH, *invH, *Ut, *inv;
+    Vector *t;
 
-    if (value_notzero_p(e->d))
-	return;
-
-    enode *p = e->x.p;
-    for (int i = 0; i < p->size; ++i)
-	evalue_substitute(&p->arr[i], subs);
-
-    if (p->type == polynomial)
-	v = subs[p->pos-1];
-    else {
-	v = new evalue;
-	value_init(v->d);
-	value_set_si(v->d, 0);
-	v->x.p = new_enode(p->type, 3, -1);
-	value_clear(v->x.p->arr[0].d);
-	v->x.p->arr[0] = p->arr[0];
-	evalue_set_si(&v->x.p->arr[1], 0, 1);
-	evalue_set_si(&v->x.p->arr[2], 1, 1);
+    if (Eq)
+	*Eq = NULL;
+    L = Matrix_Alloc(M->NbRows-1, M->NbColumns-1);
+    for (i = 0; i < L->NbRows; ++i)
+	Vector_Copy(M->p[i], L->p[i], L->NbColumns);
+    right_hermite(L, &H, &U, &Q);
+    Matrix_Free(L);
+    Matrix_Free(Q);
+    t = Vector_Alloc(U->NbColumns);
+    for (i = 0; i < U->NbColumns; ++i)
+	value_oppose(t->p[i], M->p[i][M->NbColumns-1]);
+    if (Eq) {
+	*Eq = Matrix_Alloc(H->NbRows - H->NbColumns, 2 + U->NbColumns);
+	for (i = 0; i < H->NbRows - H->NbColumns; ++i) {
+	    Vector_Copy(U->p[H->NbColumns+i], (*Eq)->p[i]+1, U->NbColumns);
+	    Inner_Product(U->p[H->NbColumns+i], t->p, U->NbColumns,
+			  (*Eq)->p[i]+1+U->NbColumns);
+	}
     }
-
-    int offset = type_offset(p);
-
-    for (int i = p->size-1; i >= offset+1; i--) {
-	emul(v, &p->arr[i]);
-	eadd(&p->arr[i], &p->arr[i-1]);
-	free_evalue_refs(&(p->arr[i]));
+    ratH = Matrix_Alloc(H->NbColumns+1, H->NbColumns+1);
+    invH = Matrix_Alloc(H->NbColumns+1, H->NbColumns+1);
+    for (i = 0; i < H->NbColumns; ++i)
+	Vector_Copy(H->p[i], ratH->p[i], H->NbColumns);
+    value_set_si(ratH->p[ratH->NbRows-1][ratH->NbColumns-1], 1);
+    Matrix_Free(H);
+    ok = Matrix_Inverse(ratH, invH);
+    assert(ok);
+    Matrix_Free(ratH);
+    Ut = Matrix_Alloc(invH->NbRows, U->NbColumns+1);
+    for (i = 0; i < Ut->NbRows-1; ++i) {
+	Vector_Copy(U->p[i], Ut->p[i], U->NbColumns);
+	Inner_Product(U->p[i], t->p, U->NbColumns, &Ut->p[i][Ut->NbColumns-1]);
     }
-
-    if (p->type != polynomial) {
-	free_evalue_refs(v);
-	delete v;
-    }
-
-    value_clear(e->d);
-    *e = p->arr[offset];
-    free(p);
-}
-
-/* "align" matrix to have nrows by inserting
- * the necessary number of rows and an equal number of columns at the end
- * right before the constant row/column
- */
-static Matrix *align_matrix_initial(Matrix *M, int nrows)
-{
-    int i;
-    int newrows = nrows - M->NbRows;
-    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
-    for (i = 0; i < newrows; ++i)
-	value_set_si(M2->p[M->NbRows-1+i][M->NbColumns-1+i], 1);
-    for (i = 0; i < M->NbRows-1; ++i) {
-	Vector_Copy(M->p[i], M2->p[i], M->NbColumns-1);
-	value_assign(M2->p[i][M2->NbColumns-1], M->p[i][M->NbColumns-1]);
-    }
-    value_assign(M2->p[M2->NbRows-1][M2->NbColumns-1],
-		 M->p[M->NbRows-1][M->NbColumns-1]);
-    return M2;
+    Matrix_Free(U);
+    Vector_Free(t);
+    value_set_si(Ut->p[Ut->NbRows-1][Ut->NbColumns-1], 1);
+    inv = Matrix_Alloc(invH->NbRows, Ut->NbColumns);
+    Matrix_Product(invH, Ut, inv);
+    Matrix_Free(Ut);
+    Matrix_Free(invH);
+    return inv;
 }
 
 /* T maps the compressed parameters to the original parameters,
  * while this max_term is based on the compressed parameters
  * and we want get the original parameters back.
  */
-void max_term::substitute(Matrix *T, unsigned MaxRays)
+void max_term::substitute(Matrix *T, barvinok_options *options)
 {
+    assert(domain->dimension() == T->NbColumns-1);
     int nexist = domain->D->Dimension - (T->NbColumns-1);
-    Matrix *M = align_matrix_initial(T, T->NbRows+nexist);
-
-    Polyhedron *D = DomainImage(domain->D, M, MaxRays);
-    Polyhedron_Free(domain->D);
-    domain->D = D;
-    Matrix_Free(M);
-
-    assert(T->NbRows == T->NbColumns);
-    Matrix *T2 = Matrix_Copy(T);
-    Matrix *inv = Matrix_Alloc(T->NbColumns, T->NbRows);
-    int ok = Matrix_Inverse(T2, inv);
-    Matrix_Free(T2);
-    assert(ok);
+    Matrix *Eq;
+    Matrix *inv = left_inverse(T, &Eq);
 
     evalue denom;
     value_init(denom.d);
@@ -1547,6 +1523,9 @@ void max_term::substitute(Matrix *T, unsigned MaxRays)
 	emul(&denom, subs[i]);
     }
     free_evalue_refs(&denom);
+
+    domain->substitute(subs, inv, Eq, options->MaxRays);
+    Matrix_Free(Eq);
 
     for (int i = 0; i < max.size(); ++i) {
 	evalue_substitute(max[i], subs);
@@ -1592,7 +1571,7 @@ void compute_evalue(evalue *e, Value *val, Value *res)
 
 Vector *max_term::eval(Value *val, unsigned MaxRays) const
 {
-    if (!domain->contains(val, dim))
+    if (!domain->contains(val, domain->dimension()))
 	return NULL;
     Vector *res = Vector_Alloc(max.size());
     for (int i = 0; i < max.size(); ++i) {
@@ -2146,12 +2125,9 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     assert(P->NbBid == 0);
 
     if (P->NbEq > 0) {
-	if (nparam > 0)
-	    CP = compress_parameters(&P, &C, nparam, options->MaxRays);
-	Q = P;
-	T = remove_equalities(&P, nparam, options->MaxRays);
-	if (P != Q && Q != Porig)
-	    Polyhedron_Free(Q);
+	remove_all_equalities(&P, &C, &CP, &T, nparam, options->MaxRays);
+	if (CP)
+	    nparam = CP->NbColumns-1;
 	if (!P) {
 	    if (C != Corig)
 		Polyhedron_Free(C);
@@ -2213,7 +2189,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	vector<max_term*> maxima = lexmin(ind, nparam, loc);
 	if (CP)
 	    for (int j = 0; j < maxima.size(); ++j)
-		maxima[j]->substitute(CP, options->MaxRays);
+		maxima[j]->substitute(CP, options);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
 	++nd;

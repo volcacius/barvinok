@@ -231,6 +231,7 @@ EDomain_floor::EDomain_floor(const evalue *f, int dim)
     value_set_si(v->p[0], 1);
     evalue2constraint_r(NULL, e, v->p, v->Size);
     refcount = 1;
+    substituted = false;
 }
 
 void EDomain_floor::eval(Value *values, Value *res) const
@@ -335,4 +336,121 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
     value_set_si(M->p[rows-1][0], 1);
     free_evalue_refs(&mone); 
     return M;
+}
+
+/* "align" matrix to have nrows by inserting
+ * the necessary number of rows and an equal number of columns at the end
+ * right before the constant row/column
+ */
+static Matrix *align_matrix_initial(Matrix *M, int nrows)
+{
+    int i;
+    int newrows = nrows - M->NbRows;
+    Matrix *M2 = Matrix_Alloc(nrows, newrows + M->NbColumns);
+    for (i = 0; i < M->NbRows-1; ++i) {
+	Vector_Copy(M->p[i], M2->p[i], M->NbColumns-1);
+	value_assign(M2->p[i][M2->NbColumns-1], M->p[i][M->NbColumns-1]);
+    }
+    for (i = 0; i <= newrows; ++i)
+	value_assign(M2->p[M->NbRows-1+i][M->NbColumns-1+i],
+		     M->p[M->NbRows-1][M->NbColumns-1]);
+    return M2;
+}
+
+static Matrix *InsertColumns(Matrix *M, int pos, int n)
+{
+    Matrix *R;
+    int i;
+
+    R = Matrix_Alloc(M->NbRows, M->NbColumns+n);
+    for (i = 0; i < M->NbRows; ++i) {
+	Vector_Copy(M->p[i], R->p[i], pos);
+	Vector_Copy(M->p[i]+pos, R->p[i]+pos+n, M->NbColumns-pos);
+    }
+    return R;
+}
+
+void evalue_substitute(evalue *e, evalue **subs)
+{
+    evalue *v;
+
+    if (value_notzero_p(e->d))
+	return;
+
+    enode *p = e->x.p;
+    for (int i = 0; i < p->size; ++i)
+	evalue_substitute(&p->arr[i], subs);
+
+    if (p->type == polynomial)
+	v = subs[p->pos-1];
+    else {
+	v = new evalue;
+	value_init(v->d);
+	value_set_si(v->d, 0);
+	v->x.p = new_enode(p->type, 3, -1);
+	value_clear(v->x.p->arr[0].d);
+	v->x.p->arr[0] = p->arr[0];
+	evalue_set_si(&v->x.p->arr[1], 0, 1);
+	evalue_set_si(&v->x.p->arr[2], 1, 1);
+    }
+
+    int offset = type_offset(p);
+
+    for (int i = p->size-1; i >= offset+1; i--) {
+	emul(v, &p->arr[i]);
+	eadd(&p->arr[i], &p->arr[i-1]);
+	free_evalue_refs(&(p->arr[i]));
+    }
+
+    if (p->type != polynomial) {
+	free_evalue_refs(v);
+	delete v;
+    }
+
+    value_clear(e->d);
+    *e = p->arr[offset];
+    free(p);
+}
+
+void EDomain_floor::substitute(evalue **subs, Matrix *T)
+{
+    /* This is a hack.  The EDomain_floor elements are possibly shared
+     * by many EDomain structures and we want to perform the substitution
+     * only once.
+     */
+    if (substituted)
+	return;
+    substituted = true;
+
+    evalue_substitute(e, subs);
+
+    assert(T->NbRows == v->Size-1);
+    Vector *tmp = Vector_Alloc(1+T->NbColumns);
+    Vector_Matrix_Product(v->p+1, T, tmp->p+1);
+    value_multiply(tmp->p[0], v->p[0], T->p[T->NbRows-1][T->NbColumns-1]);
+    Vector_Free(v);
+    v = tmp;
+}
+
+/* T is a homogeneous matrix that maps the original variables to the new variables.
+ * this has constraints in the new variables and this method
+ * transforms this to constraints in the original variables.
+ */
+void EDomain::substitute(evalue **subs, Matrix *T, Matrix *Eq, unsigned MaxRays)
+{
+    int nexist = floors.size();
+    Matrix *M = align_matrix_initial(T, T->NbRows+nexist);
+    Polyhedron *new_D = DomainPreimage(D, M, MaxRays);
+    Polyhedron_Free(D);
+    D = new_D;
+    Matrix_Free(M);
+
+    M = nexist ? InsertColumns(Eq, 1+dimension(), nexist) : Eq;
+    new_D = DomainAddConstraints(D, M, MaxRays);
+    Polyhedron_Free(D);
+    D = new_D;
+    if (nexist)
+	Matrix_Free(M);
+    for (int i = 0; i < floors.size(); ++i)
+	floors[i]->substitute(subs, T);
 }
