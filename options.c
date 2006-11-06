@@ -12,11 +12,23 @@
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 
+void barvinok_stats_clear(struct barvinok_stats *stats)
+{
+    stats->unimodular_cones = 0;
+}
+
+void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
+{
+    fprintf(out, "Unimodular cones: %d\n", stats->unimodular_cones);
+}
+
 struct barvinok_options *barvinok_options_new_with_defaults()
 {
     struct barvinok_options *options = ALLOC(struct barvinok_options);
     if (!options)
 	return NULL;
+
+    barvinok_stats_clear(&options->stats);
 
     options->LLL_a = 1;
     options->LLL_b = 1;

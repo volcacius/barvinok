@@ -130,6 +130,7 @@ void decomposer::decompose(Polyhedron *C, barvinok_options *options)
 	nonuni.push_back(c);
     } else {
 	try {
+	    options->stats.unimodular_cones++;
 	    handle(C, 1);
 	    delete c;
 	} catch (...) {
@@ -154,6 +155,7 @@ void decomposer::decompose(Polyhedron *C, barvinok_options *options)
 		nonuni.push_back(pc);
 	    } else {
 		try {
+		    options->stats.unimodular_cones++;
 		    handle(pc->poly(), sign(pc->det) * s);
 		    delete pc;
 		} catch (...) {

@@ -1,9 +1,18 @@
 #ifndef BARVINOK_OPTIONS_H
 #define BARVINOK_OPTIONS_H
 
+#include <stdio.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+struct barvinok_stats {
+    long	unimodular_cones;
+};
+
+void barvinok_stats_clear(struct barvinok_stats *stats);
+void barvinok_stats_print(struct barvinok_stats *stats, FILE *out);
 
 struct barvinok_options {
     /* PolyLib options */
@@ -28,6 +37,8 @@ struct barvinok_options {
 		 * 1: yes
 		 */
     int		lexmin_emptiness_check;
+
+    struct barvinok_stats   stats;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
