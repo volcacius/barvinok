@@ -77,17 +77,23 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	M.p_Init = Q->p_Init;
 	M.p = Q->Constraint;
 	CP = compress_parms(&M, nparam);
-	transform(&Q, &D, CP, Q != *P, MaxRays);
 
-	if (CV) {
-	    Matrix *T = CP;
-	    CP = Matrix_Alloc(CV->NbRows, T->NbColumns);
-	    Matrix_Product(CV, T, CP);
-	    Matrix_Free(T);
-	    Matrix_Free(CV);
+	if (isIdentity(CP)) {
+	    Matrix_Free(CP);
+	    CP = CV;
 	    CV = NULL;
+	} else {
+	    transform(&Q, &D, CP, Q != *P, MaxRays);
+	    if (CV) {
+		Matrix *T = CP;
+		CP = Matrix_Alloc(CV->NbRows, T->NbColumns);
+		Matrix_Product(CV, T, CP);
+		Matrix_Free(T);
+		Matrix_Free(CV);
+		CV = NULL;
+	    }
+	    nparam = CP->NbColumns-1;
 	}
-	nparam = CP->NbColumns-1;
 
 	/* Matrix "view" of equalities */
 	M.NbRows = Q->NbEq;
