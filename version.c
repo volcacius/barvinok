@@ -34,6 +34,11 @@ const char *barvinok_version(void)
 #else
 	" -OMEGA"
 #endif
+#ifdef HAVE_LIBCDDGMP
+	" +CDDLIB"
+#else
+	" -CDDLIB"
+#endif
 #ifdef HAVE_LIBGLPK
 	" +GLPK"
 #else

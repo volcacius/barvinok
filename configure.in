@@ -317,6 +317,33 @@ if test "$omega_package" != "no"; then
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
 
+
+AC_MSG_CHECKING(whether to use cddlib)
+AC_ARG_WITH(cddlib, [AS_HELP_STRING([--with-cddlib=DIR],[DIR Location of cddlib])],
+            [ cddlib_package=$withval],  [ cddlib_package=yes ])
+AC_MSG_RESULT($cddlib_package)
+
+have_cddlib=false
+if test "$cddlib_package" != "no"; then
+    if test "x$cddlib_package" != "xyes"; then
+	CPPFLAGS="-I$cddlib_package/include $CPPFLAGS"
+	LDFLAGS="-L$cddlib_package/lib $LDFLAGS"
+    fi
+    AC_TRY_LINK([
+#define GMPRATIONAL
+#include <setoper.h>
+#include <cddmp.h>
+], [
+    mytype a;
+    dd_init(a); ], [
+	have_cddlib=true
+	AC_CHECK_LIB(cddgmp, main,[],[have_cddlib=false])
+    ])
+fi
+AM_CONDITIONAL(HAVE_CDDLIB, test x$have_cddlib = xtrue)
+
+
+
 AC_MSG_CHECKING(whether to use GLPK)
 AC_ARG_WITH(glpk, [AS_HELP_STRING([--with-glpk=DIR],[DIR Location of GLPK])],
             [ glpk_package=$withval],  [ glpk_package=yes ])
