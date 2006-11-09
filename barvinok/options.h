@@ -43,6 +43,7 @@ struct barvinok_options {
 		 * 1: yes
 		 */
     int		lexmin_emptiness_check;
+    int		lexmin_reduce;
 
     struct barvinok_stats   stats;
 };

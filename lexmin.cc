@@ -55,11 +55,13 @@ using std::ostream;
 #else
 #include <getopt.h>
 #define NO_EMPTINESS_CHECK  256
-#define BASIS_REDUCTION_CDD  257
+#define BASIS_REDUCTION_CDD 257
+#define NO_REDUCTION  	    258
 struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
     { "no-emptiness-check", no_argument, 0, NO_EMPTINESS_CHECK },
+    { "no-reduction", no_argument, 0, NO_REDUCTION },
     { "cdd", no_argument, 0, BASIS_REDUCTION_CDD },
     { "min",   	    required_argument,  0,  'm' },
     { "max",   	    required_argument,  0,  'M' },
@@ -685,13 +687,15 @@ struct indicator {
 	    delete this->D;
 	this->D = D;
 	int nparam = ic.P->Dimension - ic.vertex.length();
-	Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
-	Q = DomainConstraintSimplify(Q, options->MaxRays);
-	if (!P || !PolyhedronIncludes(Q, P))
-	    reduce_in_domain(Q);
-	if (P)
-	    Polyhedron_Free(P);
-	P = Q;
+	if (options->lexmin_reduce) {
+	    Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
+	    Q = DomainConstraintSimplify(Q, options->MaxRays);
+	    if (!P || !PolyhedronIncludes(Q, P))
+		reduce_in_domain(Q);
+	    if (P)
+		Polyhedron_Free(P);
+	    P = Q;
+	}
     }
 
     void add(const indicator_term* it);
@@ -1087,7 +1091,8 @@ void partial_order::print(ostream& os, char **p)
 void indicator::add(const indicator_term* it)
 {
     indicator_term *nt = new indicator_term(*it);
-    nt->reduce_in_domain(P ? P : D->D);
+    if (options->lexmin_reduce)
+	nt->reduce_in_domain(P ? P : D->D);
     term.push_back(nt);
     order.add(nt, NULL);
     assert(term.size() == order.pred.size());
@@ -2262,6 +2267,9 @@ int main(int argc, char **argv)
 	switch (c) {
 	case NO_EMPTINESS_CHECK:
 	    options->lexmin_emptiness_check = 0;
+	    break;
+	case NO_REDUCTION:
+	    options->lexmin_reduce = 0;
 	    break;
 	case BASIS_REDUCTION_CDD:
 	    options->gbr_lp_solver = BV_GBR_CDD;

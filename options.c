@@ -52,6 +52,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 #endif
 
     options->lexmin_emptiness_check = 1;
+    options->lexmin_reduce = 1;
 
     return options;
 }
