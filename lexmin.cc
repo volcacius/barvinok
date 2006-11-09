@@ -1598,7 +1598,22 @@ Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
 	    return sample;
 	}
 
-    Matrix *T = remove_equalities(&P, 0, MaxRays);
+    Matrix *T = NULL;
+    while (P && !emptyQ2(P) && P->NbEq > 0) {
+	Polyhedron *Q = P;
+	Matrix *T2 = remove_equalities(&P, 0, MaxRays);
+	if (!T)
+	    T = T2;
+	else {
+	    Matrix *T3 = Matrix_Alloc(T->NbRows, T2->NbColumns);
+	    Matrix_Product(T, T2, T3);
+	    Matrix_Free(T);
+	    Matrix_Free(T2);
+	    T = T3;
+	    if (Q != Porig)
+		Polyhedron_Free(Q);
+	}
+    }
     if (P)
 	sample = Polyhedron_Sample(P, MaxRays);
     if (sample) {
