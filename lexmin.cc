@@ -55,10 +55,12 @@ using std::ostream;
 #else
 #include <getopt.h>
 #define NO_EMPTINESS_CHECK  256
+#define BASIS_REDUCTION_CDD  257
 struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
     { "no-emptiness-check", no_argument, 0, NO_EMPTINESS_CHECK },
+    { "cdd", no_argument, 0, BASIS_REDUCTION_CDD },
     { "min",   	    required_argument,  0,  'm' },
     { "max",   	    required_argument,  0,  'M' },
     { "range",      required_argument,  0,  'r' },
@@ -2256,6 +2258,9 @@ int main(int argc, char **argv)
 	switch (c) {
 	case NO_EMPTINESS_CHECK:
 	    options->lexmin_emptiness_check = 0;
+	    break;
+	case BASIS_REDUCTION_CDD:
+	    options->gbr_lp_solver = BV_GBR_CDD;
 	    break;
 	case 'T':
 	    verify = 1;
