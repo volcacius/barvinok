@@ -599,7 +599,8 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
  * has integer points.  In particular we add the largest coefficient
  * of a ray to the highest vertex (rounded up).
  */
-static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRays)
+static bool Polyhedron_is_infinite(Polyhedron *P, Value* result,
+				   barvinok_options *options)
 {
     int r = 0;
     Matrix *M, *M2;
@@ -620,7 +621,7 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRay
 #ifdef HAVE_LIBGLPK
     Vector *sample;
 
-    sample = Polyhedron_Sample(P, MaxRays);
+    sample = Polyhedron_Sample(P, options);
     if (!sample)
 	value_set_si(*result, 0);
     else {
@@ -680,7 +681,7 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRay
     value_set_si(v->p[0], 1);
     value_set_si(v->p[1], -1);
     value_assign(v->p[1+P->Dimension], offset);
-    R = AddConstraints(v->p, 1, P, MaxRays);
+    R = AddConstraints(v->p, 1, P, options->MaxRays);
     Polyhedron_Free(P);
     P = R;
 
@@ -688,7 +689,7 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result, unsigned MaxRay
     Vector_Free(v);
 
     value_init(c);
-    barvinok_count(P, &c, MaxRays);
+    barvinok_count_with_options(P, &c, options);
     Polyhedron_Free(P);
     if (value_zero_p(c))
 	value_set_si(*result, 0);
@@ -732,7 +733,7 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
 	}
 	allocated = 1;
     }
-    if (Polyhedron_is_infinite(P, result, options->MaxRays)) {
+    if (Polyhedron_is_infinite(P, result, options)) {
 	if (allocated)
 	    Polyhedron_Free(P);
 	return;
@@ -807,7 +808,7 @@ static void barvinok_count_f(Polyhedron *P, Value* result,
 
     POL_ENSURE_VERTICES(P);
 
-    if (Polyhedron_is_infinite(P, result, options->MaxRays))
+    if (Polyhedron_is_infinite(P, result, options))
 	return;
 
     np_base *cnt;

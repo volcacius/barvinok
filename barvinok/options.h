@@ -31,6 +31,12 @@ struct barvinok_options {
 		 */
     int		incremental_specialization;
 
+    /* basis reduction options */
+    #define	BV_GBR_NONE	0
+    #define	BV_GBR_GLPK	1
+    #define	BV_GBR_CDD	2
+    int		gbr_lp_solver;
+
     /* lexmin options */
 		/* Check for integer points in domain
 		 * 0: no

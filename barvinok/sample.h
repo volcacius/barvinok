@@ -9,7 +9,9 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
-Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays);
+struct barvinok_options;
+
+Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options);
 
 #if defined(__cplusplus)
 }

@@ -9,7 +9,12 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
-Matrix *Polyhedron_Reduced_Basis(Polyhedron *P);
+struct barvinok_options;
+
+Matrix *Polyhedron_Reduced_Basis(Polyhedron *P, struct barvinok_options *options);
+
+Matrix *glpk_Polyhedron_Reduced_Basis(Polyhedron *P);
+Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P);
 
 #if defined(__cplusplus)
 }

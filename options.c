@@ -43,6 +43,14 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->incremental_specialization = 0;
 #endif
 
+#ifdef HAVE_LIBGLPK
+    options->gbr_lp_solver = BV_GBR_GLPK;
+#elif defined HAVE_LIBCDDGMP
+    options->gbr_lp_solver = BV_GBR_CDD;
+#else
+    options->gbr_lp_solver = BV_GBR_NONE;
+#endif
+
     options->lexmin_emptiness_check = 1;
 
     return options;

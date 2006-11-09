@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	inv = Identity(A->Dimension+1);
 	P = A;
     } else {
-	basis = Polyhedron_Reduced_Basis(A);
+	basis = Polyhedron_Reduced_Basis(A, bv_options);
 
 	T = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
 	inv = Matrix_Alloc(A->Dimension+1, A->Dimension+1);

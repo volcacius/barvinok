@@ -29,12 +29,19 @@ LINK = $(CXXLINK)
 if HAVE_GINAC
     BERNSTEIN_CC = bernstein.cc
 endif
+if HAVE_CDDLIB
+    BR_CDD = basis_reduction_cdd.cc
+endif
+if HAVE_GLPK
+    BR_GLPK = basis_reduction_glpk.c
+endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
     barvinok/util.h \
     barvinok/barvinok.h \
     NTL_QQ.cc \
+    basis_reduction.c \
     evalue.c \
     genfun.cc \
     util.c \
@@ -60,7 +67,9 @@ libbarvinok_la_SOURCES = \
     mat_util.cc \
     mat_util.h \
     barvinok.cc \
-    $(BERNSTEIN_CC)
+    $(BERNSTEIN_CC) \
+    $(BR_CDD) \
+    $(BR_GLPK)
 EXTRA_libbarvinok_la_SOURCES = \
     bernstein.cc \
     piputil.h

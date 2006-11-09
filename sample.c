@@ -2,6 +2,7 @@
 #include <barvinok/util.h>
 #include <barvinok/basis_reduction.h>
 #include <barvinok/sample.h>
+#include <barvinok/options.h>
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -239,7 +240,7 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
  * in a polyhedron.
  * If the polyhedron is unbounded, we first remove its rays.
  */
-Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
+Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 {
     int i, j;
     Vector *sample = NULL;
@@ -266,14 +267,14 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	    return sample;
 	}
 
-    Q = remove_ray(P, MaxRays);
+    Q = remove_ray(P, options->MaxRays);
     if (Q) {
-	sample = Polyhedron_Sample(Q, MaxRays);
+	sample = Polyhedron_Sample(Q, options);
 	Polyhedron_Free(Q);
 	return sample;
     }
 
-    Matrix *basis = Polyhedron_Reduced_Basis(P);
+    Matrix *basis = Polyhedron_Reduced_Basis(P, options);
 
     T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
     inv = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
@@ -288,7 +289,7 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
     assert(ok);
     Matrix_Free(M);
 
-    Q = Polyhedron_Image(P, T, MaxRays);
+    Q = Polyhedron_Image(P, T, options->MaxRays);
 
     POL_ENSURE_VERTICES(Q);
 
@@ -317,8 +318,8 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 	Vector *S_sample;
 	value_assign(v->p[1+Q->Dimension], tmp);
 
-	R = AddConstraints(v->p, 1, Q, MaxRays);
-	R = DomainConstraintSimplify(R, MaxRays);
+	R = AddConstraints(v->p, 1, Q, options->MaxRays);
+	R = DomainConstraintSimplify(R, options->MaxRays);
 	if (emptyQ(R)) {
 	    Polyhedron_Free(R);
 	    continue;
@@ -326,7 +327,7 @@ Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays)
 
 	S = Polyhedron_RemoveFixedColumns(R, &T);
 	Polyhedron_Free(R);
-	S_sample = Polyhedron_Sample(S, MaxRays);
+	S_sample = Polyhedron_Sample(S, options);
 	Polyhedron_Free(S);
 	if (S_sample) {
 	    Vector *Q_sample = Vector_Alloc(Q->Dimension + 1);

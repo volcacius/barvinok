@@ -1582,7 +1582,7 @@ Vector *max_term::eval(Value *val, unsigned MaxRays) const
 
 static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays);
 
-Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
+Vector *Polyhedron_not_empty(Polyhedron *P, barvinok_options *options)
 {
     Polyhedron *Porig = P;
     Vector *sample = NULL;
@@ -1601,7 +1601,7 @@ Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
     Matrix *T = NULL;
     while (P && !emptyQ2(P) && P->NbEq > 0) {
 	Polyhedron *Q = P;
-	Matrix *T2 = remove_equalities(&P, 0, MaxRays);
+	Matrix *T2 = remove_equalities(&P, 0, options->MaxRays);
 	if (!T)
 	    T = T2;
 	else {
@@ -1615,7 +1615,7 @@ Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
 	}
     }
     if (P)
-	sample = Polyhedron_Sample(P, MaxRays);
+	sample = Polyhedron_Sample(P, options);
     if (sample) {
 	if (T) {
 	    Vector *P_sample = Vector_Alloc(Porig->Dimension + 1);
@@ -1707,8 +1707,7 @@ static void split_on(const split& sp, EDomain *D,
 	    Vector_Copy(sample->p, ED[i]->sample->p, sample->Size);
 	} else if (emptyQ2(ED[i]->D) ||
 		    (options->lexmin_emptiness_check == 1 &&
-		     !(ED[i]->sample = Polyhedron_not_empty(ED[i]->D,
-							    options->MaxRays)))) {
+		     !(ED[i]->sample = Polyhedron_not_empty(ED[i]->D, options)))) {
 	    delete ED[i];
 	    ED[i] = NULL;
 	}
