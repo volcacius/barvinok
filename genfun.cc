@@ -61,13 +61,13 @@ short_rat::short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
 
 void short_rat::normalize()
 {
-    /* Make all powers in denominator lexico-positive */
+    /* Make all powers in denominator reverse-lexico-positive */
     for (int i = 0; i < d.power.NumRows(); ++i) {
 	int j;
-	for (j = 0; j < d.power.NumCols(); ++j)
+	for (j = d.power.NumCols()-1; j >= 0; --j)
 	    if (d.power[i][j] != 0)
 		break;
-	assert(j < d.power.NumCols());
+	assert(j >= 0);
 	if (d.power[i][j] < 0) {
 	    d.power[i] = -d.power[i];
 	    for (int k = 0; k < n.coeff.length(); ++k) {
