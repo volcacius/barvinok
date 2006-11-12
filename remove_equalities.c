@@ -67,6 +67,15 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	nparam = CV->NbColumns-1;
     }
 
+    if (emptyQ2(Q)) {
+	if (CV)
+	    Matrix_Free(CV);
+	*P = Q;
+	if (C)
+	    *C = D;
+	return 0;
+    }
+
     if (Q->NbEq == 0) {
 	CP = CV;
 	CV = NULL;
