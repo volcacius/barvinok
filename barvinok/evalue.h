@@ -106,6 +106,8 @@ size_t domain_size(Polyhedron *D);
 Enumeration* partition2enumeration(evalue *EP);
 void evalue_frac2floor(evalue *e);
 int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D);
+void evalue_frac2floor2(evalue *e, int shift);
+int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift);
 evalue *esum(evalue *E, int nvar);
 void eor(evalue *e1, evalue *res);
 void evalue_denom(evalue *e, Value *d);

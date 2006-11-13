@@ -2872,7 +2872,7 @@ Enumeration* partition2enumeration(evalue *EP)
     return res;
 }
 
-int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
+int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
 {
     enode *p;
     int r = 0;
@@ -2890,7 +2890,7 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
     i = p->type == relation ? 1 : 
 	p->type == fractional ? 1 : 0;
     for (; i<p->size; i++)
-	r |= evalue_frac2floor_in_domain(&p->arr[i], D);
+	r |= evalue_frac2floor_in_domain3(&p->arr[i], D, shift);
 
     if (p->type != fractional) {
 	if (r && p->type == polynomial) {
@@ -2908,40 +2908,42 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 	return r;
     }
 
-    value_init(d);
-    I = polynomial_projection(p, D, &d, &T, 0);
+    if (shift) {
+	value_init(d);
+	I = polynomial_projection(p, D, &d, &T, 0);
 
-    /*
-    Polyhedron_Print(stderr, P_VALUE_FMT, I);
-    */
+	/*
+	Polyhedron_Print(stderr, P_VALUE_FMT, I);
+	*/
 
-    assert(I->NbEq == 0); /* Should have been reduced */
+	assert(I->NbEq == 0); /* Should have been reduced */
 
-    /* Find minimum */
-    for (i = 0; i < I->NbConstraints; ++i)
-	if (value_pos_p(I->Constraint[i][1]))
-	    break;
+	/* Find minimum */
+	for (i = 0; i < I->NbConstraints; ++i)
+	    if (value_pos_p(I->Constraint[i][1]))
+		break;
 
-    if (i < I->NbConstraints) {
-	value_init(min);
-	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
-	mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
-	if (value_neg_p(min)) {
-	    evalue offset;
-	    mpz_fdiv_q(min, min, d);
-	    value_init(offset.d);
-	    value_set_si(offset.d, 1);
-	    value_init(offset.x.n);
-	    value_oppose(offset.x.n, min);
-	    eadd(&offset, &p->arr[0]);
-	    free_evalue_refs(&offset);
+	if (i < I->NbConstraints) {
+	    value_init(min);
+	    value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+	    mpz_cdiv_q(min, I->Constraint[i][2], I->Constraint[i][1]);
+	    if (value_neg_p(min)) {
+		evalue offset;
+		mpz_fdiv_q(min, min, d);
+		value_init(offset.d);
+		value_set_si(offset.d, 1);
+		value_init(offset.x.n);
+		value_oppose(offset.x.n, min);
+		eadd(&offset, &p->arr[0]);
+		free_evalue_refs(&offset);
+	    }
+	    value_clear(min);
 	}
-	value_clear(min);
-    }
 
-    Polyhedron_Free(I);
-    Matrix_Free(T);
-    value_clear(d);
+	Polyhedron_Free(I);
+	Matrix_Free(T);
+	value_clear(d);
+    }
 
     value_init(fl.d);
     value_set_si(fl.d, 0);
@@ -2960,16 +2962,26 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
     return 1;
 }
 
-void evalue_frac2floor(evalue *e)
+int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
+{
+    return evalue_frac2floor_in_domain3(e, D, 1);
+}
+
+void evalue_frac2floor2(evalue *e, int shift)
 {
     int i;
     if (value_notzero_p(e->d) || e->x.p->type != partition)
 	return;
 
     for (i = 0; i < e->x.p->size/2; ++i)
-	if (evalue_frac2floor_in_domain(&e->x.p->arr[2*i+1],
-					EVALUE_DOMAIN(e->x.p->arr[2*i])))
+	if (evalue_frac2floor_in_domain3(&e->x.p->arr[2*i+1],
+					EVALUE_DOMAIN(e->x.p->arr[2*i]), shift))
 	    reduce_evalue(&e->x.p->arr[2*i+1]);
+}
+
+void evalue_frac2floor(evalue *e)
+{
+    evalue_frac2floor2(e, 1);
 }
 
 static Matrix *esum_add_constraint(int nvar, Polyhedron *D, Matrix *C,

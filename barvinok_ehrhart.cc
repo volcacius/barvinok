@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	print_evalue(stdout, EP, param_name);
 	if (floor) {
 	    fprintf(stderr, "WARNING: floor conversion not supported\n");
-	    evalue_frac2floor(EP);
+	    evalue_frac2floor2(EP, 0);
 	    print_evalue(stdout, EP, param_name);
 	} else if (convert) {
 	    evalue_mod2table(EP, C->Dimension);

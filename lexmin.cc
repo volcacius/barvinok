@@ -720,7 +720,7 @@ max_term* indicator::create_max_term(indicator_term *it)
 	evalue *E = new evalue;
 	value_init(E->d);
 	evalue_copy(E, it->vertex[j]);
-	if (evalue_frac2floor_in_domain(E, D->D))
+	if (evalue_frac2floor_in_domain3(E, D->D, 0))
 	    reduce_evalue(E);
 	maximum->max.push_back(E);
     }

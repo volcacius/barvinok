@@ -2301,7 +2301,7 @@ static evalue* enumerate_sum(Polyhedron *P,
     reduce_evalue(EP);
     evalue_range_reduction(EP);
 
-    evalue_frac2floor(EP);
+    evalue_frac2floor2(EP, 1);
 
     evalue *sum = esum(EP, nvar);
 
