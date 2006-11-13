@@ -123,15 +123,17 @@ struct indicator_term {
     bool is_opposite(indicator_term *neg);
 };
 
+/* Returns true if this and neg are opposite using the knowledge
+ * that they have the same numerator.
+ * In particular, we check that the signs are different and that
+ * the denominator is the same.
+ */
 bool indicator_term::is_opposite(indicator_term *neg)
 {
     if (sign + neg->sign != 0)
 	return false;
     if (den != neg->den)
 	return false;
-    for (int k = 0; k < den.NumCols(); ++k)
-	if (!eequal(vertex[k], neg->vertex[k]))
-	    return false;
     return true;
 }
 
