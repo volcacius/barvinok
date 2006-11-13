@@ -1609,11 +1609,13 @@ Vector *Polyhedron_not_empty(Polyhedron *P, barvinok_options *options)
 	if (!T)
 	    T = T2;
 	else {
-	    Matrix *T3 = Matrix_Alloc(T->NbRows, T2->NbColumns);
-	    Matrix_Product(T, T2, T3);
-	    Matrix_Free(T);
-	    Matrix_Free(T2);
-	    T = T3;
+	    if (T2) {
+		Matrix *T3 = Matrix_Alloc(T->NbRows, T2->NbColumns);
+		Matrix_Product(T, T2, T3);
+		Matrix_Free(T);
+		Matrix_Free(T2);
+		T = T3;
+	    }
 	    if (Q != Porig)
 		Polyhedron_Free(Q);
 	}
