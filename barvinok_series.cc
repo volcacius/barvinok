@@ -1,10 +1,7 @@
 #include <unistd.h>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
-}
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"

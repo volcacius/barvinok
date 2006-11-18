@@ -1,13 +1,11 @@
 #ifndef BARVINOK_SAMPLE_H
 #define BARVINOK_SAMPLE_H
 
-#include <gmp.h>
+#include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#include <polylib/polylibgmp.h>
 
 struct barvinok_options;
 

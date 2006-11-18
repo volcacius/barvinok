@@ -1,4 +1,3 @@
-#include <polylib/polylibgmp.h>
 #include "combine.h"
 
 /*                                                                                 

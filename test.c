@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"

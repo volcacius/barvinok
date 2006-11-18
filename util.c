@@ -1,4 +1,4 @@
-#include <polylib/polylibgmp.h>
+#include <barvinok/util.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "config.h"

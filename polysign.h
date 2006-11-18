@@ -1,10 +1,9 @@
-#include <gmp.h>
+#include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#include <polylib/polylibgmp.h>
 #include <barvinok/options.h>
 
 enum order_sign { order_lt, order_le, order_eq, order_ge, order_gt, order_unknown,

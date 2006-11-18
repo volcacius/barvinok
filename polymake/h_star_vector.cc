@@ -4,9 +4,6 @@
 #include <Poly.h>
 #include <Matrix.h>
 #include <Vector.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
-}
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include "convert.h"

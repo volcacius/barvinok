@@ -1,9 +1,10 @@
 /* Don't make this header public without removing the include of config.h */
+#include <barvinok/polylib.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#include <polylib/polylibgmp.h>
 #include "config.h"
 
 #ifndef HAVE_COMPRESS_PARMS

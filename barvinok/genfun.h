@@ -5,10 +5,7 @@
 #include <iostream>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
-}
 #include <barvinok/NTL_QQ.h>
 #include <barvinok/options.h>
 

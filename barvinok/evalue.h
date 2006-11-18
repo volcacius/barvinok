@@ -1,15 +1,11 @@
 #ifndef EVALUE_H
 #define EVALUE_H
 
-#include <gmp.h>
+#include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#include <polylib/polylibgmp.h>
-#undef divide
-#undef value_compare
 
 #define polynomial new_polynomial
 #define periodic new_periodic

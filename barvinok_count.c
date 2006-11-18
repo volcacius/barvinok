@@ -1,7 +1,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <polylib/polylibgmp.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "config.h"

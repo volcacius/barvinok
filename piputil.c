@@ -1,4 +1,3 @@
-#include <polylib/polylibgmp.h>
 #include <stdio.h>  /* needed for piplib ! */
 #include <piplib/piplibMP.h>
 #include <assert.h>

@@ -1,8 +1,6 @@
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
-}
+#include <barvinok/polylib.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;

@@ -1,14 +1,13 @@
 #ifndef BARVINOK_H
 #define BARVINOK_H
 
-#include <gmp.h>
+#include <barvinok/evalue.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 #include <barvinok/options.h>
-#include <barvinok/evalue.h>
 
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg);
 void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons);

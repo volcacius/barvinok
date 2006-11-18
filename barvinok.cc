@@ -8,9 +8,8 @@
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
 #include <barvinok/util.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
+extern "C" {
 #include "piputil.h"
 }
 #include "config.h"

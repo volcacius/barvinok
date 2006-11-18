@@ -1,4 +1,4 @@
-#include <polylib/polylibgmp.h>
+#include <barvinok/polylib.h>
 
 /*
  * Replaces constraint a x >= c by x >= ceil(c/a)

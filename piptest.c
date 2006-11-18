@@ -1,4 +1,3 @@
-#include <polylib/polylibgmp.h>
 #include "piputil.h"
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>

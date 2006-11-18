@@ -3,9 +3,6 @@
 #include <Rational.h>
 #include <Poly.h>
 #include <Matrix.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
-}
 #include <barvinok/barvinok.h>
 #include "convert.h"
 

@@ -1,13 +1,11 @@
 #ifndef BARVINOK_BASIS_REDUCTION_H
 #define BARVINOK_BASIS_REDUCTION_H
 
-#include <gmp.h>
+#include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#include <polylib/polylibgmp.h>
 
 struct barvinok_options;
 

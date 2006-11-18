@@ -1,13 +1,12 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <gmp.h>
+#include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
 
 #ifdef POL_NO_DUAL

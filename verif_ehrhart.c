@@ -16,7 +16,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
 #include "verif_ehrhart.h"

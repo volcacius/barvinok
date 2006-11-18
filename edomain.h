@@ -1,9 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <gmp.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
-}
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 

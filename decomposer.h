@@ -2,9 +2,7 @@
 #define DECOMPOSER_H
 
 #include <gmp.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
-}
+#include <barvinok/polylib.h>
 #include <barvinok/options.h>
 
 struct decomposer {

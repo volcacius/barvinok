@@ -1,4 +1,3 @@
-#include <polylib/polylibgmp.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include "config.h"

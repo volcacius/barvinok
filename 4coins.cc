@@ -1,5 +1,4 @@
 #include <iostream>
-#include <polylib/polylibgmp.h>
 #include <barvinok/genfun.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>

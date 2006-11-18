@@ -2,9 +2,6 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
-extern "C" {
-#include <polylib/polylibgmp.h>
-}
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include "conversion.h"
