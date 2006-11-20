@@ -1274,6 +1274,10 @@ void indicator::combine(indicator_term *a, indicator_term *b)
     assert(n_i < 30);
     assert(n_j < 30);
 
+    int n = n_i > n_j ? n_i : n_j;
+    indicator_term **new_term = new indicator_term* [1 << n];
+    assert(order.eq[a].size() > 1);
+
     for (k = (1 << n_i)-1; k >= 0; --k) {
 	indicator_term *it = k ? new indicator_term(*b) : b;
 	it->den.SetDims(n_common + n_i + n_j, dim);
@@ -1286,8 +1290,12 @@ void indicator::combine(indicator_term *a, indicator_term *b)
 	lex_order_rows(it->den);
 	int change = 0;
 	for (l = 0; l < n_i; ++l) {
-	    if (!(k & (1 <<l)))
+	    if (!(k & (1 <<l))) {
+		order.pending[it == b ? a : it].push_back(new_term[k+(1<<l)]);
+		order.lt[it == b ? a : it].push_back(new_term[k+(1<<l)]);
+		order.pred[new_term[k+(1<<l)]]++;
 		continue;
+	    }
 	    change ^= 1;
 	    for (int m = 0; m < dim; ++m)
 		evalue_add_constant(it->vertex[m], rest_i[l][m]);
@@ -1295,8 +1303,9 @@ void indicator::combine(indicator_term *a, indicator_term *b)
 	if (change)
 	    it->sign = -it->sign;
 	if (it != b) {
+	    new_term[k] = it;
 	    term.push_back(it);
-	    order.add(it, NULL);
+	    order.pred[it] = 0;
 	}
     }
 
@@ -1312,8 +1321,12 @@ void indicator::combine(indicator_term *a, indicator_term *b)
 	lex_order_rows(it->den);
 	int change = 0;
 	for (l = 0; l < n_j; ++l) {
-	    if (!(k & (1 <<l)))
+	    if (!(k & (1 <<l))) {
+		order.pending[it].push_back(new_term[k+(1<<l)]);
+		order.lt[it].push_back(new_term[k+(1<<l)]);
+		order.pred[new_term[k+(1<<l)]]++;
 		continue;
+	    }
 	    change ^= 1;
 	    for (int m = 0; m < dim; ++m)
 		evalue_add_constant(it->vertex[m], rest_j[l][m]);
@@ -1321,10 +1334,13 @@ void indicator::combine(indicator_term *a, indicator_term *b)
 	if (change)
 	    it->sign = -it->sign;
 	if (it != a) {
+	    new_term[k] = it;
 	    term.push_back(it);
-	    order.add(it, NULL);
+	    order.pred[it] = 0;
 	}
     }
+
+    delete [] new_term;
 }
 
 bool indicator::handle_equal_numerators(indicator_term *base)
