@@ -3318,7 +3318,7 @@ void eor(evalue *e1, evalue *res)
 }
 
 /* computes denominator of polynomial evalue 
- * d should point to an initialized value
+ * d should point to a value initialized to 1
  */
 void evalue_denom(evalue *e, Value *d)
 {
