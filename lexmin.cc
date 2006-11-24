@@ -81,7 +81,8 @@ static int type_offset(enode *p)
 
 struct indicator_term {
     int sign;
-    int pos;
+    int pos;		/* number of rational vertex */
+    int n;		/* number of cone associated to given rational vertex */
     mat_ZZ den;
     evalue **vertex;
 
@@ -89,16 +90,19 @@ struct indicator_term {
 	den.SetDims(0, dim);
 	vertex = new evalue* [dim];
 	this->pos = pos;
+	n = -1;
 	sign = 0;
     }
-    indicator_term(unsigned dim) {
+    indicator_term(unsigned dim, int pos, int n) {
 	den.SetDims(dim, dim);
 	vertex = new evalue* [dim];
-	pos = -1;
+	this->pos = pos;
+	this->n = n;
     }
     indicator_term(const indicator_term& src) {
 	sign = src.sign;
 	pos = src.pos;
+	n = src.n;
 	den = src.den;
 	unsigned dim = den.NumCols();
 	vertex = new evalue* [dim];
@@ -106,6 +110,19 @@ struct indicator_term {
 	    vertex[i] = new evalue();
 	    value_init(vertex[i]->d);
 	    evalue_copy(vertex[i], src.vertex[i]);
+	}
+    }
+    void swap(indicator_term *other) {
+	int tmp;
+	tmp = sign; sign = other->sign; other->sign = tmp;
+	tmp = pos; pos = other->pos; other->pos = tmp;
+	tmp = n; n = other->n; other->n = tmp;
+	mat_ZZ tmp_den = den; den = other->den; other->den = tmp_den;
+	unsigned dim = den.NumCols();
+	for (int i = 0; i < dim; ++i) {
+	    evalue *tmp = vertex[i];
+	    vertex[i] = other->vertex[i];
+	    other->vertex[i] = tmp;
 	}
     }
     ~indicator_term() {
@@ -122,15 +139,133 @@ struct indicator_term {
     void substitute(evalue *fract, evalue *val);
     void substitute(int pos, evalue *val);
     void reduce_in_domain(Polyhedron *D);
-    bool is_opposite(indicator_term *neg);
+    bool is_opposite(const indicator_term *neg) const;
 };
+
+static int evalue_rational_cmp(const evalue *e1, const evalue *e2)
+{
+    int r;
+    Value m;
+    Value m2;
+    value_init(m);
+    value_init(m2);
+
+    assert(value_notzero_p(e1->d));
+    assert(value_notzero_p(e2->d));
+    value_multiply(m, e1->x.n, e2->d);
+    value_multiply(m2, e2->x.n, e1->d);
+    if (value_lt(m, m2))
+	r = -1;
+    else if (value_gt(m, m2))
+	r = 1;
+    else 
+	r = 0;
+    value_clear(m);
+    value_clear(m2);
+
+    return r;
+}
+
+static int evalue_cmp(const evalue *e1, const evalue *e2)
+{
+    if (value_notzero_p(e1->d)) {
+	if (value_zero_p(e2->d))
+	    return -1;
+	return evalue_rational_cmp(e1, e2);
+    }
+    if (value_notzero_p(e2->d))
+	return 1;
+    if (e1->x.p->type != e2->x.p->type)
+	return e1->x.p->type - e2->x.p->type;
+    if (e1->x.p->size != e2->x.p->size)
+	return e1->x.p->size - e2->x.p->size;
+    if (e1->x.p->pos != e2->x.p->pos)
+	return e1->x.p->pos - e2->x.p->pos;
+    assert(e1->x.p->type == polynomial ||
+	   e1->x.p->type == fractional ||
+	   e1->x.p->type == flooring);
+    for (int i = 0; i < e1->x.p->size; ++i) {
+	int s = evalue_cmp(&e1->x.p->arr[i], &e2->x.p->arr[i]);
+	if (s)
+	    return s;
+    }
+    return 0;
+}
+
+void evalue_length(evalue *e, int len[2])
+{
+    len[0] = 0;
+    len[1] = 0;
+
+    while (value_zero_p(e->d)) {
+	assert(e->x.p->type == polynomial ||
+	       e->x.p->type == fractional ||
+	       e->x.p->type == flooring);
+	if (e->x.p->type == polynomial)
+	    len[1]++;
+	else
+	    len[0]++;
+	int offset = type_offset(e->x.p);
+	assert(e->x.p->size == offset+2);
+	e = &e->x.p->arr[offset];
+    }
+}
+
+static bool it_smaller(const indicator_term* it1, const indicator_term* it2)
+{
+    if (it1 == it2)
+	return false;
+    int len1[2], len2[2];
+    unsigned dim = it1->den.NumCols();
+    for (int i = 0; i < dim; ++i) {
+	evalue_length(it1->vertex[i], len1);
+	evalue_length(it2->vertex[i], len2);
+	if (len1[0] != len2[0])
+	    return len1[0] < len2[0];
+	if (len1[1] != len2[1])
+	    return len1[1] < len2[1];
+    }
+    if (it1->pos != it2->pos)
+	return it1->pos < it2->pos;
+    if (it1->n != it2->n)
+	return it1->n < it2->n;
+    int s = lex_cmp(it1->den, it2->den);
+    if (s)
+	return s < 0;
+    for (int i = 0; i < dim; ++i) {
+	s = evalue_cmp(it1->vertex[i], it2->vertex[i]);
+	if (s)
+	    return s < 0;
+    }
+    assert(it1->sign != 0);
+    assert(it2->sign != 0);
+    if (it1->sign != it2->sign)
+	return it1->sign > 0;
+    return it1 < it2;
+}
+
+struct smaller_it {
+    static const int requires_resort;
+    bool operator()(const indicator_term* it1, const indicator_term* it2) const {
+	return it_smaller(it1, it2);
+    }
+};
+const int smaller_it::requires_resort = 1;
+
+struct smaller_it_p {
+    static const int requires_resort;
+    bool operator()(const indicator_term* it1, const indicator_term* it2) const {
+	return it1 < it2;
+    }
+};
+const int smaller_it_p::requires_resort = 0;
 
 /* Returns true if this and neg are opposite using the knowledge
  * that they have the same numerator.
  * In particular, we check that the signs are different and that
  * the denominator is the same.
  */
-bool indicator_term::is_opposite(indicator_term *neg)
+bool indicator_term::is_opposite(const indicator_term *neg) const
 {
     if (sign + neg->sign != 0)
 	return false;
@@ -174,8 +309,7 @@ void indicator_term::print(ostream& os, char **p) const
 	}
 	os << "]";
     }
-    if (sign == 0)
-	os << " (" << pos << ")";
+    os << " ((" << pos << ", " << n << ", " << (void*)this << "))";
 }
 
 /* Perform the substitution specified by T on the variables.
@@ -334,6 +468,8 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
     vector<indicator_term*> *terms;
     Matrix *T;	/* Transformation to original space */
     Param_Polyhedron *PP;
+    int pos;
+    int n;
 
     indicator_constructor(Polyhedron *P, unsigned dim, Param_Polyhedron *PP,
 			  Matrix *T) :
@@ -352,6 +488,12 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
     void print(ostream& os, char **p);
 
     virtual void handle_polar(Polyhedron *P, int sign);
+    void decompose_at_vertex(Param_Vertices *V, int _i, 
+					    barvinok_options *options) {
+	pos = _i;
+	n = 0;
+	vertex_decomposer::decompose_at_vertex(V, _i, options);
+    }
 };
 
 void indicator_constructor::handle_polar(Polyhedron *C, int s)
@@ -360,7 +502,7 @@ void indicator_constructor::handle_polar(Polyhedron *C, int s)
 
     assert(C->NbRays-1 == dim);
 
-    indicator_term *term = new indicator_term(dim);
+    indicator_term *term = new indicator_term(dim, pos, n++);
     term->sign = s;
     terms[vert].push_back(term);
 
@@ -442,31 +584,125 @@ struct indicator;
 struct partial_order {
     indicator *ind;
 
-    map<indicator_term *, int > pred;
-    map<indicator_term *, vector<indicator_term * > > lt;
-    map<indicator_term *, vector<indicator_term * > > le;
-    map<indicator_term *, vector<indicator_term * > > eq;
+    map<const indicator_term *, int, smaller_it > pred;
+    map<const indicator_term *, vector<const indicator_term * >, smaller_it > lt;
+    map<const indicator_term *, vector<const indicator_term * >, smaller_it > le;
+    map<const indicator_term *, vector<const indicator_term * >, smaller_it > eq;
 
-    map<indicator_term *, vector<indicator_term * > > pending;
+    map<const indicator_term *, vector<const indicator_term * >, smaller_it > pending;
 
     partial_order(indicator *ind) : ind(ind) {}
     void copy(const partial_order& order, 
-	      map< indicator_term *, indicator_term * > old2new);
+	      map< const indicator_term *, indicator_term * > old2new);
+    void resort() {
+	map<const indicator_term *, vector<const indicator_term * > >::iterator i;
+	map<const indicator_term *, int >::iterator j;
 
-    order_sign compare(indicator_term *a, indicator_term *b);
-    void set_equal(indicator_term *a, indicator_term *b);
-    void unset_le(indicator_term *a, indicator_term *b);
+	if (pred.key_comp().requires_resort) {
+	    typeof(pred) new_pred;
+	    for (j = pred.begin(); j != pred.end(); ++j)
+		new_pred[(*j).first] = (*j).second;
+	    pred.swap(new_pred);
+	    new_pred.clear();
+	}
 
-    bool compared(indicator_term* a, indicator_term* b);
-    void add(indicator_term* it, std::set<indicator_term *> *filter);
-    void remove(indicator_term* it);
+	if (lt.key_comp().requires_resort) {
+	    typeof(lt) m;
+	    for (i = lt.begin(); i != lt.end(); ++i)
+		m[(*i).first] = (*i).second;
+	    lt.swap(m);
+	    m.clear();
+	}
+
+	if (le.key_comp().requires_resort) {
+	    typeof(le) m;
+	    for (i = le.begin(); i != le.end(); ++i)
+		m[(*i).first] = (*i).second;
+	    le.swap(m);
+	    m.clear();
+	}
+
+	if (eq.key_comp().requires_resort) {
+	    typeof(eq) m;
+	    for (i = eq.begin(); i != eq.end(); ++i)
+		m[(*i).first] = (*i).second;
+	    eq.swap(m);
+	    m.clear();
+	}
+
+	if (pending.key_comp().requires_resort) {
+	    typeof(pending) m;
+	    for (i = pending.begin(); i != pending.end(); ++i)
+		m[(*i).first] = (*i).second;
+	    pending.swap(m);
+	    m.clear();
+	}
+    }
+
+    order_sign compare(const indicator_term *a, const indicator_term *b);
+    void set_equal(const indicator_term *a, const indicator_term *b);
+    void unset_le(const indicator_term *a, const indicator_term *b);
+
+    bool compared(const indicator_term* a, const indicator_term* b);
+    void add(const indicator_term* it, std::set<const indicator_term *> *filter);
+    void remove(const indicator_term* it);
 
     void print(ostream& os, char **p);
+
+    /* replace references to orig to references to replacement */
+    void replace(const indicator_term* orig, indicator_term* replacement);
+    void sanity_check() const;
 };
 
-void partial_order::unset_le(indicator_term *a, indicator_term *b)
+/* We actually replace the contents of orig by that of replacement,
+ * but we have to be careful since replacing the content changes
+ * the order of orig in the maps.
+ */
+void partial_order::replace(const indicator_term* orig, indicator_term* replacement)
 {
-    vector<indicator_term *>::iterator i;
+    int orig_pred = pred[orig];
+    pred.erase(orig);
+    vector<const indicator_term * > orig_lt;
+    vector<const indicator_term * > orig_le;
+    vector<const indicator_term * > orig_eq;
+    vector<const indicator_term * > orig_pending;
+    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
+    bool in_lt = ((i = lt.find(orig)) != lt.end());
+    if (in_lt) {
+	orig_lt = (*i).second;
+	lt.erase(orig);
+    }
+    bool in_le = ((i = le.find(orig)) != le.end());
+    if (in_le) {
+	orig_le = (*i).second;
+	le.erase(orig);
+    }
+    bool in_eq = ((i = eq.find(orig)) != eq.end());
+    if (in_eq) {
+	orig_eq = (*i).second;
+	eq.erase(orig);
+    }
+    bool in_pending = ((i = pending.find(orig)) != pending.end());
+    if (in_pending) {
+	orig_pending = (*i).second;
+	pending.erase(orig);
+    }
+    indicator_term *old = const_cast<indicator_term *>(orig);
+    old->swap(replacement);
+    pred[old] = orig_pred;
+    if (in_lt)
+	lt[old] = orig_lt;
+    if (in_le)
+	le[old] = orig_le;
+    if (in_eq)
+	eq[old] = orig_eq;
+    if (in_pending)
+	pending[old] = orig_pending;
+}
+
+void partial_order::unset_le(const indicator_term *a, const indicator_term *b)
+{
+    vector<const indicator_term *>::iterator i;
     i = find(le[a].begin(), le[a].end(), b);
     le[a].erase(i);
     pred[b]--;
@@ -475,7 +711,7 @@ void partial_order::unset_le(indicator_term *a, indicator_term *b)
 	pending[a].erase(i);
 }
 
-void partial_order::set_equal(indicator_term *a, indicator_term *b)
+void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
 {
     if (eq[a].size() == 0)
 	eq[a].push_back(a);
@@ -484,15 +720,15 @@ void partial_order::set_equal(indicator_term *a, indicator_term *b)
     a = eq[a][0];
     b = eq[b][0];
     assert(a != b);
-    if (b < a) {
-	indicator_term *c = a;
+    if (pred.key_comp()(b, a)) {
+	const indicator_term *c = a;
 	a = b;
 	b = c;
     }
 
-    indicator_term *base = a;
+    const indicator_term *base = a;
 
-    map<indicator_term *, vector<indicator_term * > >::iterator i;
+    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
 
     for (int j = 0; j < eq[b].size(); ++j) {
 	eq[base].push_back(eq[b][j]);
@@ -511,7 +747,7 @@ void partial_order::set_equal(indicator_term *a, indicator_term *b)
 	    else
 		lt[base].push_back(lt[b][j]);
 	}
-	lt.erase(i);
+	lt.erase(b);
     }
 
     i = le.find(b);
@@ -525,12 +761,12 @@ void partial_order::set_equal(indicator_term *a, indicator_term *b)
 	    else
 		le[base].push_back(le[b][j]);
 	}
-	le.erase(i);
+	le.erase(b);
     }
 
     i = pending.find(base);
     if (i != pending.end()) {
-	vector<indicator_term * > old = pending[base];
+	vector<const indicator_term * > old = pending[base];
 	pending[base].clear();
 	for (int j = 0; j < old.size(); ++j) {
 	    if (find(eq[base].begin(), eq[base].end(), old[j]) == eq[base].end())
@@ -544,15 +780,15 @@ void partial_order::set_equal(indicator_term *a, indicator_term *b)
 	    if (find(eq[base].begin(), eq[base].end(), pending[b][j]) == eq[base].end())
 		pending[base].push_back(pending[b][j]);
 	}
-	pending.erase(i);
+	pending.erase(b);
     }
 }
 
 void partial_order::copy(const partial_order& order, 
-		         map< indicator_term *, indicator_term * > old2new)
+		         map< const indicator_term *, indicator_term * > old2new)
 {
-    map<indicator_term *, vector<indicator_term * > >::const_iterator i;
-    map<indicator_term *, int >::const_iterator j;
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
+    map<const indicator_term *, int >::const_iterator j;
 
     for (j = order.pred.begin(); j != order.pred.end(); ++j)
 	pred[old2new[(*j).first]] = (*j).second;
@@ -572,6 +808,48 @@ void partial_order::copy(const partial_order& order,
     for (i = order.pending.begin(); i != order.pending.end(); ++i) {
 	for (int j = 0; j < (*i).second.size(); ++j)
 	    pending[old2new[(*i).first]].push_back(old2new[(*i).second[j]]);
+    }
+}
+
+void partial_order::sanity_check() const
+{
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator prev;
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator l;
+    map<const indicator_term *, int >::const_iterator k, prev_k;
+
+    for (k = pred.begin(); k != pred.end(); prev_k = k, ++k)
+	if (k != pred.begin())
+ 	    assert(pred.key_comp()((*prev_k).first, (*k).first));
+    for (i = lt.begin(); i != lt.end(); prev = i, ++i) {
+	if (i != lt.begin())
+ 	    assert(lt.key_comp()((*prev).first, (*i).first));
+	l = eq.find((*i).first);
+	if (l != eq.end())
+	    assert((*l).second.size() > 1);
+	assert(pred.find((*i).first) != pred.end());
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    k = pred.find((*i).second[j]);
+	    assert(k != pred.end());
+	    assert((*k).second != 0);
+	}
+    }
+    for (i = le.begin(); i != le.end(); ++i) {
+	assert(pred.find((*i).first) != pred.end());
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    k = pred.find((*i).second[j]);
+	    assert(k != pred.end());
+	    assert((*k).second != 0);
+	}
+    }
+    for (i = eq.begin(); i != eq.end(); ++i) {
+	assert(pred.find((*i).first) != pred.end());
+	assert((*i).second.size() >= 1);
+    }
+    for (i = pending.begin(); i != pending.end(); ++i) {
+	assert(pred.find((*i).first) != pred.end());
+	for (int j = 0; j < (*i).second.size(); ++j)
+	    assert(pred.find((*i).second[j]) != pred.end());
     }
 }
 
@@ -621,6 +899,7 @@ struct indicator {
     Polyhedron	 *P;
     Param_Domain *PD;
     barvinok_options	*options;
+    vector<evalue *>	substitutions;
 
     indicator(indicator_constructor& ic, Param_Domain *PD, EDomain *D,
 	      barvinok_options *options) :
@@ -628,7 +907,7 @@ struct indicator {
     indicator(const indicator& ind, EDomain *D) :
 	    ic(ind.ic), PD(ind.PD), D(NULL), order(this), options(ind.options),
 	    P(Polyhedron_Copy(ind.P)) {
-	map< indicator_term *, indicator_term * > old2new;
+	map< const indicator_term *, indicator_term * > old2new;
 	for (int i = 0; i < ind.term.size(); ++i) {
 	    indicator_term *it = new indicator_term(*ind.term[i]);
 	    old2new[ind.term[i]] = it;
@@ -659,26 +938,30 @@ struct indicator {
 	    if (P)
 		Polyhedron_Free(P);
 	    P = Q;
+	    order.resort();
 	}
     }
 
     void add(const indicator_term* it);
-    void remove(indicator_term* it);
+    void remove(const indicator_term* it);
     void remove_initial_rational_vertices();
-    void expand_rational_vertex(indicator_term *initial);
+    void expand_rational_vertex(const indicator_term *initial);
 
     void print(ostream& os, char **p);
     void simplify();
     void peel(int i, int j);
-    void combine(indicator_term *a, indicator_term *b);
-    void substitute(evalue *equation);
+    void combine(const indicator_term *a, const indicator_term *b);
+    void add_substitution(evalue *equation);
+    void perform_pending_substitutions();
     void reduce_in_domain(Polyhedron *D);
-    bool handle_equal_numerators(indicator_term *base);
+    bool handle_equal_numerators(const indicator_term *base);
 
-    max_term* create_max_term(indicator_term *it);
+    max_term* create_max_term(const indicator_term *it);
+private:
+    void substitute(evalue *equation);
 };
 
-max_term* indicator::create_max_term(indicator_term *it)
+max_term* indicator::create_max_term(const indicator_term *it)
 {
     int dim = it->den.NumCols();
     int nparam = ic.P->Dimension - ic.vertex.length();
@@ -760,7 +1043,7 @@ static order_sign evalue_sign(evalue *diff, EDomain *D, barvinok_options *option
     return sign;
 }
 
-order_sign partial_order::compare(indicator_term *a, indicator_term *b)
+order_sign partial_order::compare(const indicator_term *a, const indicator_term *b)
 {
     unsigned dim = a->den.NumCols();
     order_sign sign = order_eq;
@@ -808,7 +1091,7 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
 	}
 	if (diff_sign == order_eq) {
 	    if (D == ind->D && !EVALUE_IS_ZERO(*diff))
-		ind->substitute(diff);
+		ind->add_substitution(diff);
 	    free_evalue_refs(diff); 
 	    delete diff;
 	    continue;
@@ -850,9 +1133,9 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
     return sign;
 }
 
-bool partial_order::compared(indicator_term* a, indicator_term* b)
+bool partial_order::compared(const indicator_term* a, const indicator_term* b)
 {
-    map<indicator_term *, vector<indicator_term * > >::iterator j;
+    map<const indicator_term *, vector<const indicator_term * > >::iterator j;
 
     j = lt.find(a);
     if (j != lt.end() && find(lt[a].begin(), lt[a].end(), b) != lt[a].end())
@@ -865,22 +1148,24 @@ bool partial_order::compared(indicator_term* a, indicator_term* b)
     return false;
 }
 
-void partial_order::add(indicator_term* it, std::set<indicator_term *> *filter)
+void partial_order::add(const indicator_term* it,
+			std::set<const indicator_term *> *filter)
 {
     if (eq.find(it) != eq.end() && eq[it].size() == 1)
 	return;
 
-    int it_pred = filter ? pred[it] : 0;
+    if (!filter)
+	pred[it] = 0;
 
-    map<indicator_term *, int >::iterator i;
+    map<const indicator_term *, int >::iterator i;
     for (i = pred.begin(); i != pred.end(); ++i) {
+	if ((*i).first == it)
+	    continue;
 	if ((*i).second != 0)
 	    continue;
 	if (eq.find((*i).first) != eq.end() && eq[(*i).first].size() == 1)
 	    continue;
 	if (filter) {
-	    if ((*i).first == it)
-		continue;
 	    if (filter->find((*i).first) == filter->end())
 		continue;
 	    if (compared((*i).first, it))
@@ -894,38 +1179,36 @@ void partial_order::add(indicator_term* it, std::set<indicator_term *> *filter)
 	    le[it].push_back((*i).first);
 	    (*i).second++;
 	} else if (sign == order_eq) {
-	    pred[it] = it_pred;
 	    set_equal(it, (*i).first);
 	    return;
 	} else if (sign == order_gt) {
 	    pending[(*i).first].push_back(it);
 	    lt[(*i).first].push_back(it);
-	    ++it_pred;
+	    pred[it]++;
 	} else if (sign == order_ge) {
 	    pending[(*i).first].push_back(it);
 	    le[(*i).first].push_back(it);
-	    ++it_pred;
+	    pred[it]++;
 	}
     }
-    pred[it] = it_pred;
 }
 
-void partial_order::remove(indicator_term* it)
+void partial_order::remove(const indicator_term* it)
 {
-    std::set<indicator_term *> filter;
-    map<indicator_term *, vector<indicator_term * > >::iterator i;
+    std::set<const indicator_term *> filter;
+    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
 
     assert(pred[it] == 0);
 
     i = eq.find(it);
     if (i != eq.end()) {
 	assert(eq[it].size() >= 1);
-	indicator_term *base;
+	const indicator_term *base;
 	if (eq[it].size() == 1) {
 	    base = eq[it][0];
-	    eq.erase(i);
+	    eq.erase(it);
 
-	    vector<indicator_term * >::iterator j;
+	    vector<const indicator_term * >::iterator j;
 	    j = find(eq[base].begin(), eq[base].end(), it);
 	    assert(j != eq[base].end());
 	    eq[base].erase(j);
@@ -933,12 +1216,12 @@ void partial_order::remove(indicator_term* it)
 	    /* "it" may no longer be the smallest, since the order
 	     * structure may have been copied from another one.
 	     */
-	    sort(eq[it].begin()+1, eq[it].end());
+	    sort(eq[it].begin()+1, eq[it].end(), pred.key_comp());
 	    assert(eq[it][0] == it);
 	    eq[it].erase(eq[it].begin());
 	    base = eq[it][0];
 	    eq[base] = eq[it];
-	    eq.erase(i);
+	    eq.erase(it);
 
 	    for (int j = 1; j < eq[base].size(); ++j)
 		eq[eq[base][j]][0] = base;
@@ -946,28 +1229,26 @@ void partial_order::remove(indicator_term* it)
 	    i = lt.find(it);
 	    if (i != lt.end()) {
 		lt[base] = lt[it];
-		lt.erase(i);
+		lt.erase(it);
 	    }
 	
 	    i = le.find(it);
 	    if (i != le.end()) {
 		le[base] = le[it];
-		le.erase(i);
+		le.erase(it);
 	    }
 	
 	    i = pending.find(it);
 	    if (i != pending.end()) {
 		pending[base] = pending[it];
-		pending.erase(i);
+		pending.erase(it);
 	    }
 	}
 
 	if (eq[base].size() == 1)
 	    eq.erase(base);
 
-	map<indicator_term *, int >::iterator j;
-	j = pred.find(it);
-	pred.erase(j);
+	pred.erase(it);
 
 	return;
     }
@@ -978,7 +1259,7 @@ void partial_order::remove(indicator_term* it)
 	    filter.insert(lt[it][j]);
 	    pred[lt[it][j]]--;
 	}
-	lt.erase(i);
+	lt.erase(it);
     }
 
     i = le.find(it);
@@ -987,26 +1268,30 @@ void partial_order::remove(indicator_term* it)
 	    filter.insert(le[it][j]);
 	    pred[le[it][j]]--;
 	}
-	le.erase(i);
+	le.erase(it);
     }
 
-    map<indicator_term *, int >::iterator j;
-    j = pred.find(it);
-    pred.erase(j);
+    pred.erase(it);
 
     i = pending.find(it);
     if (i != pending.end()) {
-	for (int j = 0; j < pending[it].size(); ++j) {
-	    filter.erase(pending[it][j]);
-	    add(pending[it][j], &filter);
+	vector<const indicator_term *> it_pending = pending[it];
+	pending.erase(it);
+	for (int j = 0; j < it_pending.size(); ++j) {
+	    filter.erase(it_pending[j]);
+	    add(it_pending[j], &filter);
 	}
-	pending.erase(i);
     }
 }
 
 void partial_order::print(ostream& os, char **p)
 {
-    map<indicator_term *, vector<indicator_term * > >::iterator i;
+    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
+    map<const indicator_term *, int >::iterator j;
+    for (j = pred.begin(); j != pred.end(); ++j) {
+	(*j).first->print(os, p);
+	os << ": " <<  (*j).second << endl;
+    }
     for (i = lt.begin(); i != lt.end(); ++i) {
 	(*i).first->print(os, p);
 	assert(pred.find((*i).first) != pred.end());
@@ -1077,7 +1362,7 @@ void indicator::add(const indicator_term* it)
     assert(term.size() == order.pred.size());
 }
 
-void indicator::remove(indicator_term* it)
+void indicator::remove(const indicator_term* it)
 {
     vector<indicator_term *>::iterator i;
     i = find(term.begin(), term.end(), it);
@@ -1088,7 +1373,7 @@ void indicator::remove(indicator_term* it)
     delete it;
 }
 
-void indicator::expand_rational_vertex(indicator_term *initial)
+void indicator::expand_rational_vertex(const indicator_term *initial)
 {
     int pos = initial->pos;
     remove(initial);
@@ -1108,8 +1393,8 @@ void indicator::expand_rational_vertex(indicator_term *initial)
 void indicator::remove_initial_rational_vertices()
 {
     do {
-	indicator_term *initial = NULL;
-	map<indicator_term *, int >::iterator i;
+	const indicator_term *initial = NULL;
+	map<const indicator_term *, int >::iterator i;
 	for (i = order.pred.begin(); i != order.pred.end(); ++i) {
 	    if ((*i).second != 0)
 		continue;
@@ -1238,7 +1523,7 @@ void indicator::peel(int i, int j)
     term.erase(term.begin()+i);
 }
 
-void indicator::combine(indicator_term *a, indicator_term *b)
+void indicator::combine(const indicator_term *a, const indicator_term *b)
 {
     int dim = a->den.NumCols();
 
@@ -1279,7 +1564,7 @@ void indicator::combine(indicator_term *a, indicator_term *b)
     assert(order.eq[a].size() > 1);
 
     for (k = (1 << n_i)-1; k >= 0; --k) {
-	indicator_term *it = k ? new indicator_term(*b) : b;
+	indicator_term *it = new indicator_term(*b);
 	it->den.SetDims(n_common + n_i + n_j, dim);
 	for (l = 0; l < n_common; ++l)
 	    it->den[l] = common[l];
@@ -1290,19 +1575,25 @@ void indicator::combine(indicator_term *a, indicator_term *b)
 	lex_order_rows(it->den);
 	int change = 0;
 	for (l = 0; l < n_i; ++l) {
-	    if (!(k & (1 <<l))) {
-		order.pending[it == b ? a : it].push_back(new_term[k+(1<<l)]);
-		order.lt[it == b ? a : it].push_back(new_term[k+(1<<l)]);
-		order.pred[new_term[k+(1<<l)]]++;
+	    if (!(k & (1 <<l)))
 		continue;
-	    }
 	    change ^= 1;
 	    for (int m = 0; m < dim; ++m)
 		evalue_add_constant(it->vertex[m], rest_i[l][m]);
 	}
 	if (change)
 	    it->sign = -it->sign;
-	if (it != b) {
+	for (l = 0; l < n_i; ++l) {
+	    if (k & (1 <<l))
+		continue;
+	    order.pending[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
+	    order.lt[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
+	    order.pred[new_term[k+(1<<l)]]++;
+	}
+	if (k == 0) {
+	    order.replace(b, it);
+	    delete it;
+	} else {
 	    new_term[k] = it;
 	    term.push_back(it);
 	    order.pred[it] = 0;
@@ -1310,7 +1601,7 @@ void indicator::combine(indicator_term *a, indicator_term *b)
     }
 
     for (k = (1 << n_j)-1; k >= 0; --k) {
-	indicator_term *it = k ? new indicator_term(*a) : a;
+	indicator_term *it = new indicator_term(*a);
 	it->den.SetDims(n_common + n_i + n_j, dim);
 	for (l = 0; l < n_common; ++l)
 	    it->den[l] = common[l];
@@ -1321,19 +1612,26 @@ void indicator::combine(indicator_term *a, indicator_term *b)
 	lex_order_rows(it->den);
 	int change = 0;
 	for (l = 0; l < n_j; ++l) {
-	    if (!(k & (1 <<l))) {
-		order.pending[it].push_back(new_term[k+(1<<l)]);
-		order.lt[it].push_back(new_term[k+(1<<l)]);
-		order.pred[new_term[k+(1<<l)]]++;
+	    if (!(k & (1 <<l)))
 		continue;
-	    }
 	    change ^= 1;
 	    for (int m = 0; m < dim; ++m)
 		evalue_add_constant(it->vertex[m], rest_j[l][m]);
 	}
 	if (change)
 	    it->sign = -it->sign;
-	if (it != a) {
+	for (l = 0; l < n_j; ++l) {
+	    if (k & (1 <<l))
+		continue;
+	    order.pending[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
+	    order.lt[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
+	    assert(order.pred.find(new_term[k+(1<<l)]) != order.pred.end());
+	    order.pred[new_term[k+(1<<l)]]++;
+	}
+	if (k == 0) {
+	    order.replace(a, it);
+	    delete it;
+	} else {
 	    new_term[k] = it;
 	    term.push_back(it);
 	    order.pred[it] = 0;
@@ -1341,9 +1639,10 @@ void indicator::combine(indicator_term *a, indicator_term *b)
     }
 
     delete [] new_term;
+    assert(term.size() == order.pred.size());
 }
 
-bool indicator::handle_equal_numerators(indicator_term *base)
+bool indicator::handle_equal_numerators(const indicator_term *base)
 {
     for (int i = 0; i < order.eq[base].size(); ++i) {
 	for (int j = i+1; j < order.eq[base].size(); ++j) {
@@ -1421,6 +1720,31 @@ void indicator::substitute(evalue *equation)
     delete val;
 
     free(p);
+}
+
+void indicator::add_substitution(evalue *equation)
+{
+    for (int i = 0; i < substitutions.size(); ++i)
+	if (eequal(substitutions[i], equation))
+	    return;
+    evalue *copy = new evalue();
+    value_init(copy->d);
+    evalue_copy(copy, equation);
+    substitutions.push_back(copy);
+}
+
+void indicator::perform_pending_substitutions()
+{
+    if (substitutions.size() == 0)
+	return;
+
+    for (int i = 0; i < substitutions.size(); ++i) {
+	substitute(substitutions[i]);
+	free_evalue_refs(substitutions[i]); 
+	delete substitutions[i];
+    }
+    substitutions.clear();
+    order.resort();
 }
 
 static void print_varlist(ostream& os, int n, char **names)
@@ -1888,19 +2212,20 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 				    vector<int> loc)
 {
     vector<max_term*> maxima;
-    map<indicator_term *, int >::iterator i;
+    map<const indicator_term *, int >::iterator i;
     vector<int> best_score;
     vector<int> second_score;
     vector<int> neg_score;
 
     do {
-	indicator_term *best = NULL, *second = NULL, *neg = NULL,
-		       *neg_eq = NULL, *neg_le = NULL;
+	ind.perform_pending_substitutions();
+	const indicator_term *best = NULL, *second = NULL, *neg = NULL,
+			     *neg_eq = NULL, *neg_le = NULL;
 	for (i = ind.order.pred.begin(); i != ind.order.pred.end(); ++i) {
 	    vector<int> score;
 	    if ((*i).second != 0)
 		continue;
-	    indicator_term *term = (*i).first;
+	    const indicator_term *term = (*i).first;
 	    if (term->sign == 0) {
 		ind.expand_rational_vertex(term);
 		break;
@@ -1978,7 +2303,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	}
 
 	if (!second && !neg) {
-	    indicator_term *rat = NULL;
+	    const indicator_term *rat = NULL;
 	    assert(best);
 	    if (ind.order.le[best].size() == 0) {
 		if (ind.order.eq[best].size() != 0) {
@@ -2044,8 +2369,10 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	    if (sign != order_eq)
 		break;
-	    if (!EVALUE_IS_ZERO(*diff))
-		ind.substitute(diff);
+	    if (!EVALUE_IS_ZERO(*diff)) {
+		ind.add_substitution(diff);
+		ind.perform_pending_substitutions();
+	    }
 	}
 	if (sign == order_eq) {
 	    ind.order.set_equal(best, second);
@@ -2078,7 +2405,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    loc.push_back(0);
 	    indicator indeq(ind, Deq);
 	    Deq = NULL;
-	    indeq.substitute(diff);
+	    indeq.add_substitution(diff);
+	    indeq.perform_pending_substitutions();
 	    vector<max_term*> maxeq = lexmin(indeq, nparam, loc);
 	    maxima.insert(maxima.end(), maxeq.begin(), maxeq.end());
 	    loc.resize(locsize);
@@ -2100,20 +2428,21 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	if (Deq) {
 	    loc.push_back(0);
-	    ind.substitute(diff);
 	    ind.set_domain(Deq);
+	    ind.add_substitution(diff);
+	    ind.perform_pending_substitutions();
 	}
 	if (Dlt) {
 	    loc.push_back(-1);
+	    ind.set_domain(Dlt);
 	    ind.order.lt[best].push_back(second);
 	    ind.order.pred[second]++;
-	    ind.set_domain(Dlt);
 	}
 	if (Dgt) {
 	    loc.push_back(1);
+	    ind.set_domain(Dgt);
 	    ind.order.lt[second].push_back(best);
 	    ind.order.pred[best]++;
-	    ind.set_domain(Dgt);
 	}
     } while(1);
 
