@@ -602,6 +602,253 @@ void indicator_constructor::normalize()
 	}
 }
 
+struct order_cache_el {
+    vector<evalue *> e;
+    order_cache_el copy() const {
+	order_cache_el n;
+	for (int i = 0; i < e.size(); ++i) {
+	    evalue *c = new evalue;
+	    value_init(c->d);
+	    evalue_copy(c, e[i]);
+	    n.e.push_back(c);
+	}
+	return n;
+    }
+    void free() {
+	for (int i = 0; i < e.size(); ++i) {
+	    free_evalue_refs(e[i]); 
+	    delete e[i];
+	}
+    }
+    void negate() {
+	evalue mone;
+	value_init(mone.d);
+	evalue_set_si(&mone, -1, 1);
+	for (int i = 0; i < e.size(); ++i)
+	    emul(&mone, e[i]);
+	free_evalue_refs(&mone); 
+    }
+    void print(ostream& os, char **p);
+};
+
+void order_cache_el::print(ostream& os, char **p)
+{
+    os << "[";
+    for (int i = 0; i < e.size(); ++i) {
+	if (i)
+	    os << ",";
+	evalue_print(os, e[i], p);
+    }
+    os << "]";
+}
+
+struct order_cache {
+    vector<order_cache_el> lt;
+    vector<order_cache_el> le;
+    vector<order_cache_el> unknown;
+
+    void clear_transients() {
+	for (int i = 0; i < le.size(); ++i)
+	    le[i].free();
+	for (int i = 0; i < unknown.size(); ++i)
+	    unknown[i].free();
+	le.resize(0);
+	unknown.resize(0);
+    }
+    ~order_cache() {
+	clear_transients();
+	for (int i = 0; i < lt.size(); ++i)
+	    lt[i].free();
+	lt.resize(0);
+    }
+    void add(order_cache_el& cache_el, order_sign sign);
+    order_sign check_lt(vector<order_cache_el>* list,
+			const indicator_term *a, const indicator_term *b,
+			order_cache_el& cache_el);
+    order_sign check_lt(const indicator_term *a, const indicator_term *b,
+			order_cache_el& cache_el);
+    order_sign check_direct(const indicator_term *a, const indicator_term *b,
+			    order_cache_el& cache_el);
+    order_sign check(const indicator_term *a, const indicator_term *b,
+			order_cache_el& cache_el);
+    void copy(const order_cache& cache);
+    void print(ostream& os, char **p);
+};
+
+void order_cache::copy(const order_cache& cache)
+{
+    for (int i = 0; i < cache.lt.size(); ++i) {
+	order_cache_el n = cache.lt[i].copy();
+	add(n, order_lt);
+    }
+}
+
+void order_cache::add(order_cache_el& cache_el, order_sign sign)
+{
+    if (sign == order_lt) {
+	lt.push_back(cache_el);
+    } else if (sign == order_gt) {
+	cache_el.negate();
+	lt.push_back(cache_el);
+    } else if (sign == order_le) {
+	le.push_back(cache_el);
+    } else if (sign == order_ge) {
+	cache_el.negate();
+	le.push_back(cache_el);
+    } else if (sign == order_unknown) {
+	unknown.push_back(cache_el);
+    } else {
+	assert(sign == order_eq);
+	cache_el.free();
+    }
+    return;
+}
+
+/* compute a - b */
+static evalue *ediff(const evalue *a, const evalue *b)
+{
+    evalue mone;
+    value_init(mone.d);
+    evalue_set_si(&mone, -1, 1);
+    evalue *diff = new evalue;
+    value_init(diff->d);
+    evalue_copy(diff, b);
+    emul(&mone, diff);
+    eadd(a, diff);
+    reduce_evalue(diff);
+    free_evalue_refs(&mone); 
+    return diff;
+}
+
+static bool evalue_first_difference(const evalue *e1, const evalue *e2,
+				    const evalue **d1, const evalue **d2)
+{
+    *d1 = e1;
+    *d2 = e2;
+
+    if (value_ne(e1->d, e2->d))
+	return true;
+
+    if (value_notzero_p(e1->d)) {
+        if (value_eq(e1->x.n, e2->x.n))
+	    return false;
+	return true;
+    }
+    if (e1->x.p->type != e2->x.p->type)
+	return true;
+    if (e1->x.p->size != e2->x.p->size)
+	return true;
+    if (e1->x.p->pos != e2->x.p->pos)
+	return true;
+
+    assert(e1->x.p->type == polynomial ||
+	   e1->x.p->type == fractional ||
+	   e1->x.p->type == flooring);
+    int offset = type_offset(e1->x.p);
+    assert(e1->x.p->size == offset+2);
+    for (int i = 0; i < e1->x.p->size; ++i)
+	if (i != type_offset(e1->x.p) &&
+	    !eequal(&e1->x.p->arr[i], &e2->x.p->arr[i])) 
+		return true;
+
+    return evalue_first_difference(&e1->x.p->arr[offset],
+				   &e2->x.p->arr[offset], d1, d2);
+}
+
+static order_sign evalue_diff_constant_sign(const evalue *e1, const evalue *e2)
+{
+    if (!evalue_first_difference(e1, e2, &e1, &e2))
+	return order_eq;
+    if (value_zero_p(e1->d) || value_zero_p(e2->d))
+	return order_undefined;
+    int s = evalue_rational_cmp(e1, e2);
+    if (s < 0)
+	return order_lt;
+    else if (s > 0)
+	return order_gt;
+    else
+	return order_eq;
+}
+
+order_sign order_cache::check_lt(vector<order_cache_el>* list,
+				  const indicator_term *a, const indicator_term *b,
+				  order_cache_el& cache_el)
+{
+    order_sign sign = order_undefined;
+    for (int i = 0; i < list->size(); ++i) {
+	int j;
+	for (j = cache_el.e.size(); j < (*list)[i].e.size(); ++j)
+	    cache_el.e.push_back(ediff(a->vertex[j], b->vertex[j]));
+	for (j = 0; j < (*list)[i].e.size(); ++j) {
+	    order_sign diff_sign;
+	    diff_sign = evalue_diff_constant_sign((*list)[i].e[j], cache_el.e[j]);
+	    if (diff_sign == order_gt) {
+		sign = order_lt;
+		break;
+	    } else if (diff_sign == order_lt)
+		break;
+	    else if (diff_sign == order_undefined)
+		break;
+	    else
+		assert(diff_sign == order_eq);
+	}
+	if (j == (*list)[i].e.size())
+	    sign = list == &lt ? order_lt : order_le;
+	if (sign != order_undefined)
+	    break;
+    }
+    return sign;
+}
+
+order_sign order_cache::check_direct(const indicator_term *a,
+				     const indicator_term *b,
+				     order_cache_el& cache_el)
+{
+    order_sign sign = check_lt(&lt, a, b, cache_el);
+    if (sign != order_undefined)
+	return sign;
+    sign = check_lt(&le, a, b, cache_el);
+    if (sign != order_undefined)
+	return sign;
+
+    for (int i = 0; i < unknown.size(); ++i) {
+	int j;
+	for (j = cache_el.e.size(); j < unknown[i].e.size(); ++j)
+	    cache_el.e.push_back(ediff(a->vertex[j], b->vertex[j]));
+	for (j = 0; j < unknown[i].e.size(); ++j) {
+	    if (!eequal(unknown[i].e[j], cache_el.e[j]))
+		break;
+	}
+	if (j == unknown[i].e.size()) {
+	    sign = order_unknown;
+	    break;
+	}
+    }
+    return sign;
+}
+
+order_sign order_cache::check(const indicator_term *a, const indicator_term *b,
+			      order_cache_el& cache_el)
+{
+    order_sign sign = check_direct(a, b, cache_el);
+    if (sign != order_undefined)
+	return sign;
+    int size = cache_el.e.size();
+    cache_el.negate();
+    sign = check_direct(a, b, cache_el);
+    cache_el.negate();
+    assert(cache_el.e.size() == size);
+    if (sign == order_undefined)
+	return sign;
+    if (sign == order_lt)
+	sign = order_gt;
+    else if (sign == order_le)
+	sign = order_ge;
+    else
+	assert(sign == order_unknown);
+    return sign;
+}
+
 struct indicator;
 
 struct partial_order {
@@ -613,6 +860,8 @@ struct partial_order {
     map<const indicator_term *, vector<const indicator_term * >, smaller_it > eq;
 
     map<const indicator_term *, vector<const indicator_term * >, smaller_it > pending;
+
+    order_cache	    cache;
 
     partial_order(indicator *ind) : ind(ind) {}
     void copy(const partial_order& order, 
@@ -812,6 +1061,8 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
 void partial_order::copy(const partial_order& order, 
 		         map< const indicator_term *, indicator_term * > old2new)
 {
+    cache.copy(order.cache);
+
     map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
     map<const indicator_term *, int >::const_iterator j;
 
@@ -909,6 +1160,7 @@ struct indicator {
     }
 
     void set_domain(EDomain *D) {
+	order.cache.clear_transients();
 	if (this->D)
 	    delete this->D;
 	this->D = D;
@@ -1012,22 +1264,6 @@ max_term* indicator::create_max_term(const indicator_term *it)
     return maximum;
 }
 
-/* compute a - b */
-static evalue *ediff(const evalue *a, const evalue *b)
-{
-    evalue mone;
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-    evalue *diff = new evalue;
-    value_init(diff->d);
-    evalue_copy(diff, b);
-    emul(&mone, diff);
-    eadd(a, diff);
-    reduce_evalue(diff);
-    free_evalue_refs(&mone); 
-    return diff;
-}
-
 static order_sign evalue_sign(evalue *diff, EDomain *D, barvinok_options *options)
 {
     order_sign sign = order_eq;
@@ -1084,16 +1320,46 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
     EDomain *D = ind->D;
     unsigned MaxRays = ind->options->MaxRays;
     bool rational = a->sign == 0 || b->sign == 0;
+
+    order_sign cached_sign = order_eq;
+    for (int k = 0; k < dim; ++k) {
+	cached_sign = evalue_diff_constant_sign(a->vertex[k], b->vertex[k]);
+	if (cached_sign != order_eq)
+	    break;
+    }
+    if (cached_sign != order_undefined)
+	return cached_sign;
+
+    order_cache_el cache_el;
+    cached_sign = order_undefined;
+    if (!rational)
+	cached_sign = cache.check(a, b, cache_el);
+    if (cached_sign != order_undefined) {
+	cache_el.free();
+	return cached_sign;
+    }
+
     if (rational && POL_ISSET(ind->options->MaxRays, POL_INTEGER)) {
 	ind->options->MaxRays &= ~POL_INTEGER;
 	if (ind->options->MaxRays)
 	    ind->options->MaxRays |= POL_HIGH_BIT;
     }
 
+    sign = order_eq;
+
     for (int k = 0; k < dim; ++k) {
 	/* compute a->vertex[k] - b->vertex[k] */
-	evalue *diff = ediff(a->vertex[k], b->vertex[k]);
-	order_sign diff_sign = evalue_sign(diff, D, ind->options);
+	evalue *diff;
+	if (cache_el.e.size() <= k) {
+	    diff = ediff(a->vertex[k], b->vertex[k]);
+	    cache_el.e.push_back(diff);
+	} else
+	    diff = cache_el.e[k];
+	order_sign diff_sign;
+	if (eequal(a->vertex[k], b->vertex[k]))
+	    diff_sign = order_eq;
+	else
+	    diff_sign = evalue_sign(diff, D, ind->options);
 
 	if (diff_sign == order_undefined) {
 	    assert(sign == order_le || sign == order_ge);
@@ -1101,8 +1367,6 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 		sign = order_lt;
 	    else
 		sign = order_gt;
-	    free_evalue_refs(diff); 
-	    delete diff;
 	    break;
 	}
 	if (diff_sign == order_lt) {
@@ -1110,8 +1374,6 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 		sign = order_lt;
 	    else
 		sign = order_unknown;
-	    free_evalue_refs(diff); 
-	    delete diff;
 	    break;
 	}
 	if (diff_sign == order_gt) {
@@ -1119,22 +1381,16 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 		sign = order_gt;
 	    else
 		sign = order_unknown;
-	    free_evalue_refs(diff); 
-	    delete diff;
 	    break;
 	}
 	if (diff_sign == order_eq) {
-	    if (D == ind->D && !EVALUE_IS_ZERO(*diff))
+	    if (D == ind->D && !rational && !EVALUE_IS_ZERO(*diff))
 		ind->add_substitution(diff);
-	    free_evalue_refs(diff); 
-	    delete diff;
 	    continue;
 	}
 	if ((diff_sign == order_unknown) ||
 	    ((diff_sign == order_lt || diff_sign == order_le) && sign == order_ge) ||
 	    ((diff_sign == order_gt || diff_sign == order_ge) && sign == order_le)) {
-	    free_evalue_refs(diff); 
-	    delete diff;
 	    sign = order_unknown;
 	    break;
 	}
@@ -1155,10 +1411,12 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	if (D != ind->D)
 	    delete D;
 	D = EDeq;
-
-	free_evalue_refs(diff); 
-	delete diff;
     }
+
+    if (!rational)
+	cache.add(cache_el, sign);
+    else
+	cache_el.free();
 
     if (D != ind->D)
 	delete D;
