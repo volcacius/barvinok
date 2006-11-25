@@ -20,6 +20,7 @@ int main(int argc, char **argv)
 
     sample = Polyhedron_Sample(P, MAXRAYS);
     if (sample) {
+	assert(in_domain(P, sample->p));
 	Vector_Print(stdout, P_VALUE_FMT, sample);
 	Vector_Free(sample);
     }

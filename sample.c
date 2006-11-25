@@ -173,13 +173,13 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
 
     assert(POL_HAS(P, POL_INEQUALITIES));
     for (i = 0; i < dim; ++i)
-	remove[i] = 0;
+	remove[i] = -1;
     NbEq = 0;
     for (i = 0; i < P->NbEq; ++i) {
 	int pos = First_Non_Zero(P->Constraint[i]+1, dim);
 	if (First_Non_Zero(P->Constraint[i]+1+pos+1, dim-pos-1) != -1)
 	    continue;
-	remove[pos] = 1;
+	remove[pos] = i;
 	++NbEq;
     }
     assert(NbEq > 0);
@@ -192,7 +192,7 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
 	}
 	value_assign(Q->Constraint[k][0], P->Constraint[i][0]);
 	for (j = 0, n = 0; j < P->Dimension; ++j) {
-	    if (remove[j])
+	    if (remove[j] != -1)
 		++n;
 	    else
 		value_assign(Q->Constraint[k][1+j-n], P->Constraint[i][1+j]);
@@ -203,7 +203,7 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
     for (i = 0; i < Q->NbRays; ++i) {
 	value_assign(Q->Ray[i][0], P->Ray[i][0]);
 	for (j = 0, n = 0; j < P->Dimension; ++j) {
-	    if (remove[j])
+	    if (remove[j] != -1)
 		++n;
 	    else
 		value_assign(Q->Ray[i][1+j-n], P->Ray[i][1+j]);
@@ -212,8 +212,9 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
     }
     *T = Matrix_Alloc(P->Dimension+1, Q->Dimension+1);
     for (i = 0, n = 0; i < P->Dimension; ++i) {
-	if (remove[i]) {
-	    value_oppose((*T)->p[i][Q->Dimension], P->Constraint[n][1+P->Dimension]);
+	if (remove[i] != -1) {
+	    value_oppose((*T)->p[i][Q->Dimension],
+			 P->Constraint[remove[i]][1+P->Dimension]);
 	    ++n;
 	} else
 	    value_set_si((*T)->p[i][i-n], 1);
