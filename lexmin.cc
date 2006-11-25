@@ -1635,6 +1635,8 @@ Vector *Polyhedron_not_empty(Polyhedron *P, unsigned MaxRays)
 	Matrix_Free(T);
     }
 
+    if (sample)
+	assert(in_domain(Porig, sample->p));
     return sample;
 }
 
