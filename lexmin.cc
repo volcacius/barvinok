@@ -79,6 +79,16 @@ static int type_offset(enode *p)
 	  p->type == flooring ? 1 : 0;
 }
 
+void compute_evalue(evalue *e, Value *val, Value *res)
+{
+    double d = compute_evalue(e, val);
+    if (d > 0)
+	d += .25;
+    else
+	d -= .25;
+    value_set_double(*res, d);
+}
+
 struct indicator_term {
     int sign;
     int pos;		/* number of rational vertex */
@@ -140,6 +150,19 @@ struct indicator_term {
     void substitute(int pos, evalue *val);
     void reduce_in_domain(Polyhedron *D);
     bool is_opposite(const indicator_term *neg) const;
+    vec_ZZ eval(Value *val) const {
+	vec_ZZ v;
+	unsigned dim = den.NumCols();
+	v.SetLength(dim);
+	Value tmp;
+	value_init(tmp);
+	for (int i = 0; i < dim; ++i) {
+	    compute_evalue(vertex[i], val, &tmp);
+	    value2zz(tmp, v[i]);
+	}
+	value_clear(tmp);
+	return v;
+    }
 };
 
 static int evalue_rational_cmp(const evalue *e1, const evalue *e2)
@@ -811,48 +834,6 @@ void partial_order::copy(const partial_order& order,
     }
 }
 
-void partial_order::sanity_check() const
-{
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator prev;
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator l;
-    map<const indicator_term *, int >::const_iterator k, prev_k;
-
-    for (k = pred.begin(); k != pred.end(); prev_k = k, ++k)
-	if (k != pred.begin())
- 	    assert(pred.key_comp()((*prev_k).first, (*k).first));
-    for (i = lt.begin(); i != lt.end(); prev = i, ++i) {
-	if (i != lt.begin())
- 	    assert(lt.key_comp()((*prev).first, (*i).first));
-	l = eq.find((*i).first);
-	if (l != eq.end())
-	    assert((*l).second.size() > 1);
-	assert(pred.find((*i).first) != pred.end());
-	for (int j = 0; j < (*i).second.size(); ++j) {
-	    k = pred.find((*i).second[j]);
-	    assert(k != pred.end());
-	    assert((*k).second != 0);
-	}
-    }
-    for (i = le.begin(); i != le.end(); ++i) {
-	assert(pred.find((*i).first) != pred.end());
-	for (int j = 0; j < (*i).second.size(); ++j) {
-	    k = pred.find((*i).second[j]);
-	    assert(k != pred.end());
-	    assert((*k).second != 0);
-	}
-    }
-    for (i = eq.begin(); i != eq.end(); ++i) {
-	assert(pred.find((*i).first) != pred.end());
-	assert((*i).second.size() >= 1);
-    }
-    for (i = pending.begin(); i != pending.end(); ++i) {
-	assert(pred.find((*i).first) != pred.end());
-	for (int j = 0; j < (*i).second.size(); ++j)
-	    assert(pred.find((*i).second[j]) != pred.end());
-    }
-}
-
 struct max_term {
     EDomain *domain;
     vector<evalue *> max;
@@ -960,6 +941,56 @@ struct indicator {
 private:
     void substitute(evalue *equation);
 };
+
+void partial_order::sanity_check() const
+{
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator prev;
+    map<const indicator_term *, vector<const indicator_term * > >::const_iterator l;
+    map<const indicator_term *, int >::const_iterator k, prev_k;
+
+    for (k = pred.begin(); k != pred.end(); prev_k = k, ++k)
+	if (k != pred.begin())
+	    assert(pred.key_comp()((*prev_k).first, (*k).first));
+    for (i = lt.begin(); i != lt.end(); prev = i, ++i) {
+	vec_ZZ i_v;
+	if (ind->D->sample)
+	    i_v = (*i).first->eval(ind->D->sample->p);
+	if (i != lt.begin())
+	    assert(lt.key_comp()((*prev).first, (*i).first));
+	l = eq.find((*i).first);
+	if (l != eq.end())
+	    assert((*l).second.size() > 1);
+	assert(pred.find((*i).first) != pred.end());
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    k = pred.find((*i).second[j]);
+	    assert(k != pred.end());
+	    assert((*k).second != 0);
+	    if ((*i).first->sign != 0 &&
+		    (*i).second[j]->sign != 0 && ind->D->sample) {
+		vec_ZZ j_v = (*i).second[j]->eval(ind->D->sample->p);
+		assert(lex_cmp(i_v, j_v) < 0);
+	    }
+	}
+    }
+    for (i = le.begin(); i != le.end(); ++i) {
+	assert(pred.find((*i).first) != pred.end());
+	for (int j = 0; j < (*i).second.size(); ++j) {
+	    k = pred.find((*i).second[j]);
+	    assert(k != pred.end());
+	    assert((*k).second != 0);
+	}
+    }
+    for (i = eq.begin(); i != eq.end(); ++i) {
+	assert(pred.find((*i).first) != pred.end());
+	assert((*i).second.size() >= 1);
+    }
+    for (i = pending.begin(); i != pending.end(); ++i) {
+	assert(pred.find((*i).first) != pred.end());
+	for (int j = 0; j < (*i).second.size(); ++j)
+	    assert(pred.find((*i).second[j]) != pred.end());
+    }
+}
 
 max_term* indicator::create_max_term(const indicator_term *it)
 {
@@ -1423,6 +1454,9 @@ void indicator::print(ostream& os, char **p)
     assert(term.size() == order.pred.size());
     for (int i = 0; i < term.size(); ++i) {
 	term[i]->print(os, p);
+	if (D->sample) {
+	    os << ": " << term[i]->eval(D->sample->p);
+	}
 	os << endl;
     }
     order.print(os, p);
@@ -1885,16 +1919,6 @@ static void SwapColumns(Polyhedron *P, int i, int j)
 {
     SwapColumns(P->Constraint, P->NbConstraints, i, j);
     SwapColumns(P->Ray, P->NbRays, i, j);
-}
-
-void compute_evalue(evalue *e, Value *val, Value *res)
-{
-    double d = compute_evalue(e, val);
-    if (d > 0)
-	d += .25;
-    else
-	d -= .25;
-    value_set_double(*res, d);
 }
 
 Vector *max_term::eval(Value *val, unsigned MaxRays) const
