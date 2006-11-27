@@ -264,7 +264,8 @@ bool EDomain::contains(Value *point, int len) const
 }
 
 Matrix *EDomain::add_ge_constraint(evalue *constraint,
-				   vector<EDomain_floor *>& new_floors) const
+				   vector<EDomain_floor *>& new_floors,
+				   bool* simplified) const
 {
     evalue mone;
     value_init(mone.d);
@@ -333,6 +334,8 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
 	}
     }
     add_coeff(M->p[rows-1], cols, e, cols-1);
+    *simplified = ConstraintSimplify(M->p[rows-1], M->p[rows-1],
+				     cols, &M->p[rows-1][0]);
     value_set_si(M->p[rows-1][0], 1);
     free_evalue_refs(&mone); 
     return M;

@@ -82,7 +82,8 @@ struct EDomain {
     bool contains(Value *point, int len) const;
 
     Matrix *add_ge_constraint(evalue *constraint,
-				 std::vector<EDomain_floor *>& new_floors) const;
+				 std::vector<EDomain_floor *>& new_floors,
+				 bool* simplified) const;
     void substitute(evalue **sub, Matrix *T, Matrix *Eq, unsigned MaxRays);
 };
 

@@ -1356,7 +1356,9 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	} else
 	    diff = cache_el.e[k];
 	order_sign diff_sign;
-	if (eequal(a->vertex[k], b->vertex[k]))
+	if (!D)
+	    diff_sign = order_undefined;
+	else if (eequal(a->vertex[k], b->vertex[k]))
 	    diff_sign = order_eq;
 	else
 	    diff_sign = evalue_sign(diff, D, ind->options);
@@ -1399,11 +1401,15 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 
 	Matrix *M;
 	vector<EDomain_floor *> new_floors;
-	M = D->add_ge_constraint(diff, new_floors);
-	value_set_si(M->p[M->NbRows-1][0], 0);
-	Polyhedron *D2 = Constraints2Polyhedron(M, MaxRays);
-	EDomain *EDeq = new EDomain(D2, D, new_floors);
-	Polyhedron_Free(D2);
+	bool simplified;
+	M = D->add_ge_constraint(diff, new_floors, &simplified);
+	EDomain *EDeq = NULL;
+	if (!simplified) {
+	    value_set_si(M->p[M->NbRows-1][0], 0);
+	    Polyhedron *D2 = Constraints2Polyhedron(M, MaxRays);
+	    EDeq = new EDomain(D2, D, new_floors);
+	    Polyhedron_Free(D2);
+	}
 	Matrix_Free(M);
 	for (int i = 0; i < new_floors.size(); ++i)
 	    EDomain_floor::unref(new_floors[i]);
@@ -1418,7 +1424,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
     else
 	cache_el.free();
 
-    if (D != ind->D)
+    if (D && D != ind->D)
 	delete D;
 
     ind->options->MaxRays = MaxRays;
@@ -2270,11 +2276,13 @@ static void split_on(const split& sp, EDomain *D,
     *Deq = NULL;
     *Dgt = NULL;
     vector<EDomain_floor *> new_floors;
-    M = D->add_ge_constraint(sp.constraint, new_floors);
+    bool simplified;
+    M = D->add_ge_constraint(sp.constraint, new_floors, &simplified);
     if (sp.sign == split::lge || sp.sign == split::ge) {
 	M2 = Matrix_Copy(M);
-	value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
-			M2->p[M2->NbRows-1][M2->NbColumns-1]);
+	if (!simplified)
+	    value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
+			    M2->p[M2->NbRows-1][M2->NbColumns-1]);
 	D2 = Constraints2Polyhedron(M2, options->MaxRays);
 	ED[2] = new EDomain(D2, D, new_floors);
 	Polyhedron_Free(D2);
@@ -2295,10 +2303,13 @@ static void split_on(const split& sp, EDomain *D,
 	ED[0] = NULL;
 
     assert(sp.sign == split::lge || sp.sign == split::ge || sp.sign == split::le);
-    value_set_si(M->p[M->NbRows-1][0], 0);
-    D2 = Constraints2Polyhedron(M, options->MaxRays);
-    ED[1] = new EDomain(D2, D, new_floors);
-    Polyhedron_Free(D2);
+    if (!simplified) {
+	value_set_si(M->p[M->NbRows-1][0], 0);
+	D2 = Constraints2Polyhedron(M, options->MaxRays);
+	ED[1] = new EDomain(D2, D, new_floors);
+	Polyhedron_Free(D2);
+    } else
+	ED[1] = NULL;
     Matrix_Free(M);
 
     Vector *sample = D->sample;
