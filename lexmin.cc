@@ -854,6 +854,7 @@ struct indicator;
 struct partial_order {
     indicator *ind;
 
+    std::set<const indicator_term *, smaller_it > head;
     map<const indicator_term *, int, smaller_it > pred;
     map<const indicator_term *, vector<const indicator_term * >, smaller_it > lt;
     map<const indicator_term *, vector<const indicator_term * >, smaller_it > le;
@@ -869,6 +870,15 @@ struct partial_order {
     void resort() {
 	map<const indicator_term *, vector<const indicator_term * > >::iterator i;
 	map<const indicator_term *, int >::iterator j;
+	std::set<const indicator_term *>::iterator k;
+
+	if (head.key_comp().requires_resort) {
+	    typeof(head) new_head;
+	    for (k = head.begin(); k != head.end(); ++k)
+		new_head.insert(*k);
+	    head.swap(new_head);
+	    new_head.clear();
+	}
 
 	if (pred.key_comp().requires_resort) {
 	    typeof(pred) new_pred;
@@ -914,6 +924,17 @@ struct partial_order {
     order_sign compare(const indicator_term *a, const indicator_term *b);
     void set_equal(const indicator_term *a, const indicator_term *b);
     void unset_le(const indicator_term *a, const indicator_term *b);
+    void dec_pred(const indicator_term *it) {
+	if (--pred[it] == 0) {
+	    pred.erase(it);
+	    head.insert(it);
+	}
+    }
+    void inc_pred(const indicator_term *it) {
+	if (head.find(it) != head.end())
+	    head.erase(it);
+	pred[it]++;
+    }
 
     bool compared(const indicator_term* a, const indicator_term* b);
     void add(const indicator_term* it, std::set<const indicator_term *> *filter);
@@ -932,8 +953,16 @@ struct partial_order {
  */
 void partial_order::replace(const indicator_term* orig, indicator_term* replacement)
 {
-    int orig_pred = pred[orig];
-    pred.erase(orig);
+    std::set<const indicator_term *>::iterator k;
+    k = head.find(orig);
+    bool is_head = k != head.end();
+    int orig_pred;
+    if (is_head) {
+	head.erase(orig);
+    } else {
+	orig_pred = pred[orig];
+	pred.erase(orig);
+    }
     vector<const indicator_term * > orig_lt;
     vector<const indicator_term * > orig_le;
     vector<const indicator_term * > orig_eq;
@@ -961,7 +990,10 @@ void partial_order::replace(const indicator_term* orig, indicator_term* replacem
     }
     indicator_term *old = const_cast<indicator_term *>(orig);
     old->swap(replacement);
-    pred[old] = orig_pred;
+    if (is_head)
+	head.insert(old);
+    else
+	pred[old] = orig_pred;
     if (in_lt)
 	lt[old] = orig_lt;
     if (in_le)
@@ -979,7 +1011,7 @@ void partial_order::unset_le(const indicator_term *a, const indicator_term *b)
     le[a].erase(i);
     if (le[a].size() == 0)
 	le.erase(a);
-    pred[b]--;
+    dec_pred(b);
     i = find(pending[a].begin(), pending[a].end(), b);
     if (i != pending[a].end())
 	pending[a].erase(i);
@@ -1014,10 +1046,10 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
     if (i != lt.end()) {
 	for (int j = 0; j < lt[b].size(); ++j) {
 	    if (find(eq[base].begin(), eq[base].end(), lt[b][j]) != eq[base].end())
-		pred[lt[b][j]]--;
+		dec_pred(lt[b][j]);
 	    else if (find(lt[base].begin(), lt[base].end(), lt[b][j])
 			!= lt[base].end())
-		pred[lt[b][j]]--;
+		dec_pred(lt[b][j]);
 	    else
 		lt[base].push_back(lt[b][j]);
 	}
@@ -1028,10 +1060,10 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
     if (i != le.end()) {
 	for (int j = 0; j < le[b].size(); ++j) {
 	    if (find(eq[base].begin(), eq[base].end(), le[b][j]) != eq[base].end())
-		pred[le[b][j]]--;
+		dec_pred(le[b][j]);
 	    else if (find(le[base].begin(), le[base].end(), le[b][j])
 			!= le[base].end())
-		pred[le[b][j]]--;
+		dec_pred(le[b][j]);
 	    else
 		le[base].push_back(le[b][j]);
 	}
@@ -1065,6 +1097,10 @@ void partial_order::copy(const partial_order& order,
 
     map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
     map<const indicator_term *, int >::const_iterator j;
+    std::set<const indicator_term *>::const_iterator k;
+
+    for (k = order.head.begin(); k != order.head.end(); ++k)
+	head.insert(old2new[*k]);
 
     for (j = order.pred.begin(); j != order.pred.end(); ++j)
 	pred[old2new[(*j).first]] = (*j).second;
@@ -1215,7 +1251,8 @@ void partial_order::sanity_check() const
 	l = eq.find((*i).first);
 	if (l != eq.end())
 	    assert((*l).second.size() > 1);
-	assert(pred.find((*i).first) != pred.end());
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
 	for (int j = 0; j < (*i).second.size(); ++j) {
 	    k = pred.find((*i).second[j]);
 	    assert(k != pred.end());
@@ -1229,7 +1266,8 @@ void partial_order::sanity_check() const
     }
     for (i = le.begin(); i != le.end(); ++i) {
 	assert((*i).second.size() > 0);
-	assert(pred.find((*i).first) != pred.end());
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
 	for (int j = 0; j < (*i).second.size(); ++j) {
 	    k = pred.find((*i).second[j]);
 	    assert(k != pred.end());
@@ -1237,13 +1275,16 @@ void partial_order::sanity_check() const
 	}
     }
     for (i = eq.begin(); i != eq.end(); ++i) {
-	assert(pred.find((*i).first) != pred.end());
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
 	assert((*i).second.size() >= 1);
     }
     for (i = pending.begin(); i != pending.end(); ++i) {
-	assert(pred.find((*i).first) != pred.end());
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
 	for (int j = 0; j < (*i).second.size(); ++j)
-	    assert(pred.find((*i).second[j]) != pred.end());
+	    assert(head.find((*i).second[j]) != head.end() ||
+		   pred.find((*i).second[j]) != pred.end());
     }
 }
 
@@ -1452,41 +1493,41 @@ void partial_order::add(const indicator_term* it,
     if (eq.find(it) != eq.end() && eq[it].size() == 1)
 	return;
 
-    if (!filter)
-	pred[it] = 0;
+    typeof(head) head_copy(head);
 
-    map<const indicator_term *, int >::iterator i;
-    for (i = pred.begin(); i != pred.end(); ++i) {
-	if ((*i).first == it)
+    if (!filter)
+	head.insert(it);
+
+    std::set<const indicator_term *>::iterator i;
+    for (i = head_copy.begin(); i != head_copy.end(); ++i) {
+	if (*i == it)
 	    continue;
-	if ((*i).second != 0)
-	    continue;
-	if (eq.find((*i).first) != eq.end() && eq[(*i).first].size() == 1)
+	if (eq.find(*i) != eq.end() && eq[*i].size() == 1)
 	    continue;
 	if (filter) {
-	    if (filter->find((*i).first) == filter->end())
+	    if (filter->find(*i) == filter->end())
 		continue;
-	    if (compared((*i).first, it))
+	    if (compared(*i, it))
 		continue;
 	}
-	order_sign sign = compare(it, (*i).first);
+	order_sign sign = compare(it, *i);
 	if (sign == order_lt) {
-	    lt[it].push_back((*i).first);
-	    (*i).second++;
+	    lt[it].push_back(*i);
+	    inc_pred(*i);
 	} else if (sign == order_le) {
-	    le[it].push_back((*i).first);
-	    (*i).second++;
+	    le[it].push_back(*i);
+	    inc_pred(*i);
 	} else if (sign == order_eq) {
-	    set_equal(it, (*i).first);
+	    set_equal(it, *i);
 	    return;
 	} else if (sign == order_gt) {
-	    pending[(*i).first].push_back(it);
-	    lt[(*i).first].push_back(it);
-	    pred[it]++;
+	    pending[*i].push_back(it);
+	    lt[*i].push_back(it);
+	    inc_pred(it);
 	} else if (sign == order_ge) {
-	    pending[(*i).first].push_back(it);
-	    le[(*i).first].push_back(it);
-	    pred[it]++;
+	    pending[*i].push_back(it);
+	    le[*i].push_back(it);
+	    inc_pred(it);
 	}
     }
 }
@@ -1496,7 +1537,7 @@ void partial_order::remove(const indicator_term* it)
     std::set<const indicator_term *> filter;
     map<const indicator_term *, vector<const indicator_term * > >::iterator i;
 
-    assert(pred[it] == 0);
+    assert(head.find(it) != head.end());
 
     i = eq.find(it);
     if (i != eq.end()) {
@@ -1546,7 +1587,7 @@ void partial_order::remove(const indicator_term* it)
 	if (eq[base].size() == 1)
 	    eq.erase(base);
 
-	pred.erase(it);
+	head.erase(it);
 
 	return;
     }
@@ -1555,7 +1596,7 @@ void partial_order::remove(const indicator_term* it)
     if (i != lt.end()) {
 	for (int j = 0; j < lt[it].size(); ++j) {
 	    filter.insert(lt[it][j]);
-	    pred[lt[it][j]]--;
+	    dec_pred(lt[it][j]);
 	}
 	lt.erase(it);
     }
@@ -1564,12 +1605,12 @@ void partial_order::remove(const indicator_term* it)
     if (i != le.end()) {
 	for (int j = 0; j < le[it].size(); ++j) {
 	    filter.insert(le[it][j]);
-	    pred[le[it][j]]--;
+	    dec_pred(le[it][j]);
 	}
 	le.erase(it);
     }
 
-    pred.erase(it);
+    head.erase(it);
 
     i = pending.find(it);
     if (i != pending.end()) {
@@ -1586,14 +1627,21 @@ void partial_order::print(ostream& os, char **p)
 {
     map<const indicator_term *, vector<const indicator_term * > >::iterator i;
     map<const indicator_term *, int >::iterator j;
+    std::set<const indicator_term *>::iterator k;
+    for (k = head.begin(); k != head.end(); ++k) {
+	(*k)->print(os, p);
+	os << endl;
+    }
     for (j = pred.begin(); j != pred.end(); ++j) {
 	(*j).first->print(os, p);
 	os << ": " <<  (*j).second << endl;
     }
     for (i = lt.begin(); i != lt.end(); ++i) {
 	(*i).first->print(os, p);
-	assert(pred.find((*i).first) != pred.end());
-	os << "(" << pred[(*i).first] << ")";
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
+	if (pred.find((*i).first) != pred.end())
+	    os << "(" << pred[(*i).first] << ")";
 	os << " < ";
 	for (int j = 0; j < (*i).second.size(); ++j) {
 	    if (j)
@@ -1606,8 +1654,10 @@ void partial_order::print(ostream& os, char **p)
     }
     for (i = le.begin(); i != le.end(); ++i) {
 	(*i).first->print(os, p);
-	assert(pred.find((*i).first) != pred.end());
-	os << "(" << pred[(*i).first] << ")";
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
+	if (pred.find((*i).first) != pred.end())
+	    os << "(" << pred[(*i).first] << ")";
 	os << " <= ";
 	for (int j = 0; j < (*i).second.size(); ++j) {
 	    if (j)
@@ -1622,22 +1672,28 @@ void partial_order::print(ostream& os, char **p)
 	if ((*i).second.size() <= 1)
 	    continue;
 	(*i).first->print(os, p);
-	assert(pred.find((*i).first) != pred.end());
-	os << "(" << pred[(*i).first] << ")";
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
+	if (pred.find((*i).first) != pred.end())
+	    os << "(" << pred[(*i).first] << ")";
 	for (int j = 1; j < (*i).second.size(); ++j) {
 	    if (j)
 		os << " = ";
 	    (*i).second[j]->print(os, p);
-	    assert(pred.find((*i).second[j]) != pred.end());
-	    os << "(" << pred[(*i).second[j]] << ")";
+	    assert(head.find((*i).second[j]) != head.end() ||
+		   pred.find((*i).second[j]) != pred.end());
+	    if (pred.find((*i).second[j]) != pred.end())
+		os << "(" << pred[(*i).second[j]] << ")";
 	}
 	os << endl;
     }
     for (i = pending.begin(); i != pending.end(); ++i) {
 	os << "pending on ";
 	(*i).first->print(os, p);
-	assert(pred.find((*i).first) != pred.end());
-	os << "(" << pred[(*i).first] << ")";
+	assert(head.find((*i).first) != head.end() ||
+	       pred.find((*i).first) != pred.end());
+	if (pred.find((*i).first) != pred.end())
+	    os << "(" << pred[(*i).first] << ")";
 	os << ": ";
 	for (int j = 0; j < (*i).second.size(); ++j) {
 	    if (j)
@@ -1657,7 +1713,7 @@ void indicator::add(const indicator_term* it)
 	nt->reduce_in_domain(P ? P : D->D);
     term.push_back(nt);
     order.add(nt, NULL);
-    assert(term.size() == order.pred.size());
+    assert(term.size() == order.head.size() + order.pred.size());
 }
 
 void indicator::remove(const indicator_term* it)
@@ -1667,7 +1723,7 @@ void indicator::remove(const indicator_term* it)
     assert(i!= term.end());
     order.remove(it);
     term.erase(i);
-    assert(term.size() == order.pred.size());
+    assert(term.size() == order.head.size() + order.pred.size());
     delete it;
 }
 
@@ -1692,16 +1748,13 @@ void indicator::remove_initial_rational_vertices()
 {
     do {
 	const indicator_term *initial = NULL;
-	map<const indicator_term *, int >::iterator i;
-	for (i = order.pred.begin(); i != order.pred.end(); ++i) {
-	    if ((*i).second != 0)
+	std::set<const indicator_term *>::iterator i;
+	for (i = order.head.begin(); i != order.head.end(); ++i) {
+	    if ((*i)->sign != 0)
 		continue;
-	    if ((*i).first->sign != 0)
+	    if (order.eq.find(*i) != order.eq.end() && order.eq[*i].size() <= 1)
 		continue;
-	    if (order.eq.find((*i).first) != order.eq.end() &&
-		order.eq[(*i).first].size() <= 1)
-		continue;
-	    initial = (*i).first;
+	    initial = *i;
 	    break;
 	}
 	if (!initial)
@@ -1718,7 +1771,7 @@ void indicator::reduce_in_domain(Polyhedron *D)
 
 void indicator::print(ostream& os, char **p)
 {
-    assert(term.size() == order.pred.size());
+    assert(term.size() == order.head.size() + order.pred.size());
     for (int i = 0; i < term.size(); ++i) {
 	term[i]->print(os, p);
 	if (D->sample) {
@@ -1889,7 +1942,7 @@ void indicator::combine(const indicator_term *a, const indicator_term *b)
 		continue;
 	    order.pending[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
 	    order.lt[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
-	    order.pred[new_term[k+(1<<l)]]++;
+	    order.inc_pred(new_term[k+(1<<l)]);
 	}
 	if (k == 0) {
 	    order.replace(b, it);
@@ -1897,7 +1950,7 @@ void indicator::combine(const indicator_term *a, const indicator_term *b)
 	} else {
 	    new_term[k] = it;
 	    term.push_back(it);
-	    order.pred[it] = 0;
+	    order.head.insert(it);
 	}
     }
 
@@ -1926,8 +1979,7 @@ void indicator::combine(const indicator_term *a, const indicator_term *b)
 		continue;
 	    order.pending[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
 	    order.lt[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
-	    assert(order.pred.find(new_term[k+(1<<l)]) != order.pred.end());
-	    order.pred[new_term[k+(1<<l)]]++;
+	    order.inc_pred(new_term[k+(1<<l)]);
 	}
 	if (k == 0) {
 	    order.replace(a, it);
@@ -1935,12 +1987,12 @@ void indicator::combine(const indicator_term *a, const indicator_term *b)
 	} else {
 	    new_term[k] = it;
 	    term.push_back(it);
-	    order.pred[it] = 0;
+	    order.head.insert(it);
 	}
     }
 
     delete [] new_term;
-    assert(term.size() == order.pred.size());
+    assert(term.size() == order.head.size() + order.pred.size());
 }
 
 bool indicator::handle_equal_numerators(const indicator_term *base)
@@ -2508,7 +2560,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 				    vector<int> loc)
 {
     vector<max_term*> maxima;
-    map<const indicator_term *, int >::iterator i;
+    std::set<const indicator_term *>::iterator i;
     vector<int> best_score;
     vector<int> second_score;
     vector<int> neg_score;
@@ -2517,11 +2569,9 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	ind.perform_pending_substitutions();
 	const indicator_term *best = NULL, *second = NULL, *neg = NULL,
 			     *neg_eq = NULL, *neg_le = NULL;
-	for (i = ind.order.pred.begin(); i != ind.order.pred.end(); ++i) {
+	for (i = ind.order.head.begin(); i != ind.order.head.end(); ++i) {
 	    vector<int> score;
-	    if ((*i).second != 0)
-		continue;
-	    const indicator_term *term = (*i).first;
+	    const indicator_term *term = *i;
 	    if (term->sign == 0) {
 		ind.expand_rational_vertex(term);
 		break;
@@ -2532,7 +2582,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 		if (ind.order.eq[term].size() <= 1)
 		    continue;
 		for (j = 1; j < ind.order.eq[term].size(); ++j)
-		    if (ind.order.pred[ind.order.eq[term][j]] != 0)
+		    if (ind.order.pred.find(ind.order.eq[term][j]) !=
+							    ind.order.pred.end())
 			break;
 		if (j < ind.order.eq[term].size())
 		    continue;
@@ -2574,7 +2625,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 		}
 	    }
 	}
-	if (i != ind.order.pred.end())
+	if (i != ind.order.head.end())
 	    continue;
 
 	if (!best && neg_eq) {
@@ -2676,12 +2727,12 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	}
 	if (sign == order_lt) {
 	    ind.order.lt[best].push_back(second);
-	    ind.order.pred[second]++;
+	    ind.order.inc_pred(second);
 	    continue;
 	}
 	if (sign == order_gt) {
 	    ind.order.lt[second].push_back(best);
-	    ind.order.pred[best]++;
+	    ind.order.inc_pred(best);
 	    continue;
 	}
 
@@ -2715,7 +2766,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    /* we don't know the new location of these terms in indgt */
 	    /*
 	    indgt.order.lt[second].push_back(best);
-	    indgt.order.pred[best]++;
+	    indgt.order.inc_pred(best);
 	    */
 	    vector<max_term*> maxgt = lexmin(indgt, nparam, loc);
 	    maxima.insert(maxima.end(), maxgt.begin(), maxgt.end());
@@ -2732,13 +2783,13 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    loc.push_back(-1);
 	    ind.set_domain(Dlt);
 	    ind.order.lt[best].push_back(second);
-	    ind.order.pred[second]++;
+	    ind.order.inc_pred(second);
 	}
 	if (Dgt) {
 	    loc.push_back(1);
 	    ind.set_domain(Dgt);
 	    ind.order.lt[second].push_back(best);
-	    ind.order.pred[best]++;
+	    ind.order.inc_pred(best);
 	}
     } while(1);
 
