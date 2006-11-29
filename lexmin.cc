@@ -1882,8 +1882,8 @@ void indicator::combine(const indicator_term *a, const indicator_term *b)
     int dim = a->den.NumCols();
 
     mat_ZZ common;
-    mat_ZZ rest_i;
-    mat_ZZ rest_j;
+    mat_ZZ rest_i;    /* factors in a, but not in b */
+    mat_ZZ rest_j;    /* factors in b, but not in a */
     int n_common = 0, n_i = 0, n_j = 0;
 
     common.SetDims(min(a->den.NumRows(), b->den.NumRows()), dim);
@@ -1910,88 +1910,75 @@ void indicator::combine(const indicator_term *a, const indicator_term *b)
     rest_i.SetDims(n_i, dim);
     rest_j.SetDims(n_j, dim);
 
-    assert(n_i < 30);
-    assert(n_j < 30);
-
-    int n = n_i > n_j ? n_i : n_j;
-    indicator_term **new_term = new indicator_term* [1 << n];
     assert(order.eq[a].size() > 1);
+    indicator_term *prev;
 
-    for (k = (1 << n_i)-1; k >= 0; --k) {
+    prev = NULL;
+    for (int k = n_i-1; k >= 0; --k) {
+	indicator_term *it = new indicator_term(*b);
+	it->den.SetDims(n_common + n_j + n_i-k, dim);
+	for (int l = k; l < n_i; ++l)
+	    it->den[n_common+n_j+l-k] = rest_i[l];
+	lex_order_rows(it->den);
+	for (int m = 0; m < dim; ++m)
+	    evalue_add_constant(it->vertex[m], rest_i[k][m]);
+	it->sign = -it->sign;
+	if (prev) {
+	    order.pending[it].push_back(prev);
+	    order.lt[it].push_back(prev);
+	    order.inc_pred(prev);
+	}
+	term.push_back(it);
+	order.head.insert(it);
+	prev = it;
+    }
+    if (n_i) {
 	indicator_term *it = new indicator_term(*b);
 	it->den.SetDims(n_common + n_i + n_j, dim);
-	for (l = 0; l < n_common; ++l)
-	    it->den[l] = common[l];
 	for (l = 0; l < n_i; ++l)
-	    it->den[n_common+l] = rest_i[l];
-	for (l = 0; l < n_j; ++l)
-	    it->den[n_common+n_i+l] = rest_j[l];
+	    it->den[n_common+n_j+l] = rest_i[l];
 	lex_order_rows(it->den);
-	int change = 0;
-	for (l = 0; l < n_i; ++l) {
-	    if (!(k & (1 <<l)))
-		continue;
-	    change ^= 1;
-	    for (int m = 0; m < dim; ++m)
-		evalue_add_constant(it->vertex[m], rest_i[l][m]);
-	}
-	if (change)
-	    it->sign = -it->sign;
-	for (l = 0; l < n_i; ++l) {
-	    if (k & (1 <<l))
-		continue;
-	    order.pending[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
-	    order.lt[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
-	    order.inc_pred(new_term[k+(1<<l)]);
-	}
-	if (k == 0) {
-	    order.replace(b, it);
-	    delete it;
-	} else {
-	    new_term[k] = it;
-	    term.push_back(it);
-	    order.head.insert(it);
-	}
+	assert(prev);
+	order.pending[a].push_back(prev);
+	order.lt[a].push_back(prev);
+	order.inc_pred(prev);
+	order.replace(b, it);
+	delete it;
     }
 
-    for (k = (1 << n_j)-1; k >= 0; --k) {
+    prev = NULL;
+    for (int k = n_j-1; k >= 0; --k) {
+	indicator_term *it = new indicator_term(*a);
+	it->den.SetDims(n_common + n_i + n_j-k, dim);
+	for (int l = k; l < n_j; ++l)
+	    it->den[n_common+n_i+l-k] = rest_j[l];
+	lex_order_rows(it->den);
+	for (int m = 0; m < dim; ++m)
+	    evalue_add_constant(it->vertex[m], rest_j[k][m]);
+	it->sign = -it->sign;
+	if (prev) {
+	    order.pending[it].push_back(prev);
+	    order.lt[it].push_back(prev);
+	    order.inc_pred(prev);
+	}
+	term.push_back(it);
+	order.head.insert(it);
+	prev = it;
+    }
+    if (n_j) {
 	indicator_term *it = new indicator_term(*a);
 	it->den.SetDims(n_common + n_i + n_j, dim);
-	for (l = 0; l < n_common; ++l)
-	    it->den[l] = common[l];
-	for (l = 0; l < n_i; ++l)
-	    it->den[n_common+l] = rest_i[l];
 	for (l = 0; l < n_j; ++l)
 	    it->den[n_common+n_i+l] = rest_j[l];
 	lex_order_rows(it->den);
-	int change = 0;
-	for (l = 0; l < n_j; ++l) {
-	    if (!(k & (1 <<l)))
-		continue;
-	    change ^= 1;
-	    for (int m = 0; m < dim; ++m)
-		evalue_add_constant(it->vertex[m], rest_j[l][m]);
-	}
-	if (change)
-	    it->sign = -it->sign;
-	for (l = 0; l < n_j; ++l) {
-	    if (k & (1 <<l))
-		continue;
-	    order.pending[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
-	    order.lt[k == 0 ? a : it].push_back(new_term[k+(1<<l)]);
-	    order.inc_pred(new_term[k+(1<<l)]);
-	}
-	if (k == 0) {
-	    order.replace(a, it);
-	    delete it;
-	} else {
-	    new_term[k] = it;
-	    term.push_back(it);
-	    order.head.insert(it);
-	}
+	assert(prev);
+	order.pending[a].push_back(prev);
+	order.lt[a].push_back(prev);
+	order.inc_pred(prev);
+	order.replace(a, it);
+	delete it;
     }
 
-    delete [] new_term;
     assert(term.size() == order.head.size() + order.pred.size());
 }
 
