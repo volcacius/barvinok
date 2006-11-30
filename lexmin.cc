@@ -9,7 +9,6 @@
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include <barvinok/sample.h>
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
@@ -2265,62 +2264,6 @@ Vector *max_term::eval(Value *val, unsigned MaxRays) const
     return res;
 }
 
-static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays);
-
-Vector *Polyhedron_not_empty(Polyhedron *P, barvinok_options *options)
-{
-    Polyhedron *Porig = P;
-    Vector *sample = NULL;
-
-    POL_ENSURE_VERTICES(P);
-    if (emptyQ2(P))
-	return NULL;
-
-    for (int i = 0; i < P->NbRays; ++i)
-	if (value_one_p(P->Ray[i][1+P->Dimension])) {
-	    sample = Vector_Alloc(P->Dimension + 1);
-	    Vector_Copy(P->Ray[i]+1, sample->p, P->Dimension+1);
-	    return sample;
-	}
-
-    Matrix *T = NULL;
-    while (P && !emptyQ2(P) && P->NbEq > 0) {
-	Polyhedron *Q = P;
-	Matrix *T2 = remove_equalities(&P, 0, options->MaxRays);
-	if (!T)
-	    T = T2;
-	else {
-	    if (T2) {
-		Matrix *T3 = Matrix_Alloc(T->NbRows, T2->NbColumns);
-		Matrix_Product(T, T2, T3);
-		Matrix_Free(T);
-		Matrix_Free(T2);
-		T = T3;
-	    }
-	    if (Q != Porig)
-		Polyhedron_Free(Q);
-	}
-    }
-    if (P)
-	sample = Polyhedron_Sample(P, options);
-    if (sample) {
-	if (T) {
-	    Vector *P_sample = Vector_Alloc(Porig->Dimension + 1);
-	    Matrix_Vector_Product(T, sample->p, P_sample->p);
-	    Vector_Free(sample);
-	    sample = P_sample;
-	}
-    }
-    if (T) {
-	Polyhedron_Free(P);
-	Matrix_Free(T);
-    }
-
-    if (sample)
-	assert(in_domain(Porig, sample->p));
-    return sample;
-}
-
 struct split {
     evalue *constraint;
     enum sign { le, ge, lge } sign;
@@ -2378,28 +2321,18 @@ static void split_on(const split& sp, EDomain *D,
 	ED[1] = NULL;
     Matrix_Free(M);
 
-    Vector *sample = D->sample;
-    if (sample && new_floors.size() > 0) {
-	assert(sample->Size == D->D->Dimension+1);
-	sample = Vector_Alloc(D->D->Dimension+new_floors.size()+1);
-	Vector_Copy(D->sample->p, sample->p, D->D->Dimension);
-	value_set_si(sample->p[D->D->Dimension+new_floors.size()], 1);
-	for (int i = 0; i < new_floors.size(); ++i)
-	    new_floors[i]->eval(sample->p, &sample->p[D->D->Dimension+i]);
-    }
-
     for (int i = 0; i < new_floors.size(); ++i)
 	EDomain_floor::unref(new_floors[i]);
 
     for (int i = 0; i < 3; ++i) {
 	if (!ED[i])
 	    continue;
-	if (sample && ED[i]->contains(sample->p, sample->Size-1)) {
-	    ED[i]->sample = Vector_Alloc(sample->Size);
-	    Vector_Copy(sample->p, ED[i]->sample->p, sample->Size);
+	if (D->sample && ED[i]->contains(D->sample->p, D->sample->Size-1)) {
+	    ED[i]->sample = Vector_Alloc(D->sample->Size);
+	    Vector_Copy(D->sample->p, ED[i]->sample->p, D->sample->Size);
 	} else if (emptyQ2(ED[i]->D) ||
 		    (options->lexmin_emptiness_check == 1 &&
-		     !(ED[i]->sample = Polyhedron_not_empty(ED[i]->D, options)))) {
+		     !(ED[i]->not_empty(options)))) {
 	    delete ED[i];
 	    ED[i] = NULL;
 	}
@@ -2408,8 +2341,6 @@ static void split_on(const split& sp, EDomain *D,
     *Deq = ED[1];
     *Dgt = ED[2];
     value_clear(mone);
-    if (sample != D->sample)
-	Vector_Free(sample);
 }
 
 ostream & operator<< (ostream & os, const vector<int> & v)
@@ -2468,30 +2399,6 @@ static Matrix *compress_parameters(Polyhedron **P, Polyhedron **C,
     *C = Polyhedron_Preimage(*C, CP, MaxRays);
 
     return CP;
-}
-
-static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays)
-{
-    /* Matrix "view" of equalities */
-    Matrix M;
-    M.NbRows = (*P)->NbEq;
-    M.NbColumns = (*P)->Dimension+2;
-    M.p_Init = (*P)->p_Init;
-    M.p = (*P)->Constraint;
-
-    Matrix *T = compress_variables(&M, nparam);
-
-    if (!T) {
-	*P = NULL;
-	return NULL;
-    }
-    if (isIdentity(T)) {
-	Matrix_Free(T);
-	T = NULL;
-    } else
-	*P = Polyhedron_Preimage(*P, T, MaxRays);
-
-    return T;
 }
 
 void construct_rational_vertices(Param_Polyhedron *PP, Matrix *T, unsigned dim, 

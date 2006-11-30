@@ -1,6 +1,7 @@
 #include <sstream>
 #include "fdstream.h"
 #include <barvinok/util.h>
+#include <barvinok/sample.h>
 #include "edomain.h"
 #include "evalue_util.h"
 
@@ -456,4 +457,83 @@ void EDomain::substitute(evalue **subs, Matrix *T, Matrix *Eq, unsigned MaxRays)
 	Matrix_Free(M);
     for (int i = 0; i < floors.size(); ++i)
 	floors[i]->substitute(subs, T);
+}
+
+static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays)
+{
+    /* Matrix "view" of equalities */
+    Matrix M;
+    M.NbRows = (*P)->NbEq;
+    M.NbColumns = (*P)->Dimension+2;
+    M.p_Init = (*P)->p_Init;
+    M.p = (*P)->Constraint;
+
+    Matrix *T = compress_variables(&M, nparam);
+
+    if (!T) {
+	*P = NULL;
+	return NULL;
+    }
+    if (isIdentity(T)) {
+	Matrix_Free(T);
+	T = NULL;
+    } else
+	*P = Polyhedron_Preimage(*P, T, MaxRays);
+
+    return T;
+}
+
+bool EDomain::not_empty(barvinok_options *options)
+{
+    Polyhedron *P = D;
+    Polyhedron *Porig = P;
+
+    POL_ENSURE_VERTICES(P);
+    if (emptyQ2(P))
+	return false;
+
+    for (int i = 0; i < P->NbRays; ++i)
+	if (value_one_p(P->Ray[i][1+P->Dimension])) {
+	    sample = Vector_Alloc(P->Dimension + 1);
+	    Vector_Copy(P->Ray[i]+1, sample->p, P->Dimension+1);
+	    return true;
+	}
+
+    Matrix *T = NULL;
+    while (P && !emptyQ2(P) && P->NbEq > 0) {
+	Polyhedron *Q = P;
+	Matrix *T2 = remove_equalities(&P, 0, options->MaxRays);
+	if (!T)
+	    T = T2;
+	else {
+	    if (T2) {
+		Matrix *T3 = Matrix_Alloc(T->NbRows, T2->NbColumns);
+		Matrix_Product(T, T2, T3);
+		Matrix_Free(T);
+		Matrix_Free(T2);
+		T = T3;
+	    }
+	    if (Q != Porig)
+		Polyhedron_Free(Q);
+	}
+    }
+    if (P)
+	sample = Polyhedron_Sample(P, options);
+    if (sample) {
+	if (T) {
+	    Vector *P_sample = Vector_Alloc(Porig->Dimension + 1);
+	    Matrix_Vector_Product(T, sample->p, P_sample->p);
+	    Vector_Free(sample);
+	    sample = P_sample;
+	}
+    }
+    if (T) {
+	Polyhedron_Free(P);
+	Matrix_Free(T);
+    }
+
+    if (sample)
+	assert(in_domain(Porig, sample->p));
+
+    return sample != NULL;
 }

@@ -85,6 +85,7 @@ struct EDomain {
 				 std::vector<EDomain_floor *>& new_floors,
 				 bool* simplified) const;
     void substitute(evalue **sub, Matrix *T, Matrix *Eq, unsigned MaxRays);
+    bool not_empty(barvinok_options *options);
 };
 
 int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len);
