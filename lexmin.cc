@@ -1354,6 +1354,91 @@ static order_sign evalue_sign(evalue *diff, EDomain *D, barvinok_options *option
     return sign;
 }
 
+/* An auxiliary class that keeps a reference to an evalue
+ * and frees it when it goes out of scope.
+ */
+struct temp_evalue {
+    evalue *E;
+    temp_evalue() : E(NULL) {}
+    temp_evalue(evalue *e) : E(e) {}
+    operator evalue* () const { return E; }
+    evalue *operator=(evalue *e) {
+	if (E) {
+	    free_evalue_refs(E); 
+	    delete E;
+	}
+	E = e;
+	return E;
+    }
+    ~temp_evalue() {
+	if (E) {
+	    free_evalue_refs(E); 
+	    delete E;
+	}
+    }
+};
+
+static void substitute(vector<indicator_term*>& term, evalue *equation)
+{
+    evalue *fract = NULL;
+    evalue *val = new evalue;
+    value_init(val->d);
+    evalue_copy(val, equation);
+
+    evalue factor;
+    value_init(factor.d);
+    value_init(factor.x.n);
+
+    evalue *e;
+    for (e = val; value_zero_p(e->d) && e->x.p->type != fractional;
+	 e = &e->x.p->arr[type_offset(e->x.p)])
+	;
+
+    if (value_zero_p(e->d) && e->x.p->type == fractional)
+	fract = &e->x.p->arr[0];
+    else {
+	for (e = val; value_zero_p(e->d) && e->x.p->type != polynomial;
+	     e = &e->x.p->arr[type_offset(e->x.p)])
+	    ;
+	assert(value_zero_p(e->d) && e->x.p->type == polynomial);
+    }
+
+    int offset = type_offset(e->x.p);
+
+    assert(value_notzero_p(e->x.p->arr[offset+1].d));
+    assert(value_notzero_p(e->x.p->arr[offset+1].x.n));
+    if (value_neg_p(e->x.p->arr[offset+1].x.n)) {
+	value_oppose(factor.d, e->x.p->arr[offset+1].x.n);
+	value_assign(factor.x.n, e->x.p->arr[offset+1].d);
+    } else {
+	value_assign(factor.d, e->x.p->arr[offset+1].x.n);
+	value_oppose(factor.x.n, e->x.p->arr[offset+1].d);
+    }
+
+    free_evalue_refs(&e->x.p->arr[offset+1]);
+    enode *p = e->x.p;
+    value_clear(e->d);
+    *e = e->x.p->arr[offset];
+
+    emul(&factor, val);
+
+    if (fract) {
+	for (int i = 0; i < term.size(); ++i)
+	    term[i]->substitute(fract, val);
+
+	free_evalue_refs(&p->arr[0]);
+    } else {
+	for (int i = 0; i < term.size(); ++i)
+	    term[i]->substitute(p->pos, val);
+    }
+
+    free_evalue_refs(&factor);
+    free_evalue_refs(val);
+    delete val;
+
+    free(p);
+}
+
 order_sign partial_order::compare(const indicator_term *a, const indicator_term *b)
 {
     unsigned dim = a->den.NumCols();
@@ -1388,6 +1473,8 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 
     sign = order_eq;
 
+    vector<indicator_term *> term;
+
     for (int k = 0; k < dim; ++k) {
 	/* compute a->vertex[k] - b->vertex[k] */
 	evalue *diff;
@@ -1396,6 +1483,9 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	    cache_el.e.push_back(diff);
 	} else
 	    diff = cache_el.e[k];
+	temp_evalue tdiff;
+	if (term.size())
+	    tdiff = diff = ediff(term[0]->vertex[k], term[1]->vertex[k]);
 	order_sign diff_sign;
 	if (!D)
 	    diff_sign = order_undefined;
@@ -1427,7 +1517,8 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	    break;
 	}
 	if (diff_sign == order_eq) {
-	    if (D == ind->D && !rational && !EVALUE_IS_ZERO(*diff))
+	    if (D == ind->D && term.size() == 0 && !rational &&
+		    !EVALUE_IS_ZERO(*diff))
 		ind->add_substitution(diff);
 	    continue;
 	}
@@ -1440,24 +1531,11 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 
 	sign = diff_sign;
 
-	Matrix *M;
-	vector<EDomain_floor *> new_floors;
-	bool simplified;
-	M = D->add_ge_constraint(diff, new_floors, &simplified);
-	EDomain *EDeq = NULL;
-	if (!simplified) {
-	    value_set_si(M->p[M->NbRows-1][0], 0);
-	    Polyhedron *D2 = Constraints2Polyhedron(M, MaxRays);
-	    EDeq = new EDomain(D2, D, new_floors);
-	    Polyhedron_Free(D2);
+	if (!term.size()) {
+	    term.push_back(new indicator_term(*a));
+	    term.push_back(new indicator_term(*b));
 	}
-	Matrix_Free(M);
-	for (int i = 0; i < new_floors.size(); ++i)
-	    EDomain_floor::unref(new_floors[i]);
-
-	if (D != ind->D)
-	    delete D;
-	D = EDeq;
+	substitute(term, diff);
     }
 
     if (!rational)
@@ -1467,6 +1545,11 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 
     if (D && D != ind->D)
 	delete D;
+
+    if (term.size()) {
+	delete term[0];
+	delete term[1];
+    }
 
     ind->options->MaxRays = MaxRays;
     return sign;
@@ -2003,63 +2086,7 @@ bool indicator::handle_equal_numerators(const indicator_term *base)
 
 void indicator::substitute(evalue *equation)
 {
-    evalue *fract = NULL;
-    evalue *val = new evalue;
-    value_init(val->d);
-    evalue_copy(val, equation);
-
-    evalue factor;
-    value_init(factor.d);
-    value_init(factor.x.n);
-
-    evalue *e;
-    for (e = val; value_zero_p(e->d) && e->x.p->type != fractional;
-	 e = &e->x.p->arr[type_offset(e->x.p)])
-	;
-
-    if (value_zero_p(e->d) && e->x.p->type == fractional)
-	fract = &e->x.p->arr[0];
-    else {
-	for (e = val; value_zero_p(e->d) && e->x.p->type != polynomial;
-	     e = &e->x.p->arr[type_offset(e->x.p)])
-	    ;
-	assert(value_zero_p(e->d) && e->x.p->type == polynomial);
-    }
-
-    int offset = type_offset(e->x.p);
-
-    assert(value_notzero_p(e->x.p->arr[offset+1].d));
-    assert(value_notzero_p(e->x.p->arr[offset+1].x.n));
-    if (value_neg_p(e->x.p->arr[offset+1].x.n)) {
-	value_oppose(factor.d, e->x.p->arr[offset+1].x.n);
-	value_assign(factor.x.n, e->x.p->arr[offset+1].d);
-    } else {
-	value_assign(factor.d, e->x.p->arr[offset+1].x.n);
-	value_oppose(factor.x.n, e->x.p->arr[offset+1].d);
-    }
-
-    free_evalue_refs(&e->x.p->arr[offset+1]);
-    enode *p = e->x.p;
-    value_clear(e->d);
-    *e = e->x.p->arr[offset];
-
-    emul(&factor, val);
-
-    if (fract) {
-	for (int i = 0; i < term.size(); ++i)
-	    term[i]->substitute(fract, val);
-
-	free_evalue_refs(&p->arr[0]);
-    } else {
-	for (int i = 0; i < term.size(); ++i)
-	    term[i]->substitute(p->pos, val);
-    }
-
-    free_evalue_refs(&factor);
-    free_evalue_refs(val);
-    delete val;
-
-    free(p);
+    ::substitute(term, equation);
 }
 
 void indicator::add_substitution(evalue *equation)
@@ -2518,30 +2545,6 @@ void construct_rational_vertices(Param_Polyhedron *PP, Matrix *T, unsigned dim,
     value_clear(lcm);
     value_clear(tmp);
 }
-
-/* An auxiliary class that keeps a reference to an evalue
- * and frees it when it goes out of scope.
- */
-struct temp_evalue {
-    evalue *E;
-    temp_evalue() : E(NULL) {}
-    temp_evalue(evalue *e) : E(e) {}
-    operator evalue* () const { return E; }
-    evalue *operator=(evalue *e) {
-	if (E) {
-	    free_evalue_refs(E); 
-	    delete E;
-	}
-	E = e;
-	return E;
-    }
-    ~temp_evalue() {
-	if (E) {
-	    free_evalue_refs(E); 
-	    delete E;
-	}
-    }
-};
 
 static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 				    vector<int> loc)
