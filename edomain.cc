@@ -9,6 +9,38 @@ using std::vector;
 using std::endl;
 using std::ostream;
 
+EDomain *EDomain::new_from_ge_constraint(ge_constraint *ge, int sign,
+					 barvinok_options *options)
+{
+    if (ge->simplified && sign == 0)
+	return NULL;
+
+    EDomain *ED;
+    Matrix *M2;
+    M2 = Matrix_Copy(ge->M);
+    if (sign == 1) {
+	if (!ge->simplified)
+	    value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
+			    M2->p[M2->NbRows-1][M2->NbColumns-1]);
+    } else if (sign == -1) {
+	Value mone;
+	value_init(mone);
+	value_set_si(mone, -1);
+	Vector_Scale(M2->p[M2->NbRows-1]+1, M2->p[M2->NbRows-1]+1,
+		     mone, M2->NbColumns-1);
+	value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
+			M2->p[M2->NbRows-1][M2->NbColumns-1]);
+	value_clear(mone);
+    } else {
+	value_set_si(M2->p[M2->NbRows-1][0], 0);
+    }
+    Polyhedron *D2 = Constraints2Polyhedron(M2, options->MaxRays);
+    ED = new EDomain(D2, ge->D, ge->new_floors);
+    Polyhedron_Free(D2);
+    Matrix_Free(M2);
+    return ED;
+}
+
 static void print_term(ostream& os, Value v, int pos, int dim,
 		        char **names, int *first)
 {
@@ -264,10 +296,9 @@ bool EDomain::contains(Value *point, int len) const
     return in;
 }
 
-Matrix *EDomain::add_ge_constraint(evalue *constraint,
-				   vector<EDomain_floor *>& new_floors,
-				   bool* simplified) const
+ge_constraint *EDomain::compute_ge_constraint(evalue *constraint) const
 {
+    ge_constraint *ge = new ge_constraint(this);
     evalue mone;
     value_init(mone.d);
     evalue_set_si(&mone, -1, 1);
@@ -283,13 +314,13 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
 
     int rows = D->NbConstraints+2*fract+1;
     int cols = 2+D->Dimension+fract;
-    Matrix *M = Matrix_Alloc(rows, cols);
+    ge->M = Matrix_Alloc(rows, cols);
     for (int i = 0; i < D->NbConstraints; ++i) {
-	Vector_Copy(D->Constraint[i], M->p[i], 1+D->Dimension);
-	value_assign(M->p[i][1+D->Dimension+fract], 
+	Vector_Copy(D->Constraint[i], ge->M->p[i], 1+D->Dimension);
+	value_assign(ge->M->p[i][1+D->Dimension+fract],
 		     D->Constraint[i][1+D->Dimension]);
     }
-    value_set_si(M->p[rows-1][0], 1);
+    value_set_si(ge->M->p[rows-1][0], 1);
     fract = 0;
     evalue *e;
     for (e = constraint; value_zero_p(e->d); e = &e->x.p->arr[type_offset(e->x.p)]) {
@@ -302,7 +333,7 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
 	    else
 		pos = D->Dimension+fract;
 
-	    add_fract(e, M->p[rows-1], cols, 1+pos);
+	    add_fract(e, ge->M->p[rows-1], cols, 1+pos);
 
 	    if (pos < D->Dimension)
 		continue;
@@ -312,34 +343,34 @@ Matrix *EDomain::add_ge_constraint(evalue *constraint,
 
 	    /* constraints for the new floor */
 	    int row = D->NbConstraints+2*fract;
-	    Vector_Copy(new_floor->v->p+1, M->p[row]+1, dimension());
-	    value_assign(M->p[row][cols-1], new_floor->v->p[1+dimension()]);
-	    value_oppose(M->p[row][1+D->Dimension+fract], new_floor->v->p[0]);
-	    value_set_si(M->p[row][0], 1);
-	    assert(value_eq(M->p[row][cols-1], new_floor->v->p[1+dimension()]));
-	    assert(Vector_Equal(new_floor->v->p+1, M->p[row]+1, dimension()));
+	    Vector_Copy(new_floor->v->p+1, ge->M->p[row]+1, dimension());
+	    value_assign(ge->M->p[row][cols-1], new_floor->v->p[1+dimension()]);
+	    value_oppose(ge->M->p[row][1+D->Dimension+fract], new_floor->v->p[0]);
+	    value_set_si(ge->M->p[row][0], 1);
+	    assert(value_eq(ge->M->p[row][cols-1], new_floor->v->p[1+dimension()]));
+	    assert(Vector_Equal(new_floor->v->p+1, ge->M->p[row]+1, dimension()));
 
-	    Vector_Scale(M->p[row]+1, M->p[row+1]+1, mone.x.n, cols-1);
-	    value_set_si(M->p[row+1][0], 1);
-	    value_addto(M->p[row+1][cols-1], M->p[row+1][cols-1],
-			M->p[row+1][1+D->Dimension+fract]);
-	    value_decrement(M->p[row+1][cols-1], M->p[row+1][cols-1]);
+	    Vector_Scale(ge->M->p[row]+1, ge->M->p[row+1]+1, mone.x.n, cols-1);
+	    value_set_si(ge->M->p[row+1][0], 1);
+	    value_addto(ge->M->p[row+1][cols-1], ge->M->p[row+1][cols-1],
+			ge->M->p[row+1][1+D->Dimension+fract]);
+	    value_decrement(ge->M->p[row+1][cols-1], ge->M->p[row+1][cols-1]);
 
-	    new_floors.push_back(new_floor);
+	    ge->new_floors.push_back(new_floor);
 
 	    ++fract;
 	} else {
 	    assert(e->x.p->type == polynomial);
 	    assert(e->x.p->size == 2);
-	    add_coeff(M->p[rows-1], cols, &e->x.p->arr[1], e->x.p->pos);
+	    add_coeff(ge->M->p[rows-1], cols, &e->x.p->arr[1], e->x.p->pos);
 	}
     }
-    add_coeff(M->p[rows-1], cols, e, cols-1);
-    *simplified = ConstraintSimplify(M->p[rows-1], M->p[rows-1],
-				     cols, &M->p[rows-1][0]);
-    value_set_si(M->p[rows-1][0], 1);
+    add_coeff(ge->M->p[rows-1], cols, e, cols-1);
+    ge->simplified = ConstraintSimplify(ge->M->p[rows-1], ge->M->p[rows-1],
+					 cols, &ge->M->p[rows-1][0]);
+    value_set_si(ge->M->p[rows-1][0], 1);
     free_evalue_refs(&mone); 
-    return M;
+    return ge;
 }
 
 /* "align" matrix to have nrows by inserting

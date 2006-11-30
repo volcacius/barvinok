@@ -30,6 +30,22 @@ struct EDomain_floor {
     void substitute(evalue **sub, Matrix *T);
 };
 
+struct EDomain;
+
+struct ge_constraint {
+    const EDomain * const D;
+    Matrix *M;
+    std::vector<EDomain_floor *> new_floors;
+    bool simplified;
+
+    ge_constraint(const EDomain *const D) : D(D) {}
+    ~ge_constraint() {
+	for (int i = 0; i < new_floors.size(); ++i)
+	    EDomain_floor::unref(new_floors[i]);
+	Matrix_Free(M);
+    }
+};
+
 struct EDomain {
     Polyhedron		*D;
     Vector		*sample;
@@ -49,7 +65,10 @@ struct EDomain {
 	add_floors(ED->floors);
 	sample = NULL;
     }
-    EDomain(Polyhedron *D, EDomain *ED, std::vector<EDomain_floor *>floors) {
+    static EDomain *new_from_ge_constraint(ge_constraint *ge, int sign,
+					   barvinok_options *options);
+    EDomain(Polyhedron *D, const EDomain *const ED,
+	    std::vector<EDomain_floor *>floors) {
 	this->D = Polyhedron_Copy(D);
 	add_floors(ED->floors);
 	add_floors(floors);
@@ -81,9 +100,7 @@ struct EDomain {
     }
     bool contains(Value *point, int len) const;
 
-    Matrix *add_ge_constraint(evalue *constraint,
-				 std::vector<EDomain_floor *>& new_floors,
-				 bool* simplified) const;
+    ge_constraint *compute_ge_constraint(evalue *constraint) const;
     void substitute(evalue **sub, Matrix *T, Matrix *Eq, unsigned MaxRays);
     bool not_empty(barvinok_options *options);
 };

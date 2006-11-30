@@ -2275,54 +2275,24 @@ static void split_on(const split& sp, EDomain *D,
 		     EDomain **Dlt, EDomain **Deq, EDomain **Dgt,
 		     barvinok_options *options)
 {
-    Matrix *M, *M2;
     EDomain *ED[3];
-    Polyhedron *D2;
-    Value mone;
-    value_init(mone);
-    value_set_si(mone, -1);
     *Dlt = NULL;
     *Deq = NULL;
     *Dgt = NULL;
-    vector<EDomain_floor *> new_floors;
-    bool simplified;
-    M = D->add_ge_constraint(sp.constraint, new_floors, &simplified);
-    if (sp.sign == split::lge || sp.sign == split::ge) {
-	M2 = Matrix_Copy(M);
-	if (!simplified)
-	    value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
-			    M2->p[M2->NbRows-1][M2->NbColumns-1]);
-	D2 = Constraints2Polyhedron(M2, options->MaxRays);
-	ED[2] = new EDomain(D2, D, new_floors);
-	Polyhedron_Free(D2);
-	Matrix_Free(M2);
-    } else
+    ge_constraint *ge = D->compute_ge_constraint(sp.constraint);
+    if (sp.sign == split::lge || sp.sign == split::ge)
+	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options);
+    else
 	ED[2] = NULL;
-    if (sp.sign == split::lge || sp.sign == split::le) {
-	M2 = Matrix_Copy(M);
-	Vector_Scale(M2->p[M2->NbRows-1]+1, M2->p[M2->NbRows-1]+1,
-		     mone, M2->NbColumns-1);
-	value_decrement(M2->p[M2->NbRows-1][M2->NbColumns-1],
-			M2->p[M2->NbRows-1][M2->NbColumns-1]);
-	D2 = Constraints2Polyhedron(M2, options->MaxRays);
-	ED[0] = new EDomain(D2, D, new_floors);
-	Polyhedron_Free(D2);
-	Matrix_Free(M2);
-    } else
+    if (sp.sign == split::lge || sp.sign == split::le)
+	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options);
+    else
 	ED[0] = NULL;
 
     assert(sp.sign == split::lge || sp.sign == split::ge || sp.sign == split::le);
-    if (!simplified) {
-	value_set_si(M->p[M->NbRows-1][0], 0);
-	D2 = Constraints2Polyhedron(M, options->MaxRays);
-	ED[1] = new EDomain(D2, D, new_floors);
-	Polyhedron_Free(D2);
-    } else
-	ED[1] = NULL;
-    Matrix_Free(M);
+    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options);
 
-    for (int i = 0; i < new_floors.size(); ++i)
-	EDomain_floor::unref(new_floors[i]);
+    delete ge;
 
     for (int i = 0; i < 3; ++i) {
 	if (!ED[i])
@@ -2340,7 +2310,6 @@ static void split_on(const split& sp, EDomain *D,
     *Dlt = ED[0];
     *Deq = ED[1];
     *Dgt = ED[2];
-    value_clear(mone);
 }
 
 ostream & operator<< (ostream & os, const vector<int> & v)
