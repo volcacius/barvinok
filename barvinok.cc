@@ -618,16 +618,18 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result,
 	return false;
 
 #ifdef HAVE_LIBGLPK
-    Vector *sample;
+    if (options->lexmin_emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_COUNT) {
+	Vector *sample;
 
-    sample = Polyhedron_Sample(P, options);
-    if (!sample)
-	value_set_si(*result, 0);
-    else {
-	value_set_si(*result, -1);
-	Vector_Free(sample);
+	sample = Polyhedron_Sample(P, options);
+	if (!sample)
+	    value_set_si(*result, 0);
+	else {
+	    value_set_si(*result, -1);
+	    Vector_Free(sample);
+	}
+	return true;
     }
-    return true;
 #endif
 
     for (int i = 0; i < P->NbRays; ++i)

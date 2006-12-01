@@ -51,14 +51,14 @@ using std::ostream;
 #define getopt_long(a,b,c,d,e) getopt(a,b,c)
 #else
 #include <getopt.h>
-#define NO_EMPTINESS_CHECK  256
+#define EMPTINESS_CHECK     256
 #define BASIS_REDUCTION_CDD 257
 #define NO_REDUCTION  	    258
 #define POLYSIGN  	    259
 struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
-    { "no-emptiness-check", no_argument, 0, NO_EMPTINESS_CHECK },
+    { "emptiness-check", required_argument, 0, EMPTINESS_CHECK },
     { "no-reduction", no_argument, 0, NO_REDUCTION },
     { "cdd", no_argument, 0, BASIS_REDUCTION_CDD },
     { "polysign",   required_argument, 0, POLYSIGN },
@@ -2301,8 +2301,8 @@ static void split_on(const split& sp, EDomain *D,
 	    ED[i]->sample = Vector_Alloc(D->sample->Size);
 	    Vector_Copy(D->sample->p, ED[i]->sample->p, D->sample->Size);
 	} else if (emptyQ2(ED[i]->D) ||
-		    (options->lexmin_emptiness_check == 1 &&
-		     !(ED[i]->not_empty(options)))) {
+	    (options->lexmin_emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE &&
+		 !(ED[i]->not_empty(options)))) {
 	    delete ED[i];
 	    ED[i] = NULL;
 	}
@@ -2509,7 +2509,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	if (!best) {
 	    /* apparently there can be negative initial term on empty domains */
-	    if (ind.options->lexmin_emptiness_check == 1 &&
+	    if (ind.options->lexmin_emptiness_check !=
+					    BV_LEXMIN_EMPTINESS_CHECK_NONE &&
 		ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
 		assert(!neg);
 	    break;
@@ -2521,7 +2522,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    if (ind.order.le.find(best) == ind.order.le.end()) {
 		if (ind.order.eq.find(best) != ind.order.eq.end()) {
 		    bool handled = ind.handle_equal_numerators(best);
-		    if (ind.options->lexmin_emptiness_check == 1 &&
+		    if (ind.options->lexmin_emptiness_check !=
+				BV_LEXMIN_EMPTINESS_CHECK_NONE &&
 			ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
 			assert(handled);
 		    /* If !handled then the leading coefficient is bigger than one;
@@ -2607,7 +2609,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	EDomain *Dlt, *Deq, *Dgt;
 	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.options);
-	if (ind.options->lexmin_emptiness_check == 1)
+	if (ind.options->lexmin_emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE)
 	    assert(Dlt || Deq || Dgt);
 	else if (!(Dlt || Deq || Dgt))
 	    /* Must have been empty all along */
@@ -2804,8 +2806,11 @@ int main(int argc, char **argv)
 
     while ((c = getopt_long(argc, argv, "TAm:M:r:V", lexmin_options, &ind)) != -1) {
 	switch (c) {
-	case NO_EMPTINESS_CHECK:
-	    options->lexmin_emptiness_check = 0;
+	case EMPTINESS_CHECK:
+	    if (!strcmp(optarg, "none"))
+		options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
+	    else if (!strcmp(optarg, "count"))
+		options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
 	    break;
 	case NO_REDUCTION:
 	    options->lexmin_reduce = 0;

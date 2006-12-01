@@ -50,7 +50,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->gbr_lp_solver = BV_GBR_NONE;
 #endif
 
-    options->lexmin_emptiness_check = 1;
+    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_SAMPLE;
     options->lexmin_reduce = 1;
     options->lexmin_polysign = BV_LEXMIN_POLYSIGN_POLYLIB;
 

@@ -2,6 +2,7 @@
 #include "fdstream.h"
 #include <barvinok/util.h>
 #include <barvinok/sample.h>
+#include <barvinok/barvinok.h>
 #include "edomain.h"
 #include "evalue_util.h"
 
@@ -529,6 +530,16 @@ bool EDomain::not_empty(barvinok_options *options)
 	    Vector_Copy(P->Ray[i]+1, sample->p, P->Dimension+1);
 	    return true;
 	}
+
+    if (options->lexmin_emptiness_check == BV_LEXMIN_EMPTINESS_CHECK_COUNT) {
+	bool notzero;
+	Value cb;
+	value_init(cb);
+	barvinok_count_with_options(P, &cb, options);
+	notzero = value_notzero_p(cb);
+	value_clear(cb);
+	return notzero;
+    }
 
     Matrix *T = NULL;
     while (P && !emptyQ2(P) && P->NbEq > 0) {
