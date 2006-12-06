@@ -273,8 +273,8 @@ if test "$with_bernstein" != "no"; then
 	AC_LANG_PUSH(C++)
 	AM_PATH_GINAC(1.3.3, [
 		have_ginac=true
-		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])])
-		PACKAGE_LIBS="-lbarvinok -lbernstein"
+		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])]
+		PACKAGE_LIBS="-lbarvinok -lbernstein")
 	AC_LANG_POP
 fi
 AM_CONDITIONAL(HAVE_GINAC, test x$have_ginac = xtrue)
