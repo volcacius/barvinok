@@ -222,7 +222,7 @@ numeric piecewise_lst::evaluate(const exvector& values)
 	assert(is_a<lst>(ex_val));
 	lst val = ex_to<lst>(ex_val);;
 	ex max = val.op(0);
-	for (int j = 1; j < val.nops(); ++i)
+	for (int j = 1; j < val.nops(); ++j)
 	    if (val.op(j) > max)
 		max = val.op(j);
 	assert(is_a<numeric>(max));
