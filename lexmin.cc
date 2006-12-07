@@ -728,6 +728,8 @@ void partial_order::unset_le(const indicator_term *a, const indicator_term *b)
     vector<const indicator_term *>::iterator i;
     i = find(le[a].begin(), le[a].end(), b);
     le[a].erase(i);
+    if (le[a].size() == 0)
+	le.erase(a);
     pred[b]--;
     i = find(pending[a].begin(), pending[a].end(), b);
     if (i != pending[a].end())
@@ -974,6 +976,7 @@ void partial_order::sanity_check() const
 	}
     }
     for (i = le.begin(); i != le.end(); ++i) {
+	assert((*i).second.size() > 0);
 	assert(pred.find((*i).first) != pred.end());
 	for (int j = 0; j < (*i).second.size(); ++j) {
 	    k = pred.find((*i).second[j]);
@@ -2329,8 +2332,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	if (!second && !neg) {
 	    const indicator_term *rat = NULL;
 	    assert(best);
-	    if (ind.order.le[best].size() == 0) {
-		if (ind.order.eq[best].size() != 0) {
+	    if (ind.order.le.find(best) == ind.order.le.end()) {
+		if (ind.order.eq.find(best) != ind.order.eq.end()) {
 		    bool handled = ind.handle_equal_numerators(best);
 		    if (ind.options->lexmin_emptiness_check == 1 &&
 			ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
