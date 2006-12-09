@@ -53,6 +53,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->lexmin_emptiness_check = 1;
     options->lexmin_reduce = 1;
+    options->lexmin_polysign = BV_LEXMIN_POLYSIGN_POLYLIB;
 
     return options;
 }

@@ -22,6 +22,7 @@ extern "C" {
 #include "edomain.h"
 #include "evalue_util.h"
 #include "remove_equalities.h"
+#include "polysign.h"
 #include "config.h"
 
 #ifdef NTL_STD_CXX
@@ -57,12 +58,14 @@ using std::ostream;
 #define NO_EMPTINESS_CHECK  256
 #define BASIS_REDUCTION_CDD 257
 #define NO_REDUCTION  	    258
+#define POLYSIGN  	    259
 struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
     { "no-emptiness-check", no_argument, 0, NO_EMPTINESS_CHECK },
     { "no-reduction", no_argument, 0, NO_REDUCTION },
     { "cdd", no_argument, 0, BASIS_REDUCTION_CDD },
+    { "polysign",   required_argument, 0, POLYSIGN },
     { "min",   	    required_argument,  0,  'm' },
     { "max",   	    required_argument,  0,  'M' },
     { "range",      required_argument,  0,  'r' },
@@ -439,8 +442,6 @@ void indicator_constructor::normalize()
 
 struct indicator;
 
-enum order_sign { order_lt, order_le, order_eq, order_ge, order_gt, order_unknown };
-
 struct partial_order {
     indicator *ind;
 
@@ -575,40 +576,6 @@ void partial_order::copy(const partial_order& order,
 	for (int j = 0; j < (*i).second.size(); ++j)
 	    pending[old2new[(*i).first]].push_back(old2new[(*i).second[j]]);
     }
-}
-
-static void interval_minmax(Polyhedron *I, int *min, int *max)
-{
-    assert(I->Dimension == 1);
-    *min = 1;
-    *max = -1;
-    POL_ENSURE_VERTICES(I);
-    for (int i = 0; i < I->NbRays; ++i) {
-	if (value_pos_p(I->Ray[i][1]))
-	    *max = 1;
-	else if (value_neg_p(I->Ray[i][1]))
-	    *min = -1;
-	else {
-	    if (*max < 0)
-		*max = 0;
-	    if (*min > 0)
-		*min = 0;
-	}
-    }
-}
-
-static void interval_minmax(Polyhedron *D, Matrix *T, int *min, int *max, 
-			    unsigned MaxRays)
-{
-    Polyhedron *I = Polyhedron_Image(D, T, MaxRays);
-    if (MaxRays & POL_INTEGER)
-	I = DomainConstraintSimplify(I, MaxRays);
-    if (emptyQ2(I)) {
-	Polyhedron_Free(I);
-	I = Polyhedron_Image(D, T, MaxRays);
-    }
-    interval_minmax(I, min, max);
-    Polyhedron_Free(I);
 }
 
 struct max_term {
@@ -747,7 +714,7 @@ static evalue *ediff(const evalue *a, const evalue *b)
     return diff;
 }
 
-static order_sign evalue_sign(evalue *diff, EDomain *D, unsigned MaxRays)
+static order_sign evalue_sign(evalue *diff, EDomain *D, barvinok_options *options)
 {
     order_sign sign = order_eq;
     evalue mone;
@@ -761,32 +728,32 @@ static order_sign evalue_sign(evalue *diff, EDomain *D, unsigned MaxRays)
     Vector_Copy(c->p+1, T->p[0], len-1);
     value_assign(T->p[1][len-2], c->p[0]);
 
-    int min, max;
-    interval_minmax(D->D, T, &min, &max, MaxRays);
-    if (max < 0)
-	sign = order_lt;
+    order_sign upper_sign = polyhedron_affine_sign(D->D, T, options);
+    if (upper_sign == order_lt || !fract)
+	sign = upper_sign;
     else {
-	if (fract) {
-	    emul(&mone, diff);
-	    evalue2constraint(D, diff, c->p, len);
-	    emul(&mone, diff);
-	    Vector_Copy(c->p+1, T->p[0], len-1);
-	    value_assign(T->p[1][len-2], c->p[0]);
+	emul(&mone, diff);
+	evalue2constraint(D, diff, c->p, len);
+	emul(&mone, diff);
+	Vector_Copy(c->p+1, T->p[0], len-1);
+	value_assign(T->p[1][len-2], c->p[0]);
 
-	    int negmin, negmax;
-	    interval_minmax(D->D, T, &negmin, &negmax, MaxRays);
-	    min = -negmax;
-	}
-	if (min > 0)
+	order_sign neg_lower_sign = polyhedron_affine_sign(D->D, T, options);
+
+	if (neg_lower_sign == order_lt)
 	    sign = order_gt;
-	else if (max == 0 && min == 0)
-	    sign = order_eq;
-	else if (min < 0 && max > 0)
-	    sign = order_unknown;
-	else if (min < 0)
-	    sign = order_le;
-	else
-	    sign = order_ge;
+	else if (neg_lower_sign == order_eq || neg_lower_sign == order_le) {
+	    if (upper_sign == order_eq || upper_sign == order_le)
+		sign = order_eq;
+	    else
+		sign = order_ge;
+	} else {
+	    if (upper_sign == order_lt || upper_sign == order_le ||
+					  upper_sign == order_eq)
+		sign = order_le;
+	    else
+		sign = order_unknown;
+	}
     }
 
     Matrix_Free(T);
@@ -802,14 +769,28 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
     order_sign sign = order_eq;
     EDomain *D = ind->D;
     unsigned MaxRays = ind->options->MaxRays;
-    if (MaxRays & POL_INTEGER && (a->sign == 0 || b->sign == 0))
-	MaxRays = 0;
+    bool rational = a->sign == 0 || b->sign == 0;
+    if (rational && POL_ISSET(ind->options->MaxRays, POL_INTEGER)) {
+	ind->options->MaxRays &= ~POL_INTEGER;
+	if (ind->options->MaxRays)
+	    ind->options->MaxRays |= POL_HIGH_BIT;
+    }
 
     for (int k = 0; k < dim; ++k) {
 	/* compute a->vertex[k] - b->vertex[k] */
 	evalue *diff = ediff(a->vertex[k], b->vertex[k]);
-	order_sign diff_sign = evalue_sign(diff, D, MaxRays);
+	order_sign diff_sign = evalue_sign(diff, D, ind->options);
 
+	if (diff_sign == order_undefined) {
+	    assert(sign == order_le || sign == order_ge);
+	    if (sign == order_le)
+		sign = order_lt;
+	    else
+		sign = order_gt;
+	    free_evalue_refs(diff); 
+	    delete diff;
+	    break;
+	}
 	if (diff_sign == order_lt) {
 	    if (sign == order_eq || sign == order_le)
 		sign = order_lt;
@@ -868,6 +849,7 @@ order_sign partial_order::compare(indicator_term *a, indicator_term *b)
     if (D != ind->D)
 	delete D;
 
+    ind->options->MaxRays = MaxRays;
     return sign;
 }
 
@@ -1976,7 +1958,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	if (!best) {
 	    /* apparently there can be negative initial term on empty domains */
-	    if (ind.options->lexmin_emptiness_check == 1)
+	    if (ind.options->lexmin_emptiness_check == 1 &&
+		ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
 		assert(!neg);
 	    break;
 	}
@@ -1987,7 +1970,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    if (ind.order.le[best].size() == 0) {
 		if (ind.order.eq[best].size() != 0) {
 		    bool handled = ind.handle_equal_numerators(best);
-		    if (ind.options->lexmin_emptiness_check == 1)
+		    if (ind.options->lexmin_emptiness_check == 1 &&
+			ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
 			assert(handled);
 		    /* If !handled then the leading coefficient is bigger than one;
 		     * must be an empty domain
@@ -2032,7 +2016,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	order_sign sign;
 	for (int k = 0; k < dim; ++k) {
 	    diff = ediff(best->vertex[k], second->vertex[k]);
-	    sign = evalue_sign(diff, ind.D, ind.options->MaxRays);
+	    sign = evalue_sign(diff, ind.D, ind.options);
 
 	    /* neg can never be smaller than best, unless it may still cancel.
 	     * This can happen if positive terms have been determined to
@@ -2273,6 +2257,12 @@ int main(int argc, char **argv)
 	    break;
 	case BASIS_REDUCTION_CDD:
 	    options->gbr_lp_solver = BV_GBR_CDD;
+	    break;
+	case POLYSIGN:
+	    if (!strcmp(optarg, "cddf"))
+		options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDDF;
+	    else if (!strcmp(optarg, "cdd"))
+		options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDD;
 	    break;
 	case 'T':
 	    verify = 1;

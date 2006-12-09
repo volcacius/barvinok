@@ -44,6 +44,10 @@ struct barvinok_options {
 		 */
     int		lexmin_emptiness_check;
     int		lexmin_reduce;
+    #define	BV_LEXMIN_POLYSIGN_POLYLIB	0
+    #define	BV_LEXMIN_POLYSIGN_CDD		1
+    #define	BV_LEXMIN_POLYSIGN_CDDF		2
+    int		lexmin_polysign;
 
     struct barvinok_stats   stats;
 };

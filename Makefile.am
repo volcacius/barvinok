@@ -30,7 +30,7 @@ if HAVE_GINAC
     BERNSTEIN_CC = bernstein.cc
 endif
 if HAVE_CDDLIB
-    BR_CDD = basis_reduction_cdd.cc
+    BR_CDD = basis_reduction_cdd.cc initcdd.cc
 endif
 if HAVE_GLPK
     BR_GLPK = basis_reduction_glpk.c
@@ -72,7 +72,9 @@ libbarvinok_la_SOURCES = \
     $(BR_GLPK)
 EXTRA_libbarvinok_la_SOURCES = \
     bernstein.cc \
-    piputil.h
+    piputil.h \
+    initcdd.cc \
+    initcdd.h
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
@@ -98,6 +100,9 @@ barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 4coins_SOURCES = 4coins.cc
+if HAVE_CDDLIB
+POLYSIGN = polysign_cddf.cc polysign_cdd.cc
+endif
 lexmin_SOURCES = \
 	lexmin.cc \
 	combine.c \
@@ -107,7 +112,12 @@ lexmin_SOURCES = \
 	evalue_util.cc \
 	evalue_util.h \
 	fdstream.cc \
-	fdstream.h
+	fdstream.h \
+	$(POLYSIGN) \
+	polysign.c \
+	polysign_polylib.c \
+	polysign.h
+EXTRA_lexmin_SOURCE = polysign_cddf.cc polysign_cdd.cc polysign.c
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 

@@ -2,6 +2,7 @@
 #include <setoper.h>
 #include <cdd.h>
 #include <barvinok/basis_reduction.h>
+#include "initcdd.h"
 
 struct CDD_LP {
     Polyhedron *P;
@@ -46,14 +47,9 @@ struct CDD_LP {
 #define Polyhedron_Reduced_Basis    	    cdd_Polyhedron_Reduced_Basis
 #include "basis_reduction_templ.c"
 
-static int cdd_initialized = 0;
-
 CDD_LP::CDD_LP(Polyhedron *P)
 {
-    if (!cdd_initialized) {
-	dd_set_global_constants();
-	cdd_initialized = 1;
-    }
+    INIT_CDD;
 
     this->P = P;
     lp = NULL;
