@@ -65,6 +65,29 @@ short_rat::short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
     n.power.SetDims(1, num.length());
     n.power[0] = num;
     d.power = den;
+    normalize();
+}
+
+void short_rat::normalize()
+{
+    /* Make all powers in denominator lexico-positive */
+    for (int i = 0; i < d.power.NumRows(); ++i) {
+	int j;
+	for (j = 0; j < d.power.NumCols(); ++j)
+	    if (d.power[i][j] != 0)
+		break;
+	assert(j < d.power.NumCols());
+	if (d.power[i][j] < 0) {
+	    d.power[i] = -d.power[i];
+	    for (int k = 0; k < n.coeff.length(); ++k) {
+		n.coeff[k].n = -n.coeff[k].n;
+		n.power[k] += d.power[i];
+	    }
+	}
+    }
+
+    /* Order powers in denominator */
+    lex_order_rows(d.power);
 }
 
 void short_rat::add(short_rat *r)
@@ -147,22 +170,6 @@ void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
 	return;
 
     short_rat * r = new short_rat(c, num, den);
-
-    /* Make all powers in denominator lexico-positive */
-    for (int i = 0; i < r->d.power.NumRows(); ++i) {
-	int j;
-	for (j = 0; j < r->d.power.NumCols(); ++j)
-	    if (r->d.power[i][j] != 0)
-		break;
-	if (r->d.power[i][j] < 0) {
-	    r->d.power[i] = -r->d.power[i];
-	    r->n.coeff[0].n = -r->n.coeff[0].n;
-	    r->n.power[0] += r->d.power[i];
-	}
-    }
-
-    /* Order powers in denominator */
-    lex_order_rows(r->d.power);
 
     for (int i = 0; i < term.size(); ++i)
 	if (lex_cmp(term[i]->d.power, r->d.power) == 0) {

@@ -31,6 +31,7 @@ struct short_rat {
     bool reduced();
     short_rat(Value c);
     short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
+    void normalize();
 };
 
 struct gen_fun {
