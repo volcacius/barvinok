@@ -47,6 +47,26 @@ static void lex_order_terms(struct short_rat* rat)
     }
 }
 
+short_rat::short_rat(Value c)
+{
+    n.coeff.SetLength(1);
+    value2zz(c, n.coeff[0].n);
+    n.coeff[0].d = 1;
+    n.power.SetDims(1, 0);
+    d.power.SetDims(0, 0);
+}
+
+short_rat::short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
+{
+    n.coeff.SetLength(1);
+    ZZ g = GCD(c.n, c.d);
+    n.coeff[0].n = c.n/g;
+    n.coeff[0].d = c.d/g;
+    n.power.SetDims(1, num.length());
+    n.power[0] = num;
+    d.power = den;
+}
+
 void short_rat::add(short_rat *r)
 {
     for (int i = 0; i < r->n.power.NumRows(); ++i) {
@@ -116,13 +136,9 @@ bool short_rat::reduced()
 
 gen_fun::gen_fun(Value c)
 {
+    short_rat *r = new short_rat(c);
     context = Universe_Polyhedron(0);
-    term.push_back(new short_rat);
-    term[0]->n.coeff.SetLength(1);
-    value2zz(c, term[0]->n.coeff[0].n);
-    term[0]->n.coeff[0].d = 1;
-    term[0]->n.power.SetDims(1, 0);
-    term[0]->d.power.SetDims(0, 0);
+    term.push_back(r);
 }
 
 void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
@@ -130,14 +146,7 @@ void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
     if (c.n == 0)
 	return;
 
-    short_rat * r = new short_rat;
-    r->n.coeff.SetLength(1);
-    ZZ g = GCD(c.n, c.d);
-    r->n.coeff[0].n = c.n/g;
-    r->n.coeff[0].d = c.d/g;
-    r->n.power.SetDims(1, num.length());
-    r->n.power[0] = num;
-    r->d.power = den;
+    short_rat * r = new short_rat(c, num, den);
 
     /* Make all powers in denominator lexico-positive */
     for (int i = 0; i < r->d.power.NumRows(); ++i) {
