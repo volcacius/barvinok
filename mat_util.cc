@@ -27,3 +27,18 @@ void lex_order_rows(mat_ZZ& mat)
 	}
     }
 }
+
+int lex_cmp(const mat_ZZ& a, const mat_ZZ& b)
+{
+    assert(a.NumCols() == b.NumCols());
+    int alen = a.NumRows();
+    int blen = b.NumRows();
+    int len = alen < blen ? alen : blen;
+
+    for (int i = 0; i < len; ++i) {
+	int s = lex_cmp(a[i], b[i]);
+	if (s)
+	    return s;
+    }
+    return alen-blen;
+}

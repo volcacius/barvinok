@@ -14,21 +14,6 @@ using std::endl;
 using std::pair;
 using std::vector;
 
-static int lex_cmp(mat_ZZ& a, mat_ZZ& b)
-{
-    assert(a.NumCols() == b.NumCols());
-    int alen = a.NumRows();
-    int blen = b.NumRows();
-    int len = alen < blen ? alen : blen;
-
-    for (int i = 0; i < len; ++i) {
-	int s = lex_cmp(a[i], b[i]);
-	if (s)
-	    return s;
-    }
-    return alen-blen;
-}
-
 static void lex_order_terms(struct short_rat* rat)
 {
     for (int i = 0; i < rat->n.power.NumRows(); ++i) {
