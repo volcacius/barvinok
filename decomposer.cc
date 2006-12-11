@@ -117,7 +117,8 @@ public:
     Matrix *Rays;
 };
 
-void decomposer::decompose(Polyhedron *C, barvinok_options *options)
+static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
+			     barvinok_options *options)
 {
     vector<cone *> nonuni;
     cone * c = new cone(C);
@@ -129,7 +130,7 @@ void decomposer::decompose(Polyhedron *C, barvinok_options *options)
     } else {
 	try {
 	    options->stats.unimodular_cones++;
-	    handle(C, 1);
+	    scc.handle(C, 1);
 	    delete c;
 	} catch (...) {
 	    delete c;
@@ -154,7 +155,7 @@ void decomposer::decompose(Polyhedron *C, barvinok_options *options)
 	    } else {
 		try {
 		    options->stats.unimodular_cones++;
-		    handle(pc->poly(), sign(pc->det) * s);
+		    scc.handle(pc->poly(), sign(pc->det) * s);
 		    delete pc;
 		} catch (...) {
 		    delete c;
@@ -176,7 +177,17 @@ void decomposer::decompose(Polyhedron *C, barvinok_options *options)
     }
 }
 
-void polar_decomposer::decompose(Polyhedron *cone, barvinok_options *options)
+struct polar_signed_cone_consumer : public signed_cone_consumer {
+    signed_cone_consumer& scc;
+    polar_signed_cone_consumer(signed_cone_consumer& scc) : scc(scc) {}
+    void handle(Polyhedron *P, int sign) {
+	Polyhedron_Polarize(P);
+	scc.handle(P, sign);
+    }
+};
+
+static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
+			    barvinok_options *options)
 {
     POL_ENSURE_VERTICES(cone);
     Polyhedron_Polarize(cone);
@@ -185,9 +196,10 @@ void polar_decomposer::decompose(Polyhedron *cone, barvinok_options *options)
 	cone = triangulate_cone(cone, options->MaxRays);
 	Polyhedron_Free(tmp);
     }
+    polar_signed_cone_consumer pssc(scc);
     try {
 	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	    decomposer::decompose(Polar, options);
+	    primal_decompose(Polar, pssc, options);
 	Domain_Free(cone);
     } catch (...) {
 	Domain_Free(cone);
@@ -195,10 +207,10 @@ void polar_decomposer::decompose(Polyhedron *cone, barvinok_options *options)
     }
 }
 
-void polar_decomposer::handle(Polyhedron *P, int sign)
+void barvinok_decompose(Polyhedron *C, signed_cone_consumer& scc,
+			barvinok_options *options)
 {
-    Polyhedron_Polarize(P);
-    handle_polar(P, sign);
+    polar_decompose(C, scc, options);
 }
 
 void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i, 
@@ -208,7 +220,7 @@ void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i,
     vert = _i;
     this->V = V;
 
-    pd->decompose(C, options);
+    barvinok_decompose(C, scc, options);
 }
 
 /*

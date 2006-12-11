@@ -14,7 +14,7 @@ using namespace NTL;
 struct gen_fun;
 
 /* base for non-parametric counting */
-struct np_base : public polar_decomposer {
+struct np_base : public signed_cone_consumer {
     unsigned dim;
     ZZ one;
 
@@ -23,14 +23,14 @@ struct np_base : public polar_decomposer {
 	one = 1;
     }
 
-    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c) = 0;
-    virtual void handle_polar(Polyhedron *C, int s);
+    virtual void handle(Polyhedron *C, Value *vertex, QQ c) = 0;
+    virtual void handle(Polyhedron *C, int s);
     virtual void start(Polyhedron *P, barvinok_options *options);
     void do_vertex_cone(const QQ& factor, Polyhedron *Cone, 
 			Value *vertex, barvinok_options *options) {
 	current_vertex = vertex;
 	this->factor = factor;
-	decompose(Cone, options);
+	barvinok_decompose(Cone, *this, options);
     }
     virtual void init(Polyhedron *P) {
     }
@@ -67,7 +67,7 @@ struct reducer : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle_polar(Polyhedron *C, Value *vertex, QQ c);
+    virtual void handle(Polyhedron *C, Value *vertex, QQ c);
     void reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f);
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,

@@ -485,7 +485,8 @@ void indicator_term::substitute(int pos, evalue *val)
     }
 }
 
-struct indicator_constructor : public polar_decomposer, public vertex_decomposer {
+struct indicator_constructor : public signed_cone_consumer,
+				public vertex_decomposer {
     vec_ZZ vertex;
     vector<indicator_term*> *terms;
     Matrix *T;	/* Transformation to original space */
@@ -495,7 +496,7 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
 
     indicator_constructor(Polyhedron *P, unsigned dim, Param_Polyhedron *PP,
 			  Matrix *T) :
-		vertex_decomposer(P, PP->nbV, this), T(T), PP(PP) {
+		vertex_decomposer(P, PP->nbV, *this), T(T), PP(PP) {
 	vertex.SetLength(dim);
 	terms = new vector<indicator_term*>[nbV];
     }
@@ -509,7 +510,7 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
     void normalize();
     void print(ostream& os, char **p);
 
-    virtual void handle_polar(Polyhedron *P, int sign);
+    virtual void handle(Polyhedron *P, int sign);
     void decompose_at_vertex(Param_Vertices *V, int _i, 
 					    barvinok_options *options) {
 	pos = _i;
@@ -518,7 +519,7 @@ struct indicator_constructor : public polar_decomposer, public vertex_decomposer
     }
 };
 
-void indicator_constructor::handle_polar(Polyhedron *C, int s)
+void indicator_constructor::handle(Polyhedron *C, int s)
 {
     unsigned dim = vertex.length();
 

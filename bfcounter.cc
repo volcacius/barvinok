@@ -108,7 +108,7 @@ int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle_polar(Polyhedron *C, Value *vertex, QQ c)
+void bf_base::handle(Polyhedron *C, Value *vertex, QQ c)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;

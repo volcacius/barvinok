@@ -5,15 +5,8 @@
 #include <barvinok/polylib.h>
 #include <barvinok/options.h>
 
-struct decomposer {
-    void decompose(Polyhedron *C, barvinok_options *options);
+struct signed_cone_consumer {
     virtual void handle(Polyhedron *P, int sign) = 0;
-};
-
-struct polar_decomposer : public decomposer {
-    void decompose(Polyhedron *C, barvinok_options *options);
-    virtual void handle(Polyhedron *P, int sign);
-    virtual void handle_polar(Polyhedron *P, int sign) = 0;
 };
 
 struct vertex_decomposer {
@@ -21,11 +14,14 @@ struct vertex_decomposer {
     unsigned nbV;	// number of vertices
     Param_Vertices *V;	// current vertex
     int vert;		// current vertex index
-    polar_decomposer *pd;
+    signed_cone_consumer& scc;
 
-    vertex_decomposer(Polyhedron *P, unsigned nbV, polar_decomposer *pd) : 
-			P(P), nbV(nbV), pd(pd) {}
+    vertex_decomposer(Polyhedron *P, unsigned nbV, signed_cone_consumer& scc) :
+			P(P), nbV(nbV), scc(scc) {}
     void decompose_at_vertex(Param_Vertices *V, int _i, barvinok_options *options);
 };
+
+void barvinok_decompose(Polyhedron *C, signed_cone_consumer& scc,
+			barvinok_options *options);
 
 #endif

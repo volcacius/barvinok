@@ -5,11 +5,11 @@
 
 using std::vector;
 
-void np_base::handle_polar(Polyhedron *C, int s)
+void np_base::handle(Polyhedron *C, int s)
 {
     assert(C->NbRays-1 == dim);
     factor.n *= s;
-    handle_polar(C, current_vertex, factor);
+    handle(C, current_vertex, factor);
     factor.n *= s;
 }
 
@@ -202,7 +202,7 @@ void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
     }
 }
 
-void reducer::handle_polar(Polyhedron *C, Value *V, QQ c)
+void reducer::handle(Polyhedron *C, Value *V, QQ c)
 {
     lattice_point(V, C, vertex);
 
