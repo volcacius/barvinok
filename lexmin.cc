@@ -47,14 +47,14 @@ using std::ostream;
 /* if dimension >= VBIDDIM, use VSRANGE */
 #define VBIGDIM 8
 
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
 #define EMPTINESS_CHECK     256
 #define BASIS_REDUCTION_CDD 257
 #define NO_REDUCTION  	    258
 #define POLYSIGN  	    259
+#ifndef HAVE_GETOPT_H
+#define getopt_long(a,b,c,d,e) getopt(a,b,c)
+#else
+#include <getopt.h>
 struct option lexmin_options[] = {
     { "verify",     no_argument,  0,  'T' },
     { "print-all",  no_argument,  0,  'A' },
