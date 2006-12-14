@@ -74,6 +74,7 @@ struct reducer : public np_base {
 		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
     virtual gen_fun *get_gf() {
 	assert(0);
+	return NULL;
     }
 };
 
