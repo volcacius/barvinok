@@ -7,7 +7,6 @@
 
 #include <bernstein/bernstein.h>
 #include <bernstein/maximize.h>
-#include "polynomial.h"
 
 #define MAXRAYS 1000
 
