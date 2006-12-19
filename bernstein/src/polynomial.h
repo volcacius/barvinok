@@ -11,11 +11,11 @@
 class polynomial : public GiNaC::ex
 {
 public:
-	polynomial::polynomial(void);
-	polynomial::polynomial(GiNaC::ex &);
-	polynomial::polynomial(const GiNaC::ex &);
+	polynomial(void);
+	polynomial(GiNaC::ex &);
+	polynomial(const GiNaC::ex &);
 
 	unsigned int nbTerms(void);
 	GiNaC::ex term(unsigned int i);
-	polynomial& polynomial::operator=(GiNaC::ex &);
+	polynomial& operator=(GiNaC::ex &);
 };
