@@ -22,6 +22,8 @@ bernstein_SOURCES = src/main.cpp
 
 EXTRA_DIST = examples
 
+ACLOCAL_AMFLAGS = -I m4
+
 check:
 	@for i in $(top_srcdir)/examples/*.matrix; do \
 	    if ./bernstein < $$i | diff -u $${i%.matrix}.out -; then \
