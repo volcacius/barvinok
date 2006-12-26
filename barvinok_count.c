@@ -3,48 +3,64 @@
 #include <strings.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "config.h"
+#include "argp.h"
 
-int print_stats = 0;
+#define PRINT_STATS  	    (BV_OPT_LAST+1)
 
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-#define PRINT_STATS  256
-struct option options[] = {
-    { "print-stats",   no_argument,  &print_stats,  PRINT_STATS },
-    { "version",   no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+struct argp_option argp_options[] = {
+    { "print-stats",	    PRINT_STATS,  0,	0 },
+    { 0 }
 };
-#endif
+
+struct arguments {
+    struct barvinok_options *options;
+    int print_stats;
+};
+
+error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *arguments = state->input;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = arguments->options;
+	break;
+    case PRINT_STATS:
+	arguments->print_stats = 1;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
     Value cb;
     Polyhedron *A;
-    int c, ind = 0;
-    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
+    struct arguments arguments;
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    0,	0,  0 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-    while ((c = getopt_long(argc, argv, "V", options, &ind)) != -1) {
-	switch (c) {
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    arguments.print_stats = 0;
+    arguments.options = options;
 
-    A = Polyhedron_Read(bv_options->MaxRays);
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+    A = Polyhedron_Read(options->MaxRays);
     value_init(cb);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
-    barvinok_count_with_options(A, &cb, bv_options);
+    barvinok_count_with_options(A, &cb, options);
     value_print(stdout, P_VALUE_FMT, cb);
     puts("");
-    if (print_stats)
-	barvinok_stats_print(&bv_options->stats, stdout);
+    if (arguments.print_stats)
+	barvinok_stats_print(&options->stats, stdout);
     value_clear(cb);
     Polyhedron_Free(A);
-    free(bv_options);
+    free(options);
     return 0;
 }
