@@ -2,6 +2,7 @@
 #include <vector>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
+#include "config.h"
 
 using std::vector;
 
