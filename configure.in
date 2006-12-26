@@ -1,5 +1,8 @@
 AC_INIT
 AM_INIT_AUTOMAKE(barvinok, 0.22)
+AC_PROG_CC
+gl_EARLY
+
 AC_PROG_CXX
 AM_PROG_LEX
 AC_PROG_YACC
@@ -19,6 +22,9 @@ esac
 
 AC_DISABLE_SHARED
 AC_PROG_LIBTOOL
+
+gl_MODULES(argp)
+gl_INIT
 
 AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(sys/times.h)
@@ -415,7 +421,7 @@ echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_FILES(Makefile doc/Makefile omega/Makefile)
+AC_CONFIG_FILES(Makefile lib/Makefile doc/Makefile omega/Makefile)
 if test x$have_ginac = xtrue; then
     AC_CONFIG_SUBDIRS(bernstein)
 fi

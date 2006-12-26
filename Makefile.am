@@ -1,9 +1,10 @@
 if HAVE_GINAC
     MAYBE_BERNSTEIN = bernstein
 endif
-SUBDIRS = $(MAYBE_BERNSTEIN) . omega doc
+SUBDIRS = $(MAYBE_BERNSTEIN) lib . omega doc
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib
+AM_LDFLAGS = -Llib
 
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
@@ -80,7 +81,7 @@ EXTRA_libbarvinok_la_SOURCES = \
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
-libbarvinok_la_LIBADD = @LTLIBOBJS@ $(BERNSTEIN_LA)
+libbarvinok_la_LIBADD = @LTLIBOBJS@ $(BERNSTEIN_LA) lib/libgnu.la
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 LDADD = libbarvinok.la
 
