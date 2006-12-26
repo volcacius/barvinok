@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
+#include "argp.h"
 #include "config.h"
 
 #ifdef HAVE_GROWING_CHERNIKOVA
@@ -56,3 +57,35 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     return options;
 }
+
+struct argp_option barvinok_argp_options[] = {
+    { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
+    { "version",	    'V',		    0,			0 },
+    { 0 }
+};
+
+error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct barvinok_options *options = state->input;
+
+    switch (key) {
+    case 'V':
+	printf(barvinok_version());
+	exit(0);
+    case BV_OPT_SPECIALIZATION:
+	if (!strcmp(arg, "bf"))
+	    options->incremental_specialization = BV_SPECIALIZATION_BF;
+	else if (!strcmp(arg, "df"))
+	    options->incremental_specialization = BV_SPECIALIZATION_DF;
+	else if (!strcmp(arg, "random"))
+	    options->incremental_specialization = BV_SPECIALIZATION_RANDOM;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+struct argp barvinok_argp = {
+    barvinok_argp_options, barvinok_parse_opt, 0, 0
+};

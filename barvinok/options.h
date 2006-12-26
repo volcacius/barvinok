@@ -29,6 +29,9 @@ struct barvinok_options {
 		 * 1: depth first
 		 * 2: breadth first
 		 */
+    #define	BV_SPECIALIZATION_BF		2
+    #define	BV_SPECIALIZATION_DF		1
+    #define	BV_SPECIALIZATION_RANDOM	0
     int		incremental_specialization;
 
     /* basis reduction options */
@@ -54,6 +57,12 @@ struct barvinok_options {
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
+
+#define BV_OPT_SPECIALIZATION	256
+#define BV_OPT_LAST		256
+
+struct argp;
+extern struct argp barvinok_argp;
 
 #if defined(__cplusplus)
 }
