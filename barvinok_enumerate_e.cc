@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
+#include "argp.h"
 #include "config.h"
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
@@ -23,40 +24,93 @@
 #define MAXRAYS  600
 #endif
 
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-struct option options[] = {
+struct argp_option argp_options[] = {
 #ifdef HAVE_OMEGA
-    { "omega",      no_argument,  0,  'o' },
+    { "omega",      	    'o',    0,      0 },
 #endif
 #ifdef HAVE_PIPLIB
-    { "pip",   	    no_argument,  0,  'p' },
+    { "pip",   	    	    'p',    0,      0 },
 #endif
-    { "series",     no_argument,  0,  's' },
-    { "scarf",      no_argument,  0,  'S' },
-    { "convert",    no_argument,  0,  'c' },
-    { "floor",      no_argument,  0,  'f' },
-    { "range-reduction",	no_argument,	0,  'R' },
-    { "verify",     no_argument,  0,  'T' },
-    { "print-all",  no_argument,  0,  'A' },
-    { "min",   	    required_argument,  0,  'm' },
-    { "max",   	    required_argument,  0,  'M' },
-    { "range",      required_argument,  0,  'r' },
-    { "version",    no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+    { "series",     	    's',    0,	    0 },
+    { "scarf",      	    'S',    0,	    0 },
+    { "convert",    	    'c',    0,	    0 },
+    { "floor",      	    'f',    0,	    0 },
+    { "range-reduction",    'R',    0,	    0 },
+    { "verify",     	    'T',    0,	    0 },
+    { "print-all",  	    'A',    0,	    0 },
+    { "min",   	    	    'm',    "int",  0 },
+    { "max",   	    	    'M',    "int",  0 },
+    { "range",      	    'r',    "int",  0 },
+    { 0 }
 };
-#endif
 
-#ifdef HAVE_PIPLIB
-#define PIPLIB_OPT "p"
-#else
-#define PIPLIB_OPT ""
-#endif
+struct arguments {
+    struct barvinok_options *options;
+    int range;
+    int convert;
+    int omega;
+    int pip;
+    int scarf;
+    int series;
+    int floor;
+    int verify;
+    int print_all;
+    int m;
+    int M;
+};
+
+error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *arguments = (struct arguments *)(state->input);
+
+    switch (key) {
+    case 's':
+	arguments->series = 1;
+	break;
+    case 'S':
+	arguments->scarf = 1;
+	break;
+    case 'o':
+	arguments->omega = 1;
+	break;
+    case 'p':
+	arguments->pip = 1;
+	break;
+    case 'f':
+	arguments->floor = 1;
+	break;
+    case 'c':
+	arguments->convert = 1;
+	break;
+    case 'R':
+	arguments->range = 1;
+	break;
+    case 'T':
+	arguments->verify = 1;
+	break;
+    case 'A':
+	arguments->print_all = 1;
+	break;
+    case 'm':
+	arguments->m = atoi(optarg);
+	arguments->verify = 1;
+	break;
+    case 'M':
+	arguments->M = atoi(optarg);
+	arguments->verify = 1;
+	break;
+    case 'r':
+	arguments->M = atoi(optarg);
+	arguments->m = -arguments->M;
+	arguments->verify = 1;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 #ifdef HAVE_OMEGA
-#define OMEGA_OPT "o"
 
 Polyhedron *Omega_simplify(Polyhedron *P, 
 			    unsigned exist, unsigned nparam, char **parms)
@@ -68,7 +122,6 @@ Polyhedron *Omega_simplify(Polyhedron *P,
     return relation2Domain(r, varv, paramv);
 }
 #else
-#define OMEGA_OPT ""
 Polyhedron *Omega_simplify(Polyhedron *P, 
 			    unsigned exist, unsigned nparam, char **parms)
 {
@@ -113,70 +166,32 @@ int main(int argc, char **argv)
     int exist, nparam, nvar;
     char s[128];
     evalue *EP;
-    int c, ind = 0;
-    int range = 0;
-    int convert = 0;
-    int omega = 0;
-    int pip = 0;
-    int scarf = 0;
-    int series = 0;
-    int floor = 0;
-    int verify = 0;
-    int print_all = 0;
-    int m = INT_MAX, M = INT_MIN, r;
     int print_solution = 1;
+    int r;
+    struct arguments arguments;
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    0,	0,  0 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-    while ((c = getopt_long(argc, argv, 
-		    OMEGA_OPT PIPLIB_OPT "sSfcRTAm:M:r:V", options, &ind)) != -1) {
-	switch (c) {
-	case 's':
-	    series = 1;
-	    break;
-	case 'S':
-	    scarf = 1;
-	    break;
-	case 'o':
-	    omega = 1;
-	    break;
-	case 'p':
-	    pip = 1;
-	    break;
-	case 'f':
-	    floor = 1;
-	    break;
-	case 'c':
-	    convert = 1;
-	    break;
-	case 'R':
-	    range = 1;
-	    break;
-	case 'T':
-	    verify = 1;
-	    break;
-	case 'A':
-	    print_all = 1;
-	    break;
-	case 'm':
-	    m = atoi(optarg);
-	    verify = 1;
-	    break;
-	case 'M':
-	    M = atoi(optarg);
-	    verify = 1;
-	    break;
-	case 'r':
-	    M = atoi(optarg);
-	    m = -M;
-	    verify = 1;
-	    break;
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    arguments.options = options;
+    arguments.range = 0;
+    arguments.convert = 0;
+    arguments.omega = 0;
+    arguments.pip = 0;
+    arguments.scarf = 0;
+    arguments.series = 0;
+    arguments.floor = 0;
+    arguments.verify = 0;
+    arguments.print_all = 0;
+    arguments.m = INT_MAX;
+    arguments.M = INT_MIN;
 
-    if (series && !scarf) {
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+    if (arguments.series && !arguments.scarf) {
 	fprintf(stderr, 
 		"--series currently only available if --scarf is specified\n");
 	exit(1);
@@ -201,16 +216,16 @@ int main(int argc, char **argv)
 	r = SRANGE;
     else
 	r = RANGE;
-    if (M == INT_MIN)
-	M = r;
-    if (m == INT_MAX)
-	m = -r;
+    if (arguments.M == INT_MIN)
+	arguments.M = r;
+    if (arguments.m == INT_MAX)
+	arguments.m = -r;
 
-    if (verify && m > M) {
+    if (arguments.verify && arguments.m > arguments.M) {
 	fprintf(stderr,"Nothing to do: min > max !\n");
 	return(0);
     }
-    if (verify)
+    if (arguments.verify)
 	print_solution = 0;
 
     if (print_solution) {
@@ -219,15 +234,15 @@ int main(int argc, char **argv)
     }
     param_name = Read_ParamNames(stdin, nparam);
     nvar = A->Dimension - exist - nparam;
-    if (omega) {
+    if (arguments.omega) {
 	A = Omega_simplify(A, exist, nparam, param_name);
 	assert(!A->next);
 	exist = A->Dimension - nvar - nparam;
     }
-    if (series) {
+    if (arguments.series) {
 	gen_fun *gf;
 	barvinok_options *options = barvinok_options_new_with_defaults();
-	assert(scarf);
+	assert(arguments.scarf);
 	gf = barvinok_enumerate_scarf_series(A, exist, nparam, options);
 	if (print_solution) {
 	    gf->print(std::cout, nparam, param_name);
@@ -236,32 +251,33 @@ int main(int argc, char **argv)
 	delete gf;
 	free(options);
     } else {
-	if (scarf) {
+	if (arguments.scarf) {
 	    barvinok_options *options = barvinok_options_new_with_defaults();
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
 	    free(options);
-	} else if (pip && exist > 0)
+	} else if (arguments.pip && exist > 0)
 	    EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
 	else
 	    EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
 	reduce_evalue(EP);
 	evalue_combine(EP);
-	if (range)
+	if (arguments.range)
 	    evalue_range_reduction(EP);
 	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
-	if (floor) {
+	if (arguments.floor) {
 	    fprintf(stderr, "WARNING: floor conversion not supported\n");
 	    evalue_frac2floor2(EP, 0);
 	    if (print_solution)
 		print_evalue(stdout, EP, param_name);
-	} else if (convert) {
+	} else if (arguments.convert) {
 	    evalue_mod2table(EP, nparam);
 	    if (print_solution)
 		print_evalue(stdout, EP, param_name);
 	}
-	if (verify)
-	    verify_results(A, EP, exist, nparam, m, M, print_all);
+	if (arguments.verify)
+	    verify_results(A, EP, exist, nparam, arguments.m, arguments.M,
+			    arguments.print_all);
 	free_evalue_refs(EP);
 	free(EP);
     }
