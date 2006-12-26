@@ -402,5 +402,7 @@ AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_FILES(Makefile doc/Makefile omega/Makefile)
-AC_CONFIG_SUBDIRS(bernstein)
+if test x$have_ginac = xtrue; then
+    AC_CONFIG_SUBDIRS(bernstein)
+fi
 AC_OUTPUT
