@@ -1,4 +1,5 @@
 #include <vector>
+#include <assert.h>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <NTL/mat_ZZ.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>

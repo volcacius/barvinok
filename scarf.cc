@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <vector>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
