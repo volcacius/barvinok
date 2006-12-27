@@ -183,7 +183,7 @@ int main(int argc, char **argv)
     arguments.m = INT_MAX;
     arguments.M = INT_MIN;
 
-    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+    argp_parse(&argp, argc, argv, ARGP_NO_EXIT, 0, &arguments);
 
     if (arguments.series && !arguments.scarf) {
 	fprintf(stderr, 
