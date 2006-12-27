@@ -18,12 +18,6 @@
  * The polytope is in PolyLib notation.
  */
 
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
-
 struct argp_option argp_options[] = {
 #ifdef HAVE_OMEGA
     { "omega",      	    'o',    0,      0 },
@@ -156,7 +150,7 @@ static int st;
 static int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
 		      int exist, int nparam, int pos, Value *z, int print_all);
 static void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, 
-			   int m, int M, int print_all);
+			   int m, int M, int print_all, unsigned MaxRays);
 
 int main(int argc, char **argv)
 {
@@ -198,7 +192,7 @@ int main(int argc, char **argv)
     }
 
     MA = Matrix_Read();
-    A = Constraints2Polyhedron(MA, MAXRAYS);
+    A = Constraints2Polyhedron(MA, options->MaxRays);
     Matrix_Free(MA);
 
     fgets(s, 128, stdin);
@@ -256,9 +250,9 @@ int main(int argc, char **argv)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
 	    free(options);
 	} else if (arguments.pip && exist > 0)
-	    EP = barvinok_enumerate_pip(A, exist, nparam, MAXRAYS);
+	    EP = barvinok_enumerate_pip(A, exist, nparam, options->MaxRays);
 	else
-	    EP = barvinok_enumerate_e(A, exist, nparam, MAXRAYS);
+	    EP = barvinok_enumerate_e(A, exist, nparam, options->MaxRays);
 	reduce_evalue(EP);
 	evalue_combine(EP);
 	if (arguments.range)
@@ -277,7 +271,7 @@ int main(int argc, char **argv)
 	}
 	if (arguments.verify)
 	    verify_results(A, EP, exist, nparam, arguments.m, arguments.M,
-			    arguments.print_all);
+			    arguments.print_all, options->MaxRays);
 	free_evalue_refs(EP);
 	free(EP);
     }
@@ -287,7 +281,7 @@ int main(int argc, char **argv)
 }
 
 void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int M,
-		    int print_all)
+		    int print_all, unsigned MaxRays)
 {
     int i;
     int res;
@@ -309,7 +303,7 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int
     value_set_si(p[i],1);
 
     /* S = scanning list of polyhedra */
-    S = Polyhedron_Scan(P, C, MAXRAYS & POL_NO_DUAL ? 0 : MAXRAYS);
+    S = Polyhedron_Scan(P, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
 
     if (!print_all) {
 	if (C->Dimension > 0) {
