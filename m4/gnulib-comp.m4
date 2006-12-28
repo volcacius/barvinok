@@ -40,7 +40,7 @@ AC_DEFUN([gl_INIT],
   gl_cond_libtool=true
   gl_source_base='lib'
 changequote(,)dnl
-LTALLOCA=`echo "$ALLOCA" | $SED 's/\.[^.]* /.lo /g;s/\.[^.]*$/.lo/'`
+LTALLOCA=`echo "$ALLOCA" | sed 's/\.[^.]* /.lo /g;s/\.[^.]*$/.lo/'`
 changequote([, ])dnl
 AC_SUBST([LTALLOCA])
   gl_FUNC_ALLOCA
@@ -68,6 +68,7 @@ AC_SUBST([LTALLOCA])
   gl_HEADER_UNISTD
   gl_FUNC_VASNPRINTF
   gl_FUNC_VSNPRINTF
+  gl_WCTYPE_H
   gl_FUNC_WCWIDTH
   gl_XALLOC
   gl_XSIZE
@@ -81,7 +82,7 @@ AC_SUBST([LTALLOCA])
     if test -n "$gl_LIBOBJS"; then
       # Remove the extension.
       sed_drop_objext='s/\.o$//;s/\.obj$//'
-      for i in `for i in $gl_LIBOBJS; do echo "$i"; done | $SED "$sed_drop_objext" | sort | uniq`; do
+      for i in `for i in $gl_LIBOBJS; do echo "$i"; done | sed "$sed_drop_objext" | sort | uniq`; do
         gl_libobjs="$gl_libobjs $i.$ac_objext"
         gl_ltlibobjs="$gl_ltlibobjs $i.lo"
       done
@@ -171,6 +172,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/vasnprintf.h
   lib/vsnprintf.c
   lib/vsnprintf.h
+  lib/wctype_.h
   lib/wcwidth.h
   lib/xalloc-die.c
   lib/xalloc.h
@@ -178,6 +180,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/xsize.h
   lib/xstrndup.c
   lib/xstrndup.h
+  m4/absolute-header.m4
   m4/alloca.m4
   m4/argp.m4
   m4/dirname.m4
@@ -212,6 +215,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/vasnprintf.m4
   m4/vsnprintf.m4
   m4/wchar_t.m4
+  m4/wctype.m4
   m4/wcwidth.m4
   m4/wint_t.m4
   m4/xalloc.m4
