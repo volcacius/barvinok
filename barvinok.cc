@@ -929,58 +929,75 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
 
 typedef evalue * evalue_p;
 
-struct enumerator : public signed_cone_consumer {
-    vec_ZZ lambda;
-    unsigned dim, nbV;
+struct enumerator_base {
+    unsigned dim;
     evalue ** vE;
-    int _i;
+    evalue mone;
+    vertex_decomposer *vpd;
+
+    enumerator_base(unsigned dim, vertex_decomposer *vpd)
+    {
+	this->dim = dim;
+	this->vpd = vpd;
+
+	vE = new evalue_p[vpd->nbV];
+	for (int j = 0; j < vpd->nbV; ++j)
+	    vE[j] = 0;
+
+	value_init(mone.d);
+	evalue_set_si(&mone, -1, 1);
+    }
+
+    void decompose_at(Param_Vertices *V, int _i, barvinok_options *options) {
+	//this->pVD = pVD;
+
+	vE[_i] = new evalue;
+	value_init(vE[_i]->d);
+	evalue_set_si(vE[_i], 0, 1);
+
+	vpd->decompose_at_vertex(V, _i, options);
+    }
+
+    virtual ~enumerator_base() {
+    	for (int j = 0; j < vpd->nbV; ++j)
+	    if (vE[j]) {
+		free_evalue_refs(vE[j]);
+		delete vE[j];
+	    }
+	delete [] vE;
+
+	free_evalue_refs(&mone);
+    }
+
+    static enumerator_base *create(Polyhedron *P, unsigned dim, unsigned nbV,
+				     barvinok_options *options);
+};
+
+struct enumerator : public signed_cone_consumer, public vertex_decomposer,
+		    public enumerator_base {
+    vec_ZZ lambda;
     mat_ZZ rays;
     vec_ZZ den;
     ZZ sign;
-    Polyhedron *P;
-    Param_Vertices *V;
     term_info num;
     Vector *c;
     mpq_t count;
 
-    enumerator(Polyhedron *P, unsigned dim, unsigned nbV) {
+    enumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
+		vertex_decomposer(P, nbV, *this), enumerator_base(dim, this) {
 	this->P = P;
-	this->dim = dim;
 	this->nbV = nbV;
 	randomvector(P, lambda, dim);
 	rays.SetDims(dim, dim);
 	den.SetLength(dim);
 	c = Vector_Alloc(dim+2);
 
-	vE = new evalue_p[nbV];
-	for (int j = 0; j < nbV; ++j)
-	    vE[j] = 0;
-
 	mpq_init(count);
-    }
-
-    void decompose_at(Param_Vertices *V, int _i, barvinok_options *options) {
-	Polyhedron *C = supporting_cone_p(P, V);
-	this->_i = _i;
-	this->V = V;
-
-	vE[_i] = new evalue;
-	value_init(vE[_i]->d);
-	evalue_set_si(vE[_i], 0, 1);
-
-	barvinok_decompose(C, *this, options);
     }
 
     ~enumerator() {
 	mpq_clear(count);
 	Vector_Free(c);
-
-	for (int j = 0; j < nbV; ++j)
-	    if (vE[j]) {
-		free_evalue_refs(vE[j]);
-		delete vE[j];
-	    }
-	delete [] vE;
     }
 
     virtual void handle(const signed_cone& sc);
@@ -1013,7 +1030,7 @@ void enumerator::handle(const signed_cone& sc)
 	d.div(n, c, sign);
 	evalue EV; 
 	multi_polynom(c, num.E, &EV);
-	eadd(&EV , vE[_i]);
+	eadd(&EV , vE[vert]);
 	free_evalue_refs(&EV);
 	free_evalue_refs(num.E);
 	delete num.E; 
@@ -1022,7 +1039,7 @@ void enumerator::handle(const signed_cone& sc)
 	d.div(n, c, sign);
 	evalue EV;
 	uni_polynom(num.pos, c, &EV);
-	eadd(&EV , vE[_i]);
+	eadd(&EV , vE[vert]);
 	free_evalue_refs(&EV);
     } else {
 	mpq_set_si(count, 0, 1);
@@ -1031,54 +1048,21 @@ void enumerator::handle(const signed_cone& sc)
 	evalue EV;
 	value_init(EV.d);
 	evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
-	eadd(&EV , vE[_i]);
+	eadd(&EV , vE[vert]);
 	free_evalue_refs(&EV);
     } 
 }
 
-struct enumerator_base {
-    unsigned dim;
-    evalue ** vE;
+struct ienumerator_base : enumerator_base {
     evalue ** E_vertex;
-    evalue mone;
-    vertex_decomposer *vpd;
 
-    enumerator_base(unsigned dim, vertex_decomposer *vpd)
-    {
-	this->dim = dim;
-	this->vpd = vpd;
-
-	vE = new evalue_p[vpd->nbV];
-	for (int j = 0; j < vpd->nbV; ++j)
-	    vE[j] = 0;
-
+    ienumerator_base(unsigned dim, vertex_decomposer *vpd) :
+			enumerator_base(dim,vpd) {
 	E_vertex = new evalue_p[dim];
-
-	value_init(mone.d);
-	evalue_set_si(&mone, -1, 1);
     }
 
-    void decompose_at(Param_Vertices *V, int _i, barvinok_options *options) {
-	//this->pVD = pVD;
-
-	vE[_i] = new evalue;
-	value_init(vE[_i]->d);
-	evalue_set_si(vE[_i], 0, 1);
-
-	vpd->decompose_at_vertex(V, _i, options);
-    }
-
-    ~enumerator_base() {
-    	for (int j = 0; j < vpd->nbV; ++j)
-	    if (vE[j]) {
-		free_evalue_refs(vE[j]);
-		delete vE[j];
-	    }
-	delete [] vE;
-
+    virtual ~ienumerator_base() {
 	delete [] E_vertex;
-
-	free_evalue_refs(&mone);
     }
 
     evalue *E_num(int i, int d) {
@@ -1199,14 +1183,14 @@ void ie_cum::add_term(const vector<int>& powers, evalue *f2)
 }
 
 struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
-		     public enumerator_base {
+		     public ienumerator_base {
     //Polyhedron *pVD;
     mat_ZZ den;
     vec_ZZ vertex;
     mpq_t tcount;
 
     ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
-		vertex_decomposer(P, nbV, *this), enumerator_base(dim, this) {
+		vertex_decomposer(P, nbV, *this), ienumerator_base(dim, this) {
 	vertex.SetLength(dim);
 
 	den.SetDims(dim, dim);
@@ -1449,12 +1433,12 @@ void ienumerator::handle(const signed_cone& sc)
 }
 
 struct bfenumerator : public vertex_decomposer, public bf_base,
-		      public enumerator_base {
+		      public ienumerator_base {
     evalue *factor;
 
     bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
 		    vertex_decomposer(P, nbV, *this),
-		    bf_base(dim), enumerator_base(dim, this) {
+		    bf_base(dim), ienumerator_base(dim, this) {
 	lower = 0;
 	factor = NULL;
     }
@@ -1547,6 +1531,21 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 
     virtual void cum(bf_reducer *bfr, bfc_term_base *t, int k, dpoly_r *r);
 };
+
+enumerator_base *enumerator_base::create(Polyhedron *P, unsigned dim, unsigned nbV,
+					 barvinok_options *options)
+{
+    enumerator_base *eb;
+
+    if (options->incremental_specialization == BV_SPECIALIZATION_BF)
+	eb = new bfenumerator(P, dim, nbV);
+    else if (options->incremental_specialization == BV_SPECIALIZATION_DF)
+	eb = new ienumerator(P, dim, nbV);
+    else
+	eb = new enumerator(P, dim, nbV);
+
+    return eb;
+}
 
 struct bfe_cum : public cumulator {
     bfenumerator *bfe;
@@ -1868,14 +1867,12 @@ out:
     section *s = new section[nd];
     Polyhedron **fVD = new Polyhedron_p[nd];
 
+    enumerator_base *et = NULL;
 try_again:
-#ifdef USE_INCREMENTAL_BF
-    bfenumerator et(P, dim, PP->nbV);
-#elif defined USE_INCREMENTAL_DF
-    ienumerator et(P, dim, PP->nbV);
-#else
-    enumerator et(P, dim, PP->nbV);
-#endif
+    if (et)
+	delete et;
+
+    et = enumerator_base::create(P, dim, PP->nbV, options);
 
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
@@ -1892,9 +1889,9 @@ try_again:
 	s[nd].D = rVD;
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
-	    if (!et.vE[_i])
+	    if (!et->vE[_i])
 		try {
-		    et.decompose_at(V, _i, options);
+		    et->decompose_at(V, _i, options);
 		} catch (OrthogonalException &e) {
 		    if (rVD != pVD)
 			Domain_Free(pVD);
@@ -1905,7 +1902,7 @@ try_again:
 		    }
 		    goto try_again;
 		}
-	    eadd(et.vE[_i] , &s[nd].E);
+	    eadd(et->vE[_i] , &s[nd].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
 	evalue_range_reduction_in_domain(&s[nd].E, pVD);
 
@@ -1916,6 +1913,7 @@ try_again:
 	    Domain_Free(pVD);
     }
 
+    delete et;
     if (nd == 0)
 	evalue_set_si(eres, 0, 1);
     else {
