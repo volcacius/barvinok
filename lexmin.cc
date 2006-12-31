@@ -510,7 +510,7 @@ struct indicator_constructor : public signed_cone_consumer,
     void normalize();
     void print(ostream& os, char **p);
 
-    virtual void handle(Polyhedron *P, int sign);
+    virtual void handle(const signed_cone& sc);
     void decompose_at_vertex(Param_Vertices *V, int _i, 
 					    barvinok_options *options) {
 	pos = _i;
@@ -519,20 +519,20 @@ struct indicator_constructor : public signed_cone_consumer,
     }
 };
 
-void indicator_constructor::handle(Polyhedron *C, int s)
+void indicator_constructor::handle(const signed_cone& sc)
 {
     unsigned dim = vertex.length();
 
-    assert(C->NbRays-1 == dim);
+    assert(sc.C->NbRays-1 == dim);
 
     indicator_term *term = new indicator_term(dim, pos, n++);
-    term->sign = s;
+    term->sign = sc.sign;
     terms[vert].push_back(term);
 
-    lattice_point(V, C, vertex, term->vertex);
+    lattice_point(V, sc.C, vertex, term->vertex);
 
     for (int r = 0; r < dim; ++r) {
-	values2zz(C->Ray[r]+1, term->den[r], dim);
+	values2zz(sc.C->Ray[r]+1, term->den[r], dim);
 	for (int j = 0; j < dim; ++j) {
 	    if (term->den[r][j] == 0)
 		continue;

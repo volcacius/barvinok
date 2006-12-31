@@ -130,7 +130,7 @@ static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
     } else {
 	try {
 	    options->stats.unimodular_cones++;
-	    scc.handle(C, 1);
+	    scc.handle(signed_cone(C, 1));
 	    delete c;
 	} catch (...) {
 	    delete c;
@@ -155,7 +155,7 @@ static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
 	    } else {
 		try {
 		    options->stats.unimodular_cones++;
-		    scc.handle(pc->poly(), sign(pc->det) * s);
+		    scc.handle(signed_cone(pc->poly(), sign(pc->det) * s));
 		    delete pc;
 		} catch (...) {
 		    delete c;
@@ -180,9 +180,9 @@ static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
 struct polar_signed_cone_consumer : public signed_cone_consumer {
     signed_cone_consumer& scc;
     polar_signed_cone_consumer(signed_cone_consumer& scc) : scc(scc) {}
-    void handle(Polyhedron *P, int sign) {
-	Polyhedron_Polarize(P);
-	scc.handle(P, sign);
+    virtual void handle(const signed_cone& sc) {
+	Polyhedron_Polarize(sc.C);
+	scc.handle(sc);
     }
 };
 

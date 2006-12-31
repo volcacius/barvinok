@@ -24,7 +24,7 @@ struct np_base : public signed_cone_consumer {
     }
 
     virtual void handle(Polyhedron *C, Value *vertex, QQ c) = 0;
-    virtual void handle(Polyhedron *C, int s);
+    virtual void handle(const signed_cone& sc);
     virtual void start(Polyhedron *P, barvinok_options *options);
     void do_vertex_cone(const QQ& factor, Polyhedron *Cone, 
 			Value *vertex, barvinok_options *options) {

@@ -5,12 +5,12 @@
 
 using std::vector;
 
-void np_base::handle(Polyhedron *C, int s)
+void np_base::handle(const signed_cone& sc)
 {
-    assert(C->NbRays-1 == dim);
-    factor.n *= s;
-    handle(C, current_vertex, factor);
-    factor.n *= s;
+    assert(sc.C->NbRays-1 == dim);
+    factor.n *= sc.sign;
+    handle(sc.C, current_vertex, factor);
+    factor.n *= sc.sign;
 }
 
 void np_base::start(Polyhedron *P, barvinok_options *options)

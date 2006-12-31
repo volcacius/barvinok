@@ -5,8 +5,14 @@
 #include <barvinok/polylib.h>
 #include <barvinok/options.h>
 
+struct signed_cone {
+    signed_cone(Polyhedron *C, int sign) : C(C), sign(sign) {}
+    Polyhedron *C;
+    int sign;
+};
+
 struct signed_cone_consumer {
-    virtual void handle(Polyhedron *P, int sign) = 0;
+    virtual void handle(const signed_cone& sc) = 0;
 };
 
 struct vertex_decomposer {

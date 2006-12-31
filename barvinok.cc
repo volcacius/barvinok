@@ -983,22 +983,22 @@ struct enumerator : public signed_cone_consumer {
 	delete [] vE;
     }
 
-    virtual void handle(Polyhedron *P, int sign);
+    virtual void handle(const signed_cone& sc);
 };
 
-void enumerator::handle(Polyhedron *C, int s)
+void enumerator::handle(const signed_cone& sc)
 {
     int r = 0;
-    assert(C->NbRays-1 == dim);
-    add_rays(rays, C, &r);
+    assert(sc.C->NbRays-1 == dim);
+    add_rays(rays, sc.C, &r);
     for (int k = 0; k < dim; ++k) {
 	if (lambda * rays[k] == 0)
 	    throw Orthogonal;
     }
 
-    sign = s;
+    sign = sc.sign;
 
-    lattice_point(V, C, lambda, &num, 0);
+    lattice_point(V, sc.C, lambda, &num, 0);
     den = rays * lambda;
     normalize(sign, num.constant, den);
 
@@ -1217,7 +1217,7 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
 	mpq_clear(tcount);
     }
 
-    virtual void handle(Polyhedron *P, int sign);
+    virtual void handle(const signed_cone& sc);
     void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f);
 };
 
@@ -1425,19 +1425,19 @@ static int edegree(evalue *e)
     return d;
 }
 
-void ienumerator::handle(Polyhedron *C, int s)
+void ienumerator::handle(const signed_cone& sc)
 {
-    assert(C->NbRays-1 == dim);
+    assert(sc.C->NbRays-1 == dim);
 
-    lattice_point(V, C, vertex, E_vertex);
+    lattice_point(V, sc.C, vertex, E_vertex);
 
     int r;
     for (r = 0; r < dim; ++r)
-	values2zz(C->Ray[r]+1, den[r], dim);
+	values2zz(sc.C->Ray[r]+1, den[r], dim);
 
     evalue one;
     value_init(one.d);
-    evalue_set_si(&one, s, 1);
+    evalue_set_si(&one, sc.sign, 1);
     reduce(&one, vertex, den);
     free_evalue_refs(&one);
 
@@ -1462,7 +1462,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
     ~bfenumerator() {
     }
 
-    virtual void handle(Polyhedron *P, int sign);
+    virtual void handle(const signed_cone& sc);
     virtual void base(mat_ZZ& factors, bfc_vec& v);
 
     bfc_term_base* new_bf_term(int len) {
@@ -1590,9 +1590,9 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
-void bfenumerator::handle(Polyhedron *C, int s)
+void bfenumerator::handle(const signed_cone& sc)
 {
-    assert(C->NbRays-1 == enumerator_base::dim);
+    assert(sc.C->NbRays-1 == enumerator_base::dim);
 
     bfe_term* t = new bfe_term(enumerator_base::dim);
     vector< bfc_term_base * > v;
@@ -1601,11 +1601,11 @@ void bfenumerator::handle(Polyhedron *C, int s)
     t->factors.resize(1);
 
     t->terms.SetDims(1, enumerator_base::dim);
-    lattice_point(V, C, t->terms[0], E_vertex);
+    lattice_point(V, sc.C, t->terms[0], E_vertex);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;
-    s = setup_factors(C, factors, t, s);
+    int s = setup_factors(sc.C, factors, t, sc.sign);
 
     t->factors[0] = new evalue;
     value_init(t->factors[0]->d);
