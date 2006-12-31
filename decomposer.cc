@@ -223,6 +223,22 @@ void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i,
     barvinok_decompose(C, scc, options);
 }
 
+struct posneg_collector : public signed_cone_consumer {
+    posneg_collector(Polyhedron *pos, Polyhedron *neg) : pos(pos), neg(neg) {}
+    virtual void handle(const signed_cone& sc) {
+	Polyhedron *p = Polyhedron_Copy(sc.C);
+	if (sc.sign > 0) {
+	    p->next = pos;
+	    pos = p;
+	} else {
+	    p->next = neg;
+	    neg = p;
+	}
+    }
+    Polyhedron *pos;
+    Polyhedron *neg;
+};
+
 /*
  * Barvinok's Decomposition of a simplicial cone
  *
@@ -231,54 +247,11 @@ void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i,
 void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
 {
     barvinok_options *options = barvinok_options_new_with_defaults();
-    Polyhedron *pos = *ppos, *neg = *pneg;
-    vector<cone *> nonuni;
-    cone * c = new cone(C);
-    ZZ det = c->det;
-    int s = sign(det);
-    assert(det != 0);
-    if (abs(det) > 1) {
-	nonuni.push_back(c);
-    } else {
-	Polyhedron *p = Polyhedron_Copy(c->Cone);
-	p->next = pos;
-	pos = p;
-	delete c;
-    }
-    vec_ZZ lambda;
-    while (!nonuni.empty()) {
-	c = nonuni.back();
-	nonuni.pop_back();
-	Vector* v = c->short_vector(lambda, options);
-	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
-	    if (lambda[i] == 0)
-		continue;
-	    Matrix* M = Matrix_Copy(c->Rays);
-	    Vector_Copy(v->p, M->p[i], v->Size);
-	    cone * pc = new cone(M);
-	    assert (pc->det != 0);
-	    if (abs(pc->det) > 1) {
-		assert(abs(pc->det) < abs(c->det));
-		nonuni.push_back(pc);
-	    } else {
-		Polyhedron *p = pc->poly();
-		pc->Cone = 0;
-		if (sign(pc->det) == s) {
-		    p->next = pos;
-		    pos = p;
-		} else {
-		    p->next = neg;
-		    neg = p;
-		}
-		delete pc;
-	    }
-	    Matrix_Free(M);
-	}
-	Vector_Free(v);
-	delete c;
-    }
-    *ppos = pos;
-    *pneg = neg;
+    posneg_collector pc(*ppos, *pneg);
+    POL_ENSURE_VERTICES(C);
+    primal_decompose(C, pc, options);
+    *ppos = pc.pos;
+    *pneg = pc.neg;
     free(options);
 }
 
