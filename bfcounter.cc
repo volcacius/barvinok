@@ -108,7 +108,7 @@ int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle(Polyhedron *C, Value *vertex, QQ c)
+void bf_base::handle(Polyhedron *C, Value *vertex, QQ c, int *closed)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
@@ -117,7 +117,7 @@ void bf_base::handle(Polyhedron *C, Value *vertex, QQ c)
     t->c.SetLength(1);
 
     t->terms.SetDims(1, dim);
-    lattice_point(vertex, C, t->terms[0]);
+    lattice_point(vertex, C, t->terms[0], closed);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;

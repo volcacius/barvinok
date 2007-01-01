@@ -9,7 +9,7 @@ void np_base::handle(const signed_cone& sc)
 {
     assert(sc.C->NbRays-1 == dim);
     factor.n *= sc.sign;
-    handle(sc.C, current_vertex, factor);
+    handle(sc.C, current_vertex, factor, sc.closed);
     factor.n *= sc.sign;
 }
 
@@ -202,9 +202,9 @@ void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
     }
 }
 
-void reducer::handle(Polyhedron *C, Value *V, QQ c)
+void reducer::handle(Polyhedron *C, Value *V, QQ c, int *closed)
 {
-    lattice_point(V, C, vertex);
+    lattice_point(V, C, vertex, closed);
 
     mat_ZZ den;
     den.SetDims(dim, dim);

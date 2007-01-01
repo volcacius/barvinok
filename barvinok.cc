@@ -416,7 +416,7 @@ struct counter : public np_base {
 	mpq_clear(count);
     }
 
-    virtual void handle(Polyhedron *C, Value *vertex, QQ c);
+    virtual void handle(Polyhedron *C, Value *vertex, QQ c, int *closed);
     virtual void get_count(Value *result) {
 	assert(value_one_p(&count[0]._mp_den));
 	value_assign(*result, &count[0]._mp_num);
@@ -425,7 +425,7 @@ struct counter : public np_base {
 
 struct OrthogonalException {} Orthogonal;
 
-void counter::handle(Polyhedron *C, Value *V, QQ c)
+void counter::handle(Polyhedron *C, Value *V, QQ c, int *closed)
 {
     int r = 0;
     add_rays(rays, C, &r);
@@ -438,7 +438,7 @@ void counter::handle(Polyhedron *C, Value *V, QQ c)
     assert(c.n == 1 || c.n == -1);
     sign = c.n;
 
-    lattice_point(V, C, vertex);
+    lattice_point(V, C, vertex, closed);
     num = vertex * lambda;
     den = rays * lambda;
     normalize(sign, num, den);
@@ -1005,6 +1005,7 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 
 void enumerator::handle(const signed_cone& sc)
 {
+    assert(!sc.closed);
     int r = 0;
     assert(sc.C->NbRays-1 == dim);
     add_rays(rays, sc.C, &r);
@@ -1411,6 +1412,7 @@ static int edegree(evalue *e)
 
 void ienumerator::handle(const signed_cone& sc)
 {
+    assert(!sc.closed);
     assert(sc.C->NbRays-1 == dim);
 
     lattice_point(V, sc.C, vertex, E_vertex);
@@ -1591,6 +1593,7 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
 
 void bfenumerator::handle(const signed_cone& sc)
 {
+    assert(!sc.closed);
     assert(sc.C->NbRays-1 == enumerator_base::dim);
 
     bfe_term* t = new bfe_term(enumerator_base::dim);

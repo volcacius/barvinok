@@ -31,16 +31,26 @@ public:
 	Cone = 0;
 	Rays = Matrix_Copy(M);
 	set_det();
+	set_closed(NULL);
     }
-    cone(Polyhedron *C) {
-	Cone = Polyhedron_Copy(C);
-	Rays = rays(C);
+    cone(const signed_cone& sc) {
+	Cone = Polyhedron_Copy(sc.C);
+	Rays = rays(sc.C);
 	set_det();
+	set_closed(sc.closed);
     }
     void set_det() {
 	mat_ZZ A;
 	matrix2zz(Rays, A, Rays->NbRows - 1, Rays->NbColumns - 1);
 	det = determinant(A);
+    }
+    void set_closed(int *cl) {
+	closed = NULL;
+	if (cl) {
+	    closed = new int[Rays->NbRows-1];
+	    for (int i = 0; i < Rays->NbRows-1; ++i)
+		closed[i] = cl[i];
+	}
     }
 
     Vector* short_vector(vec_ZZ& lambda, barvinok_options *options) {
@@ -93,6 +103,8 @@ public:
     ~cone() {
 	Polyhedron_Free(Cone);
 	Matrix_Free(Rays);
+	if (closed)
+	    delete [] closed;
     }
 
     Polyhedron *poly() {
@@ -115,13 +127,14 @@ public:
     ZZ det;
     Polyhedron *Cone;
     Matrix *Rays;
+    int *closed;
 };
 
-static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
+static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 			     barvinok_options *options)
 {
     vector<cone *> nonuni;
-    cone * c = new cone(C);
+    cone * c = new cone(sc);
     ZZ det = c->det;
     int s = sign(det);
     assert(det != 0);
@@ -130,14 +143,16 @@ static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
     } else {
 	try {
 	    options->stats.unimodular_cones++;
-	    scc.handle(signed_cone(C, 1));
+	    scc.handle(sc);
 	    delete c;
 	} catch (...) {
 	    delete c;
 	    throw;
 	}
+	return;
     }
     vec_ZZ lambda;
+    int closed[c->Rays->NbRows-1];
     while (!nonuni.empty()) {
 	c = nonuni.back();
 	nonuni.pop_back();
@@ -148,6 +163,26 @@ static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
 	    Matrix* M = Matrix_Copy(c->Rays);
 	    Vector_Copy(v->p, M->p[i], v->Size);
 	    cone * pc = new cone(M);
+	    if (c->closed) {
+		bool same_sign = sign(c->det) * sign(pc->det) > 0;
+		for (int j = 0; j < c->Rays->NbRows - 1; ++j) {
+		    if (lambda[j] == 0)
+			closed[j] = c->closed[j];
+		    else if (j == i) {
+			if (same_sign)
+			    closed[j] = c->closed[j];
+			else
+			    closed[j] = !c->closed[j];
+		    } else if (sign(lambda[i]) * sign(lambda[j]) > 0) {
+			if (c->closed[i] == c->closed[j])
+			    closed[j] = i < j;
+			else
+			    closed[j] = c->closed[j];
+		    } else
+			closed[j] = c->closed[i] && c->closed[j];
+		}
+		pc->set_closed(closed);
+	    }
 	    assert (pc->det != 0);
 	    if (abs(pc->det) > 1) {
 		assert(abs(pc->det) < abs(c->det));
@@ -155,7 +190,11 @@ static void primal_decompose(Polyhedron *C, signed_cone_consumer& scc,
 	    } else {
 		try {
 		    options->stats.unimodular_cones++;
-		    scc.handle(signed_cone(pc->poly(), sign(pc->det) * s));
+		    if (pc->closed)
+			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s,
+					       pc->closed));
+		    else
+			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s));
 		    delete pc;
 		} catch (...) {
 		    delete c;
@@ -199,7 +238,7 @@ static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     polar_signed_cone_consumer pssc(scc);
     try {
 	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	    primal_decompose(Polar, pssc, options);
+	    decompose(signed_cone(Polar, 1), pssc, options);
 	Domain_Free(cone);
     } catch (...) {
 	Domain_Free(cone);
@@ -207,10 +246,81 @@ static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     }
 }
 
+static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
+			     barvinok_options *options)
+{
+    POL_ENSURE_VERTICES(cone);
+    Polyhedron *parts;
+    if (cone->NbRays - 1 == cone->Dimension)
+	parts = cone;
+    else
+	parts = triangulate_cone(cone, options->MaxRays);
+    int closed[cone->Dimension];
+    Vector *average = NULL;
+    Value tmp;
+    if (parts != cone) {
+	value_init(tmp);
+	average = Vector_Alloc(cone->Dimension);
+	for (int i = 0; i < cone->NbRays; ++i) {
+	    if (value_notzero_p(cone->Ray[i][1+cone->Dimension]))
+		continue;
+	    Vector_Add(average->p, cone->Ray[i]+1, average->p, cone->Dimension);
+	}
+    }
+    try {
+	for (Polyhedron *simple = parts; simple; simple = simple->next) {
+	    for (int i = 0, r = 0; r < simple->NbRays; ++r) {
+		if (value_notzero_p(simple->Ray[r][1+simple->Dimension]))
+		    continue;
+		if (simple == cone) {
+		    closed[i] = 1;
+		} else {
+		    int f;
+		    for (f = 0; f < simple->NbConstraints; ++f) {
+			Inner_Product(simple->Ray[r]+1, simple->Constraint[f]+1,
+				      simple->Dimension, &tmp);
+			if (value_notzero_p(tmp))
+			    break;
+		    }
+		    assert(f < simple->NbConstraints);
+		    Inner_Product(simple->Constraint[f]+1, average->p,
+				  simple->Dimension, &tmp);
+		    if (value_notzero_p(tmp))
+			closed[i] = value_pos_p(tmp);
+		    else {
+			int p = First_Non_Zero(simple->Constraint[f]+1,
+					       simple->Dimension);
+			closed[i] = value_pos_p(simple->Constraint[f][1+p]);
+		    }
+		}
+		++i;
+	    }
+	    decompose(signed_cone(simple, 1, closed), scc, options);
+	}
+	Domain_Free(parts);
+	if (parts != cone) {
+	    Domain_Free(cone);
+	    value_clear(tmp);
+	    Vector_Free(average);
+	}
+    } catch (...) {
+	Domain_Free(parts);
+	if (parts != cone) {
+	    Domain_Free(cone);
+	    value_clear(tmp);
+	    Vector_Free(average);
+	}
+	throw;
+    }
+}
+
 void barvinok_decompose(Polyhedron *C, signed_cone_consumer& scc,
 			barvinok_options *options)
 {
-    polar_decompose(C, scc, options);
+    if (options->primal)
+	primal_decompose(C, scc, options);
+    else
+	polar_decompose(C, scc, options);
 }
 
 void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i, 
@@ -249,7 +359,7 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     barvinok_options *options = barvinok_options_new_with_defaults();
     posneg_collector pc(*ppos, *pneg);
     POL_ENSURE_VERTICES(C);
-    primal_decompose(C, pc, options);
+    decompose(signed_cone(C, 1), pc, options);
     *ppos = pc.pos;
     *pneg = pc.neg;
     free(options);

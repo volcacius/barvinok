@@ -288,10 +288,12 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     return E;
 }
 
-void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
+void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex, int *closed)
 {
     unsigned dim = i->Dimension;
-    if(!value_one_p(values[dim])) {
+    if (value_one_p(values[dim]) && !closed)
+	values2zz(values, vertex, dim);
+    else {
 	Matrix* Rays = rays(i);
 	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
 	int ok = Matrix_Inverse(Rays, inv);
@@ -302,7 +304,12 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
 	Vector_Matrix_Product(values, inv, lambda->p);
 	Matrix_Free(inv);
 	for (int j = 0; j < dim; ++j)
-	    mpz_cdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
+	    if (!closed || closed[j])
+		mpz_cdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
+	    else {
+		value_addto(lambda->p[j], lambda->p[j], lambda->p[dim]);
+		mpz_fdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
+	    }
 	value_set_si(lambda->p[dim], 1);
 	Vector *A = Vector_Alloc(dim+1);
 	Vector_Matrix_Product(lambda->p, Rays, A->p);
@@ -310,8 +317,7 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex)
 	Matrix_Free(Rays);
 	values2zz(A->p, vertex, dim);
 	Vector_Free(A);
-    } else
-	values2zz(values, vertex, dim);
+    }
 }
 
 static void vertex_period(
@@ -331,7 +337,7 @@ static void vertex_period(
 	Vector * values = Vector_Alloc(dim + 1);
 	Vector_Matrix_Product(val->p, T, values->p);
 	value_assign(values->p[dim], lcm);
-	lattice_point(values->p, i, vertex);
+	lattice_point(values->p, i, vertex, NULL);
 	num = vertex * lambda;
 	value2zz(lcm, l);
 	num *= l;

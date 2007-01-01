@@ -521,6 +521,7 @@ struct indicator_constructor : public signed_cone_consumer,
 
 void indicator_constructor::handle(const signed_cone& sc)
 {
+    assert(!sc.closed);
     unsigned dim = vertex.length();
 
     assert(sc.C->NbRays-1 == dim);

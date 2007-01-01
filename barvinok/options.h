@@ -34,6 +34,8 @@ struct barvinok_options {
     #define	BV_SPECIALIZATION_RANDOM	0
     int		incremental_specialization;
 
+    int		primal;
+
     /* basis reduction options */
     #define	BV_GBR_NONE	0
     #define	BV_GBR_GLPK	1
@@ -59,7 +61,8 @@ struct barvinok_options {
 struct barvinok_options *barvinok_options_new_with_defaults();
 
 #define BV_OPT_SPECIALIZATION	256
-#define BV_OPT_LAST		256
+#define BV_OPT_PRIMAL		257
+#define BV_OPT_LAST		257
 
 struct argp;
 extern struct argp barvinok_argp;

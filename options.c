@@ -42,6 +42,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 #else
     options->incremental_specialization = 0;
 #endif
+    options->primal = 0;
 
 #ifdef HAVE_LIBGLPK
     options->gbr_lp_solver = BV_GBR_GLPK;
@@ -59,6 +60,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 }
 
 struct argp_option barvinok_argp_options[] = {
+    { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
     { "version",	    'V',		    0,			0 },
     { 0 }
@@ -79,6 +81,9 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->incremental_specialization = BV_SPECIALIZATION_DF;
 	else if (!strcmp(arg, "random"))
 	    options->incremental_specialization = BV_SPECIALIZATION_RANDOM;
+	break;
+    case BV_OPT_PRIMAL:
+	options->primal = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;

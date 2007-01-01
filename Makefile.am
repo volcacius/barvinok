@@ -203,11 +203,13 @@ check:
 	    fi \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
-	    if test -f $$i; then \
-		echo -n $$i; \
-		./test < $$i || echo -n " NOT"; \
-		echo " ok"; \
-	    fi \
+	    for options in '' '--primal'; do \
+		if test -f $$i; then \
+		    echo -n $$i $$options; \
+		    ./test $$options < $$i || echo -n " NOT"; \
+		    echo " ok"; \
+		fi \
+	    done \
 	done
 if HAVE_GLPK
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
