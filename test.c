@@ -4,13 +4,8 @@
 #include <unistd.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
+#include "argp.h"
 #include "config.h"
-
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
 
 #ifdef HAVE_SYS_TIMES_H
 
@@ -36,11 +31,14 @@ static void time_diff(struct tms *before, struct tms *after)
 
 #endif
 
-int main()
+int main(int argc, char **argv)
 {
     int i, nbPol, nbVec, func, j;
     Polyhedron *A, *B, *C, *D, *E, *F, *G;
     char s[128];
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
+
+    argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
 
     nbPol = nbVec = 0;
     fgets(s, 128, stdin);
@@ -50,7 +48,7 @@ int main()
 
     for (i = 0; i < nbPol; ++i) {
 	Matrix *M = Matrix_Read();
-	A = Constraints2Polyhedron(M, MAXRAYS);
+	A = Constraints2Polyhedron(M, options->MaxRays);
 	Matrix_Free(M);
 	fgets(s, 128, stdin);
 	while ((*s=='#') || (sscanf(s, "F %d", &func)<1))
@@ -69,7 +67,7 @@ int main()
 		/* workaround for apparent bug in older gmps */
 		*strchr(s, '\n') = '\0';
 	    }
-	    barvinok_count(A, &cb, MAXRAYS);
+	    barvinok_count_with_options(A, &cb, options);
 	    if (value_ne(cb, ck))
 		return -1;
 	    value_clear(cb);
@@ -78,9 +76,9 @@ int main()
 	}
 	case 1:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = Polyhedron_Polar(A, MAXRAYS);
+	    B = Polyhedron_Polar(A, options->MaxRays);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
-	    C = Polyhedron_Polar(B, MAXRAYS);
+	    C = Polyhedron_Polar(B, options->MaxRays);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
 	    Polyhedron_Free(C);
 	    Polyhedron_Free(B);
@@ -144,11 +142,11 @@ int main()
 	    evalue *EP;
 	    Matrix *M = Matrix_Read();
 	    char **param_name;
-	    C = Constraints2Polyhedron(M, MAXRAYS);
+	    C = Constraints2Polyhedron(M, options->MaxRays);
 	    Matrix_Free(M);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
-	    EP = barvinok_enumerate_ev(A, C, MAXRAYS);
+	    EP = barvinok_enumerate_with_options(A, C, options);
 	    param_name = Read_ParamNames(stdin, C->Dimension);
 	    print_evalue(stdout, EP, param_name);
 	    free_evalue_refs(EP);
@@ -182,5 +180,6 @@ int main()
 	Vector_Free(V);
     }
 
+    free(options);
     return 0;
 }
