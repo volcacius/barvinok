@@ -2805,6 +2805,7 @@ int main(int argc, char **argv)
     struct barvinok_options *options;
 
     options = barvinok_options_new_with_defaults();
+    options->lookup_table = 0;
 
     while ((c = getopt_long(argc, argv, "TAm:M:r:V", lexmin_options, &ind)) != -1) {
 	switch (c) {
