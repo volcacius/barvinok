@@ -58,6 +58,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct arguments *arguments = (struct arguments *)(state->input);
 
     switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = arguments->options;
+	break;
     case 's':
 	arguments->series = 1;
 	break;
@@ -86,15 +89,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	arguments->print_all = 1;
 	break;
     case 'm':
-	arguments->m = atoi(optarg);
+	arguments->m = atoi(arg);
 	arguments->verify = 1;
 	break;
     case 'M':
-	arguments->M = atoi(optarg);
+	arguments->M = atoi(arg);
 	arguments->verify = 1;
 	break;
     case 'r':
-	arguments->M = atoi(optarg);
+	arguments->M = atoi(arg);
 	arguments->m = -arguments->M;
 	arguments->verify = 1;
 	break;
