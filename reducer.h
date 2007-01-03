@@ -23,7 +23,7 @@ struct np_base : public signed_cone_consumer {
 	one = 1;
     }
 
-    virtual void handle(Polyhedron *C, Value *vertex, QQ c, int *closed) = 0;
+    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed) = 0;
     virtual void handle(const signed_cone& sc);
     virtual void start(Polyhedron *P, barvinok_options *options);
     void do_vertex_cone(const QQ& factor, Polyhedron *Cone, 
@@ -67,11 +67,11 @@ struct reducer : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle(Polyhedron *C, Value *vertex, QQ c, int *closed);
-    void reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f);
+    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed);
+    void reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f);
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
+		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
     virtual gen_fun *get_gf() {
 	assert(0);
 	return NULL;
@@ -82,7 +82,7 @@ struct ireducer : public reducer {
     ireducer(unsigned dim) : reducer(dim) {}
 
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
+		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
 };
 
 void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,

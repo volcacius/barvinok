@@ -82,7 +82,7 @@ void bf_base::reduce(mat_ZZ& factors, bfc_vec& v)
 	reduce(bfr.nfactors, bfr.vn);
 }
 
-int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors, 
+int bf_base::setup_factors(const mat_ZZ& rays, mat_ZZ& factors, 
 				    bfc_term_base* t, int s)
 {
     factors.SetDims(dim, dim);
@@ -93,7 +93,7 @@ int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors,
 	t->powers[r] = 1;
 
     for (r = 0; r < dim; ++r) {
-	values2zz(C->Ray[r]+1, factors[r], dim);
+	factors[r] = rays[r];
 	int k;
 	for (k = 0; k < dim; ++k)
 	    if (factors[r][k] != 0)
@@ -108,7 +108,7 @@ int bf_base::setup_factors(Polyhedron *C, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle(Polyhedron *C, Value *vertex, QQ c, int *closed)
+void bf_base::handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
@@ -117,11 +117,11 @@ void bf_base::handle(Polyhedron *C, Value *vertex, QQ c, int *closed)
     t->c.SetLength(1);
 
     t->terms.SetDims(1, dim);
-    lattice_point(vertex, C, t->terms[0], closed);
+    lattice_point(vertex, rays, t->terms[0], closed);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;
-    int s = setup_factors(C, factors, t, 1);
+    int s = setup_factors(rays, factors, t, 1);
 
     t->c[0].n = s * c.n;
     t->c[0].d = c.d;

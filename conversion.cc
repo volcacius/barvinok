@@ -70,6 +70,19 @@ void matrix2zz(Matrix *M, mat_ZZ& m, unsigned nr, unsigned nc)
     }
 }
 
+Matrix *rays2matrix(const mat_ZZ& rays)
+{
+    unsigned dim = rays.NumRows();
+
+    Matrix *M = Matrix_Alloc(dim+1, dim+1);
+    assert(M);
+
+    for (int i = 0; i < dim; ++i)
+	zz2values(rays[i], M->p[i]);
+    value_set_si(M->p[dim][dim], 1);
+    return M;
+}
+
 Matrix *rays(Polyhedron *C)
 {
     unsigned dim = C->NbRays - 1; /* don't count zero vertex */

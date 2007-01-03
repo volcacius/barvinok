@@ -5,11 +5,28 @@
 
 using std::vector;
 
+static void rays(mat_ZZ& rays, Polyhedron *C)
+{
+    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
+    assert(C->NbRays - 1 == C->Dimension);
+    rays.SetDims(dim, dim);
+
+    int i, j;
+    for (i = 0, j = 0; i < C->NbRays; ++i) {
+	if (value_notzero_p(C->Ray[i][dim+1]))
+	    continue;
+	values2zz(C->Ray[i]+1, rays[j], dim);
+	++j;
+    }
+}
+
 void np_base::handle(const signed_cone& sc)
 {
     assert(sc.C->NbRays-1 == dim);
     factor.n *= sc.sign;
-    handle(sc.C, current_vertex, factor, sc.closed);
+    mat_ZZ r;
+    rays(r, sc.C);
+    handle(r, current_vertex, factor, sc.closed);
     factor.n *= sc.sign;
 }
 
@@ -81,7 +98,7 @@ void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	sign = -sign;
 }
 
-void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
+void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
 
@@ -202,22 +219,15 @@ void reducer::reduce(QQ c, vec_ZZ& num, mat_ZZ& den_f)
     }
 }
 
-void reducer::handle(Polyhedron *C, Value *V, QQ c, int *closed)
+void reducer::handle(const mat_ZZ& den, Value *V, QQ c, int *closed)
 {
-    lattice_point(V, C, vertex, closed);
-
-    mat_ZZ den;
-    den.SetDims(dim, dim);
-
-    int r;
-    for (r = 0; r < dim; ++r)
-	values2zz(C->Ray[r]+1, den[r], dim);
+    lattice_point(V, den, vertex, closed);
 
     reduce(c, vertex, den);
 }
 
 void ireducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		     mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
+		     const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned d = num.length() - 1;

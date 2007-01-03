@@ -48,8 +48,8 @@ struct bf_base : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle(Polyhedron *C, Value *vertex, QQ c, int *closed);
-    int setup_factors(Polyhedron *P, mat_ZZ& factors, bfc_term_base* t, int s);
+    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed);
+    int setup_factors(const mat_ZZ& rays, mat_ZZ& factors, bfc_term_base* t, int s);
 
     bfc_term_base* find_bfc_term(bfc_vec& v, int *powers, int len);
     void add_term(bfc_term_base *t, vec_ZZ& num1, vec_ZZ& num);

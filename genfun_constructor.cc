@@ -19,7 +19,7 @@ void partial_ireducer::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 }
 
 void partial_reducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-			    mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
+			    const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned nvar = tmp.length();

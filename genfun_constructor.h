@@ -59,7 +59,7 @@ struct partial_reducer : public reducer, public gf_base {
     virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
 
     virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
+		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
     virtual gen_fun *get_gf() {
 	return gf;
     }

@@ -8,7 +8,7 @@ using namespace NTL;
 
 evalue *multi_monom(vec_ZZ& p);
 int normal_mod(Value *coef, int len, Value *m);
-void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex, int *closed);
+void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *closed);
 evalue* lattice_point(
     Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD);
 void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 

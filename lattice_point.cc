@@ -288,18 +288,18 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     return E;
 }
 
-void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex, int *closed)
+void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *closed)
 {
-    unsigned dim = i->Dimension;
+    unsigned dim = rays.NumRows();
     if (value_one_p(values[dim]) && !closed)
 	values2zz(values, vertex, dim);
     else {
-	Matrix* Rays = rays(i);
+	Matrix* Rays = rays2matrix(rays);
 	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
 	int ok = Matrix_Inverse(Rays, inv);
 	assert(ok);
 	Matrix_Free(Rays);
-	Rays = rays(i);
+	Rays = rays2matrix(rays);
 	Vector *lambda = Vector_Alloc(dim+1);
 	Vector_Matrix_Product(values, inv, lambda->p);
 	Matrix_Free(inv);
@@ -321,13 +321,13 @@ void lattice_point(Value* values, Polyhedron *i, vec_ZZ& vertex, int *closed)
 }
 
 static void vertex_period(
-		    Polyhedron *i, vec_ZZ& lambda, Matrix *T, 
+		    const mat_ZZ& rays, vec_ZZ& lambda, Matrix *T, 
 		    Value lcm, int p, Vector *val, 
 		    evalue *E, evalue* ev,
 		    ZZ& offset)
 {
     unsigned nparam = T->NbRows - 1;
-    unsigned dim = i->Dimension;
+    unsigned dim = rays.NumRows();
     Value tmp;
     ZZ nump;
 
@@ -337,7 +337,7 @@ static void vertex_period(
 	Vector * values = Vector_Alloc(dim + 1);
 	Vector_Matrix_Product(val->p, T, values->p);
 	value_assign(values->p[dim], lcm);
-	lattice_point(values->p, i, vertex, NULL);
+	lattice_point(values->p, rays, vertex, NULL);
 	num = vertex * lambda;
 	value2zz(lcm, l);
 	num *= l;
@@ -377,11 +377,11 @@ static void vertex_period(
 	    --count;
 	    ZZ new_offset = offset - count * nump;
 	    value_assign(val->p[p], tmp);
-	    vertex_period(i, lambda, T, lcm, p+1, val, E, 
+	    vertex_period(rays, lambda, T, lcm, p+1, val, E, 
 			  &ev->x.p->arr[VALUE_TO_INT(tmp)], new_offset);
 	} while (value_pos_p(tmp));
     } else
-	vertex_period(i, lambda, T, lcm, p+1, val, E, ev, offset);
+	vertex_period(rays, lambda, T, lcm, p+1, val, E, ev, offset);
     value_clear(tmp);
 }
 

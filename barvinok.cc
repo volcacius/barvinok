@@ -37,24 +37,6 @@ using std::ostringstream;
 
 #define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
 
-static void rays(mat_ZZ& r, Polyhedron *C)
-{
-    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
-    assert(C->NbRays - 1 == C->Dimension);
-    r.SetDims(dim, dim);
-    ZZ tmp;
-
-    int i, c;
-    for (i = 0, c = 0; i < dim; ++i)
-	if (value_zero_p(C->Ray[i][dim+1])) {
-	    for (int j = 0; j < dim; ++j) {
-		value2zz(C->Ray[i][j+1], tmp);
-		r[j][c] = tmp;
-	    }
-	    ++c;
-	}
-}
-
 class dpoly_n {
 public:
     Matrix *coeff;
@@ -396,7 +378,6 @@ void lattice_point(
 
 struct counter : public np_base {
     vec_ZZ lambda;
-    mat_ZZ rays;
     vec_ZZ vertex;
     vec_ZZ den;
     ZZ sign;
@@ -405,7 +386,6 @@ struct counter : public np_base {
     mpq_t count;
 
     counter(unsigned dim) : np_base(dim) {
-	rays.SetDims(dim, dim);
 	den.SetLength(dim);
 	mpq_init(count);
     }
@@ -416,7 +396,7 @@ struct counter : public np_base {
 	mpq_clear(count);
     }
 
-    virtual void handle(Polyhedron *C, Value *vertex, QQ c, int *closed);
+    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed);
     virtual void get_count(Value *result) {
 	assert(value_one_p(&count[0]._mp_den));
 	value_assign(*result, &count[0]._mp_num);
@@ -425,10 +405,8 @@ struct counter : public np_base {
 
 struct OrthogonalException {} Orthogonal;
 
-void counter::handle(Polyhedron *C, Value *V, QQ c, int *closed)
+void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed)
 {
-    int r = 0;
-    add_rays(rays, C, &r);
     for (int k = 0; k < dim; ++k) {
 	if (lambda * rays[k] == 0)
 	    throw Orthogonal;
@@ -438,7 +416,7 @@ void counter::handle(Polyhedron *C, Value *V, QQ c, int *closed)
     assert(c.n == 1 || c.n == -1);
     sign = c.n;
 
-    lattice_point(V, C, vertex, closed);
+    lattice_point(V, rays, vertex, closed);
     num = vertex * lambda;
     den = rays * lambda;
     normalize(sign, num, den);
@@ -1591,6 +1569,21 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
+static void rays(mat_ZZ& rays, Polyhedron *C)
+{
+    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
+    assert(C->NbRays - 1 == C->Dimension);
+    rays.SetDims(dim, dim);
+
+    int i, j;
+    for (i = 0, j = 0; i < C->NbRays; ++i) {
+	if (value_notzero_p(C->Ray[i][dim+1]))
+	    continue;
+	values2zz(C->Ray[i]+1, rays[j], dim);
+	++j;
+    }
+}
+
 void bfenumerator::handle(const signed_cone& sc)
 {
     assert(!sc.closed);
@@ -1606,8 +1599,10 @@ void bfenumerator::handle(const signed_cone& sc)
     lattice_point(V, sc.C, t->terms[0], E_vertex);
 
     // the elements of factors are always lexpositive
+    mat_ZZ   r;
     mat_ZZ   factors;
-    int s = setup_factors(sc.C, factors, t, sc.sign);
+    rays(r, sc.C);
+    int s = setup_factors(r, factors, t, sc.sign);
 
     t->factors[0] = new evalue;
     value_init(t->factors[0]->d);
