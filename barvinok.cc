@@ -3532,7 +3532,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
     if (nparam == 0) {
 	Value c;
 	value_init(c);
-	barvinok_count(P, &c, options->MaxRays);
+	barvinok_count_with_options(P, &c, options);
 	gf = new gen_fun(c);
 	value_clear(c);
     } else {
