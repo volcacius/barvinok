@@ -5,13 +5,13 @@
 
 using std::vector;
 
-void np_base::handle(const signed_cone& sc)
+void np_base::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(sc.C->NbRays-1 == dim);
     factor.n *= sc.sign;
     mat_ZZ r;
     rays(sc.C, r);
-    handle(r, current_vertex, factor, sc.closed);
+    handle(r, current_vertex, factor, sc.closed, options);
     factor.n *= sc.sign;
 }
 
@@ -204,7 +204,8 @@ void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
     }
 }
 
-void reducer::handle(const mat_ZZ& den, Value *V, QQ c, int *closed)
+void reducer::handle(const mat_ZZ& den, Value *V, QQ c, int *closed,
+		     barvinok_options *options)
 {
     lattice_point(V, den, vertex, closed);
 

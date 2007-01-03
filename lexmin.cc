@@ -510,7 +510,7 @@ struct indicator_constructor : public signed_cone_consumer,
     void normalize();
     void print(ostream& os, char **p);
 
-    virtual void handle(const signed_cone& sc);
+    virtual void handle(const signed_cone& sc, barvinok_options *options);
     void decompose_at_vertex(Param_Vertices *V, int _i, 
 					    barvinok_options *options) {
 	pos = _i;
@@ -519,7 +519,7 @@ struct indicator_constructor : public signed_cone_consumer,
     }
 };
 
-void indicator_constructor::handle(const signed_cone& sc)
+void indicator_constructor::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
     unsigned dim = vertex.length();
@@ -530,7 +530,7 @@ void indicator_constructor::handle(const signed_cone& sc)
     term->sign = sc.sign;
     terms[vert].push_back(term);
 
-    lattice_point(V, sc.C, vertex, term->vertex);
+    lattice_point(V, sc.C, vertex, term->vertex, options);
 
     for (int r = 0; r < dim; ++r) {
 	values2zz(sc.C->Ray[r]+1, term->den[r], dim);

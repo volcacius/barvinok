@@ -65,7 +65,7 @@ bfc_term_base* bf_base::find_bfc_term(bfc_vec& v, int *powers, int len)
     return t;
 }
 
-void bf_base::reduce(mat_ZZ& factors, bfc_vec& v)
+void bf_base::reduce(mat_ZZ& factors, bfc_vec& v, barvinok_options *options)
 {
     assert(v.size() > 0);
     unsigned nf = factors.NumRows();
@@ -76,10 +76,10 @@ void bf_base::reduce(mat_ZZ& factors, bfc_vec& v)
 
     bf_reducer bfr(factors, v, this);
 
-    bfr.reduce();
+    bfr.reduce(options);
 
     if (bfr.vn.size() > 0)
-	reduce(bfr.nfactors, bfr.vn);
+	reduce(bfr.nfactors, bfr.vn, options);
 }
 
 int bf_base::setup_factors(const mat_ZZ& rays, mat_ZZ& factors, 
@@ -108,7 +108,8 @@ int bf_base::setup_factors(const mat_ZZ& rays, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed)
+void bf_base::handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed,
+		     barvinok_options *options)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
@@ -126,7 +127,7 @@ void bf_base::handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed)
     t->c[0].n = s * c.n;
     t->c[0].d = c.d;
 
-    reduce(factors, v);
+    reduce(factors, v, options);
 }
 
 bfc_term_base* bfcounter_base::new_bf_term(int len)
@@ -279,7 +280,7 @@ void bf_reducer::compute_reduced_factors()
     bpowers = new int[nnf];
 }
 
-void bf_reducer::reduce()
+void bf_reducer::reduce(barvinok_options *options)
 {
     compute_reduced_factors();
 
@@ -413,7 +414,7 @@ void bf_reducer::reduce()
 			    bf->add_term(t, v[i]->terms[j], l_extra_num);
 			}
 		    } else
-			bf->cum(this, v[i], j, rc);
+			bf->cum(this, v[i], j, rc, options);
 
 		    delete rc;
 		}

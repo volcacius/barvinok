@@ -237,18 +237,13 @@ out:
     value_clear(m);
 }
 
-#ifdef USE_MODULO
-static void ceil(Value *coef, int len, Value d, ZZ& f, 
-                 evalue *EP, Polyhedron *PD) {
+static void ceil(Value *coef, int len, Value d, ZZ& f,
+                 evalue *EP, Polyhedron *PD, barvinok_options *options)
+{
     ceil_mod(coef, len, d, f, EP, PD);
+    if (options->lookup_table)
+	evalue_mod2table(EP, len-1);
 }
-#else
-static void ceil(Value *coef, int len, Value d, ZZ& f, 
-                 evalue *EP, Polyhedron *PD) {
-    ceil_mod(coef, len, d, f, EP, PD);
-    evalue_mod2table(EP, len-1);
-}
-#endif
 
 evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 {
@@ -398,9 +393,8 @@ static void vertex_period(
  * PD is the parameter domain, which, if != NULL, may be used to simply the
  * resulting expression.
  */
-#ifdef USE_MODULO
-evalue* lattice_point(
-    Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
+static evalue* lattice_point_fractional(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
+					Value lcm, Polyhedron *PD)
 {
     unsigned nparam = W->NbColumns - 1;
 
@@ -447,9 +441,9 @@ evalue* lattice_point(
     free_evalue_refs(&tmp); 
     return EP;
 }
-#else
-evalue* lattice_point(
-    Polyhedron *i, vec_ZZ& lambda, Matrix *W, Value lcm, Polyhedron *PD)
+
+static evalue* lattice_point_table(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
+				   Value lcm, Polyhedron *PD)
 {
     Matrix *T = Transpose(W);
     unsigned nparam = T->NbRows - 1;
@@ -476,7 +470,15 @@ evalue* lattice_point(
 
     return EP;
 }
-#endif
+
+evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
+		      Value lcm, Polyhedron *PD, barvinok_options *options)
+{
+    if (options->lookup_table)
+	return lattice_point_table(i, lambda, W, lcm, PD);
+    else
+	return lattice_point_fractional(i, lambda, W, lcm, PD);
+}
 
 /* returns the unique lattice point in the fundamental parallelepiped
  * of the unimodual cone C shifted to the parametric vertex V.
@@ -487,7 +489,7 @@ evalue* lattice_point(
  *	    num[i] + E_vertex[i]
  */
 void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 
-		   evalue **E_vertex)
+		   evalue **E_vertex, barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = C->Dimension;
@@ -532,7 +534,7 @@ void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num,
 	for (int i = 0; i < dim; ++i) {
 	    remainders[i] = evalue_zero();
 	    one = 1;
-	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], 0);
+	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], 0, options);
 	}
 	Matrix_Free(L);
 

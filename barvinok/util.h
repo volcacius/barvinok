@@ -48,7 +48,9 @@ void manual_count(Polyhedron *P, Value* result);
 Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, 
 			      unsigned NbMaxRays);
 void Line_Length(Polyhedron *P, Value *len);
-evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays);
+struct barvinok_options;
+evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C,
+			 struct barvinok_options *options);
 void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g);
 Matrix * unimodular_complete(Vector *row);
 Bool isIdentity(Matrix *M);

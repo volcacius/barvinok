@@ -143,7 +143,7 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
     } else {
 	try {
 	    options->stats.unimodular_cones++;
-	    scc.handle(sc);
+	    scc.handle(sc, options);
 	    delete c;
 	} catch (...) {
 	    delete c;
@@ -192,9 +192,10 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 		    options->stats.unimodular_cones++;
 		    if (pc->closed)
 			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s,
-					       pc->closed));
+					       pc->closed), options);
 		    else
-			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s));
+			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s),
+				   options);
 		    delete pc;
 		} catch (...) {
 		    delete c;
@@ -219,9 +220,9 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 struct polar_signed_cone_consumer : public signed_cone_consumer {
     signed_cone_consumer& scc;
     polar_signed_cone_consumer(signed_cone_consumer& scc) : scc(scc) {}
-    virtual void handle(const signed_cone& sc) {
+    virtual void handle(const signed_cone& sc, barvinok_options *options) {
 	Polyhedron_Polarize(sc.C);
-	scc.handle(sc);
+	scc.handle(sc, options);
     }
 };
 
@@ -335,7 +336,7 @@ void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i,
 
 struct posneg_collector : public signed_cone_consumer {
     posneg_collector(Polyhedron *pos, Polyhedron *neg) : pos(pos), neg(neg) {}
-    virtual void handle(const signed_cone& sc) {
+    virtual void handle(const signed_cone& sc, barvinok_options *options) {
 	Polyhedron *p = Polyhedron_Copy(sc.C);
 	if (sc.sign > 0) {
 	    p->next = pos;

@@ -177,8 +177,7 @@ static void mask_r(Matrix *f, int nr, Vector *lcm, int p, Vector *val, evalue *e
     value_clear(tmp);
 }
 
-#ifdef USE_MODULO
-static void mask(Matrix *f, evalue *factor)
+static void mask_fractional(Matrix *f, evalue *factor)
 {
     int nr = f->NbRows, nc = f->NbColumns;
     int n;
@@ -245,11 +244,11 @@ static void mask(Matrix *f, evalue *factor)
     value_clear(m);
     free_evalue_refs(&EV); 
 }
-#else
+
 /*
  * 
  */
-static void mask(Matrix *f, evalue *factor)
+static void mask_table(Matrix *f, evalue *factor)
 {
     int nr = f->NbRows, nc = f->NbColumns;
     int n;
@@ -290,7 +289,14 @@ static void mask(Matrix *f, evalue *factor)
     emul(&EP,factor); 
     free_evalue_refs(&EP);
 }
-#endif
+
+static void mask(Matrix *f, evalue *factor, barvinok_options *options)
+{
+    if (options->lookup_table)
+	mask_table(f, factor);
+    else
+	mask_fractional(f, factor);
+}
 
 /* This structure encodes the power of the term in a rational generating function.
  * 
@@ -317,7 +323,7 @@ struct term_info {
  */
 void lattice_point(
     Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term,
-    Polyhedron *PD)
+    Polyhedron *PD, barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = i->Dimension;
@@ -337,7 +343,7 @@ void lattice_point(
 	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
 	}
 
-	term->E = lattice_point(i, lambda, mv, lcm, PD);
+	term->E = lattice_point(i, lambda, mv, lcm, PD, options);
 	term->constant = 0;
 
 	Matrix_Free(mv);
@@ -396,7 +402,8 @@ struct counter : public np_base {
 	mpq_clear(count);
     }
 
-    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed);
+    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed,
+			barvinok_options *options);
     virtual void get_count(Value *result) {
 	assert(value_one_p(&count[0]._mp_den));
 	value_assign(*result, &count[0]._mp_num);
@@ -405,7 +412,8 @@ struct counter : public np_base {
 
 struct OrthogonalException {} Orthogonal;
 
-void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed)
+void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed,
+		     barvinok_options *options)
 {
     for (int k = 0; k < dim; ++k) {
 	if (lambda * rays[k] == 0)
@@ -1000,10 +1008,10 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 	Vector_Free(c);
     }
 
-    virtual void handle(const signed_cone& sc);
+    virtual void handle(const signed_cone& sc, barvinok_options *options);
 };
 
-void enumerator::handle(const signed_cone& sc)
+void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
     int r = 0;
@@ -1016,7 +1024,7 @@ void enumerator::handle(const signed_cone& sc)
 
     sign = sc.sign;
 
-    lattice_point(V, sc.C, lambda, &num, 0);
+    lattice_point(V, sc.C, lambda, &num, 0, options);
     den = rays * lambda;
     normalize(sign, num.constant, den);
 
@@ -1079,23 +1087,23 @@ struct cumulator {
     cumulator(evalue *factor, evalue *v, dpoly_r *r) : 
 	factor(factor), v(v), r(r) {}
 
-    void cumulate();
+    void cumulate(barvinok_options *options);
 
     virtual void add_term(const vector<int>& powers, evalue *f2) = 0;
 };
 
-void cumulator::cumulate()
+void cumulator::cumulate(barvinok_options *options)
 {
     evalue cum;  // factor * 1 * E_num[0]/1 * (E_num[0]-1)/2 *...
     evalue f;
     evalue t;	// E_num[0] - (m-1)
-#ifdef USE_MODULO
     evalue *cst;
-#else
     evalue mone;
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
-#endif
+
+    if (options->lookup_table) {
+	value_init(mone.d);
+	evalue_set_si(&mone, -1, 1);
+    }
 
     value_init(cum.d);
     evalue_copy(&cum, factor);
@@ -1106,25 +1114,24 @@ void cumulator::cumulate()
     value_init(t.d);
     evalue_copy(&t, v);
 
-#ifdef USE_MODULO
-    for (cst = &t; value_zero_p(cst->d); ) {
-	if (cst->x.p->type == fractional)
-	    cst = &cst->x.p->arr[1];
-	else
-	    cst = &cst->x.p->arr[0];
+    if (!options->lookup_table) {
+	for (cst = &t; value_zero_p(cst->d); ) {
+	    if (cst->x.p->type == fractional)
+		cst = &cst->x.p->arr[1];
+	    else
+		cst = &cst->x.p->arr[0];
+	}
     }
-#endif
 
     for (int m = 0; m < r->len; ++m) {
 	if (m > 0) {
 	    if (m > 1) {
 		value_set_si(f.d, m);
 		emul(&f, &cum);
-#ifdef USE_MODULO
-		value_subtract(cst->x.n, cst->x.n, cst->d);
-#else
-		eadd(&mone, &t);
-#endif
+		if (!options->lookup_table)
+		    value_subtract(cst->x.n, cst->x.n, cst->d);
+		else
+		    eadd(&mone, &t);
 	    }
 	    emul(&t, &cum);
 	}
@@ -1146,9 +1153,8 @@ void cumulator::cumulate()
     free_evalue_refs(&f);
     free_evalue_refs(&t);
     free_evalue_refs(&cum);
-#ifndef USE_MODULO
-    free_evalue_refs(&mone);
-#endif
+    if (options->lookup_table)
+	free_evalue_refs(&mone);
 }
 
 struct E_poly_term {
@@ -1202,12 +1208,13 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
 	mpq_clear(tcount);
     }
 
-    virtual void handle(const signed_cone& sc);
-    void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f);
+    virtual void handle(const signed_cone& sc, barvinok_options *options);
+    void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f,
+		barvinok_options *options);
 };
 
-void ienumerator::reduce(
-	evalue *factor, vec_ZZ& num, mat_ZZ& den_f)
+void ienumerator::reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f,
+			 barvinok_options *options)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
     unsigned dim = num.length();
@@ -1256,7 +1263,7 @@ void ienumerator::reduce(
 	    ++only_param;
     }
     if (no_param == 0) {
-	reduce(factor, num_p, den_r);
+	reduce(factor, num_p, den_r, options);
     } else {
 	int k, l;
 	mat_ZZ pden;
@@ -1296,7 +1303,7 @@ void ienumerator::reduce(
 		    value_assign(f.x.n, mpq_numref(tcount));
 		    value_assign(f.d, mpq_denref(tcount));
 		    emul(&f, factor);
-		    reduce(factor, num_p, pden);
+		    reduce(factor, num_p, pden, options);
 		    free_evalue_refs(&f);
 		}
 		return;
@@ -1352,13 +1359,13 @@ void ienumerator::reduce(
 		evalue_copy(&t, factor);
 		zz2value((*j)->coeff, f.x.n);
 		emul(&f, &t);
-		reduce(&t, num_p, pden);
+		reduce(&t, num_p, pden, options);
 		free_evalue_refs(&t);
 	    }
 	    free_evalue_refs(&f);
 	} else {
 	    ie_cum cum(factor, E_num(0, dim), r);
-	    cum.cumulate();
+	    cum.cumulate(options);
 
 	    int common = pden.NumRows();
 	    int rows;
@@ -1374,7 +1381,7 @@ void ienumerator::reduce(
 			pden[rows+l] = den_r[k];
 		    rows += n;
 		}
-		reduce(cum.terms[j]->E, num_p, pden);
+		reduce(cum.terms[j]->E, num_p, pden, options);
 		free_evalue_refs(cum.terms[j]->E); 
 		delete cum.terms[j]->E;
 		delete cum.terms[j];
@@ -1410,12 +1417,12 @@ static int edegree(evalue *e)
     return d;
 }
 
-void ienumerator::handle(const signed_cone& sc)
+void ienumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
     assert(sc.C->NbRays-1 == dim);
 
-    lattice_point(V, sc.C, vertex, E_vertex);
+    lattice_point(V, sc.C, vertex, E_vertex, options);
 
     int r;
     for (r = 0; r < dim; ++r)
@@ -1424,7 +1431,7 @@ void ienumerator::handle(const signed_cone& sc)
     evalue one;
     value_init(one.d);
     evalue_set_si(&one, sc.sign, 1);
-    reduce(&one, vertex, den);
+    reduce(&one, vertex, den, options);
     free_evalue_refs(&one);
 
     for (int i = 0; i < dim; ++i)
@@ -1448,7 +1455,7 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
     ~bfenumerator() {
     }
 
-    virtual void handle(const signed_cone& sc);
+    virtual void handle(const signed_cone& sc, barvinok_options *options);
     virtual void base(mat_ZZ& factors, bfc_vec& v);
 
     bfc_term_base* new_bf_term(int len) {
@@ -1531,7 +1538,8 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 
     virtual bool constant_vertex(int dim) { return E_num(0, dim) == 0; }
 
-    virtual void cum(bf_reducer *bfr, bfc_term_base *t, int k, dpoly_r *r);
+    virtual void cum(bf_reducer *bfr, bfc_term_base *t, int k, dpoly_r *r,
+		     barvinok_options *options);
 };
 
 enumerator_base *enumerator_base::create(Polyhedron *P, unsigned dim, unsigned nbV,
@@ -1574,11 +1582,11 @@ void bfe_cum::add_term(const vector<int>& powers, evalue *f2)
 }
 
 void bfenumerator::cum(bf_reducer *bfr, bfc_term_base *t, int k,
-		       dpoly_r *r)
+		       dpoly_r *r, barvinok_options *options)
 {
     bfe_term* bfet = static_cast<bfe_term *>(t);
     bfe_cum cum(bfet->factors[k], E_num(0, bfr->d), r, bfr, t, k, this);
-    cum.cumulate();
+    cum.cumulate(options);
 }
 
 void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
@@ -1591,7 +1599,7 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
-void bfenumerator::handle(const signed_cone& sc)
+void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
     assert(sc.C->NbRays-1 == enumerator_base::dim);
@@ -1603,7 +1611,7 @@ void bfenumerator::handle(const signed_cone& sc)
     t->factors.resize(1);
 
     t->terms.SetDims(1, enumerator_base::dim);
-    lattice_point(V, sc.C, t->terms[0], E_vertex);
+    lattice_point(V, sc.C, t->terms[0], E_vertex, options);
 
     // the elements of factors are always lexpositive
     mat_ZZ   r;
@@ -1614,7 +1622,7 @@ void bfenumerator::handle(const signed_cone& sc)
     t->factors[0] = new evalue;
     value_init(t->factors[0]->d);
     evalue_set_si(t->factors[0], s, 1);
-    reduce(factors, v);
+    reduce(factors, v, options);
 
     for (int i = 0; i < enumerator_base::dim; ++i)
 	if (E_vertex[i]) {
@@ -1746,7 +1754,7 @@ out:
     if (P->NbEq != 0) {
 	Matrix *f;
 	P = remove_equalities_p(P, P->Dimension-nparam, &f);
-	mask(f, &factor);
+	mask(f, &factor, options);
 	Matrix_Free(f);
     }
     if (P->Dimension == nparam) {
@@ -1828,7 +1836,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     unsigned nparam = C->Dimension;
 
     if (P->Dimension - nparam == 1)
-	return ParamLine_Length(P, C, options->MaxRays);
+	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
     Polyhedron *CEq = NULL, *pVD;

@@ -43,6 +43,11 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->incremental_specialization = 0;
 #endif
     options->primal = 0;
+#ifdef USE_MODULO
+    options->lookup_table = 0;
+#else
+    options->lookup_table = 1;
+#endif
 
 #ifdef HAVE_LIBGLPK
     options->gbr_lp_solver = BV_GBR_GLPK;
@@ -61,6 +66,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
 struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
+    { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
     { "version",	    'V',		    0,			0 },
     { 0 }

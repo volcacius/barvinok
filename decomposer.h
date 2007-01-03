@@ -16,7 +16,7 @@ struct signed_cone {
 };
 
 struct signed_cone_consumer {
-    virtual void handle(const signed_cone& sc) = 0;
+    virtual void handle(const signed_cone& sc, barvinok_options *options) = 0;
 };
 
 struct vertex_decomposer {

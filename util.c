@@ -1,6 +1,7 @@
-#include <barvinok/util.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <barvinok/util.h>
+#include <barvinok/options.h>
 #include "config.h"
 
 #ifndef HAVE_ENUMERATE4
@@ -879,21 +880,17 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
     return F;
 }
 
-#ifdef USE_MODULO
-evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
-{
-    return ParamLine_Length_mod(P, C, MaxRays);
-}
-#else
-evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C,
+			 struct barvinok_options *options)
 {
     evalue* tmp;
-    tmp = ParamLine_Length_mod(P, C, MaxRays);
-    evalue_mod2table(tmp, C->Dimension);
-    reduce_evalue(tmp);
+    tmp = ParamLine_Length_mod(P, C, options->MaxRays);
+    if (options->lookup_table) {
+	evalue_mod2table(tmp, C->Dimension);
+	reduce_evalue(tmp);
+    }
     return tmp;
 }
-#endif
 
 Bool isIdentity(Matrix *M)
 {
