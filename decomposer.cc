@@ -96,6 +96,7 @@ public:
 	    value_set_si(tmp, -1);
 	    Vector_Scale(z->p, z->p, tmp, z->Size-1);
 	    value_clear(tmp);
+	    lambda = -lambda;
 	}
 	return z;
     }
