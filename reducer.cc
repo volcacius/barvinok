@@ -5,27 +5,12 @@
 
 using std::vector;
 
-static void rays(mat_ZZ& rays, Polyhedron *C)
-{
-    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
-    assert(C->NbRays - 1 == C->Dimension);
-    rays.SetDims(dim, dim);
-
-    int i, j;
-    for (i = 0, j = 0; i < C->NbRays; ++i) {
-	if (value_notzero_p(C->Ray[i][dim+1]))
-	    continue;
-	values2zz(C->Ray[i]+1, rays[j], dim);
-	++j;
-    }
-}
-
 void np_base::handle(const signed_cone& sc)
 {
     assert(sc.C->NbRays-1 == dim);
     factor.n *= sc.sign;
     mat_ZZ r;
-    rays(r, sc.C);
+    rays(sc.C, r);
     handle(r, current_vertex, factor, sc.closed);
     factor.n *= sc.sign;
 }

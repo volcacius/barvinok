@@ -1591,21 +1591,6 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
     }
 }
 
-static void rays(mat_ZZ& rays, Polyhedron *C)
-{
-    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
-    assert(C->NbRays - 1 == C->Dimension);
-    rays.SetDims(dim, dim);
-
-    int i, j;
-    for (i = 0, j = 0; i < C->NbRays; ++i) {
-	if (value_notzero_p(C->Ray[i][dim+1]))
-	    continue;
-	values2zz(C->Ray[i]+1, rays[j], dim);
-	++j;
-    }
-}
-
 void bfenumerator::handle(const signed_cone& sc)
 {
     assert(!sc.closed);
@@ -1623,7 +1608,7 @@ void bfenumerator::handle(const signed_cone& sc)
     // the elements of factors are always lexpositive
     mat_ZZ   r;
     mat_ZZ   factors;
-    rays(r, sc.C);
+    rays(sc.C, r);
     int s = setup_factors(r, factors, t, sc.sign);
 
     t->factors[0] = new evalue;

@@ -120,6 +120,21 @@ Matrix *rays2(Polyhedron *C)
     return M;
 }
 
+void rays(Polyhedron *C, mat_ZZ& rays)
+{
+    unsigned dim = C->NbRays - 1; /* don't count zero vertex */
+    assert(C->NbRays - 1 == C->Dimension);
+    rays.SetDims(dim, dim);
+
+    int i, j;
+    for (i = 0, j = 0; i < C->NbRays; ++i) {
+	if (value_notzero_p(C->Ray[i][dim+1]))
+	    continue;
+	values2zz(C->Ray[i]+1, rays[j], dim);
+	++j;
+    }
+}
+
 void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
 {
     Value tmp;

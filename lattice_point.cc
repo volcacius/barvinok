@@ -463,7 +463,9 @@ evalue* lattice_point(
     value_set_si(val->p[nparam], 1);
     ZZ offset(INIT_VAL, 0);
     value_init(ev.d);
-    vertex_period(i, lambda, T, lcm, 0, val, EP, &ev, offset);
+    mat_ZZ r;
+    rays(i, r);
+    vertex_period(r, lambda, T, lcm, 0, val, EP, &ev, offset);
     Vector_Free(val);
     eadd(&ev, EP);
     free_evalue_refs(&ev);   
