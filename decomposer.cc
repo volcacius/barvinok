@@ -85,7 +85,6 @@ public:
 	zz2values(U[index], z->p);
 	value_set_si(z->p[U[index].length()], 0);
 
-	Polyhedron *C = poly();
 	int i;
 	for (i = 0; i < lambda.length(); ++i)
 	    if (lambda[i] > 0)
