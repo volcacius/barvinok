@@ -485,7 +485,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    evalue *EP = count_relation(*$2);
 	    if (EP) {
 		const Variable_ID_Tuple * globals = $2->global_decls();
-		const char **param_names = new (const char *)[globals->size()];
+		const char **param_names = new const char *[globals->size()];
 		$2->setup_names();
 		for (int i = 0; i < globals->size(); ++i)
 		    param_names[i] = (*globals)[i+1]->char_name();
@@ -503,7 +503,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		const Variable_ID_Tuple * globals = $2->global_decls();
 		int nvar = $2->n_set();
 		int n = nvar + globals->size();
-		const char **names = new (const char *)[n];
+		const char **names = new const char *[n];
 		$2->setup_names();
 		for (int i = 0; i < nvar; ++i)
 		    names[i] = $2->set_var(i+1)->char_name();
@@ -523,7 +523,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		const Variable_ID_Tuple * globals = $4->global_decls();
 		int nvar = $4->n_set();
 		int n = nvar + globals->size();
-		const char **names = new (const char *)[n];
+		const char **names = new const char *[n];
 		$4->setup_names();
 		for (int i = 0; i < nvar; ++i)
 		    names[i] = $4->set_var(i+1)->char_name();
