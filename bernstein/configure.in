@@ -48,8 +48,6 @@ fi
 if test "$polylib_package" != "yes"; then
     CPPFLAGS="-I$polylib_package/include $CPPFLAGS"
     LDFLAGS="-L$polylib_package/lib $LDFLAGS"
-    LD_LIBRARY_PATH="$polylib_package/lib:$LD_LIBRARY_PATH"
-    export LD_LIBRARY_PATH
 fi
 
 AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
