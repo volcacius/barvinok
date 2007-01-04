@@ -132,16 +132,15 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 		continue;
 	    cone *pc = new cone(c->rays, i, v);
 	    if (c->closed) {
-		bool same_sign = sign(c->det) * sign(pc->det) > 0;
 		for (int j = 0; j < c->rays.NumRows(); ++j) {
 		    if (lambda[j] == 0)
 			closed[j] = c->closed[j];
 		    else if (j == i) {
-			if (same_sign)
+			if (lambda[i] > 0)
 			    closed[j] = c->closed[j];
 			else
 			    closed[j] = !c->closed[j];
-		    } else if (sign(lambda[i]) * sign(lambda[j]) > 0) {
+		    } else if (sign(lambda[i]) == sign(lambda[j])) {
 			if (c->closed[i] == c->closed[j])
 			    closed[j] = i < j;
 			else
