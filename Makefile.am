@@ -96,6 +96,8 @@ else
 BEEO_SOURCES = 
 endif
 barvinok_enumerate_e_SOURCES = \
+	verify.h \
+	verify.c \
 	barvinok_enumerate_e.cc \
 	$(BEEO_SOURCES)
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)

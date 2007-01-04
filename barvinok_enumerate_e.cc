@@ -9,6 +9,7 @@
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
 #endif
+#include "verify.h"
 
 /* The input of this example program is a polytope in combined
  * data and parameter space followed by two lines indicating
@@ -27,16 +28,12 @@ struct argp_option argp_options[] = {
     { "convert",    	    'c',    0,	    0 },
     { "floor",      	    'f',    0,	    0 },
     { "range-reduction",    'R',    0,	    0 },
-    { "verify",     	    'T',    0,	    0 },
-    { "print-all",  	    'A',    0,	    0 },
-    { "min",   	    	    'm',    "int",  0 },
-    { "max",   	    	    'M',    "int",  0 },
-    { "range",      	    'r',    "int",  0 },
     { 0 }
 };
 
 struct arguments {
     struct barvinok_options *options;
+    struct verify_options    verify;
     int range;
     int convert;
     int omega;
@@ -44,10 +41,6 @@ struct arguments {
     int scarf;
     int series;
     int floor;
-    int verify;
-    int print_all;
-    int m;
-    int M;
 };
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -57,6 +50,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = arguments->options;
+	state->child_inputs[1] = &arguments->verify;
 	break;
     case 's':
 	arguments->series = 1;
@@ -87,25 +81,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     case 'R':
 	arguments->range = 1;
 	break;
-    case 'T':
-	arguments->verify = 1;
-	break;
-    case 'A':
-	arguments->print_all = 1;
-	break;
-    case 'm':
-	arguments->m = atoi(arg);
-	arguments->verify = 1;
-	break;
-    case 'M':
-	arguments->M = atoi(arg);
-	arguments->verify = 1;
-	break;
-    case 'r':
-	arguments->M = atoi(arg);
-	arguments->m = -arguments->M;
-	arguments->verify = 1;
-	break;
     default:
 	return ARGP_ERR_UNKNOWN;
     }
@@ -134,21 +109,6 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 /* define this to continue the test after first error found */
 /* #define DONT_BREAK_ON_ERROR */
 
-/* RANGE : normal range for evalutations (-RANGE -> RANGE) */
-#define RANGE 50
-
-/* SRANGE : small range for evalutations */
-#define SRANGE 15
-
-/* if dimension >= BIDDIM, use SRANGE */
-#define BIGDIM 5
-
-/* VSRANGE : very small range for evalutations */
-#define VSRANGE 5
-
-/* if dimension >= VBIDDIM, use VSRANGE */
-#define VBIGDIM 8
-
 static Value min_val, max_val;
 
 static char **params;
@@ -169,10 +129,10 @@ int main(int argc, char **argv)
     char s[128];
     evalue *EP;
     int print_solution = 1;
-    int r;
     struct arguments arguments;
     static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    0,	0,  0 },
+	{ &barvinok_argp,    	0,	0,  		0 },
+	{ &verify_argp,    	0,	"verification",	1 },
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
@@ -186,10 +146,6 @@ int main(int argc, char **argv)
     arguments.scarf = 0;
     arguments.series = 0;
     arguments.floor = 0;
-    arguments.verify = 0;
-    arguments.print_all = 0;
-    arguments.m = INT_MAX;
-    arguments.M = INT_MIN;
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
@@ -212,22 +168,9 @@ int main(int argc, char **argv)
 	fgets(s, 128, stdin);
 
     /******* Read the options: initialize Min and Max ********/
-    if (A->Dimension >= VBIGDIM)
-	r = VSRANGE;
-    else if (A->Dimension >= BIGDIM)
-	r = SRANGE;
-    else
-	r = RANGE;
-    if (arguments.M == INT_MIN)
-	arguments.M = r;
-    if (arguments.m == INT_MAX)
-	arguments.m = -r;
+    verify_options_set_range(&arguments.verify, A);
 
-    if (arguments.verify && arguments.m > arguments.M) {
-	fprintf(stderr,"Nothing to do: min > max !\n");
-	return(0);
-    }
-    if (arguments.verify)
+    if (arguments.verify.verify)
 	print_solution = 0;
 
     if (print_solution) {
@@ -277,9 +220,10 @@ int main(int argc, char **argv)
 	    if (print_solution)
 		print_evalue(stdout, EP, param_name);
 	}
-	if (arguments.verify)
-	    verify_results(A, EP, exist, nparam, arguments.m, arguments.M,
-			    arguments.print_all, options->MaxRays);
+	if (arguments.verify.verify)
+	    verify_results(A, EP, exist, nparam, arguments.verify.m,
+			    arguments.verify.M, arguments.verify.print_all,
+			    options->MaxRays);
 	free_evalue_refs(EP);
 	free(EP);
     }
