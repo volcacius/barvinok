@@ -165,31 +165,6 @@ AC_TRY_COMPILE([#include <polylib/polylibgmp.h>],
 			  [count_points takes four arguments])],
 	       [AC_MSG_RESULT(3)])
 
-AC_MSG_CHECKING([for value_subtract macro])
-AC_EGREP_CPP(yes, [
-    #include <polylib/polylibgmp.h>
-    #ifdef value_subtract
-    yes
-    #endif
-    ],[AC_MSG_RESULT(yes)],
-    [AC_MSG_RESULT(no)
-     AC_DEFINE(value_subtract,value_substract,
-		[define to value_substract if missing from PolyLib])])
-
-AC_MSG_CHECKING([for value_addmul macro])
-AC_EGREP_CPP(yes, [
-    #include <polylib/polylibgmp.h>
-    #ifdef value_addmul
-    yes
-    #endif
-    ],[AC_MSG_RESULT(yes)],
-    [AC_MSG_RESULT(no)
-     AC_DEFINE([value_addmul(ref,val1,val2)],[do {Value _tmp; value_init(_tmp); dnl
-		value_multiply(_tmp,val1,val2); dnl
-		value_addto(ref,ref,_tmp); dnl
-		value_clear(_tmp); } while(0)],
-		[define if missing from PolyLib])])
-
 AC_ARG_WITH(piplib,
             [  --with-piplib=DIR       DIR Location of PIP],
             [ echo "Package piplib : $withval" && piplib_package=$withval],  
