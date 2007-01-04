@@ -27,34 +27,31 @@ static ZZ max(vec_ZZ& v)
 
 class cone {
 public:
-    cone(Matrix *M) {
-	Cone = 0;
-	Rays = Matrix_Copy(M);
+    cone(const mat_ZZ& r, int row, const vec_ZZ& w) {
+	rays = r;
+	rays[row] = w;
 	set_det();
 	set_closed(NULL);
     }
     cone(const signed_cone& sc) {
-	Cone = Polyhedron_Copy(sc.C);
-	Rays = rays(sc.C);
+	rays = sc.rays;
 	set_det();
 	set_closed(sc.closed);
     }
     void set_det() {
-	mat_ZZ A;
-	matrix2zz(Rays, A, Rays->NbRows - 1, Rays->NbColumns - 1);
-	det = determinant(A);
+	det = determinant(rays);
     }
     void set_closed(int *cl) {
 	closed = NULL;
 	if (cl) {
-	    closed = new int[Rays->NbRows-1];
-	    for (int i = 0; i < Rays->NbRows-1; ++i)
+	    closed = new int[rays.NumRows()];
+	    for (int i = 0; i < rays.NumRows(); ++i)
 		closed[i] = cl[i];
 	}
     }
 
-    Vector* short_vector(vec_ZZ& lambda, barvinok_options *options) {
-	Matrix *M = Matrix_Copy(Rays);
+    void short_vector(vec_ZZ& v, vec_ZZ& lambda, barvinok_options *options) {
+	Matrix *M = rays2matrix(rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
 	assert(ok);
@@ -80,53 +77,25 @@ public:
 
 	lambda = B[index];
 
-	Vector *z = Vector_Alloc(U[index].length()+1);
-	assert(z);
-	zz2values(U[index], z->p);
-	value_set_si(z->p[U[index].length()], 0);
+	v = U[index];
 
 	int i;
 	for (i = 0; i < lambda.length(); ++i)
 	    if (lambda[i] > 0)
 		break;
 	if (i == lambda.length()) {
-	    Value tmp;
-	    value_init(tmp);
-	    value_set_si(tmp, -1);
-	    Vector_Scale(z->p, z->p, tmp, z->Size-1);
-	    value_clear(tmp);
+	    v = -v;
 	    lambda = -lambda;
 	}
-	return z;
     }
 
     ~cone() {
-	Polyhedron_Free(Cone);
-	Matrix_Free(Rays);
 	if (closed)
 	    delete [] closed;
     }
 
-    Polyhedron *poly() {
-	if (!Cone) {
-	    Matrix *M = Matrix_Alloc(Rays->NbRows+1, Rays->NbColumns+1);
-	    for (int i = 0; i < Rays->NbRows; ++i) {
-		Vector_Copy(Rays->p[i], M->p[i]+1, Rays->NbColumns);
-		value_set_si(M->p[i][0], 1);
-	    }
-	    Vector_Set(M->p[Rays->NbRows]+1, 0, Rays->NbColumns-1);
-	    value_set_si(M->p[Rays->NbRows][0], 1);
-	    value_set_si(M->p[Rays->NbRows][Rays->NbColumns], 1);
-	    Cone = Rays2Polyhedron(M, M->NbRows+1);
-	    assert(Cone->NbConstraints == Cone->NbRays);
-	    Matrix_Free(M);
-	}
-	return Cone;
-    }
-
     ZZ det;
-    Polyhedron *Cone;
-    Matrix *Rays;
+    mat_ZZ rays;
     int *closed;
 };
 
@@ -152,20 +121,19 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 	return;
     }
     vec_ZZ lambda;
-    int closed[c->Rays->NbRows-1];
+    vec_ZZ v;;
+    int closed[c->rays.NumRows()];
     while (!nonuni.empty()) {
 	c = nonuni.back();
 	nonuni.pop_back();
-	Vector* v = c->short_vector(lambda, options);
-	for (int i = 0; i < c->Rays->NbRows - 1; ++i) {
+	c->short_vector(v, lambda, options);
+	for (int i = 0; i < c->rays.NumRows(); ++i) {
 	    if (lambda[i] == 0)
 		continue;
-	    Matrix* M = Matrix_Copy(c->Rays);
-	    Vector_Copy(v->p, M->p[i], v->Size);
-	    cone * pc = new cone(M);
+	    cone *pc = new cone(c->rays, i, v);
 	    if (c->closed) {
 		bool same_sign = sign(c->det) * sign(pc->det) > 0;
-		for (int j = 0; j < c->Rays->NbRows - 1; ++j) {
+		for (int j = 0; j < c->rays.NumRows(); ++j) {
 		    if (lambda[j] == 0)
 			closed[j] = c->closed[j];
 		    else if (j == i) {
@@ -191,10 +159,10 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 		try {
 		    options->stats.unimodular_cones++;
 		    if (pc->closed)
-			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s,
+			scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
 					       pc->closed), options);
 		    else
-			scc.handle(signed_cone(pc->poly(), sign(pc->det) * s),
+			scc.handle(signed_cone(pc->rays, sign(pc->det) * s),
 				   options);
 		    delete pc;
 		} catch (...) {
@@ -205,24 +173,37 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 			nonuni.pop_back();
 			delete c;
 		    }
-		    Matrix_Free(M);
-		    Vector_Free(v);
 		    throw;
 		}
 	    }
-	    Matrix_Free(M);
 	}
-	Vector_Free(v);
 	delete c;
     }
 }
 
 struct polar_signed_cone_consumer : public signed_cone_consumer {
     signed_cone_consumer& scc;
+    mat_ZZ r;
     polar_signed_cone_consumer(signed_cone_consumer& scc) : scc(scc) {}
     virtual void handle(const signed_cone& sc, barvinok_options *options) {
-	Polyhedron_Polarize(sc.C);
-	scc.handle(sc, options);
+	Polyhedron *C = sc.C;
+	if (!sc.C) {
+	    Matrix *M = Matrix_Alloc(sc.rays.NumRows()+1, sc.rays.NumCols()+2);
+	    for (int i = 0; i < sc.rays.NumRows(); ++i) {
+		zz2values(sc.rays[i], M->p[i]+1);
+		value_set_si(M->p[i][0], 1);
+	    }
+	    value_set_si(M->p[sc.rays.NumRows()][0], 1);
+	    value_set_si(M->p[sc.rays.NumRows()][1+sc.rays.NumCols()], 1);
+	    C = Rays2Polyhedron(M, M->NbRows+1);
+	    assert(C->NbConstraints == C->NbRays);
+	    Matrix_Free(M);
+	}
+	Polyhedron_Polarize(C);
+	rays(C, r);
+	scc.handle(signed_cone(C, r, sc.sign), options);
+	if (!sc.C)
+	    Polyhedron_Free(C);
     }
 };
 
@@ -237,9 +218,12 @@ static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 	Polyhedron_Free(tmp);
     }
     polar_signed_cone_consumer pssc(scc);
+    mat_ZZ r;
     try {
-	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next)
-	    decompose(signed_cone(Polar, 1), pssc, options);
+	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next) {
+	    rays(Polar, r);
+	    decompose(signed_cone(Polar, r, 1), pssc, options);
+	}
 	Domain_Free(cone);
     } catch (...) {
 	Domain_Free(cone);
@@ -268,6 +252,7 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 	    Vector_Add(average->p, cone->Ray[i]+1, average->p, cone->Dimension);
 	}
     }
+    mat_ZZ ray;
     try {
 	for (Polyhedron *simple = parts; simple; simple = simple->next) {
 	    for (int i = 0, r = 0; r < simple->NbRays; ++r) {
@@ -296,7 +281,8 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 		}
 		++i;
 	    }
-	    decompose(signed_cone(simple, 1, closed), scc, options);
+	    rays(simple, ray);
+	    decompose(signed_cone(simple, ray, 1, closed), scc, options);
 	}
 	Domain_Free(parts);
 	if (parts != cone) {
@@ -360,7 +346,9 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     barvinok_options *options = barvinok_options_new_with_defaults();
     posneg_collector pc(*ppos, *pneg);
     POL_ENSURE_VERTICES(C);
-    decompose(signed_cone(C, 1), pc, options);
+    mat_ZZ r;
+    rays(C, r);
+    decompose(signed_cone(C, r, 1), pc, options);
     *ppos = pc.pos;
     *pneg = pc.neg;
     free(options);

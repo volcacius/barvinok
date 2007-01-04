@@ -524,16 +524,16 @@ void indicator_constructor::handle(const signed_cone& sc, barvinok_options *opti
     assert(!sc.closed);
     unsigned dim = vertex.length();
 
-    assert(sc.C->NbRays-1 == dim);
+    assert(sc.rays.NumRows() == dim);
 
     indicator_term *term = new indicator_term(dim, pos, n++);
     term->sign = sc.sign;
     terms[vert].push_back(term);
 
-    lattice_point(V, sc.C, vertex, term->vertex, options);
+    lattice_point(V, sc.rays, vertex, term->vertex, options);
 
+    term->den = sc.rays;
     for (int r = 0; r < dim; ++r) {
-	values2zz(sc.C->Ray[r]+1, term->den[r], dim);
 	for (int j = 0; j < dim; ++j) {
 	    if (term->den[r][j] == 0)
 		continue;

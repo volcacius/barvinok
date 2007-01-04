@@ -7,11 +7,9 @@ using std::vector;
 
 void np_base::handle(const signed_cone& sc, barvinok_options *options)
 {
-    assert(sc.C->NbRays-1 == dim);
+    assert(sc.rays.NumRows() == dim);
     factor.n *= sc.sign;
-    mat_ZZ r;
-    rays(sc.C, r);
-    handle(r, current_vertex, factor, sc.closed, options);
+    handle(sc.rays, current_vertex, factor, sc.closed, options);
     factor.n *= sc.sign;
 }
 

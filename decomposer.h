@@ -6,10 +6,12 @@
 #include <barvinok/options.h>
 
 struct signed_cone {
-    signed_cone(Polyhedron *C, int sign) : C(C), sign(sign), closed(NULL) {}
-    signed_cone(Polyhedron *C, int sign, int *closed) :
-				    C(C), sign(sign), closed(closed) {}
+    signed_cone(const mat_ZZ& rays, int sign, int *closed = NULL) :
+				C(NULL), rays(rays), sign(sign), closed(closed) {}
+    signed_cone(Polyhedron *C, const mat_ZZ& rays, int sign, int *closed = NULL) :
+				C(C), rays(rays), sign(sign), closed(closed) {}
     Polyhedron *C;
+    const mat_ZZ& rays;
     int sign;
     /* facet not containing ray is closed */
     int *closed;

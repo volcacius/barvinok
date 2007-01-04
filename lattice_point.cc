@@ -393,12 +393,12 @@ static void vertex_period(
  * PD is the parameter domain, which, if != NULL, may be used to simply the
  * resulting expression.
  */
-static evalue* lattice_point_fractional(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
-					Value lcm, Polyhedron *PD)
+static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
+					Matrix *W, Value lcm, Polyhedron *PD)
 {
     unsigned nparam = W->NbColumns - 1;
 
-    Matrix* Rays = rays2(i);
+    Matrix* Rays = rays2matrix2(rays);
     Matrix *T = Transpose(Rays);
     Matrix *T2 = Matrix_Copy(T);
     Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
@@ -442,7 +442,7 @@ static evalue* lattice_point_fractional(Polyhedron *i, vec_ZZ& lambda, Matrix *W
     return EP;
 }
 
-static evalue* lattice_point_table(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
+static evalue* lattice_point_table(const mat_ZZ& rays, vec_ZZ& lambda, Matrix *W,
 				   Value lcm, Polyhedron *PD)
 {
     Matrix *T = Transpose(W);
@@ -457,9 +457,7 @@ static evalue* lattice_point_table(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
     value_set_si(val->p[nparam], 1);
     ZZ offset(INIT_VAL, 0);
     value_init(ev.d);
-    mat_ZZ r;
-    rays(i, r);
-    vertex_period(r, lambda, T, lcm, 0, val, EP, &ev, offset);
+    vertex_period(rays, lambda, T, lcm, 0, val, EP, &ev, offset);
     Vector_Free(val);
     eadd(&ev, EP);
     free_evalue_refs(&ev);   
@@ -471,13 +469,13 @@ static evalue* lattice_point_table(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
     return EP;
 }
 
-evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
+evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda, Matrix *W,
 		      Value lcm, Polyhedron *PD, barvinok_options *options)
 {
     if (options->lookup_table)
-	return lattice_point_table(i, lambda, W, lcm, PD);
+	return lattice_point_table(rays, lambda, W, lcm, PD);
     else
-	return lattice_point_fractional(i, lambda, W, lcm, PD);
+	return lattice_point_fractional(rays, lambda, W, lcm, PD);
 }
 
 /* returns the unique lattice point in the fundamental parallelepiped
@@ -488,11 +486,11 @@ evalue* lattice_point(Polyhedron *i, vec_ZZ& lambda, Matrix *W,
  *
  *	    num[i] + E_vertex[i]
  */
-void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num, 
+void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num, 
 		   evalue **E_vertex, barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
-    unsigned dim = C->Dimension;
+    unsigned dim = rays.NumCols();
     vec_ZZ vertex;
     vertex.SetLength(nparam+1);
 
@@ -512,7 +510,7 @@ void lattice_point(Param_Vertices *V, Polyhedron *C, vec_ZZ& num,
 	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
 	}
 
-	Matrix* Rays = rays2(C);
+	Matrix* Rays = rays2matrix2(rays);
 	Matrix *T = Transpose(Rays);
 	Matrix *T2 = Matrix_Copy(T);
 	Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);

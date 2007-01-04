@@ -83,6 +83,18 @@ Matrix *rays2matrix(const mat_ZZ& rays)
     return M;
 }
 
+Matrix *rays2matrix2(const mat_ZZ& rays)
+{
+    unsigned dim = rays.NumRows();
+
+    Matrix *M = Matrix_Alloc(dim, dim);
+    assert(M);
+
+    for (int i = 0; i < dim; ++i)
+	zz2values(rays[i], M->p[i]);
+    return M;
+}
+
 Matrix *rays(Polyhedron *C)
 {
     unsigned dim = C->NbRays - 1; /* don't count zero vertex */

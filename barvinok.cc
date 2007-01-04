@@ -321,12 +321,11 @@ struct term_info {
  *
  * The result is returned in term.
  */
-void lattice_point(
-    Param_Vertices* V, Polyhedron *i, vec_ZZ& lambda, term_info* term,
-    Polyhedron *PD, barvinok_options *options)
+void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
+    term_info* term, Polyhedron *PD, barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
-    unsigned dim = i->Dimension;
+    unsigned dim = rays.NumCols();
     mat_ZZ vertex;
     vertex.SetDims(V->Vertex->NbRows, nparam+1);
     Value lcm, tmp;
@@ -343,7 +342,7 @@ void lattice_point(
 	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
 	}
 
-	term->E = lattice_point(i, lambda, mv, lcm, PD, options);
+	term->E = lattice_point(rays, lambda, mv, lcm, PD, options);
 	term->constant = 0;
 
 	Matrix_Free(mv);
@@ -984,7 +983,6 @@ struct enumerator_base {
 struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 		    public enumerator_base {
     vec_ZZ lambda;
-    mat_ZZ rays;
     vec_ZZ den;
     ZZ sign;
     term_info num;
@@ -996,7 +994,6 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 	this->P = P;
 	this->nbV = nbV;
 	randomvector(P, lambda, dim);
-	rays.SetDims(dim, dim);
 	den.SetLength(dim);
 	c = Vector_Alloc(dim+2);
 
@@ -1015,17 +1012,16 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
     int r = 0;
-    assert(sc.C->NbRays-1 == dim);
-    add_rays(rays, sc.C, &r);
+    assert(sc.rays.NumRows() == dim);
     for (int k = 0; k < dim; ++k) {
-	if (lambda * rays[k] == 0)
+	if (lambda * sc.rays[k] == 0)
 	    throw Orthogonal;
     }
 
     sign = sc.sign;
 
-    lattice_point(V, sc.C, lambda, &num, 0, options);
-    den = rays * lambda;
+    lattice_point(V, sc.rays, lambda, &num, 0, options);
+    den = sc.rays * lambda;
     normalize(sign, num.constant, den);
 
     dpoly n(dim, den[0], 1);
@@ -1420,13 +1416,11 @@ static int edegree(evalue *e)
 void ienumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
-    assert(sc.C->NbRays-1 == dim);
+    assert(sc.rays.NumRows() == dim);
 
-    lattice_point(V, sc.C, vertex, E_vertex, options);
+    lattice_point(V, sc.rays, vertex, E_vertex, options);
 
-    int r;
-    for (r = 0; r < dim; ++r)
-	values2zz(sc.C->Ray[r]+1, den[r], dim);
+    den = sc.rays;
 
     evalue one;
     value_init(one.d);
@@ -1602,7 +1596,7 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
 void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(!sc.closed);
-    assert(sc.C->NbRays-1 == enumerator_base::dim);
+    assert(sc.rays.NumRows() == enumerator_base::dim);
 
     bfe_term* t = new bfe_term(enumerator_base::dim);
     vector< bfc_term_base * > v;
@@ -1611,13 +1605,11 @@ void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
     t->factors.resize(1);
 
     t->terms.SetDims(1, enumerator_base::dim);
-    lattice_point(V, sc.C, t->terms[0], E_vertex, options);
+    lattice_point(V, sc.rays, t->terms[0], E_vertex, options);
 
     // the elements of factors are always lexpositive
-    mat_ZZ   r;
     mat_ZZ   factors;
-    rays(sc.C, r);
-    int s = setup_factors(r, factors, t, sc.sign);
+    int s = setup_factors(sc.rays, factors, t, sc.sign);
 
     t->factors[0] = new evalue;
     value_init(t->factors[0]->d);
