@@ -4,6 +4,7 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "argp.h"
+#include "error.h"
 #include "config.h"
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
@@ -19,12 +20,8 @@
  */
 
 struct argp_option argp_options[] = {
-#ifdef HAVE_OMEGA
     { "omega",      	    'o',    0,      0 },
-#endif
-#ifdef HAVE_PIPLIB
     { "pip",   	    	    'p',    0,      0 },
-#endif
     { "series",     	    's',    0,	    0 },
     { "scarf",      	    'S',    0,	    0 },
     { "convert",    	    'c',    0,	    0 },
@@ -68,10 +65,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	arguments->scarf = 1;
 	break;
     case 'o':
+#ifdef HAVE_OMEGA
 	arguments->omega = 1;
+#else
+	error(0, 0, "--omega option not supported");
+#endif
 	break;
     case 'p':
+#ifdef HAVE_PIPLIB
 	arguments->pip = 1;
+#else
+	error(0, 0, "--pip option not supported");
+#endif
 	break;
     case 'f':
 	arguments->floor = 1;
@@ -186,7 +191,7 @@ int main(int argc, char **argv)
     arguments.m = INT_MAX;
     arguments.M = INT_MIN;
 
-    argp_parse(&argp, argc, argv, ARGP_NO_EXIT, 0, &arguments);
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     if (arguments.series && !arguments.scarf) {
 	fprintf(stderr, 
