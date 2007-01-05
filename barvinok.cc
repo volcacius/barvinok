@@ -602,8 +602,7 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result,
     if (P->NbBid == 0 && r == P->NbRays)
 	return false;
 
-#ifdef HAVE_LIBGLPK
-    if (options->lexmin_emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_COUNT) {
+    if (options->count_sample_infinite) {
 	Vector *sample;
 
 	sample = Polyhedron_Sample(P, options);
@@ -615,7 +614,6 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result,
 	}
 	return true;
     }
-#endif
 
     for (int i = 0; i < P->NbRays; ++i)
 	if (value_one_p(P->Ray[i][1+P->Dimension])) {

@@ -36,6 +36,7 @@ struct barvinok_options {
 
     int		primal;
     int		lookup_table;
+    int		count_sample_infinite;
 
     /* basis reduction options */
     #define	BV_GBR_NONE	0

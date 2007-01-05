@@ -63,8 +63,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case EMPTINESS_CHECK:
 	if (!strcmp(arg, "none"))
 	    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
-	else if (!strcmp(arg, "count"))
+	else if (!strcmp(arg, "count")) {
 	    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
+	    options->count_sample_infinite = 0;
+	}
 	break;
     case NO_REDUCTION:
 	options->lexmin_reduce = 0;

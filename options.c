@@ -10,6 +10,13 @@
 #define MAXRAYS  600
 #endif
 
+#ifndef HAVE_LIBGLPK
+Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
+{
+    assert(0);
+}
+#endif
+
 #define ALLOC(type) (type*)malloc(sizeof(type))
 
 void barvinok_stats_clear(struct barvinok_stats *stats)
@@ -47,6 +54,11 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->lookup_table = 0;
 #else
     options->lookup_table = 1;
+#endif
+#ifdef HAVE_LIBGLPK
+    options->count_sample_infinite = 1;
+#else
+    options->count_sample_infinite = 0;
 #endif
 
 #ifdef HAVE_LIBGLPK
