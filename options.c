@@ -93,6 +93,9 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     case BV_OPT_PRIMAL:
 	options->primal = 1;
 	break;
+    case BV_OPT_TABLE:
+	options->lookup_table = 1;
+	break;
     case BV_OPT_GBR:
 	if (!strcmp(arg, "cdd"))
 	    options->gbr_lp_solver = BV_GBR_CDD;

@@ -201,9 +201,9 @@ int main(int argc, char **argv)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
 	    free(options);
 	} else if (arguments.pip && exist > 0)
-	    EP = barvinok_enumerate_pip(A, exist, nparam, options->MaxRays);
+	    EP = barvinok_enumerate_pip_with_options(A, exist, nparam, options);
 	else
-	    EP = barvinok_enumerate_e(A, exist, nparam, options->MaxRays);
+	    EP = barvinok_enumerate_e_with_options(A, exist, nparam, options);
 	reduce_evalue(EP);
 	evalue_combine(EP);
 	if (arguments.range)

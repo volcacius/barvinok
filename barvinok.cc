@@ -3075,15 +3075,26 @@ static evalue* enumerate_vd(Polyhedron **PA,
     return EP;
 }
 
+evalue* barvinok_enumerate_pip(Polyhedron *P, unsigned exist, unsigned nparam,
+			       unsigned MaxRays)
+{
+    evalue *E;
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = MaxRays;
+    E = barvinok_enumerate_pip_with_options(P, exist, nparam, options);
+    free(options);
+    return E;
+}
+
 #ifndef HAVE_PIPLIB
-evalue *barvinok_enumerate_pip(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
+		  unsigned exist, unsigned nparam, struct barvinok_options *options)
 {
     return 0;
 }
 #else
-evalue *barvinok_enumerate_pip(Polyhedron *P,
-			  unsigned exist, unsigned nparam, unsigned MaxRays)
+evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
+		  unsigned exist, unsigned nparam, struct barvinok_options *options)
 {
     int nvar = P->Dimension - exist - nparam;
     evalue *EP = evalue_zero();
@@ -3099,7 +3110,7 @@ evalue *barvinok_enumerate_pip(Polyhedron *P,
 	Q->next = 0;
 	evalue *E;
 	exist = Q->Dimension - nvar - nparam;
-	E = barvinok_enumerate_e(Q, exist, nparam, MaxRays);
+	E = barvinok_enumerate_e_with_options(Q, exist, nparam, options);
 	Polyhedron_Free(Q);
 	eadd(E, EP);
 	free_evalue_refs(E); 
@@ -3438,7 +3449,7 @@ next:
     if (EP)
 	goto out;
 
-    EP = barvinok_enumerate_pip(P, exist, nparam, options->MaxRays);
+    EP = barvinok_enumerate_pip_with_options(P, exist, nparam, options);
     if (EP)
 	goto out;
 
