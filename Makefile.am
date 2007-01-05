@@ -9,7 +9,7 @@ AM_LDFLAGS = -Llib
 lib_LTLIBRARIES = libbarvinok.la
 noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
 		  barvinok_ehrhart \
-		  verif_ehrhart barvinok_enumerate_e \
+		  barvinok_enumerate_e \
 		  remove_redundant_equalities \
 		  barvinok_union \
 		  @bv_extra_programs@
@@ -94,7 +94,12 @@ BEEO_SOURCES = omega/Exit.cc omega/convert.cc
 else
 BEEO_SOURCES = 
 endif
-barvinok_enumerate_SOURCES = barvinok_enumerate.cc
+barvinok_enumerate_SOURCES = \
+	barvinok_enumerate.cc \
+	verify.h \
+	verify.c \
+	verif_ehrhart.h \
+	verif_ehrhart.c
 barvinok_enumerate_e_SOURCES = \
 	verify.h \
 	verify.c \
@@ -103,7 +108,6 @@ barvinok_enumerate_e_SOURCES = \
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
-verif_ehrhart_SOURCES = verif_ehrhart.c verify_main.cc verif_ehrhart.h
 4coins_SOURCES = 4coins.cc
 if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc
@@ -181,14 +185,14 @@ check-series:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		./verif_ehrhart --series < $$i; \
+		./barvinok_enumerate --verify --series < $$i; \
 	    fi \
 	done
 check:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		./verif_ehrhart < $$i; \
+		./barvinok_enumerate --verify < $$i; \
 	    fi \
 	done
 	@for dir in $(BEE_TESTDIRS); do \
