@@ -121,7 +121,9 @@ lexmin_SOURCES = \
 	$(POLYSIGN) \
 	polysign.c \
 	polysign_polylib.c \
-	polysign.h
+	polysign.h \
+	verify.h \
+	verify.c
 EXTRA_lexmin_SOURCE = polysign_cddf.cc polysign_cdd.cc polysign.c
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')

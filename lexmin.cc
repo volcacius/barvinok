@@ -9,6 +9,7 @@
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
+#include "argp.h"
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
@@ -19,7 +20,7 @@
 #include "evalue_util.h"
 #include "remove_equalities.h"
 #include "polysign.h"
-#include "config.h"
+#include "verify.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -32,43 +33,57 @@ using std::cout;
 using std::endl;
 using std::ostream;
 
-/* RANGE : normal range for evalutations (-RANGE -> RANGE) */
-#define RANGE 50
+#define EMPTINESS_CHECK     	(BV_OPT_LAST+1)
+#define BASIS_REDUCTION_CDD 	(BV_OPT_LAST+2)
+#define NO_REDUCTION  	    	(BV_OPT_LAST+3)
+#define POLYSIGN  	    	(BV_OPT_LAST+4)
 
-/* SRANGE : small range for evalutations */
-#define SRANGE 15
-
-/* if dimension >= BIDDIM, use SRANGE */
-#define BIGDIM 5
-
-/* VSRANGE : very small range for evalutations */
-#define VSRANGE 5
-
-/* if dimension >= VBIDDIM, use VSRANGE */
-#define VBIGDIM 8
-
-#define EMPTINESS_CHECK     256
-#define BASIS_REDUCTION_CDD 257
-#define NO_REDUCTION  	    258
-#define POLYSIGN  	    259
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-struct option lexmin_options[] = {
-    { "verify",     no_argument,  0,  'T' },
-    { "print-all",  no_argument,  0,  'A' },
-    { "emptiness-check", required_argument, 0, EMPTINESS_CHECK },
-    { "no-reduction", no_argument, 0, NO_REDUCTION },
-    { "cdd", no_argument, 0, BASIS_REDUCTION_CDD },
-    { "polysign",   required_argument, 0, POLYSIGN },
-    { "min",   	    required_argument,  0,  'm' },
-    { "max",   	    required_argument,  0,  'M' },
-    { "range",      required_argument,  0,  'r' },
-    { "version",    no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+struct argp_option argp_options[] = {
+    { "emptiness-check",    EMPTINESS_CHECK,	"[none|count]",	    0 },
+    { "no-reduction",	    NO_REDUCTION,	0,		    0 },
+    { "cdd",		    BASIS_REDUCTION_CDD,    0,		    0 },
+    { "polysign",	    POLYSIGN,		"[cdd|cddf]",	    0 },
+    { 0 }
 };
-#endif
+
+struct arguments {
+    struct barvinok_options *options;
+    struct verify_options    verify;
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *arguments = (struct arguments *)(state->input);
+    struct barvinok_options *options = arguments->options;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = arguments->options;
+	state->child_inputs[1] = &arguments->verify;
+	break;
+    case EMPTINESS_CHECK:
+	if (!strcmp(arg, "none"))
+	    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
+	else if (!strcmp(arg, "count"))
+	    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
+	break;
+    case NO_REDUCTION:
+	options->lexmin_reduce = 0;
+	break;
+    case BASIS_REDUCTION_CDD:
+	options->gbr_lp_solver = BV_GBR_CDD;
+	break;
+    case POLYSIGN:
+	if (!strcmp(arg, "cddf"))
+	    options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDDF;
+	else if (!strcmp(arg, "cdd"))
+	    options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDD;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -2796,62 +2811,21 @@ int main(int argc, char **argv)
     Matrix *MA;
     int bignum;
     char **iter_names, **param_names;
-    int c, ind = 0;
-    int range = 0;
-    int verify = 0;
-    int print_all = 0;
-    int m = INT_MAX, M = INT_MIN, r;
     int print_solution = 1;
+    struct arguments arguments;
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    	0,	0,  		0 },
+	{ &verify_argp,    	0,	"verification",	1 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     struct barvinok_options *options;
 
     options = barvinok_options_new_with_defaults();
     options->lookup_table = 0;
 
-    while ((c = getopt_long(argc, argv, "TAm:M:r:V", lexmin_options, &ind)) != -1) {
-	switch (c) {
-	case EMPTINESS_CHECK:
-	    if (!strcmp(optarg, "none"))
-		options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
-	    else if (!strcmp(optarg, "count"))
-		options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
-	    break;
-	case NO_REDUCTION:
-	    options->lexmin_reduce = 0;
-	    break;
-	case BASIS_REDUCTION_CDD:
-	    options->gbr_lp_solver = BV_GBR_CDD;
-	    break;
-	case POLYSIGN:
-	    if (!strcmp(optarg, "cddf"))
-		options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDDF;
-	    else if (!strcmp(optarg, "cdd"))
-		options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDD;
-	    break;
-	case 'T':
-	    verify = 1;
-	    break;
-	case 'A':
-	    print_all = 1;
-	    break;
-	case 'm':
-	    m = atoi(optarg);
-	    verify = 1;
-	    break;
-	case 'M':
-	    M = atoi(optarg);
-	    verify = 1;
-	    break;
-	case 'r':
-	    M = atoi(optarg);
-	    m = -M;
-	    verify = 1;
-	    break;
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    arguments.options = options;
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     MA = Matrix_Read();
     C = Constraints2Polyhedron(MA, options->MaxRays);
@@ -2862,22 +2836,9 @@ int main(int argc, char **argv)
     A = Constraints2Polyhedron(MA, options->MaxRays);
     Matrix_Free(MA);
 
-    if (A->Dimension >= VBIGDIM)
-	r = VSRANGE;
-    else if (A->Dimension >= BIGDIM)
-	r = SRANGE;
-    else
-	r = RANGE;
-    if (M == INT_MIN)
-	M = r;
-    if (m == INT_MAX)
-	m = -r;
+    verify_options_set_range(&arguments.verify, A);
 
-    if (verify && m > M) {
-	fprintf(stderr,"Nothing to do: min > max !\n");
-	return(0);
-    }
-    if (verify)
+    if (arguments.verify.verify)
 	print_solution = 0;
 
     iter_names = util_generate_names(A->Dimension - C->Dimension, "i");
@@ -2891,8 +2852,9 @@ int main(int argc, char **argv)
 	for (int i = 0; i < maxima.size(); ++i)
 	    maxima[i]->print(cout, param_names, options);
 
-    if (verify)
-	verify_results(A, C, maxima, m, M, print_all, options->MaxRays);
+    if (arguments.verify.verify)
+	verify_results(A, C, maxima, arguments.verify.m, arguments.verify.M,
+		       arguments.verify.print_all, options->MaxRays);
 
     for (int i = 0; i < maxima.size(); ++i)
 	delete maxima[i];
