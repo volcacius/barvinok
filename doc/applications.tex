@@ -93,7 +93,7 @@ vertices
 {barvinok\_enumerate}}
 
 The program \ai[\tt]{barvinok\_enumerate} enumerates a
-parametric polytope.  It takes two polytopes in \PolyLib/
+parametric polytope as a \psp/ or \rgf/.  It takes two polytopes in \PolyLib/
 notation as input, optionally followed by a list of parameter
 names.
 The two polytopes refer to arguments \verb+P+ and \verb+C+
@@ -184,14 +184,55 @@ $$
 .
 \end{cases}
 $$
+The following is an example of Petr Lison\u{e}k\index{Lison\u{e}k, P.}.
+\begin{verbatim}
+> cat petr
+4 6
+1 -1 -1 -1 1 0
+1 1 -1 0 0 0
+1 0 1 -1 0 0
+1 0 0 1 0 -1
+
+0 3
+n
+> ./barvinok_enumerate --series < petr
+POLYHEDRON Dimension:4
+           Constraints:5  Equations:0  Rays:5  Lines:0
+Constraints 5 6
+Inequality: [  -1  -1  -1   1   0 ]
+Inequality: [   1  -1   0   0   0 ]
+Inequality: [   0   1  -1   0   0 ]
+Inequality: [   0   0   1   0  -1 ]
+Inequality: [   0   0   0   0   1 ]
+Rays 5 6
+Ray:    [   1   1   1   3 ]
+Ray:    [   1   1   0   2 ]
+Ray:    [   1   0   0   1 ]
+Ray:    [   0   0   0   1 ]
+Vertex: [   1   1   1   3 ]/1
+POLYHEDRON Dimension:1
+           Constraints:1  Equations:0  Rays:2  Lines:1
+Constraints 1 3
+Inequality: [   0   1 ]
+Rays 2 3
+Line:   [   1 ]
+Vertex: [   0 ]/1
+(n^3)/((1-n) * (1-n) * (1-n^2) * (1-n^3))
+\end{verbatim}
 
 Options:\\
-\begin{tabular}{lll}
+\begin{tabular}{llp{0.7\textwidth}}
 \ai[\tt]{--floor} & \ai[\tt]{-f} & 
 convert \ai[\tt]{fractional}s to \ai[\tt]{flooring}s
 \\
 \ai[\tt]{--convert} & \ai[\tt]{-c} & 
 convert \ai[\tt]{fractional}s to \ai[\tt]{periodic}s
+\\
+\ai[\tt]{--series} & \ai[\tt]{-s} & 
+compute \rgf/ instead of \psp/
+\\
+\ai[\tt]{--explicit} & \ai[\tt]{-e} & 
+convert computed \rgf/ to a \psp/
 \end{tabular}
 
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_enumerate\_e}}
@@ -258,56 +299,6 @@ use \Omegalib/ as a preprocessor
 \ai[\tt]{--pip} & \ai[\tt]{-p} & 
 \raggedright
 call \ai[\tt]{barvinok\_enumerate\_pip} instead of \ai[\tt]{barvinok\_enumerate\_e}
-\end{tabular}
-
-\subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_series}}
-{barvinok\_series}}
-
-The program \ai[\tt]{barvinok\_series} enumerates a
-parametric polytope in the form of a \rgf/.  
-The input of this program is the same as that of
-\ai[\tt]{barvinok\_enumerate}, except that the input polyhedron
-is assumed to be full-dimensional.
-The following is an example of Petr Lison\u{e}k\index{Lison\u{e}k, P.}.
-\begin{verbatim}
-> cat petr
-4 6
-1 -1 -1 -1 1 0
-1 1 -1 0 0 0
-1 0 1 -1 0 0
-1 0 0 1 0 -1
-
-0 3
-n
-> ./barvinok_series  < petr
-POLYHEDRON Dimension:4
-           Constraints:5  Equations:0  Rays:5  Lines:0
-Constraints 5 6
-Inequality: [  -1  -1  -1   1   0 ]
-Inequality: [   1  -1   0   0   0 ]
-Inequality: [   0   1  -1   0   0 ]
-Inequality: [   0   0   1   0  -1 ]
-Inequality: [   0   0   0   0   1 ]
-Rays 5 6
-Ray:    [   1   1   1   3 ]
-Ray:    [   1   1   0   2 ]
-Ray:    [   1   0   0   1 ]
-Ray:    [   0   0   0   1 ]
-Vertex: [   1   1   1   3 ]/1
-POLYHEDRON Dimension:1
-           Constraints:1  Equations:0  Rays:2  Lines:1
-Constraints 1 3
-Inequality: [   0   1 ]
-Rays 2 3
-Line:   [   1 ]
-Vertex: [   0 ]/1
-(n^3)/((1-n) * (1-n) * (1-n^2) * (1-n^3))
-\end{verbatim}
-
-Options:\\
-\begin{tabular}{llp{0.7\textwidth}}
-\ai[\tt]{--explicit} & \ai[\tt]{-e} & 
-convert computed \rgf/ to a \psp/
 \end{tabular}
 
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_union}}
