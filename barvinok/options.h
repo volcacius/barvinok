@@ -44,19 +44,6 @@ struct barvinok_options {
     #define	BV_GBR_CDD	2
     int		gbr_lp_solver;
 
-    /* lexmin options */
-		/* Check for integer points in domain
-		 */
-    #define	BV_LEXMIN_EMPTINESS_CHECK_NONE		0
-    #define	BV_LEXMIN_EMPTINESS_CHECK_SAMPLE	1
-    #define	BV_LEXMIN_EMPTINESS_CHECK_COUNT		2
-    int		lexmin_emptiness_check;
-    int		lexmin_reduce;
-    #define	BV_LEXMIN_POLYSIGN_POLYLIB	0
-    #define	BV_LEXMIN_POLYSIGN_CDD		1
-    #define	BV_LEXMIN_POLYSIGN_CDDF		2
-    int		lexmin_polysign;
-
     struct barvinok_stats   stats;
 };
 

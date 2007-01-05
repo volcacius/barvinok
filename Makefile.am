@@ -109,6 +109,7 @@ if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc
 endif
 lexmin_SOURCES = \
+	lexmin.h \
 	lexmin.cc \
 	combine.c \
 	combine.h \

@@ -3,6 +3,7 @@
 #include <gmp.h>
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
+#include "lexmin.h"
 
 struct EDomain_floor {
     bool     substituted; // see substitute method
@@ -102,7 +103,7 @@ struct EDomain {
 
     ge_constraint *compute_ge_constraint(evalue *constraint) const;
     void substitute(evalue **sub, Matrix *T, Matrix *Eq, unsigned MaxRays);
-    bool not_empty(barvinok_options *options);
+    bool not_empty(lexmin_options *options);
 };
 
 int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len);

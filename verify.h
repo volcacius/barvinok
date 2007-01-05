@@ -1,3 +1,6 @@
+#ifndef VERIFY_H
+#define VERIFY_H
+
 #include <barvinok/polylib.h>
 #include "argp.h"
 
@@ -17,4 +20,6 @@ void verify_options_set_range(struct verify_options *options, Polyhedron *P);
 
 #if defined(__cplusplus)
 }
+#endif
+
 #endif

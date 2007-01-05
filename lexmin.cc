@@ -21,6 +21,7 @@
 #include "remove_equalities.h"
 #include "polysign.h"
 #include "verify.h"
+#include "lexmin.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -34,9 +35,8 @@ using std::endl;
 using std::ostream;
 
 #define EMPTINESS_CHECK     	(BV_OPT_LAST+1)
-#define BASIS_REDUCTION_CDD 	(BV_OPT_LAST+2)
-#define NO_REDUCTION  	    	(BV_OPT_LAST+3)
-#define POLYSIGN  	    	(BV_OPT_LAST+4)
+#define NO_REDUCTION  	    	(BV_OPT_LAST+2)
+#define POLYSIGN  	    	(BV_OPT_LAST+3)
 
 struct argp_option argp_options[] = {
     { "emptiness-check",    EMPTINESS_CHECK,	"[none|count]",	    0 },
@@ -45,37 +45,35 @@ struct argp_option argp_options[] = {
     { 0 }
 };
 
-struct arguments {
-    struct barvinok_options *options;
-    struct verify_options    verify;
-};
-
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct arguments *arguments = (struct arguments *)(state->input);
-    struct barvinok_options *options = arguments->options;
+    struct lexmin_options *options = (struct lexmin_options *)(state->input);
+    struct barvinok_options *bv_options = options->barvinok;
 
     switch (key) {
     case ARGP_KEY_INIT:
-	state->child_inputs[0] = arguments->options;
-	state->child_inputs[1] = &arguments->verify;
+	state->child_inputs[0] = options->barvinok;
+	state->child_inputs[1] = &options->verify;
+	options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_SAMPLE;
+	options->reduce = 1;
+	options->polysign = BV_LEXMIN_POLYSIGN_POLYLIB;
 	break;
     case EMPTINESS_CHECK:
 	if (!strcmp(arg, "none"))
-	    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
+	    options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
 	else if (!strcmp(arg, "count")) {
-	    options->lexmin_emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
-	    options->count_sample_infinite = 0;
+	    options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
+	    bv_options->count_sample_infinite = 0;
 	}
 	break;
     case NO_REDUCTION:
-	options->lexmin_reduce = 0;
+	options->reduce = 0;
 	break;
     case POLYSIGN:
 	if (!strcmp(arg, "cddf"))
-	    options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDDF;
+	    options->polysign = BV_LEXMIN_POLYSIGN_CDDF;
 	else if (!strcmp(arg, "cdd"))
-	    options->lexmin_polysign = BV_LEXMIN_POLYSIGN_CDD;
+	    options->polysign = BV_LEXMIN_POLYSIGN_CDD;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -1182,11 +1180,11 @@ struct indicator {
     EDomain	 *D;
     Polyhedron	 *P;
     Param_Domain *PD;
-    barvinok_options	*options;
+    lexmin_options	*options;
     vector<evalue *>	substitutions;
 
     indicator(indicator_constructor& ic, Param_Domain *PD, EDomain *D,
-	      barvinok_options *options) :
+	      lexmin_options *options) :
 	ic(ic), PD(PD), D(D), order(this), options(options), P(NULL) {}
     indicator(const indicator& ind, EDomain *D) :
 	    ic(ind.ic), PD(ind.PD), D(NULL), order(this), options(ind.options),
@@ -1215,9 +1213,9 @@ struct indicator {
 	    delete this->D;
 	this->D = D;
 	int nparam = ic.P->Dimension - ic.vertex.length();
-	if (options->lexmin_reduce) {
+	if (options->reduce) {
 	    Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
-	    Q = DomainConstraintSimplify(Q, options->MaxRays);
+	    Q = DomainConstraintSimplify(Q, options->barvinok->MaxRays);
 	    if (!P || !PolyhedronIncludes(Q, P))
 		reduce_in_domain(Q);
 	    if (P)
@@ -1319,7 +1317,7 @@ max_term* indicator::create_max_term(const indicator_term *it)
     return maximum;
 }
 
-static order_sign evalue_sign(evalue *diff, EDomain *D, barvinok_options *options)
+static order_sign evalue_sign(evalue *diff, EDomain *D, lexmin_options *options)
 {
     order_sign sign = order_eq;
     evalue mone;
@@ -1458,7 +1456,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
     unsigned dim = a->den.NumCols();
     order_sign sign = order_eq;
     EDomain *D = ind->D;
-    unsigned MaxRays = ind->options->MaxRays;
+    unsigned MaxRays = ind->options->barvinok->MaxRays;
     bool rational = a->sign == 0 || b->sign == 0;
 
     order_sign cached_sign = order_eq;
@@ -1479,10 +1477,10 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	return cached_sign;
     }
 
-    if (rational && POL_ISSET(ind->options->MaxRays, POL_INTEGER)) {
-	ind->options->MaxRays &= ~POL_INTEGER;
-	if (ind->options->MaxRays)
-	    ind->options->MaxRays |= POL_HIGH_BIT;
+    if (rational && POL_ISSET(ind->options->barvinok->MaxRays, POL_INTEGER)) {
+	ind->options->barvinok->MaxRays &= ~POL_INTEGER;
+	if (ind->options->barvinok->MaxRays)
+	    ind->options->barvinok->MaxRays |= POL_HIGH_BIT;
     }
 
     sign = order_eq;
@@ -1565,7 +1563,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	delete term[1];
     }
 
-    ind->options->MaxRays = MaxRays;
+    ind->options->barvinok->MaxRays = MaxRays;
     return sign;
 }
 
@@ -1806,7 +1804,7 @@ void partial_order::print(ostream& os, char **p)
 void indicator::add(const indicator_term* it)
 {
     indicator_term *nt = new indicator_term(*it);
-    if (options->lexmin_reduce)
+    if (options->reduce)
 	nt->reduce_in_domain(P ? P : D->D);
     term.push_back(nt);
     order.add(nt, NULL);
@@ -1832,7 +1830,7 @@ void indicator::expand_rational_vertex(const indicator_term *initial)
 	Param_Vertices *V;
 	FORALL_PVertex_in_ParamPolyhedron(V, PD, ic.PP) // _i is internal counter
 	    if (_i == pos) {
-		ic.decompose_at_vertex(V, pos, options);
+		ic.decompose_at_vertex(V, pos, options->barvinok);
 		break;
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;
@@ -2288,7 +2286,7 @@ struct split {
 
 static void split_on(const split& sp, EDomain *D, 
 		     EDomain **Dlt, EDomain **Deq, EDomain **Dgt,
-		     barvinok_options *options)
+		     lexmin_options *options)
 {
     EDomain *ED[3];
     *Dlt = NULL;
@@ -2296,16 +2294,16 @@ static void split_on(const split& sp, EDomain *D,
     *Dgt = NULL;
     ge_constraint *ge = D->compute_ge_constraint(sp.constraint);
     if (sp.sign == split::lge || sp.sign == split::ge)
-	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options);
+	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options->barvinok);
     else
 	ED[2] = NULL;
     if (sp.sign == split::lge || sp.sign == split::le)
-	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options);
+	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options->barvinok);
     else
 	ED[0] = NULL;
 
     assert(sp.sign == split::lge || sp.sign == split::ge || sp.sign == split::le);
-    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options);
+    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options->barvinok);
 
     delete ge;
 
@@ -2316,7 +2314,7 @@ static void split_on(const split& sp, EDomain *D,
 	    ED[i]->sample = Vector_Alloc(D->sample->Size);
 	    Vector_Copy(D->sample->p, ED[i]->sample->p, D->sample->Size);
 	} else if (emptyQ2(ED[i]->D) ||
-	    (options->lexmin_emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE &&
+	    (options->emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE &&
 		 !(ED[i]->not_empty(options)))) {
 	    delete ED[i];
 	    ED[i] = NULL;
@@ -2524,9 +2522,8 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	if (!best) {
 	    /* apparently there can be negative initial term on empty domains */
-	    if (ind.options->lexmin_emptiness_check !=
-					    BV_LEXMIN_EMPTINESS_CHECK_NONE &&
-		ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
+	    if (ind.options->emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE &&
+		ind.options->polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
 		assert(!neg);
 	    break;
 	}
@@ -2537,9 +2534,9 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	    if (ind.order.le.find(best) == ind.order.le.end()) {
 		if (ind.order.eq.find(best) != ind.order.eq.end()) {
 		    bool handled = ind.handle_equal_numerators(best);
-		    if (ind.options->lexmin_emptiness_check !=
+		    if (ind.options->emptiness_check !=
 				BV_LEXMIN_EMPTINESS_CHECK_NONE &&
-			ind.options->lexmin_polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
+			ind.options->polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
 			assert(handled);
 		    /* If !handled then the leading coefficient is bigger than one;
 		     * must be an empty domain
@@ -2624,7 +2621,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 
 	EDomain *Dlt, *Deq, *Dgt;
 	split_on(sp, ind.D, &Dlt, &Deq, &Dgt, ind.options);
-	if (ind.options->lexmin_emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE)
+	if (ind.options->emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE)
 	    assert(Dlt || Deq || Dgt);
 	else if (!(Dlt || Deq || Dgt))
 	    /* Must have been empty all along */
@@ -2680,7 +2677,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 }
 
 static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
-				barvinok_options *options)
+				lexmin_options *options)
 {
     unsigned nparam = C->Dimension;
     Param_Polyhedron *PP = NULL;
@@ -2706,7 +2703,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     assert(P->NbBid == 0);
 
     if (P->NbEq > 0) {
-	remove_all_equalities(&P, &C, &CP, &T, nparam, options->MaxRays);
+	remove_all_equalities(&P, &C, &CP, &T, nparam, options->barvinok->MaxRays);
 	if (CP)
 	    nparam = CP->NbColumns-1;
 	if (!P) {
@@ -2716,10 +2713,10 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	}
     }
 
-    if (options->MaxRays & POL_NO_DUAL)
+    if (options->barvinok->MaxRays & POL_NO_DUAL)
 	P2PSD_MaxRays = 0;
     else
-	P2PSD_MaxRays = options->MaxRays;
+	P2PSD_MaxRays = options->barvinok->MaxRays;
 
     Q = P;
     PP = Polyhedron2Param_SimplifiedDomain(&P, C, P2PSD_MaxRays, &CEq, &CT);
@@ -2751,11 +2748,11 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	next = D->next;
 
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, options->MaxRays);
+					fVD, nd, options->barvinok->MaxRays);
 	if (!rVD)
 	    continue;
 
-	pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
+	pVD = CT ? DomainImage(rVD, CT, options->barvinok->MaxRays) : rVD;
 
 	EDomain *epVD = new EDomain(pVD);
 	indicator ind(ic, D, epVD, options);
@@ -2770,7 +2767,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	vector<max_term*> maxima = lexmin(ind, nparam, loc);
 	if (CP)
 	    for (int j = 0; j < maxima.size(); ++j)
-		maxima[j]->substitute(CP, options);
+		maxima[j]->substitute(CP, options->barvinok);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
 	++nd;
@@ -2810,33 +2807,33 @@ int main(int argc, char **argv)
     int bignum;
     char **iter_names, **param_names;
     int print_solution = 1;
-    struct arguments arguments;
+    struct lexmin_options options;
     static struct argp_child argp_children[] = {
 	{ &barvinok_argp,    	0,	0,  		0 },
 	{ &verify_argp,    	0,	"verification",	1 },
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
-    struct barvinok_options *options;
+    struct barvinok_options *bv_options;
 
-    options = barvinok_options_new_with_defaults();
-    options->lookup_table = 0;
+    bv_options = barvinok_options_new_with_defaults();
+    bv_options->lookup_table = 0;
 
-    arguments.options = options;
-    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+    options.barvinok = bv_options;
+    argp_parse(&argp, argc, argv, 0, 0, &options);
 
     MA = Matrix_Read();
-    C = Constraints2Polyhedron(MA, options->MaxRays);
+    C = Constraints2Polyhedron(MA, bv_options->MaxRays);
     Matrix_Free(MA);
     fscanf(stdin, " %d", &bignum);
     assert(bignum == -1);
     MA = Matrix_Read();
-    A = Constraints2Polyhedron(MA, options->MaxRays);
+    A = Constraints2Polyhedron(MA, bv_options->MaxRays);
     Matrix_Free(MA);
 
-    verify_options_set_range(&arguments.verify, A);
+    verify_options_set_range(&options.verify, A);
 
-    if (arguments.verify.verify)
+    if (options.verify.verify)
 	print_solution = 0;
 
     iter_names = util_generate_names(A->Dimension - C->Dimension, "i");
@@ -2845,14 +2842,14 @@ int main(int argc, char **argv)
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	Polyhedron_Print(stdout, P_VALUE_FMT, C);
     }
-    vector<max_term*> maxima = lexmin(A, C, options);
+    vector<max_term*> maxima = lexmin(A, C, &options);
     if (print_solution)
 	for (int i = 0; i < maxima.size(); ++i)
-	    maxima[i]->print(cout, param_names, options);
+	    maxima[i]->print(cout, param_names, options.barvinok);
 
-    if (arguments.verify.verify)
-	verify_results(A, C, maxima, arguments.verify.m, arguments.verify.M,
-		       arguments.verify.print_all, options->MaxRays);
+    if (options.verify.verify)
+	verify_results(A, C, maxima, options.verify.m, options.verify.M,
+		       options.verify.print_all, bv_options->MaxRays);
 
     for (int i = 0; i < maxima.size(); ++i)
 	delete maxima[i];
@@ -2862,7 +2859,7 @@ int main(int argc, char **argv)
     Polyhedron_Free(A);
     Polyhedron_Free(C);
 
-    free(options);
+    free(bv_options);
 
     return 0;
 }

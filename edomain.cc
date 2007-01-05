@@ -515,7 +515,7 @@ static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRa
     return T;
 }
 
-bool EDomain::not_empty(barvinok_options *options)
+bool EDomain::not_empty(lexmin_options *options)
 {
     Polyhedron *P = D;
     Polyhedron *Porig = P;
@@ -531,11 +531,11 @@ bool EDomain::not_empty(barvinok_options *options)
 	    return true;
 	}
 
-    if (options->lexmin_emptiness_check == BV_LEXMIN_EMPTINESS_CHECK_COUNT) {
+    if (options->emptiness_check == BV_LEXMIN_EMPTINESS_CHECK_COUNT) {
 	bool notzero;
 	Value cb;
 	value_init(cb);
-	barvinok_count_with_options(P, &cb, options);
+	barvinok_count_with_options(P, &cb, options->barvinok);
 	notzero = value_notzero_p(cb);
 	value_clear(cb);
 	return notzero;
@@ -544,7 +544,7 @@ bool EDomain::not_empty(barvinok_options *options)
     Matrix *T = NULL;
     while (P && !emptyQ2(P) && P->NbEq > 0) {
 	Polyhedron *Q = P;
-	Matrix *T2 = remove_equalities(&P, 0, options->MaxRays);
+	Matrix *T2 = remove_equalities(&P, 0, options->barvinok->MaxRays);
 	if (!T)
 	    T = T2;
 	else {
@@ -560,7 +560,7 @@ bool EDomain::not_empty(barvinok_options *options)
 	}
     }
     if (P)
-	sample = Polyhedron_Sample(P, options);
+	sample = Polyhedron_Sample(P, options->barvinok);
     if (sample) {
 	if (T) {
 	    Vector *P_sample = Vector_Alloc(Porig->Dimension + 1);

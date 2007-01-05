@@ -2,6 +2,7 @@
 #include <setoper.h>
 #include <cdd.h>
 #include <barvinok/util.h>
+#include <barvinok/options.h>
 #include "polysign.h"
 #include "initcdd.h"
 

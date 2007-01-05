@@ -1,4 +1,5 @@
 #include <barvinok/util.h>
+#include <barvinok/options.h>
 #include "polysign.h"
 
 static enum order_sign interval_minmax(Polyhedron *I)
