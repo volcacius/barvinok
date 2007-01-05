@@ -507,7 +507,7 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 		    QQ c = (*i)->n.coeff[j];
 		    c *= (*i2)->n.coeff[j2];
 		    if (!pp.add(c, P)) {
-			gen_fun *t = barvinok_series(P, U, options->MaxRays);
+			gen_fun *t = barvinok_series_with_options(P, U, options);
 			sum->add(c, t);
 			delete t;
 		    }
