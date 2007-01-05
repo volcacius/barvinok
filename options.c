@@ -68,6 +68,8 @@ struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
+    { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
+      "solver to use for basis reduction" },
     { "version",	    'V',		    0,			0 },
     { 0 }
 };
@@ -90,6 +92,10 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case BV_OPT_PRIMAL:
 	options->primal = 1;
+	break;
+    case BV_OPT_GBR:
+	if (!strcmp(arg, "cdd"))
+	    options->gbr_lp_solver = BV_GBR_CDD;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;

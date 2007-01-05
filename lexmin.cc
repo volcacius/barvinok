@@ -41,7 +41,6 @@ using std::ostream;
 struct argp_option argp_options[] = {
     { "emptiness-check",    EMPTINESS_CHECK,	"[none|count]",	    0 },
     { "no-reduction",	    NO_REDUCTION,	0,		    0 },
-    { "cdd",		    BASIS_REDUCTION_CDD,    0,		    0 },
     { "polysign",	    POLYSIGN,		"[cdd|cddf]",	    0 },
     { 0 }
 };
@@ -69,9 +68,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case NO_REDUCTION:
 	options->lexmin_reduce = 0;
-	break;
-    case BASIS_REDUCTION_CDD:
-	options->gbr_lp_solver = BV_GBR_CDD;
 	break;
     case POLYSIGN:
 	if (!strcmp(arg, "cddf"))

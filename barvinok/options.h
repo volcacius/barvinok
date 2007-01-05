@@ -64,7 +64,8 @@ struct barvinok_options *barvinok_options_new_with_defaults();
 #define BV_OPT_SPECIALIZATION	256
 #define BV_OPT_PRIMAL		257
 #define BV_OPT_TABLE		258
-#define BV_OPT_LAST		258
+#define BV_OPT_GBR		259
+#define BV_OPT_LAST		259
 
 struct argp;
 extern struct argp barvinok_argp;
