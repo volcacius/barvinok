@@ -3,7 +3,7 @@
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "config.h"
+#include "argp.h"
 
 /* The input of this example program is the same as that of testehrhart
  * in the PolyLib distribution, i.e., a polytope in combined
@@ -12,18 +12,45 @@
  * Both polytopes are in PolyLib notation.
  */
 
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-struct option options[] = {
-    { "convert",   no_argument,  0,  'c' },
-    { "floor",     no_argument,  0,  'f' },
-    { "size",      no_argument,  0,  's' },
-    { "version",   no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+struct argp_option argp_options[] = {
+    { "convert",   'c', 0, 0, "convert fractionals to periodics" },
+    { "floor",     'f', 0, 0, "convert fractionals to floorings" },
+    { "size",      'S' },
+    { 0 }
 };
-#endif
+
+struct arguments {
+    struct barvinok_options *barvinok;
+    int convert;
+    int floor;
+    int size;
+};
+
+error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *options = state->input;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = options->barvinok;
+	options->convert = 0;
+	options->floor = 0;
+	options->size = 0;
+	break;
+    case 'c':
+	options->convert = 1;
+	break;
+    case 'f':
+	options->floor = 1;
+	break;
+    case 'S':
+	options->size = 1;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -31,29 +58,16 @@ int main(int argc, char **argv)
     Matrix *M;
     evalue *EP;
     char **param_name;
-    int c, ind = 0;
-    int convert = 0;
-    int floor = 0;
-    int size = 0;
+    struct arguments options;
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    0,	0,  0 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
-    while ((c = getopt_long(argc, argv, "fcsV", options, &ind)) != -1) {
-	switch (c) {
-	case 'c':
-	    convert = 1;
-	    break;
-	case 'f':
-	    floor = 1;
-	    break;
-	case 's':
-	    size = 1;
-	    break;
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    options.barvinok = bv_options;
+    argp_parse(&argp, argc, argv, 0, 0, &options);
 
     M = Matrix_Read();
     A = Constraints2Polyhedron(M, bv_options->MaxRays);
@@ -66,16 +80,16 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, C->Dimension);
     EP = barvinok_enumerate_with_options(A, C, bv_options);
     print_evalue(stdout, EP, param_name);
-    if (size)
+    if (options.size)
 	printf("\nSize: %d\n", evalue_size(EP));
-    if (floor) {
+    if (options.floor) {
 	fprintf(stderr, "WARNING: floor conversion not supported\n");
 	evalue_frac2floor2(EP, 0);
 	print_evalue(stdout, EP, param_name);
-    } else if (convert) {
+    } else if (options.convert) {
 	evalue_mod2table(EP, C->Dimension);
 	print_evalue(stdout, EP, param_name);
-	if (size)
+	if (options.size)
 	    printf("\nSize: %d\n", evalue_size(EP));
     }
     free_evalue_refs(EP);
