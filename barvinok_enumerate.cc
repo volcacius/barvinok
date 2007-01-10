@@ -3,9 +3,11 @@
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
+#include "fdstream.h"
 #include "argp.h"
 #include "verify.h"
 #include "verif_ehrhart.h"
+#include "remove_equalities.h"
 
 /* The input of this example program is the same as that of testehrhart
  * in the PolyLib distribution, i.e., a polytope in combined
@@ -74,8 +76,101 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
-			int nparam, int pos, Value *z, int print_all)
+struct skewed_gen_fun {
+    gen_fun *gf;
+    /* maps original space to space in which gf is defined */
+    Matrix  *T;
+    /* equalities in the original space that need to be satisfied for
+     * gf to be valid
+     */
+    Matrix  *eq;
+    /* divisibilities in the original space that need to be satisfied for
+     * gf to be valid
+     */
+    Matrix  *div;
+
+    skewed_gen_fun(gen_fun *gf, Matrix *T, Matrix *eq, Matrix *div) :
+		    gf(gf), T(T), eq(eq), div(div) {}
+    ~skewed_gen_fun() {
+	if (T)
+	    Matrix_Free(T);
+	if (eq)
+	    Matrix_Free(eq);
+	if (div)
+	    Matrix_Free(div);
+	delete gf;
+    }
+
+    void print(FILE *out, unsigned int nparam, char **param_name) const;
+    operator evalue *() const {
+	assert(T == NULL && eq == NULL); /* other cases not supported for now */
+	return *gf;
+    }
+    void coefficient(Value* params, Value* c, barvinok_options *options) const;
+};
+
+void skewed_gen_fun::print(FILE *out, unsigned int nparam,
+			    char **param_name) const
+{
+    fdostream os(dup(fileno(out)));
+    if (T) {
+	fprintf(out, "T:\n");
+	Matrix_Print(out, P_VALUE_FMT, T);
+    }
+    if (eq) {
+	fprintf(out, "eq:\n");
+	Matrix_Print(out, P_VALUE_FMT, eq);
+    }
+    if (div) {
+	fprintf(out, "div:\n");
+	Matrix_Print(out, P_VALUE_FMT, div);
+    }
+    gf->print(os, nparam, param_name);
+}
+
+void skewed_gen_fun::coefficient(Value* params, Value* c,
+				 barvinok_options *options) const
+{
+    if (eq) {
+	for (int i = 0; i < eq->NbRows; ++i) {
+	    Inner_Product(eq->p[i]+1, params, eq->NbColumns-2, eq->p[i]);
+	    if (value_notzero_p(eq->p[i][0])) {
+		value_set_si(*c, 0);
+		return;
+	    }
+	}
+    }
+    if (div) {
+	Value tmp;
+	value_init(tmp);
+	for (int i = 0; i < div->NbRows; ++i) {
+	    Inner_Product(div->p[i], params, div->NbColumns-1, &tmp);
+	    if (!mpz_divisible_p(tmp, div->p[i][div->NbColumns-1])) {
+		value_set_si(*c, 0);
+		return;
+	    }
+	}
+	value_clear(tmp);
+    }
+
+    ZZ coeff;
+    if (!T)
+	coeff = gf->coefficient(params, options);
+    else {
+	Vector *p2 = Vector_Alloc(T->NbRows);
+	Matrix_Vector_Product(T, params, p2->p);
+	if (value_notone_p(p2->p[T->NbRows-1]))
+	    Vector_AntiScale(p2->p, p2->p, p2->p[T->NbRows-1], T->NbRows);
+	coeff = gf->coefficient(p2->p, options);
+	Vector_Free(p2);
+    }
+
+    zz2value(coeff, *c);
+}
+
+static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
+			int nparam, int pos, Value *z, int print_all,
+			barvinok_options *options)
 {
     int k;
     Value c, tmp;
@@ -88,7 +183,7 @@ static int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 
     if (pos == nparam) {
 	/* Computes the coefficient */
-	gf->coefficient(&z[S->Dimension-nparam+1], &c);
+	gf->coefficient(&z[S->Dimension-nparam+1], &c, options);
 
 	/* if c=0 we may be out of context. */
 	/* scanning is useless in this case*/
@@ -147,7 +242,8 @@ static int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
 		}
 	    }
 	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	    if (!check_series(S, CS->next, gf, nparam, pos+1, z, print_all)) {
+	    if (!check_series(S, CS->next, gf, nparam, pos+1, z, print_all,
+			      options)) {
 		value_clear(c); value_clear(tmp);
 		value_clear(LB);
 		value_clear(UB);
@@ -164,7 +260,7 @@ static int check_series(Polyhedron *S, Polyhedron *CS, gen_fun *gf,
     return 1;
 }
 
-static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, gen_fun *gf,
+static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun *gf,
 		   arguments *options)
 {
     Polyhedron *CC, *PP, *CS, *S, *U;
@@ -238,7 +334,7 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, gen_fun *gf,
 		result = -1;
 	} else {
 	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p,
-			      options->verify.print_all))
+			      options->verify.print_all, options->barvinok))
 		result = -1;
 	}
 	Domain_Free(S);
@@ -257,13 +353,131 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, gen_fun *gf,
     return result;
 }
 
+static void unimodular_complete(Matrix *M, int row)
+{
+    Matrix *H, *Q, *U;
+    left_hermite(M, &H, &Q, &U);
+    Matrix_Free(H);
+    Matrix_Free(U);
+    for (int r = row; r < M->NbRows; ++r)
+	Vector_Copy(Q->p[r], M->p[r], M->NbColumns);
+    Matrix_Free(Q);
+}
+
+static skewed_gen_fun *series(Polyhedron *P, Polyhedron* C,
+				barvinok_options *options)
+{
+    Polyhedron *C1, *C2;
+    gen_fun *gf;
+    Matrix *inv = NULL;
+    Matrix *eq = NULL;
+    Matrix *div = NULL;
+    Polyhedron *PT = P;
+
+    /* Compute true context */
+    C1 = Polyhedron_Project(P, C->Dimension);
+    C2 = DomainIntersection(C, C1, options->MaxRays);
+    Polyhedron_Free(C1);
+
+    POL_ENSURE_VERTICES(C2);
+    if (C2->NbBid != 0) {
+	Polyhedron *T;
+	Matrix *M, *Minv, *M2;
+	Matrix *CP;
+	if (C2->NbEq || P->NbEq) {
+	    /* We remove all equalities to be sure all lines are unit vectors */
+	    Polyhedron *CT = C2;
+	    remove_all_equalities(&PT, &CT, &CP, NULL, C2->Dimension,
+				  options->MaxRays);
+	    if (CT != C2) {
+		Polyhedron_Free(C2);
+		C2 = CT;
+	    }
+	    if (CP) {
+		inv = left_inverse(CP, &eq);
+		Matrix_Free(CP);
+
+		int d = 0;
+		Value tmp;
+		value_init(tmp);
+		div = Matrix_Alloc(inv->NbRows-1, inv->NbColumns+1);
+		for (int i = 0; i < inv->NbRows-1; ++i) {
+		    Vector_Gcd(inv->p[i], inv->NbColumns, &tmp);
+		    if (mpz_divisible_p(tmp,
+					inv->p[inv->NbRows-1][inv->NbColumns-1]))
+			continue;
+		    Vector_Copy(inv->p[i], div->p[d], inv->NbColumns);
+		    value_assign(div->p[d][inv->NbColumns],
+				 inv->p[inv->NbRows-1][inv->NbColumns-1]);
+		    ++d;
+		}
+		value_clear(tmp);
+
+		if (!d) {
+		    Matrix_Free(div);
+		    div = NULL;
+		} else
+		    div->NbRows = d;
+	    }
+	}
+	POL_ENSURE_VERTICES(C2);
+
+	/* Since we have "compressed" the parameters (in case there were
+	 * any equalities), the result is independent of the coordinates in the
+	 * coordinate subspace spanned by the lines.  We can therefore assume
+	 * these coordinates are zero and compute the inverse image of the map
+	 * from a lower dimensional space that adds zeros in the appropriate
+	 * places.
+	 */
+	M = Matrix_Alloc(C2->Dimension+1, C2->Dimension-C2->NbBid+1);
+	int k = 0;
+	for (int i = 0; i < C2->NbBid; ++i) {
+	    int j = First_Non_Zero(C2->Ray[i]+1, C2->Dimension);
+	    assert(First_Non_Zero(C2->Ray[i]+1+j+1, C2->Dimension-j-1) == -1);
+	    for ( ; k < j; k++)
+		value_set_si(M->p[k+i][k], 1);
+	}
+	for ( ; k < C2->Dimension-C2->NbBid+1; k++)
+	    value_set_si(M->p[k+C2->NbBid][k], 1);
+	Minv = Transpose(M);
+	M2 = align_matrix(M, PT->Dimension + 1);
+
+	T = PT;
+	PT = Polyhedron_Preimage(PT, M2, options->MaxRays);
+	if (T != P)
+	    Polyhedron_Free(T);
+
+	T = C2;
+	C2 = Polyhedron_Preimage(C2, M, options->MaxRays);
+	if (T != C)
+	    Polyhedron_Free(T);
+
+	Matrix_Free(M);
+	Matrix_Free(M2);
+
+	if (inv) {
+	    Matrix *T = inv;
+	    inv = Matrix_Alloc(Minv->NbRows, T->NbColumns);
+	    Matrix_Product(Minv, T, inv);
+	    Matrix_Free(T);
+	    Matrix_Free(Minv);
+	} else
+	    inv = Minv;
+    }
+    gf = barvinok_series_with_options(PT, C2, options);
+    Polyhedron_Free(C2);
+    if (PT != P)
+	Polyhedron_Free(PT);
+    return new skewed_gen_fun(gf, inv, eq, div);
+}
+
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C;
     Matrix *M;
     evalue *EP = NULL;
     Enumeration *en = NULL;
-    gen_fun *gf = NULL;
+    skewed_gen_fun *gf = NULL;
     char **param_name;
     int print_solution = 1;
     int result = 0;
@@ -299,9 +513,9 @@ int main(int argc, char **argv)
     }
 
     if (options.series) {
-	gf = barvinok_series_with_options(A, C, bv_options);
+	gf = series(A, C, bv_options);
 	if (print_solution) {
-	    gf->print(std::cout, C->Dimension, param_name);
+	    gf->print(stdout, C->Dimension, param_name);
 	    puts("");
 	}
 	if (options.function) {
