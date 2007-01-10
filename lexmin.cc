@@ -2155,55 +2155,6 @@ void max_term::print(ostream& os, char **p, barvinok_options *options) const
     os << " }" << endl;
 }
 
-Matrix *left_inverse(Matrix *M, Matrix **Eq)
-{
-    int i, ok;
-    Matrix *L, *H, *Q, *U, *ratH, *invH, *Ut, *inv;
-    Vector *t;
-
-    if (Eq)
-	*Eq = NULL;
-    L = Matrix_Alloc(M->NbRows-1, M->NbColumns-1);
-    for (i = 0; i < L->NbRows; ++i)
-	Vector_Copy(M->p[i], L->p[i], L->NbColumns);
-    right_hermite(L, &H, &U, &Q);
-    Matrix_Free(L);
-    Matrix_Free(Q);
-    t = Vector_Alloc(U->NbColumns);
-    for (i = 0; i < U->NbColumns; ++i)
-	value_oppose(t->p[i], M->p[i][M->NbColumns-1]);
-    if (Eq) {
-	*Eq = Matrix_Alloc(H->NbRows - H->NbColumns, 2 + U->NbColumns);
-	for (i = 0; i < H->NbRows - H->NbColumns; ++i) {
-	    Vector_Copy(U->p[H->NbColumns+i], (*Eq)->p[i]+1, U->NbColumns);
-	    Inner_Product(U->p[H->NbColumns+i], t->p, U->NbColumns,
-			  (*Eq)->p[i]+1+U->NbColumns);
-	}
-    }
-    ratH = Matrix_Alloc(H->NbColumns+1, H->NbColumns+1);
-    invH = Matrix_Alloc(H->NbColumns+1, H->NbColumns+1);
-    for (i = 0; i < H->NbColumns; ++i)
-	Vector_Copy(H->p[i], ratH->p[i], H->NbColumns);
-    value_set_si(ratH->p[ratH->NbRows-1][ratH->NbColumns-1], 1);
-    Matrix_Free(H);
-    ok = Matrix_Inverse(ratH, invH);
-    assert(ok);
-    Matrix_Free(ratH);
-    Ut = Matrix_Alloc(invH->NbRows, U->NbColumns+1);
-    for (i = 0; i < Ut->NbRows-1; ++i) {
-	Vector_Copy(U->p[i], Ut->p[i], U->NbColumns);
-	Inner_Product(U->p[i], t->p, U->NbColumns, &Ut->p[i][Ut->NbColumns-1]);
-    }
-    Matrix_Free(U);
-    Vector_Free(t);
-    value_set_si(Ut->p[Ut->NbRows-1][Ut->NbColumns-1], 1);
-    inv = Matrix_Alloc(invH->NbRows, Ut->NbColumns);
-    Matrix_Product(invH, Ut, inv);
-    Matrix_Free(Ut);
-    Matrix_Free(invH);
-    return inv;
-}
-
 /* T maps the compressed parameters to the original parameters,
  * while this max_term is based on the compressed parameters
  * and we want get the original parameters back.
