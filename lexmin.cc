@@ -23,6 +23,8 @@
 #include "verify.h"
 #include "lexmin.h"
 
+#undef CS   /* for Solaris 10 */
+
 #ifdef NTL_STD_CXX
 using namespace NTL;
 #endif

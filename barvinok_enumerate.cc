@@ -9,6 +9,8 @@
 #include "verif_ehrhart.h"
 #include "remove_equalities.h"
 
+#undef CS   /* for Solaris 10 */
+
 /* The input of this example program is the same as that of testehrhart
  * in the PolyLib distribution, i.e., a polytope in combined
  * data and parameter space, a context polytope in parameter space

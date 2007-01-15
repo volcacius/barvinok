@@ -20,6 +20,8 @@
 #include <barvinok/barvinok.h>
 #include "verif_ehrhart.h"
 
+#undef CS   /* for Solaris 10 */
+
 #include "config.h"
 #ifndef HAVE_COUNT_POINTS4
 #define count_points(a,b,c,d) {				\
