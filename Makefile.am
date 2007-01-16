@@ -7,9 +7,9 @@ AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib
 AM_LDFLAGS = -Llib
 
 lib_LTLIBRARIES = libbarvinok.la
-noinst_PROGRAMS = test barvinok_count randomtest barvinok_enumerate \
-		  barvinok_ehrhart \
-		  barvinok_enumerate_e \
+bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
+		  barvinok_ehrhart
+noinst_PROGRAMS = test randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union \
 		  @bv_extra_programs@
