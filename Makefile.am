@@ -185,10 +185,12 @@ endif
 
 check-series:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
-	    if test -f $$i; then \
-		echo $$i; \
-		./barvinok_enumerate --verify --series < $$i; \
-	    fi \
+	    for options in '' '--primal'; do \
+		if test -f $$i; then \
+		    echo $$i $$options; \
+		    ./barvinok_enumerate --verify --series $$options < $$i; \
+		fi \
+	    done \
 	done
 check:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
