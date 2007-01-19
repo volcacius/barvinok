@@ -15,8 +15,7 @@ using namespace NTL;
 
 struct short_rat {
     struct __short_rat_n {
-	/* rows: terms in numerator */
-	/* coeff has two columns: the numerator and the denominator */
+	/* rows of power/columns of coeff: terms in numerator */
 	vec_QQ	coeff;
 	mat_ZZ	power;
     } n;
