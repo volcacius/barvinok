@@ -17,6 +17,7 @@ struct QQ {
 	this->n = n;
 	this->d = d;
     }
+
     QQ& operator += (const QQ& a) {
 	ZZ g = GCD(d, a.d);
 	ZZ num = a.n * (d / g) + (a.d / g) * n;
@@ -32,9 +33,16 @@ struct QQ {
 	d *= a.d;
 	return *this;
     }
+
+    QQ& operator *= (const ZZ& a) {
+	n *= a;
+	return *this;
+    }
 };
 
 NTL_vector_decl(QQ,vec_QQ);
+
+vec_QQ& operator *= (vec_QQ& a, const ZZ& b);
 
 std::ostream& operator<< (std::ostream& os, const QQ& q);
 std::istream& operator>> (std::istream& os, QQ& q);

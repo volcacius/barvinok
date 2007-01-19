@@ -3,6 +3,13 @@
 
 NTL_vector_impl(QQ,vec_QQ);
 
+vec_QQ& operator *= (vec_QQ& a, const ZZ& b)
+{
+    for (int i = 0; i < a.length(); ++i)
+	a[i] *= b;
+    return a;
+}
+
 std::ostream& operator<< (std::ostream& os, const QQ& q)
 {
     os << q.n << "/" << q.d;
