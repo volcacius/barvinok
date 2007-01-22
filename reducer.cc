@@ -102,6 +102,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 {
     assert(c.length() == num.NumRows());
     unsigned len = den_f.NumRows();  // number of factors in den
+    vec_QQ c2 = c;
 
     if (num.NumCols() == lower) {
 	base(c, num, den_f);
@@ -122,6 +123,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 
     ZZ sign(INIT_VAL, 1);
     normalize(sign, num_s, num_p, den_s, den_p, den_r);
+    c2 *= sign;
 
     int only_param = 0;	    // k-r-s from text
     int no_param = 0;	    // r from text
@@ -132,8 +134,6 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 	    ++only_param;
     }
     if (no_param == 0) {
-	vec_QQ c2 = c;
-	c2 *= sign;
 	reduce(c2, num_p, den_r);
     } else {
 	int k, l;
@@ -149,11 +149,35 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 		break;
 
 	dpoly *n[num_s.length()];
-	/* We can further optimize the computation by combining the
-	 * n's for rows with the same num_p
-	 */
-	for (int i = 0; i < num_s.length(); ++i)
+	for (int i = 0; i < num_s.length(); ++i) {
 	    n[i] = new dpoly(no_param, num_s[i]);
+	    /* Search for other numerator (j) with same num_p.
+	     * If found, replace a[j]/b[j] * n[j] and a[i]/b[i] * n[i]
+	     * by 1/(b[j]*b[i]/g) * (a[j]*b[i]/g * n[j] + a[i]*b[j]/g * n[i])
+	     * where g = gcd(b[i], b[j].
+	     */
+	    for (int j = 0; j < i; ++j) {
+		if (num_p[i] != num_p[j])
+		    continue;
+		ZZ g = GCD(c2[i].d, c2[j].d);
+		*n[j] *= c2[j].n * c2[i].d/g;
+		*n[i] *= c2[i].n * c2[j].d/g;
+		*n[j] += *n[i];
+		c2[j].n = 1;
+		c2[j].d *= c2[i].d/g;
+		delete n[i];
+		if (i < num_s.length()-1) {
+		    num_s[i] = num_s[num_s.length()-1];
+		    num_p[i] = num_p[num_s.length()-1];
+		    c2[i] = c2[num_s.length()-1];
+		}
+		num_s.SetLength(num_s.length()-1);
+		c2.SetLength(c2.length()-1);
+		num_p.SetDims(num_p.NumRows()-1, num_p.NumCols());
+		--i;
+		break;
+	    }
+	}
 	dpoly D(no_param, den_s[k], 1);
 	for ( ; ++k < len; )
 	    if (den_p[k] == 0) {
@@ -170,8 +194,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 
 		value2zz(mpq_numref(tcount), q[i].n);
 		value2zz(mpq_denref(tcount), q[i].d);
-		q[i] *= c[i];
-		q[i] *= sign;
+		q[i] *= c2[i];
 	    }
 	    for (int i = q.length()-1; i >= 0; --i) {
 		if (q[i].n == 0) {
@@ -224,7 +247,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 		dpoly_r *rc = r[i]->div(D);
 		num_p_i[0] = num_p[i];
 
-		factor[0].d = rc->denom * c[i].d;
+		factor[0].d = rc->denom * c2[i].d;
 
 		dpoly_r_term_list& final = rc->c[rc->len-1];
 		int rows;
@@ -243,7 +266,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 			    pden[rows+l] = den_r[k];
 			rows += n;
 		    }
-		    factor[0].n = (*j)->coeff *= c[i].n * sign;
+		    factor[0].n = (*j)->coeff *= c2[i].n;
 		    reduce(factor, num_p_i, pden);
 		}
 
