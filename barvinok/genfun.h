@@ -77,4 +77,6 @@ struct gen_fun {
     }
 };
 
+std::ostream & operator<< (std::ostream & os, const gen_fun& gf);
+
 #endif

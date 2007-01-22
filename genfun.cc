@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <assert.h>
 #include "config.h"
@@ -707,6 +708,41 @@ void gen_fun::print(std::ostream& os, unsigned int nparam, char **param_name) co
 	    os << " + ";
 	(*i)->print(os, nparam, param_name);
     }
+}
+
+std::ostream & operator<< (std::ostream & os, const short_rat& r)
+{
+    os << r.n.coeff << endl;
+    os << r.n.power << endl;
+    os << r.d.power << endl;
+    return os;
+}
+
+std::ostream & operator<< (std::ostream & os, const Polyhedron& P)
+{
+    char *str;
+    void (*gmp_free)(void *, size_t);
+    mp_get_memory_functions(NULL, NULL, &gmp_free);
+    os << P.NbConstraints << " " << P.Dimension+2 << endl;
+    for (int i = 0; i < P.NbConstraints; ++i) {
+	for (int j = 0; j < P.Dimension+2; ++j) {
+	    str = mpz_get_str(0, 10, P.Constraint[i][j]);
+	    os << std::setw(4) << str << " ";
+	    (*gmp_free)(str, strlen(str)+1);
+	}
+	os << endl;
+    }
+    return os;
+}
+
+std::ostream & operator<< (std::ostream & os, const gen_fun& gf)
+{
+    os << *gf.context << endl;
+    os << endl;
+    os << gf.term.size() << endl;
+    for (short_rat_list::iterator i = gf.term.begin(); i != gf.term.end(); ++i)
+	os << **i;
+    return os;
 }
 
 gen_fun::operator evalue *() const
