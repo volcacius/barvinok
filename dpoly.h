@@ -17,6 +17,8 @@ class dpoly {
 public:
     vec_ZZ coeff;
     dpoly(int d, ZZ& degree, int offset = 0);
+    void operator += (const dpoly& t);
+    void operator *= (const ZZ& f);
     void operator *= (dpoly& f);
     void div(dpoly& d, mpq_t count, ZZ& sign);
     void div(dpoly& d, mpq_t *count, const mpq_t& factor);

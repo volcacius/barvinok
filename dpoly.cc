@@ -24,6 +24,19 @@ dpoly::dpoly(int d, ZZ& degree, int offset)
     }
 }
 
+void dpoly::operator += (const dpoly& t)
+{
+    assert(coeff.length() == t.coeff.length());
+    for (int i = 0; i < coeff.length(); ++i)
+	coeff[i] += t.coeff[i];
+}
+
+void dpoly::operator *= (const ZZ& f)
+{
+    for (int i = 0; i < coeff.length(); ++i)
+	coeff[i] *= f;
+}
+
 void dpoly::operator *= (dpoly& f)
 {
     assert(coeff.length() == f.coeff.length());
