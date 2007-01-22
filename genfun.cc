@@ -38,6 +38,13 @@ static void lex_order_terms(struct short_rat* rat)
     }
 }
 
+short_rat::short_rat(const short_rat& r)
+{
+    n.coeff = r.n.coeff;
+    n.power = r.n.power;
+    d.power = r.d.power;
+}
+
 short_rat::short_rat(Value c)
 {
     n.coeff.SetLength(1);
