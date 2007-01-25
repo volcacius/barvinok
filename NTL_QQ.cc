@@ -18,7 +18,9 @@ std::ostream& operator<< (std::ostream& os, const QQ& q)
 
 std::istream& operator>> (std::istream& is, QQ& q)
 {
-    assert(0);
+    char slash;
+    is >> q.n >> slash >> q.d;
+    assert(slash == '/');
     return is;
 }
 
