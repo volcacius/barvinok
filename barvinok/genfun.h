@@ -29,6 +29,7 @@ struct short_rat {
     short_rat(const short_rat& r);
     short_rat(Value c);
     short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
+    short_rat(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den);
     void normalize();
     void print(std::ostream& os, unsigned int nparam, char **param_name) const;
 };
@@ -53,6 +54,7 @@ struct gen_fun {
     void shift(const vec_ZZ& offset);
     void divide(const vec_ZZ& power);
     void print(std::ostream& os, unsigned int nparam, char **param_name) const;
+    static gen_fun *read(std::istream& is, barvinok_options *options);
     operator evalue *() const;
     ZZ coefficient(Value* params, barvinok_options *options) const;
     void coefficient(Value* params, Value* c) const;

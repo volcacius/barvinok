@@ -67,6 +67,14 @@ short_rat::short_rat(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
     normalize();
 }
 
+short_rat::short_rat(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den)
+{
+    n.coeff = c;
+    n.power = num;
+    d.power = den;
+    normalize();
+}
+
 void short_rat::normalize()
 {
     /* Make all powers in denominator reverse-lexico-positive */
@@ -746,6 +754,44 @@ std::ostream & operator<< (std::ostream & os, const gen_fun& gf)
     for (short_rat_list::iterator i = gf.term.begin(); i != gf.term.end(); ++i)
 	os << **i;
     return os;
+}
+
+static Matrix *Matrix_Read(std::istream& is)
+{
+    Matrix *M;
+    int r, c;
+    ZZ tmp;
+
+    is >> r >> c;
+    M = Matrix_Alloc(r, c);
+    for (int i = 0; i < r; ++i)
+	for (int j = 0; j < c; ++j) {
+	    is >> tmp;
+	    zz2value(tmp, M->p[i][j]);
+	}
+    return M;
+}
+
+gen_fun *gen_fun::read(std::istream& is, barvinok_options *options)
+{
+    Matrix *M = Matrix_Read(is);
+    Polyhedron *C = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    gen_fun *gf = new gen_fun(C);
+
+    int n;
+    is >> n;
+
+    vec_QQ c;
+    mat_ZZ num;
+    mat_ZZ den;
+    for (int i = 0; i < n; ++i) {
+	is >> c >> num >> den;
+	gf->add(new short_rat(c, num, den));
+    }
+
+    return gf;
 }
 
 gen_fun::operator evalue *() const
