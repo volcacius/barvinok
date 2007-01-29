@@ -4,6 +4,8 @@
 #include "lattice_point.h"
 
 using std::vector;
+using std::cerr;
+using std::endl;
 
 struct OrthogonalException Orthogonal;
 
@@ -97,6 +99,72 @@ void reducer::base(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
     for (int i = 0; i < num.NumRows(); ++i)
 	base(c[i], num[i], den_f);
 }
+
+struct dpoly_r_scanner {
+    const dpoly_r *rc;
+    const dpoly * const *num;
+    int n;
+    int dim;
+    dpoly_r_term_list::iterator *iter;
+    vector<int> powers;
+    vec_ZZ coeff;
+
+    dpoly_r_scanner(const dpoly * const *num, int n, const dpoly_r *rc, int dim)
+		    : num(num), rc(rc), n(n), dim(dim), powers(dim, 0) {
+	coeff.SetLength(n);
+	iter = new dpoly_r_term_list::iterator[rc->len];
+	for (int i = 0; i < rc->len; ++i) {
+	    int k;
+	    for (k = 0; k < n; ++k)
+		if (num[k]->coeff[rc->len-1-i] != 0)
+		    break;
+	    if (k < n)
+		iter[i] = rc->c[i].begin();
+	    else
+		iter[i] = rc->c[i].end();
+	}
+    }
+    bool next() {
+	int pos[rc->len];
+	int len = 0;
+
+	for (int i = 0; i < rc->len; ++i) {
+	    if (iter[i] == rc->c[i].end())
+		continue;
+	    if (!len)
+		pos[len++] = i;
+	    else {
+		if ((*iter[i])->powers < (*iter[pos[0]])->powers) {
+		    pos[0] = i;
+		    len = 1;
+		} else if ((*iter[i])->powers == (*iter[pos[0]])->powers)
+		    pos[len++] = i;
+	    }
+	}
+
+	if (!len)
+	    return false;
+
+	powers = (*iter[pos[0]])->powers;
+	for (int k = 0; k < n; ++k)
+	    mul(coeff[k], (*iter[pos[0]])->coeff, num[k]->coeff[rc->len-1-pos[0]]);
+	++iter[pos[0]];
+	for (int i = 1; i < len; ++i) {
+	    for (int k = 0; k < n; ++k) {
+		mul(tmp, (*iter[pos[i]])->coeff, num[k]->coeff[rc->len-1-pos[i]]);
+		add(coeff[k], coeff[k], tmp);
+	    }
+	    ++iter[pos[i]];
+	}
+
+	return true;
+    }
+    ~dpoly_r_scanner() {
+	delete [] iter;
+    }
+private:
+    ZZ tmp;
+};
 
 void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 {
@@ -208,9 +276,9 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 	    if (q.length() != 0)
 		reduce(q, num_p, pden);
 	} else {
-	    dpoly_r *r[num_s.length()];
-	    for (int i = 0; i < num_s.length(); ++i)
-		r[i] = NULL;
+	    ZZ zz_zero(INIT_VAL, 0);
+	    dpoly one(no_param, zz_zero);
+	    dpoly_r *r = NULL;
 
 	    for (k = 0; k < len; ++k) {
 		if (den_s[k] == 0 || den_p[k] == 0)
@@ -223,58 +291,53 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 		    if (den_r[l] == den_r[k])
 			break;
 
-		if (!r[0]) {
-		    for (int i = 0; i < num_s.length(); ++i)
-			r[i] = new dpoly_r(*n[i], pd, l, len);
-		} else {
-		    for (int i = 0; i < num_s.length(); ++i) {
-			dpoly_r *nr = new dpoly_r(r[i], pd, l, len);
-			delete r[i];
-			r[i] = nr;
-		    }
+		if (!r)
+		    r = new dpoly_r(one, pd, l, len);
+		else {
+		    dpoly_r *nr = new dpoly_r(r, pd, l, len);
+		    delete r;
+		    r = nr;
 		}
 	    }
 
-	    /* We need to further optimize this part to exploit the common
-	     * denominator.
-	     */
 	    vec_QQ factor;
-	    factor.SetLength(1);
-	    mat_ZZ num_p_i;
-	    num_p_i.SetDims(1, num_p.NumCols());
+	    factor.SetLength(c2.length());
 	    int common = pden.NumRows();
+	    dpoly_r *rc = r->div(D);
 	    for (int i = 0; i < num_s.length(); ++i) {
-		dpoly_r *rc = r[i]->div(D);
-		num_p_i[0] = num_p[i];
-
-		factor[0].d = rc->denom * c2[i].d;
-
-		dpoly_r_term_list& final = rc->c[rc->len-1];
-		int rows;
-		dpoly_r_term_list::iterator j;
-		for (j = final.begin(); j != final.end(); ++j) {
-		    if ((*j)->coeff == 0)
-			continue;
-		    rows = common;
-		    pden.SetDims(rows, pden.NumCols());
-		    for (int k = 0; k < rc->dim; ++k) {
-			int n = (*j)->powers[k];
-			if (n == 0)
-			    continue;
-			pden.SetDims(rows+n, pden.NumCols());
-			for (int l = 0; l < n; ++l)
-			    pden[rows+l] = den_r[k];
-			rows += n;
-		    }
-		    factor[0].n = (*j)->coeff *= c2[i].n;
-		    reduce(factor, num_p_i, pden);
-		}
-
-		delete rc;
+		factor[i].d = c2[i].d;
+		factor[i].d *= rc->denom;
 	    }
 
-	    for (int i = 0; i < num_s.length(); ++i)
-		delete r[i];
+	    dpoly_r_scanner scanner(n, num_s.length(), rc, len);
+	    int rows;
+	    while (scanner.next()) {
+		int i;
+		for (i = 0; i < num_s.length(); ++i)
+		    if (scanner.coeff[i] != 0)
+			break;
+		if (i == num_s.length())
+		    continue;
+		rows = common;
+		pden.SetDims(rows, pden.NumCols());
+		for (int k = 0; k < rc->dim; ++k) {
+		    int n = scanner.powers[k];
+		    if (n == 0)
+			continue;
+		    pden.SetDims(rows+n, pden.NumCols());
+		    for (int l = 0; l < n; ++l)
+			pden[rows+l] = den_r[k];
+		    rows += n;
+		}
+		for (int i = 0; i < num_s.length(); ++i) {
+		    factor[i].n = c2[i].n;
+		    factor[i].n *= scanner.coeff[i];
+		}
+		reduce(factor, num_p, pden);
+	    }
+
+	    delete rc;
+	    delete r;
 	}
 	for (int i = 0; i < num_s.length(); ++i)
 	    delete n[i];
