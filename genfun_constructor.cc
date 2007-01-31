@@ -60,6 +60,11 @@ void partial_reducer::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     gf->add(c, num, den_f);
 }
 
+void partial_reducer::base(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
+{
+    gf->add(new short_rat(c, num, den_f));
+}
+
 void partial_bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 {
     mat_ZZ den;

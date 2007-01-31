@@ -60,6 +60,7 @@ struct partial_reducer : public reducer, public gf_base {
     ~partial_reducer() {
     }
     virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual void base(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);
 
     virtual void split(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
 		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
