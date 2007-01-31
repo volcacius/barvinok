@@ -19,12 +19,15 @@ struct QQ {
     }
 
     QQ& operator += (const QQ& a) {
-	ZZ g = GCD(d, a.d);
-	ZZ num = a.n * (d / g) + (a.d / g) * n;
-	ZZ den = a.d / g * d;
-	g = GCD(num, den);
-	n = num/g;
-	d = den/g;
+	/* This is not thread-safe, but neither is NTL */
+	static ZZ tmp;
+	n *= a.d;
+	mul(tmp, d, a.n);
+	n += tmp;
+	d *= a.d;
+	GCD(tmp, n, d);
+	n /= tmp;
+	d /= tmp;
 	return *this;
     }
 
