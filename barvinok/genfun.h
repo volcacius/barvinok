@@ -23,7 +23,7 @@ struct short_rat {
 	/* rows: factors in denominator */
 	mat_ZZ	power;
     } d;
-    void add(short_rat *rat);
+    void add(const short_rat *rat);
     QQ coefficient(Value* params, barvinok_options *options) const;
     bool reduced();
     short_rat(Value c);

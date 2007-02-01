@@ -81,7 +81,7 @@ void short_rat::normalize()
     lex_order_rows(d.power);
 }
 
-void short_rat::add(short_rat *r)
+void short_rat::add(const short_rat *r)
 {
     for (int i = 0; i < r->n.power.NumRows(); ++i) {
 	int len = n.coeff.length();
