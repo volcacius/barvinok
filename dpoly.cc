@@ -163,20 +163,21 @@ dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
     c = new dpoly_r_term_list[len];
     this->dim = dim;
     int powers[dim];
+    ZZ coeff;
 
     for (int i = 0; i < len; ++i) {
-	ZZ coeff = num.coeff[i];
 	vector<int> powers(dim, 0);
 	powers[pos] = 1;
 
-	add_term(i, powers, coeff);
+	add_term(i, powers, num.coeff[i]);
 
 	for (int j = 1; j <= i; ++j) {
 	    dpoly_r_term_list::iterator k;
 	    for (k = c[i-j].begin(); k != c[i-j].end(); ++k) {
 		powers = (*k)->powers;
 		powers[pos]++;
-		coeff = -den.coeff[j-1] * (*k)->coeff;
+		negate(coeff, den.coeff[j-1]);
+		coeff *= (*k)->coeff;
 		add_term(i, powers, coeff);
 	    }
 	}
@@ -205,7 +206,8 @@ dpoly_r::dpoly_r(const dpoly_r* num, dpoly& den, int pos, int dim)
 	    for (k = c[i-j].begin(); k != c[i-j].end(); ++k) {
 		vector<int> powers = (*k)->powers;
 		powers[pos]++;
-		coeff = -den.coeff[j-1] * (*k)->coeff;
+		negate(coeff, den.coeff[j-1]);
+		coeff *= (*k)->coeff;
 		add_term(i, powers, coeff);
 	    }
 	}
