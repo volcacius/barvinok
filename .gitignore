@@ -1,0 +1,16 @@
+Makefile.in
+aclocal.m4
+autom4te.cache
+config.guess
+config.sub
+configure
+compile
+depcomp
+install-sh
+ltmain.sh
+missing
+tags
+*.bak
+*~
+
+config.h.in
