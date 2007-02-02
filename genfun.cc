@@ -212,8 +212,11 @@ void gen_fun::add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den)
     if (c.n == 0)
 	return;
 
-    short_rat * r = new short_rat(c, num, den);
+    add(new short_rat(c, num, den));
+}
 
+void gen_fun::add(short_rat *r)
+{
     short_rat_list::iterator i = term.find(r);
     while (i != term.end()) {
 	(*i)->add(r);

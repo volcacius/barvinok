@@ -44,6 +44,7 @@ struct gen_fun {
     Polyhedron *context;
 
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
+    void add(short_rat *r);
     /* add c times gf */
     void add(const QQ& c, const gen_fun *gf);
     void substitute(Matrix *CP);
