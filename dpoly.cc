@@ -6,10 +6,14 @@ using std::cerr;
 using std::endl;
 using std::vector;
 
+/* Construct truncated expansion of (1+t)^(degree),
+ * computing the first 1+d coefficients
+ */
 dpoly::dpoly(int d, ZZ& degree, int offset)
 {
     coeff.SetLength(d+1);
 
+    /* For small degrees, we only need to compute some coefficients */
     int min = d + offset;
     if (degree >= 0 && degree < ZZ(INIT_VAL, min))
 	min = to_int(degree);

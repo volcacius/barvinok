@@ -27,6 +27,10 @@ private:
     void   clear_div(mpq_t *c) const;
 };
 
+/* Each element in powers corresponds to a factor of the form (1 - z^b)
+ * and indicates the exponent of this factor in the denominator.
+ * The constants b are stored elsewhere (den_r in reducer::reducer).
+ */
 struct dpoly_r_term {
     std::vector<int>    powers;
     ZZ	    	    	coeff;
