@@ -184,7 +184,7 @@ dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
     //dump();
 }
 
-dpoly_r::dpoly_r(dpoly_r* num, dpoly& den, int pos, int dim)
+dpoly_r::dpoly_r(const dpoly_r* num, dpoly& den, int pos, int dim)
 {
     denom = num->denom;
     len = num->len;
@@ -221,7 +221,7 @@ dpoly_r::~dpoly_r()
     delete [] c;
 }
 
-dpoly_r *dpoly_r::div(dpoly& d)
+dpoly_r *dpoly_r::div(const dpoly& d) const
 {
     dpoly_r *rc = new dpoly_r(len, dim);
     rc->denom = power(d.coeff[0], len);

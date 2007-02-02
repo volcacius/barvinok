@@ -58,9 +58,9 @@ struct dpoly_r {
     dpoly_r(int len, int dim);
     dpoly_r(dpoly& num, int dim);
     dpoly_r(dpoly& num, dpoly& den, int pos, int dim);
-    dpoly_r(dpoly_r* num, dpoly& den, int pos, int dim);
+    dpoly_r(const dpoly_r* num, dpoly& den, int pos, int dim);
     ~dpoly_r();
-    dpoly_r *div(dpoly& d);
+    dpoly_r *div(const dpoly& d) const;
     void dump(void);
 };
 
