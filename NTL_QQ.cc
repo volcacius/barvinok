@@ -10,6 +10,13 @@ vec_QQ& operator *= (vec_QQ& a, const ZZ& b)
     return a;
 }
 
+vec_QQ& operator *= (vec_QQ& a, const QQ& b)
+{
+    for (int i = 0; i < a.length(); ++i)
+	a[i] *= b;
+    return a;
+}
+
 std::ostream& operator<< (std::ostream& os, const QQ& q)
 {
     os << q.n << "/" << q.d;

@@ -46,6 +46,7 @@ struct QQ {
 NTL_vector_decl(QQ,vec_QQ);
 
 vec_QQ& operator *= (vec_QQ& a, const ZZ& b);
+vec_QQ& operator *= (vec_QQ& a, const QQ& b);
 
 std::ostream& operator<< (std::ostream& os, const QQ& q);
 std::istream& operator>> (std::istream& os, QQ& q);
