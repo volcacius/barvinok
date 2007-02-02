@@ -52,7 +52,7 @@ private:
 };
 
 struct reducer : public np_base {
-    vec_ZZ vertex;
+    mat_ZZ vertex;
     //vec_ZZ den;
     ZZ num;
     mpq_t tcount;
@@ -61,6 +61,7 @@ struct reducer : public np_base {
     int lower;	    // call base when only this many variables is left
 
     reducer(unsigned dim) : np_base(dim) {
+	vertex.SetDims(1, dim);
 	//den.SetLength(dim);
 	mpq_init(tcount);
 	mpz_init(tn);
@@ -75,9 +76,10 @@ struct reducer : public np_base {
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed,
 			barvinok_options *options);
-    void reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f);
-    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
-    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
+    void reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);
+    virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
+    void base(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);
+    virtual void split(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
 		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) = 0;
     virtual gen_fun *get_gf() {
 	assert(0);
@@ -85,14 +87,19 @@ struct reducer : public np_base {
     }
 };
 
+void split_one(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
+	       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
+
 struct ireducer : public reducer {
     ireducer(unsigned dim) : reducer(dim) {}
 
-    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
+    virtual void split(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
+		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r) {
+	split_one(num, num_s, num_p, den_f, den_s, den_r);
+    }
 };
 
-void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
+void normalize(ZZ& sign, vec_ZZ& num_s, mat_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	       mat_ZZ& f);
 
 // incremental counter
@@ -106,7 +113,7 @@ struct icounter : public ireducer {
     ~icounter() {
 	mpq_clear(count);
     }
-    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
     virtual void get_count(Value *result) {
 	assert(value_one_p(&count[0]._mp_den));
 	value_assign(*result, &count[0]._mp_num);
@@ -141,7 +148,7 @@ struct infinite_icounter : public ireducer {
 	    mpq_clear(count[i]);
 	delete [] count;
     }
-    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
 };
 
 #endif

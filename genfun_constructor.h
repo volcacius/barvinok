@@ -35,7 +35,7 @@ struct partial_ireducer : public ireducer, public gf_base {
     }
     ~partial_ireducer() {
     }
-    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
     virtual gen_fun *get_gf() {
 	return gf;
     }
@@ -59,9 +59,9 @@ struct partial_reducer : public reducer, public gf_base {
     }
     ~partial_reducer() {
     }
-    virtual void base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
+    virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
 
-    virtual void split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
+    virtual void split(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
 		       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r);
     virtual gen_fun *get_gf() {
 	return gf;

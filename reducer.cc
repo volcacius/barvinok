@@ -52,11 +52,11 @@ void np_base::start(Polyhedron *P, barvinok_options *options)
  *
  * all inputs are subject to change
  */
-void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
+void normalize(ZZ& sign, vec_ZZ& num_s, mat_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	       mat_ZZ& f)
 {
     unsigned dim = f.NumRows();
-    unsigned nparam = num_p.length();
+    unsigned nparam = num_p.NumCols();
     unsigned nvar = dim - nparam;
 
     int change = 0;
@@ -74,7 +74,8 @@ void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	    den_p[j] = 1;
 	    if (den_s[j] > 0) {
 		f[j] = -f[j];
-		num_p += f[j];
+		for (int i = 0; i < num_p.NumRows(); ++i)
+		    num_p[i] += f[j];
 	    }
 	} else
 	    den_p[j] = 0;
@@ -82,7 +83,8 @@ void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	    change ^= 1;
 	else {
 	    den_s[j] = abs(den_s[j]);
-	    num_s += den_s[j];
+	    for (int i = 0; i < num_p.NumRows(); ++i)
+		num_s[i] += den_s[j];
 	}
     }
 
@@ -90,27 +92,36 @@ void normalize(ZZ& sign, ZZ& num_s, vec_ZZ& num_p, vec_ZZ& den_s, vec_ZZ& den_p,
 	sign = -sign;
 }
 
-void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
+void reducer::base(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 {
+    for (int i = 0; i < num.NumRows(); ++i)
+	base(c[i], num[i], den_f);
+}
+
+void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
+{
+    assert(c.length() == num.NumRows());
     unsigned len = den_f.NumRows();  // number of factors in den
 
-    if (num.length() == lower) {
+    if (num.NumCols() == lower) {
 	base(c, num, den_f);
 	return;
     }
-    assert(num.length() > 1);
+    assert(num.NumCols() > 1);
+    assert(num.NumRows() > 0);
 
     vec_ZZ den_s;
     mat_ZZ den_r;
-    ZZ num_s;
-    vec_ZZ num_p;
+    vec_ZZ num_s;
+    mat_ZZ num_p;
 
     split(num, num_s, num_p, den_f, den_s, den_r);
 
     vec_ZZ den_p;
     den_p.SetLength(len);
 
-    normalize(c.n, num_s, num_p, den_s, den_p, den_r);
+    ZZ sign(INIT_VAL, 1);
+    normalize(sign, num_s, num_p, den_s, den_p, den_r);
 
     int only_param = 0;	    // k-r-s from text
     int no_param = 0;	    // r from text
@@ -121,7 +132,9 @@ void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
 	    ++only_param;
     }
     if (no_param == 0) {
-	reduce(c, num_p, den_r);
+	vec_QQ c2 = c;
+	c2 *= sign;
+	reduce(c2, num_p, den_r);
     } else {
 	int k, l;
 	mat_ZZ pden;
@@ -135,7 +148,12 @@ void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
 	    if (den_p[k] == 0)
 		break;
 
-	dpoly n(no_param, num_s);
+	dpoly *n[num_s.length()];
+	/* We can further optimize the computation by combining the
+	 * n's for rows with the same num_p
+	 */
+	for (int i = 0; i < num_s.length(); ++i)
+	    n[i] = new dpoly(no_param, num_s[i]);
 	dpoly D(no_param, den_s[k], 1);
 	for ( ; ++k < len; )
 	    if (den_p[k] == 0) {
@@ -144,19 +162,32 @@ void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
 	    }
 
 	if (no_param + only_param == len) {
-	    mpq_set_si(tcount, 0, 1);
-	    n.div(D, tcount, one);
+	    vec_QQ q;
+	    q.SetLength(num_s.length());
+	    for (int i = 0; i < num_s.length(); ++i) {
+		mpq_set_si(tcount, 0, 1);
+		n[i]->div(D, tcount, one);
 
-	    QQ q;
-	    value2zz(mpq_numref(tcount), q.n);
-	    value2zz(mpq_denref(tcount), q.d);
+		value2zz(mpq_numref(tcount), q[i].n);
+		value2zz(mpq_denref(tcount), q[i].d);
+		q[i] *= c[i];
+		q[i] *= sign;
+	    }
+	    for (int i = q.length()-1; i >= 0; --i) {
+		if (q[i].n == 0) {
+		    q[i] = q[q.length()-1];
+		    num_p[i] = num_p[q.length()-1];
+		    q.SetLength(q.length()-1);
+		    num_p.SetDims(num_p.NumRows()-1, num_p.NumCols());
+		}
+	    }
 
-	    q *= c;
-
-	    if (q.n != 0)
+	    if (q.length() != 0)
 		reduce(q, num_p, pden);
 	} else {
-	    dpoly_r * r = 0;
+	    dpoly_r *r[num_s.length()];
+	    for (int i = 0; i < num_s.length(); ++i)
+		r[i] = NULL;
 
 	    for (k = 0; k < len; ++k) {
 		if (den_s[k] == 0 || den_p[k] == 0)
@@ -169,61 +200,81 @@ void reducer::reduce(QQ c, vec_ZZ& num, const mat_ZZ& den_f)
 		    if (den_r[l] == den_r[k])
 			break;
 
-		if (r == 0)
-		    r = new dpoly_r(n, pd, l, len);
-		else {
-		    dpoly_r *nr = new dpoly_r(r, pd, l, len);
-		    delete r;
-		    r = nr;
+		if (!r[0]) {
+		    for (int i = 0; i < num_s.length(); ++i)
+			r[i] = new dpoly_r(*n[i], pd, l, len);
+		} else {
+		    for (int i = 0; i < num_s.length(); ++i) {
+			dpoly_r *nr = new dpoly_r(r[i], pd, l, len);
+			delete r[i];
+			r[i] = nr;
+		    }
 		}
 	    }
 
-	    dpoly_r *rc = r->div(D);
-
-	    QQ factor;
-	    factor.d = rc->denom * c.d;
-
+	    /* We need to further optimize this part to exploit the common
+	     * denominator.
+	     */
+	    vec_QQ factor;
+	    factor.SetLength(1);
+	    mat_ZZ num_p_i;
+	    num_p_i.SetDims(1, num_p.NumCols());
 	    int common = pden.NumRows();
-	    dpoly_r_term_list& final = rc->c[rc->len-1];
-	    int rows;
-	    dpoly_r_term_list::iterator j;
-	    for (j = final.begin(); j != final.end(); ++j) {
-		if ((*j)->coeff == 0)
-		    continue;
-		rows = common;
-		pden.SetDims(rows, pden.NumCols());
-		for (int k = 0; k < rc->dim; ++k) {
-		    int n = (*j)->powers[k];
-		    if (n == 0)
+	    for (int i = 0; i < num_s.length(); ++i) {
+		dpoly_r *rc = r[i]->div(D);
+		num_p_i[0] = num_p[i];
+
+		factor[0].d = rc->denom * c[i].d;
+
+		dpoly_r_term_list& final = rc->c[rc->len-1];
+		int rows;
+		dpoly_r_term_list::iterator j;
+		for (j = final.begin(); j != final.end(); ++j) {
+		    if ((*j)->coeff == 0)
 			continue;
-		    pden.SetDims(rows+n, pden.NumCols());
-		    for (int l = 0; l < n; ++l)
-			pden[rows+l] = den_r[k];
-		    rows += n;
+		    rows = common;
+		    pden.SetDims(rows, pden.NumCols());
+		    for (int k = 0; k < rc->dim; ++k) {
+			int n = (*j)->powers[k];
+			if (n == 0)
+			    continue;
+			pden.SetDims(rows+n, pden.NumCols());
+			for (int l = 0; l < n; ++l)
+			    pden[rows+l] = den_r[k];
+			rows += n;
+		    }
+		    factor[0].n = (*j)->coeff *= c[i].n * sign;
+		    reduce(factor, num_p_i, pden);
 		}
-		factor.n = (*j)->coeff *= c.n;
-		reduce(factor, num_p, pden);
+
+		delete rc;
 	    }
 
-	    delete rc;
-	    delete r;
+	    for (int i = 0; i < num_s.length(); ++i)
+		delete r[i];
 	}
+	for (int i = 0; i < num_s.length(); ++i)
+	    delete n[i];
     }
 }
 
 void reducer::handle(const mat_ZZ& den, Value *V, QQ c, int *closed,
 		     barvinok_options *options)
 {
-    lattice_point(V, den, vertex, closed);
+    vec_QQ vc;
+    vc.SetLength(1);
+    vc[0] = c;
 
-    reduce(c, vertex, den);
+    lattice_point(V, den, vertex[0], closed);
+
+    reduce(vc, vertex, den);
 }
 
-void ireducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
-		     const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
+void split_one(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
+	       const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
-    unsigned d = num.length() - 1;
+    unsigned d = num.NumCols() - 1;
 
     den_s.SetLength(len);
     den_r.SetDims(len, d);
@@ -234,10 +285,13 @@ void ireducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 	    den_r[r][k-1] = den_f[r][k];
     }
 
-    num_s = num[0];
-    num_p.SetLength(d);
-    for (int k = 1 ; k <= d; ++k)
-	num_p[k-1] = num[k];
+    num_s.SetLength(num.NumRows());
+    num_p.SetDims(num.NumRows(), d);
+    for (int i = 0; i < num.NumRows(); ++i) {
+	num_s[i] = num[i][0];
+	for (int k = 1 ; k <= d; ++k)
+	    num_p[i][k-1] = num[i][k];
+    }
 }
 
 void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
@@ -258,7 +312,7 @@ void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
 	sign = -sign;
 }
 
-void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
+void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
     int r;
     unsigned len = den_f.NumRows();  // number of factors in den
@@ -267,7 +321,8 @@ void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     ZZ num_s = num[0];
     for (r = 0; r < len; ++r)
 	den_s[r] = den_f[r][0];
-    normalize(c.n, num_s, den_s);
+    ZZ sign = ZZ(INIT_VAL, 1);
+    normalize(sign, num_s, den_s);
 
     dpoly n(len, num_s);
     dpoly D(len, den_s[0], 1);
@@ -278,6 +333,8 @@ void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     mpq_set_si(tcount, 0, 1);
     n.div(D, tcount, one);
     zz2value(c.n, tn);
+    if (sign == -1)
+	value_oppose(tn, tn);
     zz2value(c.d, td);
     mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
     mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
@@ -285,7 +342,7 @@ void icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     mpq_add(count, count, tcount);
 }
 
-void infinite_icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
+void infinite_icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
     int r;
     unsigned len = den_f.NumRows();  // number of factors in den
@@ -295,7 +352,8 @@ void infinite_icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 
     for (r = 0; r < len; ++r)
 	den_s[r] = den_f[r][0];
-    normalize(c.n, num_s, den_s);
+    ZZ sign = ZZ(INIT_VAL, 1);
+    normalize(sign, num_s, den_s);
 
     dpoly n(len, num_s);
     dpoly D(len, den_s[0], 1);
@@ -309,6 +367,8 @@ void infinite_icounter::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     mpq_init(factor);
     value_init(tmp);
     zz2value(c.n, tmp);
+    if (sign == -1)
+	value_oppose(tmp, tmp);
     value_assign(mpq_numref(factor), tmp);
     zz2value(c.d, tmp);
     value_assign(mpq_denref(factor), tmp);

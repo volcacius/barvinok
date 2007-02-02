@@ -895,8 +895,7 @@ gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const
 	try {
 	    red->init(context);
 	    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
-		for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
-		    red->reduce((*i)->n.coeff[j], (*i)->n.power[j], (*i)->d.power);
+		red->reduce((*i)->n.coeff, (*i)->n.power, (*i)->d.power);
 	    break;
 	} catch (OrthogonalException &e) {
 	    red->reset();
@@ -922,8 +921,7 @@ bool gen_fun::summate(Value *sum) const
 
     infinite_icounter cnt((*term.begin())->d.power.NumCols(), maxlen);
     for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
-	for (int j = 0; j < (*i)->n.power.NumRows(); ++j)
-	    cnt.reduce((*i)->n.coeff[j], (*i)->n.power[j], (*i)->d.power);
+	cnt.reduce((*i)->n.coeff, (*i)->n.power, (*i)->d.power);
 
     for (int i = 1; i <= maxlen; ++i)
 	if (value_notzero_p(mpq_numref(cnt.count[i]))) {

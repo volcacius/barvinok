@@ -13,12 +13,12 @@ gf_base *gf_base::create(Polyhedron *context, unsigned dim, unsigned nparam,
     return red;
 }
 
-void partial_ireducer::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
+void partial_ireducer::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
     gf->add(c, num, den_f);
 }
 
-void partial_reducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
+void partial_reducer::split(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
 			    const mat_ZZ& den_f, vec_ZZ& den_s, mat_ZZ& den_r)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
@@ -44,15 +44,18 @@ void partial_reducer::split(vec_ZZ& num, ZZ& num_s, vec_ZZ& num_p,
 	    throw Orthogonal;
     }
 
-    for (int k = 0; k < nvar; ++k)
-	tmp[k] = num[k];
-    num_s = tmp *lambda;
-    num_p.SetLength(lower);
-    for (int k = nvar ; k < dim; ++k)
-	num_p[k-nvar] = num[k];
+    num_s.SetLength(num.NumRows());
+    num_p.SetDims(num.NumRows(), lower);
+    for (int i = 0; i < num.NumRows(); ++i) {
+	for (int k = 0; k < nvar; ++k)
+	    tmp[k] = num[i][k];
+	num_s[i] = tmp * lambda;
+	for (int k = nvar ; k < dim; ++k)
+	    num_p[i][k-nvar] = num[i][k];
+    }
 }
 
-void partial_reducer::base(QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
+void partial_reducer::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
     gf->add(c, num, den_f);
 }

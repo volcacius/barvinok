@@ -1178,12 +1178,12 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
 		     public ienumerator_base {
     //Polyhedron *pVD;
     mat_ZZ den;
-    vec_ZZ vertex;
+    mat_ZZ vertex;
     mpq_t tcount;
 
     ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
 		vertex_decomposer(P, nbV, *this), ienumerator_base(dim, this) {
-	vertex.SetLength(dim);
+	vertex.SetDims(1, dim);
 
 	den.SetDims(dim, dim);
 	mpq_init(tcount);
@@ -1194,15 +1194,16 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
     }
 
     virtual void handle(const signed_cone& sc, barvinok_options *options);
-    void reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f,
+    void reduce(evalue *factor, const mat_ZZ& num, const mat_ZZ& den_f,
 		barvinok_options *options);
 };
 
-void ienumerator::reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f,
+void ienumerator::reduce(evalue *factor, const mat_ZZ& num, const mat_ZZ& den_f,
 			 barvinok_options *options)
 {
     unsigned len = den_f.NumRows();  // number of factors in den
-    unsigned dim = num.length();
+    unsigned dim = num.NumCols();
+    assert(num.NumRows() == 1);
 
     if (dim == 0) {
 	eadd(factor, vE[vert]);
@@ -1210,25 +1211,11 @@ void ienumerator::reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f,
     }
 
     vec_ZZ den_s;
-    den_s.SetLength(len);
     mat_ZZ den_r;
-    den_r.SetDims(len, dim-1);
+    vec_ZZ num_s;
+    mat_ZZ num_p;
 
-    int r, k;
-
-    for (r = 0; r < len; ++r) {
-	den_s[r] = den_f[r][0];
-	for (k = 0; k <= dim-1; ++k)
-	    if (k != 0)
-		den_r[r][k-(k>0)] = den_f[r][k];
-    }
-
-    ZZ num_s = num[0];
-    vec_ZZ num_p;
-    num_p.SetLength(dim-1);
-    for (k = 0 ; k <= dim-1; ++k)
-	if (k != 0)
-	    num_p[k-(k>0)] = num[k];
+    split_one(num, num_s, num_p, den_f, den_s, den_r);
 
     vec_ZZ den_p;
     den_p.SetLength(len);
@@ -1262,7 +1249,7 @@ void ienumerator::reduce(evalue *factor, vec_ZZ& num, mat_ZZ& den_f,
 	    if (den_p[k] == 0)
 		break;
 
-	dpoly n(no_param, num_s);
+	dpoly n(no_param, num_s[0]);
 	dpoly D(no_param, den_s[k], 1);
 	for ( ; ++k < len; )
 	    if (den_p[k] == 0) {
@@ -1407,7 +1394,7 @@ void ienumerator::handle(const signed_cone& sc, barvinok_options *options)
     assert(!sc.closed);
     assert(sc.rays.NumRows() == dim);
 
-    lattice_point(V, sc.rays, vertex, E_vertex, options);
+    lattice_point(V, sc.rays, vertex[0], E_vertex, options);
 
     den = sc.rays;
 
