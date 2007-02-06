@@ -206,6 +206,20 @@ struct polar_signed_cone_consumer : public signed_cone_consumer {
     }
 };
 
+/* Remove common divisor of elements of rows of B */
+static void normalize_rows(mat_ZZ& B)
+{
+    ZZ gcd;
+    for (int i = 0; i < B.NumRows(); ++i) {
+	gcd = B[i][0];
+	for (int j = 1 ; gcd != 1 && j < B.NumCols(); ++j)
+	    GCD(gcd, gcd, B[i][j]);
+	if (gcd != 1)
+	    for (int j = 0; j < B.NumCols(); ++j)
+		B[i][j] /= gcd;
+    }
+}
+
 static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 			    barvinok_options *options)
 {
@@ -221,6 +235,7 @@ static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     try {
 	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next) {
 	    rays(Polar, r);
+	    normalize_rows(r);
 	    decompose(signed_cone(Polar, r, 1), pssc, options);
 	}
 	Domain_Free(cone);
