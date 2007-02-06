@@ -44,7 +44,7 @@ struct barvinok_options {
     #define	BV_GBR_CDD	2
     int		gbr_lp_solver;
 
-    struct barvinok_stats   stats;
+    struct barvinok_stats   *stats;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();

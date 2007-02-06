@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     value_print(stdout, P_VALUE_FMT, cb);
     puts("");
     if (arguments.print_stats)
-	barvinok_stats_print(&options->stats, stdout);
+	barvinok_stats_print(options->stats, stdout);
     value_clear(cb);
     Polyhedron_Free(A);
     barvinok_options_free(options);

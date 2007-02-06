@@ -569,7 +569,7 @@ int main(int argc, char **argv)
     }
 
     if (options.print_stats)
-	barvinok_stats_print(&options.barvinok->stats, stdout);
+	barvinok_stats_print(options.barvinok->stats, stdout);
 
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);

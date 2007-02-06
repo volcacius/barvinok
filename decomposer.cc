@@ -111,7 +111,7 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 	nonuni.push_back(c);
     } else {
 	try {
-	    options->stats.unimodular_cones++;
+	    options->stats->unimodular_cones++;
 	    scc.handle(sc, options);
 	    delete c;
 	} catch (...) {
@@ -156,7 +156,7 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 		nonuni.push_back(pc);
 	    } else {
 		try {
-		    options->stats.unimodular_cones++;
+		    options->stats->unimodular_cones++;
 		    if (pc->closed)
 			scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
 					       pc->closed), options);

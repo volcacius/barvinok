@@ -35,7 +35,13 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     if (!options)
 	return NULL;
 
-    barvinok_stats_clear(&options->stats);
+    options->stats = ALLOC(struct barvinok_stats);
+    if (!options->stats) {
+	free(options);
+	return NULL;
+    }
+
+    barvinok_stats_clear(options->stats);
 
     options->LLL_a = 1;
     options->LLL_b = 1;
@@ -74,6 +80,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
 void barvinok_options_free(struct barvinok_options *options)
 {
+    free(options->stats);
     free(options);
 }
 
