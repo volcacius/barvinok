@@ -180,6 +180,6 @@ int main(int argc, char **argv)
 	Vector_Free(V);
     }
 
-    free(options);
+    barvinok_options_free(options);
     return 0;
 }

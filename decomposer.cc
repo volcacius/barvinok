@@ -365,6 +365,6 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     decompose(signed_cone(C, r, 1), pc, options);
     *ppos = pc.pos;
     *pneg = pc.neg;
-    free(options);
+    barvinok_options_free(options);
 }
 

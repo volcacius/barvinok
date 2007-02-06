@@ -119,6 +119,6 @@ int main(int argc, char **argv)
     Domain_Free(S);
     Polyhedron_Free(P);
     Polyhedron_Free(U);
-    free(bv_options);
+    barvinok_options_free(bv_options);
     return 0;
 }

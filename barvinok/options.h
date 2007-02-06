@@ -48,6 +48,7 @@ struct barvinok_options {
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
+void barvinok_options_free(struct barvinok_options *options);
 
 #define BV_OPT_SPECIALIZATION	256
 #define BV_OPT_PRIMAL		257

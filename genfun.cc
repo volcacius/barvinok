@@ -877,7 +877,7 @@ void gen_fun::coefficient(Value* params, Value* c) const
 
     zz2value(coeff, *c);
 
-    free(options);
+    barvinok_options_free(options);
 }
 
 gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const

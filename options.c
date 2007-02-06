@@ -72,6 +72,11 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     return options;
 }
 
+void barvinok_options_free(struct barvinok_options *options)
+{
+    free(options);
+}
+
 struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },

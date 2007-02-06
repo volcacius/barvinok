@@ -194,12 +194,12 @@ int main(int argc, char **argv)
 	    puts("");
 	}
 	delete gf;
-	free(options);
+	barvinok_options_free(options);
     } else {
 	if (arguments.scarf) {
 	    barvinok_options *options = barvinok_options_new_with_defaults();
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
-	    free(options);
+	    barvinok_options_free(options);
 	} else if (arguments.pip && exist > 0)
 	    EP = barvinok_enumerate_pip_with_options(A, exist, nparam, options);
 	else

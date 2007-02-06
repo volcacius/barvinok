@@ -762,7 +762,7 @@ void barvinok_count(Polyhedron *P, Value* result, unsigned NbMaxCons)
     barvinok_options *options = barvinok_options_new_with_defaults();
     options->MaxRays = NbMaxCons;
     barvinok_count_with_options(P, result, options);
-    free(options);
+    barvinok_options_free(options);
 }
 
 static void barvinok_count_f(Polyhedron *P, Value* result,
@@ -1794,7 +1794,7 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     barvinok_options *options = barvinok_options_new_with_defaults();
     options->MaxRays = MaxRays;
     E = barvinok_enumerate_with_options(P, C, options);
-    free(options);
+    barvinok_options_free(options);
     return E;
 }
 
@@ -3058,7 +3058,7 @@ evalue* barvinok_enumerate_pip(Polyhedron *P, unsigned exist, unsigned nparam,
     barvinok_options *options = barvinok_options_new_with_defaults();
     options->MaxRays = MaxRays;
     E = barvinok_enumerate_pip_with_options(P, exist, nparam, options);
-    free(options);
+    barvinok_options_free(options);
     return E;
 }
 
@@ -3142,7 +3142,7 @@ evalue* barvinok_enumerate_e(Polyhedron *P, unsigned exist, unsigned nparam,
     barvinok_options *options = barvinok_options_new_with_defaults();
     options->MaxRays = MaxRays;
     E = barvinok_enumerate_e_with_options(P, exist, nparam, options);
-    free(options);
+    barvinok_options_free(options);
     return E;
 }
 
@@ -3568,7 +3568,7 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     barvinok_options *options = barvinok_options_new_with_defaults();
     options->MaxRays = MaxRays;
     gf = barvinok_series_with_options(P, C, options);
-    free(options);
+    barvinok_options_free(options);
     return gf;
 }
 
@@ -3668,7 +3668,7 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
     barvinok_options *options = barvinok_options_new_with_defaults();
     options->MaxRays = MaxRays;
     gf = barvinok_enumerate_union_series_with_options(D, C, options);
-    free(options);
+    barvinok_options_free(options);
     return gf;
 }
 

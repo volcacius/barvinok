@@ -27,5 +27,5 @@ int main(int argc, char **argv)
     }
 
     Polyhedron_Free(P);
-    free(bv_options);
+    barvinok_options_free(bv_options);
 }

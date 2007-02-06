@@ -574,6 +574,6 @@ int main(int argc, char **argv)
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
-    free(bv_options);
+    barvinok_options_free(bv_options);
     return result;
 }

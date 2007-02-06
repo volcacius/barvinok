@@ -157,5 +157,5 @@ int main(int argc, char **argv)
     delete S;
 
     Polyhedron_Free(P);
-    free(options);
+    barvinok_options_free(options);
 }

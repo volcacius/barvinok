@@ -61,6 +61,6 @@ int main(int argc, char **argv)
 	barvinok_stats_print(&options->stats, stdout);
     value_clear(cb);
     Polyhedron_Free(A);
-    free(options);
+    barvinok_options_free(options);
     return 0;
 }
