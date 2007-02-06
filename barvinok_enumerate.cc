@@ -18,6 +18,8 @@
  * Both polytopes are in PolyLib notation.
  */
 
+#define PRINT_STATS  	    (BV_OPT_LAST+1)
+
 struct argp_option argp_options[] = {
     { "convert",   'c', 0, 0, "convert fractionals to periodics" },
     { "floor",     'f', 0, 0, "convert fractionals to floorings" },
@@ -25,6 +27,7 @@ struct argp_option argp_options[] = {
     { "series",    's', 0, 0, "compute rational generating function" },
     { "explicit",  'e', 0, 0, "convert rgf to psp" },
     { "verbose",    'v' },
+    { "print-stats",	    PRINT_STATS,  0,	0 },
     { 0 }
 };
 
@@ -36,6 +39,7 @@ struct arguments {
     int series;
     int function;
     int verbose;
+    int print_stats;
     struct verify_options    verify;
 };
 
@@ -53,6 +57,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->series = 0;
 	options->function = 0;
 	options->verbose = 0;
+	options->print_stats = 0;
+	break;
+    case PRINT_STATS:
+	options->print_stats = 1;
 	break;
     case 'c':
 	options->convert = 1;
@@ -559,6 +567,9 @@ int main(int argc, char **argv)
 	free_evalue_refs(EP);
 	free(EP);
     }
+
+    if (options.print_stats)
+	barvinok_stats_print(&options.barvinok->stats, stdout);
 
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
