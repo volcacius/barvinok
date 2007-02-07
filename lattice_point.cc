@@ -8,6 +8,9 @@
 #include "conversion.h"
 #include "lattice_point.h"
 
+using std::cerr;
+using std::endl;
+
 #define ALLOC(type) (type*)malloc(sizeof(type))
 
 /* returns an evalue that corresponds to
@@ -313,6 +316,103 @@ void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *close
 	values2zz(A->p, vertex, dim);
 	Vector_Free(A);
     }
+}
+
+/* Compute the lattice points in the vertex cone at "values" with rays "rays".
+ * The lattice points are returned in "vertex".
+ *
+ * Rays has the generators as rows and so does W.
+ * We first compute { m-v, u_i^* } with m = k W, where k runs through
+ * the cosets.
+ * We compute
+ * [k 1] [ d1*W  0 ] [  U'  0 ] = [k 1] T2
+ *       [ -v   d1 ] [  0  d2 ]
+ * where d1 and d2 are the denominators of v and U^{-1}=U'/d2.
+ * Then  lambda = { k } (componentwise)
+ * We compute x - floor(x) = {x} = { a/b } as fdiv_r(a,b)/b
+ * For open rays/facets, we need values in (0,1] rather than [0,1),
+ * so we compute {{x}} = x - ceil(x-1) = a/b - ceil((a-b)/b)
+ *		       = (a - b cdiv_q(a-b,b) - b + b)/b
+ *		       = (cdiv_r(a,b)+b)/b
+ * Finally, we compute v + lambda * U
+ * The denominator of lambda can be d1*d2, that of lambda2 = lambda*U
+ * can be at most d1, since it is integer if v = 0.
+ * The denominator of v + lambda2 is 1.
+ */
+void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
+		   unsigned long det, int *closed)
+{
+    unsigned dim = rays.NumRows();
+    vertex.SetDims(det, dim);
+    if (det == 1) {
+	lattice_point(values, rays, vertex[0], closed);
+	return;
+    }
+    Matrix* Rays = rays2matrix2(rays);
+    Matrix *U, *W, *D;
+    Smith(Rays, &U, &W, &D);
+    Matrix_Free(Rays);
+    Matrix_Free(U);
+
+    Matrix *T = Matrix_Alloc(W->NbRows+1, W->NbColumns+1);
+    for (int i = 0; i < W->NbRows; ++i)
+	Vector_Scale(W->p[i], T->p[i], values[dim], W->NbColumns);
+    Matrix_Free(W);
+    Value tmp;
+    value_init(tmp);
+    value_set_si(tmp, -1);
+    Vector_Scale(values, T->p[dim], tmp, dim);
+    value_clear(tmp);
+    value_assign(T->p[dim][dim], values[dim]);
+
+    Rays = rays2matrix(rays);
+    Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
+    int ok = Matrix_Inverse(Rays, inv);
+    assert(ok);
+    Matrix_Free(Rays);
+
+    Matrix *T2 = Matrix_Alloc(dim+1, dim+1);
+    Matrix_Product(T, inv, T2);
+    Matrix_Free(T);
+
+    Rays = rays2matrix(rays);
+
+    Vector *k = Vector_Alloc(dim+1);
+    value_set_si(k->p[dim], 1);
+    Vector *lambda = Vector_Alloc(dim+1);
+    Vector *lambda2 = Vector_Alloc(dim+1);
+    for (unsigned long i = 0; i < det; ++i) {
+	unsigned long val = i;
+	for (int j = 0; j < dim; ++j) {
+	    value_set_si(k->p[j], val % mpz_get_ui(D->p[j][j]));
+	    val /= mpz_get_ui(D->p[j][j]);
+	}
+	Vector_Matrix_Product(k->p, T2, lambda->p);
+	for (int j = 0; j < dim; ++j)
+	    if (!closed || closed[j])
+		mpz_fdiv_r(lambda->p[j], lambda->p[j], lambda->p[dim]);
+	    else {
+		mpz_cdiv_r(lambda->p[j], lambda->p[j], lambda->p[dim]);
+		value_addto(lambda->p[j], lambda->p[j], lambda->p[dim]);
+	    }
+	Vector_Matrix_Product(lambda->p, Rays, lambda2->p);
+	for (int j = 0; j < dim; ++j)
+	    assert(mpz_divisible_p(lambda2->p[j], inv->p[dim][dim]));
+	Vector_AntiScale(lambda2->p, lambda2->p, inv->p[dim][dim], dim+1);
+	Vector_Add(lambda2->p, values, lambda2->p, dim);
+	for (int j = 0; j < dim; ++j)
+	    assert(mpz_divisible_p(lambda2->p[j], values[dim]));
+	Vector_AntiScale(lambda2->p, lambda2->p, values[dim], dim+1);
+	values2zz(lambda2->p, vertex[i], dim);
+    }
+    Vector_Free(k);
+    Vector_Free(lambda);
+    Vector_Free(lambda2);
+    Matrix_Free(D);
+    Matrix_Free(Rays);
+    Matrix_Free(inv);
+
+    Matrix_Free(T2);
 }
 
 static void vertex_period(

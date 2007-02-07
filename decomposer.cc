@@ -40,6 +40,7 @@ public:
     }
     void set_det() {
 	det = determinant(rays);
+	abs_det = abs(det);
     }
     void set_closed(int *cl) {
 	closed = NULL;
@@ -48,6 +49,13 @@ public:
 	    for (int i = 0; i < rays.NumRows(); ++i)
 		closed[i] = cl[i];
 	}
+    }
+    bool needs_split(barvinok_options *options) {
+	if (IsOne(abs_det))
+	    return false;
+	if (options->primal && abs_det <= options->max_index)
+	    return false;
+	return true;
     }
 
     void short_vector(vec_ZZ& v, vec_ZZ& lambda, barvinok_options *options) {
@@ -95,6 +103,7 @@ public:
     }
 
     ZZ det;
+    ZZ abs_det;
     mat_ZZ rays;
     int *closed;
 };
@@ -107,12 +116,13 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
     ZZ det = c->det;
     int s = sign(det);
     assert(det != 0);
-    if (abs(det) > 1) {
+    if (c->needs_split(options)) {
 	nonuni.push_back(c);
     } else {
 	try {
 	    options->stats->unimodular_cones++;
-	    scc.handle(sc, options);
+	    scc.handle(signed_cone(sc.C, sc.rays, sc.sign, to_ulong(c->abs_det),
+				   sc.closed), options);
 	    delete c;
 	} catch (...) {
 	    delete c;
@@ -151,13 +161,14 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 		pc->set_closed(closed);
 	    }
 	    assert (pc->det != 0);
-	    if (abs(pc->det) > 1) {
-		assert(abs(pc->det) < abs(c->det));
+	    if (pc->needs_split(options)) {
+		assert(pc->abs_det < c->abs_det);
 		nonuni.push_back(pc);
 	    } else {
 		try {
 		    options->stats->unimodular_cones++;
 		    scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
+					   to_ulong(pc->abs_det),
 					   pc->closed), options);
 		    delete pc;
 		} catch (...) {
@@ -196,7 +207,7 @@ struct polar_signed_cone_consumer : public signed_cone_consumer {
 	}
 	Polyhedron_Polarize(C);
 	rays(C, r);
-	scc.handle(signed_cone(C, r, sc.sign), options);
+	scc.handle(signed_cone(C, r, sc.sign, sc.det), options);
 	if (!sc.C)
 	    Polyhedron_Free(C);
     }
@@ -292,7 +303,7 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 		++i;
 	    }
 	    rays(simple, ray);
-	    decompose(signed_cone(simple, ray, 1, closed), scc, options);
+	    decompose(signed_cone(simple, ray, 1, 0, closed), scc, options);
 	}
 	Domain_Free(parts);
 	if (parts != cone) {

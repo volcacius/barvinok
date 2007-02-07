@@ -55,6 +55,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 #else
     options->incremental_specialization = 0;
 #endif
+    options->max_index = 1;
     options->primal = 0;
 #ifdef USE_MODULO
     options->lookup_table = 0;
@@ -85,6 +86,8 @@ void barvinok_options_free(struct barvinok_options *options)
 }
 
 struct argp_option barvinok_argp_options[] = {
+    { "index",		    BV_OPT_MAXINDEX,	    "int",		0,
+       "maximal index of simple cones in decomposition" },
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
@@ -119,6 +122,9 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     case BV_OPT_GBR:
 	if (!strcmp(arg, "cdd"))
 	    options->gbr_lp_solver = BV_GBR_CDD;
+	break;
+    case BV_OPT_MAXINDEX:
+	options->max_index = strtoul(arg, NULL, 0);
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;

@@ -383,10 +383,11 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
 
 struct counter : public np_base {
     vec_ZZ lambda;
-    vec_ZZ vertex;
+    mat_ZZ vertex;
     vec_ZZ den;
     ZZ sign;
-    ZZ num;
+    vec_ZZ num;
+    ZZ offset;
     int j;
     mpq_t count;
 
@@ -407,16 +408,16 @@ struct counter : public np_base {
 	mpq_clear(count);
     }
 
-    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed,
-			barvinok_options *options);
+    virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
+			unsigned long det, int *closed, barvinok_options *options);
     virtual void get_count(Value *result) {
 	assert(value_one_p(&count[0]._mp_den));
 	value_assign(*result, &count[0]._mp_num);
     }
 };
 
-void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed,
-		     barvinok_options *options)
+void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long det,
+		     int *closed, barvinok_options *options)
 {
     for (int k = 0; k < dim; ++k) {
 	if (lambda * rays[k] == 0)
@@ -427,12 +428,19 @@ void counter::handle(const mat_ZZ& rays, Value *V, QQ c, int *closed,
     assert(c.n == 1 || c.n == -1);
     sign = c.n;
 
-    lattice_point(V, rays, vertex, closed);
+    lattice_point(V, rays, vertex, det, closed);
     num = vertex * lambda;
     den = rays * lambda;
-    normalize(sign, num, den);
+    offset = 0;
+    normalize(sign, offset, den);
 
-    dpoly d(dim, num);
+    num[0] += offset;
+    dpoly d(dim, num[0]);
+    for (int k = 1; k < num.length(); ++k) {
+	num[k] += offset;
+	dpoly term(dim, num[k]);
+	d += term;
+    }
     dpoly n(dim, den[0], 1);
     for (int k = 1; k < dim; ++k) {
 	dpoly fact(dim, den[k], 1);
@@ -999,6 +1007,7 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 
 void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
+    assert(sc.det == 1);
     assert(!sc.closed);
     int r = 0;
     assert(sc.rays.NumRows() == dim);
@@ -1391,6 +1400,7 @@ static int edegree(evalue *e)
 
 void ienumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
+    assert(sc.det == 1);
     assert(!sc.closed);
     assert(sc.rays.NumRows() == dim);
 
@@ -1571,6 +1581,7 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
 
 void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
+    assert(sc.det == 1);
     assert(!sc.closed);
     assert(sc.rays.NumRows() == enumerator_base::dim);
 

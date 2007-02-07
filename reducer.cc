@@ -13,7 +13,7 @@ void np_base::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(sc.rays.NumRows() == dim);
     factor.n *= sc.sign;
-    handle(sc.rays, current_vertex, factor, sc.closed, options);
+    handle(sc.rays, current_vertex, factor, sc.det, sc.closed, options);
     factor.n *= sc.sign;
 }
 
@@ -344,14 +344,16 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
     }
 }
 
-void reducer::handle(const mat_ZZ& den, Value *V, QQ c, int *closed,
-		     barvinok_options *options)
+void reducer::handle(const mat_ZZ& den, Value *V, const QQ& c, unsigned long det,
+		     int *closed, barvinok_options *options)
 {
     vec_QQ vc;
-    vc.SetLength(1);
-    vc[0] = c;
 
-    lattice_point(V, den, vertex[0], closed);
+    lattice_point(V, den, vertex, det, closed);
+
+    vc.SetLength(vertex.NumRows());
+    for (int i = 0; i < vc.length(); ++i)
+	vc[i] = c;
 
     reduce(vc, vertex, den);
 }

@@ -216,7 +216,7 @@ check:
 	    fi \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
-	    for options in '' '--primal'; do \
+	    for options in '' '--primal --index=10'; do \
 		if test -f $$i; then \
 		    echo -n $$i $$options; \
 		    ./test $$options < $$i || echo -n " NOT"; \

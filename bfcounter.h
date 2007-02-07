@@ -48,8 +48,8 @@ struct bf_base : public np_base {
 	mpz_clear(td);
     }
 
-    virtual void handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed,
-			barvinok_options *options);
+    virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
+			unsigned long det, int *closed, barvinok_options *options);
     int setup_factors(const mat_ZZ& rays, mat_ZZ& factors, bfc_term_base* t, int s);
 
     bfc_term_base* find_bfc_term(bfc_vec& v, int *powers, int len);

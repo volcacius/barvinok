@@ -3,6 +3,8 @@
 #include "lattice_point.h"
 
 using std::vector;
+using std::cerr;
+using std::endl;
 
 static int lex_cmp(vec_ZZ& a, vec_ZZ& b)
 {
@@ -100,7 +102,8 @@ int bf_base::setup_factors(const mat_ZZ& rays, mat_ZZ& factors,
 		break;
 	if (factors[r][k] < 0) {
 	    factors[r] = -factors[r];
-	    t->terms[0] += factors[r];
+	    for (int i = 0; i < t->terms.NumRows(); ++i)
+		t->terms[i] += factors[r];
 	    s = -s;
 	}
     }
@@ -108,24 +111,25 @@ int bf_base::setup_factors(const mat_ZZ& rays, mat_ZZ& factors,
     return s;
 }
 
-void bf_base::handle(const mat_ZZ& rays, Value *vertex, QQ c, int *closed,
-		     barvinok_options *options)
+void bf_base::handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
+		     unsigned long det, int *closed, barvinok_options *options)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
     v.push_back(t);
 
-    t->c.SetLength(1);
-
-    t->terms.SetDims(1, dim);
-    lattice_point(vertex, rays, t->terms[0], closed);
+    lattice_point(vertex, rays, t->terms, det, closed);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;
     int s = setup_factors(rays, factors, t, 1);
 
-    t->c[0].n = s * c.n;
-    t->c[0].d = c.d;
+    t->c.SetLength(t->terms.NumRows());
+
+    for (int i = 0; i < t->c.length(); ++i) {
+	t->c[i].n = s * c.n;
+	t->c[i].d = c.d;
+    }
 
     reduce(factors, v, options);
 }
