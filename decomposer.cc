@@ -157,12 +157,8 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 	    } else {
 		try {
 		    options->stats->unimodular_cones++;
-		    if (pc->closed)
-			scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
-					       pc->closed), options);
-		    else
-			scc.handle(signed_cone(pc->rays, sign(pc->det) * s),
-				   options);
+		    scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
+					   pc->closed), options);
 		    delete pc;
 		} catch (...) {
 		    delete c;
