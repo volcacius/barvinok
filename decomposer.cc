@@ -12,6 +12,8 @@
 using namespace NTL;
 #endif
 using std::vector;
+using std::cerr;
+using std::endl;
 
 /*
  * Returns the largest absolute value in the vector
@@ -23,6 +25,20 @@ static ZZ max(vec_ZZ& v)
 	if (abs(v[i]) > max)
 	    max = abs(v[i]);
     return max;
+}
+
+/* Remove common divisor of elements of cols of B */
+static void normalize_cols(mat_ZZ& B)
+{
+    ZZ gcd;
+    for (int i = 0; i < B.NumCols(); ++i) {
+	gcd = B[0][i];
+	for (int j = 1 ; gcd != 1 && j < B.NumRows(); ++j)
+	    GCD(gcd, gcd, B[j][i]);
+	if (gcd != 1)
+	    for (int j = 0; j < B.NumRows(); ++j)
+		B[j][i] /= gcd;
+    }
 }
 
 class cone {
@@ -40,7 +56,6 @@ public:
     }
     void set_det() {
 	det = determinant(rays);
-	abs_det = abs(det);
     }
     void set_closed(int *cl) {
 	closed = NULL;
@@ -51,24 +66,35 @@ public:
 	}
     }
     bool needs_split(barvinok_options *options) {
-	if (IsOne(abs_det))
+	index = abs(det);
+	if (IsOne(index))
 	    return false;
-	if (options->primal && abs_det <= options->max_index)
+	if (options->primal && index <= options->max_index)
 	    return false;
-	return true;
-    }
 
-    void short_vector(vec_ZZ& v, vec_ZZ& lambda, barvinok_options *options) {
 	Matrix *M = rays2matrix(rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
 	assert(ok);
 	Matrix_Free(M);
 
-	ZZ det2;
-	mat_ZZ B;
-	mat_ZZ U;
 	matrix2zz(inv, B, inv->NbRows - 1, inv->NbColumns - 1);
+	Matrix_Free(inv);
+
+	if (!options->primal && options->max_index > 1) {
+	    mat_ZZ B2 = B;
+	    normalize_cols(B2);
+	    index = abs(determinant(B2));
+	    if (index <= options->max_index)
+		return false;
+	}
+
+	return true;
+    }
+
+    void short_vector(vec_ZZ& v, vec_ZZ& lambda, barvinok_options *options) {
+	ZZ det2;
+	mat_ZZ U;
 	long r = LLL(det2, B, U, options->LLL_a, options->LLL_b);
 
 	ZZ min = max(B[0]);
@@ -80,8 +106,6 @@ public:
 		index = i;
 	    }
 	}
-
-	Matrix_Free(inv);
 
 	lambda = B[index];
 
@@ -103,8 +127,9 @@ public:
     }
 
     ZZ det;
-    ZZ abs_det;
+    ZZ index;
     mat_ZZ rays;
+    mat_ZZ B;
     int *closed;
 };
 
@@ -121,7 +146,7 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
     } else {
 	try {
 	    options->stats->base_cones++;
-	    scc.handle(signed_cone(sc.C, sc.rays, sc.sign, to_ulong(c->abs_det),
+	    scc.handle(signed_cone(sc.C, sc.rays, sc.sign, to_ulong(c->index),
 				   sc.closed), options);
 	    delete c;
 	} catch (...) {
@@ -162,13 +187,13 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 	    }
 	    assert (pc->det != 0);
 	    if (pc->needs_split(options)) {
-		assert(pc->abs_det < c->abs_det);
+		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
 	    } else {
 		try {
 		    options->stats->base_cones++;
 		    scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
-					   to_ulong(pc->abs_det),
+					   to_ulong(pc->index),
 					   pc->closed), options);
 		    delete pc;
 		} catch (...) {
