@@ -21,12 +21,12 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 
 void barvinok_stats_clear(struct barvinok_stats *stats)
 {
-    stats->unimodular_cones = 0;
+    stats->base_cones = 0;
 }
 
 void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
 {
-    fprintf(out, "Unimodular cones: %d\n", stats->unimodular_cones);
+    fprintf(out, "Base cones: %d\n", stats->base_cones);
 }
 
 struct barvinok_options *barvinok_options_new_with_defaults()

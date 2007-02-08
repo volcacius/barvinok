@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 struct barvinok_stats {
-    long	unimodular_cones;
+    long	base_cones;
 };
 
 void barvinok_stats_clear(struct barvinok_stats *stats);
