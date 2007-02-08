@@ -406,6 +406,7 @@ void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     unsigned len = den_f.NumRows();  // number of factors in den
     vec_ZZ den_s;
     den_s.SetLength(len);
+    assert(num.length() == 1);
     ZZ num_s = num[0];
     for (r = 0; r < len; ++r)
 	den_s[r] = den_f[r][0];
@@ -436,6 +437,7 @@ void infinite_icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f
     unsigned len = den_f.NumRows();  // number of factors in den
     vec_ZZ den_s;
     den_s.SetLength(len);
+    assert(num.length() == 1);
     ZZ num_s = num[0];
 
     for (r = 0; r < len; ++r)
