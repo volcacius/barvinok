@@ -91,6 +91,8 @@ Polyhedron *Cone_over_Polyhedron(Polyhedron *P);
 Matrix *compress_variables(Matrix *Equalities, unsigned nparam);
 Matrix *left_inverse(Matrix *M, Matrix **Eq);
 
+int Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam);
+
 const char *barvinok_version();
 
 #if defined(__cplusplus)

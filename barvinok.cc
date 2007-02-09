@@ -909,28 +909,6 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
     return true;
 }
 
-/* Check whether all rays are revlex positive in the parameters
- */
-static bool Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam)
-{
-    int r;
-    for (r = 0; r < P->NbRays; ++r) {
-	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
-	    continue;
-	int i;
-	for (i = P->Dimension-1; i >= P->Dimension-nparam; --i) {
-	    if (value_neg_p(P->Ray[r][i+1]))
-		return false;
-	    if (value_pos_p(P->Ray[r][i+1]))
-		break;
-	}
-	/* A ray independent of the parameters */
-	if (i < P->Dimension-nparam)
-	    return false;
-    }
-    return true;
-}
-
 typedef evalue * evalue_p;
 
 struct enumerator_base {

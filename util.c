@@ -1557,3 +1557,25 @@ Matrix *left_inverse(Matrix *M, Matrix **Eq)
     Matrix_Free(invH);
     return inv;
 }
+
+/* Check whether all rays are revlex positive in the parameters
+ */
+int Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam)
+{
+    int r;
+    for (r = 0; r < P->NbRays; ++r) {
+	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
+	    continue;
+	int i;
+	for (i = P->Dimension-1; i >= P->Dimension-nparam; --i) {
+	    if (value_neg_p(P->Ray[r][i+1]))
+		return 0;
+	    if (value_pos_p(P->Ray[r][i+1]))
+		break;
+	}
+	/* A ray independent of the parameters */
+	if (i < P->Dimension-nparam)
+	    return 0;
+    }
+    return 1;
+}
