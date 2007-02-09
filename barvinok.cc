@@ -1670,7 +1670,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 
 /* Destroys C */
 static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C, 
-				      unsigned MaxRays)
+				      struct barvinok_options *options)
 {
     evalue *eres;
 
@@ -1678,13 +1678,14 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
     value_init(eres->d);
     value_set_si(eres->d, 0);
     eres->x.p = new_enode(partition, 2, C->Dimension);
-    EVALUE_SET_DOMAIN(eres->x.p->arr[0], DomainConstraintSimplify(C, MaxRays));
+    EVALUE_SET_DOMAIN(eres->x.p->arr[0],
+		      DomainConstraintSimplify(C, options->MaxRays));
     value_set_si(eres->x.p->arr[1].d, 1);
     value_init(eres->x.p->arr[1].x.n);
     if (emptyQ(P))
 	value_set_si(eres->x.p->arr[1].x.n, 0);
     else
-	barvinok_count(P, &eres->x.p->arr[1].x.n, MaxRays);
+	barvinok_count_with_options(P, &eres->x.p->arr[1].x.n, options);
 
     return eres;
 }
@@ -1715,8 +1716,7 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
-	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), 
-				      options->MaxRays);
+	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), options);
 out:
 	emul(&factor, eres);
 	reduce_evalue(eres);
@@ -1833,7 +1833,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     } else {
 	assert(CT->NbRows != CT->NbColumns);
 	if (CT->NbRows == 1) {		// no more parameters
-	    eres = barvinok_enumerate_cst(P, CEq, options->MaxRays);
+	    eres = barvinok_enumerate_cst(P, CEq, options);
 out:
 	    if (CT)
 		Matrix_Free(CT);
@@ -1869,8 +1869,7 @@ try_again:
     for(nd = 0, D=PP->D; D; D=next) {
 	next = D->next;
 
-	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, options->MaxRays);
+	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq, fVD, nd, options);
 	if (!rVD)
 	    continue;
 
@@ -2785,8 +2784,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     Polyhedron **VD = new Polyhedron_p[nd];
     Polyhedron **fVD = new Polyhedron_p[nd];
     for(nd = 0, D=PP->D; D; D=D->next) {
-	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd,  options->MaxRays);
+	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq, fVD, nd,  options);
 	if (!rVD)
 	    continue;
 

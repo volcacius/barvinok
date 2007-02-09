@@ -2702,7 +2702,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	next = D->next;
 
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, options->barvinok->MaxRays);
+					fVD, nd, options->barvinok);
 	if (!rVD)
 	    continue;
 

@@ -1,16 +1,18 @@
+#include <barvinok/options.h>
 #include "reduce_domain.h"
 
 Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
-			  Polyhedron **fVD, int nd, unsigned MaxRays)
+			  Polyhedron **fVD, int nd,
+			  struct barvinok_options *options)
 {
     Polyhedron *Dt, *rVD;
     Polyhedron *C;
     Value c;
     int i;
 
-    C = D->next ? DomainConvex(D, MaxRays) : D;
-    Dt = CT ? DomainPreimage(C, CT, MaxRays) : C;
-    rVD = CEq ? DomainIntersection(Dt, CEq, MaxRays) : Domain_Copy(Dt);
+    C = D->next ? DomainConvex(D, options->MaxRays) : D;
+    Dt = CT ? DomainPreimage(C, CT, options->MaxRays) : C;
+    rVD = CEq ? DomainIntersection(Dt, CEq, options->MaxRays) : Domain_Copy(Dt);
 
     /* if rVD is empty or too small in geometric dimension */
     if(!rVD || emptyQ(rVD) ||
@@ -32,22 +34,22 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
     fVD[nd] = Domain_Copy(rVD);
     for (i = 0 ; i < nd; ++i) {
 	Polyhedron *F;
-	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], MaxRays);
+	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], options->MaxRays);
 	if (emptyQ(I)) {
 	    Domain_Free(I);
 	    continue;
 	}
-	F = DomainSimplify(I, fVD[nd], MaxRays);
+	F = DomainSimplify(I, fVD[nd], options->MaxRays);
 	if (F->NbEq == 1) {
 	    Polyhedron *T = rVD;
-	    rVD = DomainDifference(rVD, F, MaxRays);
+	    rVD = DomainDifference(rVD, F, options->MaxRays);
 	    Domain_Free(T);
 	}
 	Domain_Free(F);
 	Domain_Free(I);
     }
 
-    rVD = DomainConstraintSimplify(rVD, MaxRays);
+    rVD = DomainConstraintSimplify(rVD, options->MaxRays);
     if (emptyQ(rVD)) {
 	Domain_Free(fVD[nd]);
 	Domain_Free(rVD);
@@ -55,7 +57,7 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
     }
 
     value_init(c);
-    barvinok_count(rVD, &c, MaxRays);
+    barvinok_count_with_options(rVD, &c, options);
     if (value_zero_p(c)) {
 	Domain_Free(rVD);
 	rVD = 0;
