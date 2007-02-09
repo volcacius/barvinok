@@ -374,6 +374,39 @@ static void unimodular_complete(Matrix *M, int row)
     Matrix_Free(Q);
 }
 
+/* frees M and Minv */
+static void apply_transformation(Polyhedron **P, Polyhedron **C,
+				 bool free_P, bool free_C,
+				 Matrix *M, Matrix *Minv, Matrix **inv,
+				 barvinok_options *options)
+{
+    Polyhedron *T;
+    Matrix *M2;
+
+    M2 = align_matrix(M, (*P)->Dimension + 1);
+    T = *P;
+    *P = Polyhedron_Preimage(*P, M2, options->MaxRays);
+    if (free_P)
+	Polyhedron_Free(T);
+    Matrix_Free(M2);
+
+    T = *C;
+    *C = Polyhedron_Preimage(*C, M, options->MaxRays);
+    if (free_C)
+	Polyhedron_Free(T);
+
+    Matrix_Free(M);
+
+    if (*inv) {
+	Matrix *T = *inv;
+	*inv = Matrix_Alloc(Minv->NbRows, T->NbColumns);
+	Matrix_Product(Minv, T, *inv);
+	Matrix_Free(T);
+	Matrix_Free(Minv);
+    } else
+	*inv = Minv;
+}
+
 static skewed_gen_fun *series(Polyhedron *P, Polyhedron* C,
 				barvinok_options *options)
 {
@@ -450,29 +483,30 @@ static skewed_gen_fun *series(Polyhedron *P, Polyhedron* C,
 	for ( ; k < C2->Dimension-C2->NbBid+1; k++)
 	    value_set_si(M->p[k+C2->NbBid][k], 1);
 	Minv = Transpose(M);
-	M2 = align_matrix(M, PT->Dimension + 1);
 
-	T = PT;
-	PT = Polyhedron_Preimage(PT, M2, options->MaxRays);
-	if (T != P)
-	    Polyhedron_Free(T);
+	apply_transformation(&PT, &C2, PT != P, C2 != C, M, Minv, &inv, options);
+    }
+    POL_ENSURE_VERTICES(C2);
+    if (!Polyhedron_has_revlex_positive_rays(C2, C2->Dimension)) {
+	Polyhedron *T;
+	Matrix *Constraints;
+	Matrix *H, *Q, *U;
+	Constraints = Matrix_Alloc(C2->NbConstraints, C2->Dimension+1);
+	for (int i = 0; i < C2->NbConstraints; ++i)
+	    Vector_Copy(C2->Constraint[i]+1, Constraints->p[i], C2->Dimension);
+	left_hermite(Constraints, &H, &Q, &U);
+	/* flip rows of Q */
+	for (int i = 0; i < C2->Dimension/2; ++i)
+	    Vector_Exchange(Q->p[i], Q->p[C2->Dimension-1-i], C2->Dimension);
+	Matrix_Free(H);
+	Matrix_Free(U);
+	Matrix *M = Matrix_Alloc(C2->Dimension+1, C2->Dimension+1);
+	U = Matrix_Copy(Q);
+	int ok = Matrix_Inverse(U, M);
+	assert(ok);
+	Matrix_Free(U);
 
-	T = C2;
-	C2 = Polyhedron_Preimage(C2, M, options->MaxRays);
-	if (T != C)
-	    Polyhedron_Free(T);
-
-	Matrix_Free(M);
-	Matrix_Free(M2);
-
-	if (inv) {
-	    Matrix *T = inv;
-	    inv = Matrix_Alloc(Minv->NbRows, T->NbColumns);
-	    Matrix_Product(Minv, T, inv);
-	    Matrix_Free(T);
-	    Matrix_Free(Minv);
-	} else
-	    inv = Minv;
+	apply_transformation(&PT, &C2, PT != P, C2 != C, M, Q, &inv, options);
     }
     gf = barvinok_series_with_options(PT, C2, options);
     Polyhedron_Free(C2);
