@@ -185,50 +185,68 @@ endif
 
 check-series:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
-	    for options in '' '--primal'; do \
-		if test -f $$i; then \
-		    echo $$i $$options; \
-		    ./barvinok_enumerate --verify --series $$options < $$i; \
-		fi \
-	    done \
+	    if test -f $$i; then \
+		for options in '' '--primal'; do \
+		    for spec in 'random' 'bf' 'df'; do \
+			opt="--specialization=$$spec $$options"; \
+			echo $$i $$opt; \
+			./barvinok_enumerate --verify --series $$opt < $$i; \
+		    done \
+		done \
+	    fi \
 	done
 check:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
-		echo $$i; \
-		./barvinok_enumerate --verify < $$i; \
+		for spec in 'random' 'bf' 'df'; do \
+		    opt="--specialization=$$spec"; \
+		    echo $$i $$opt; \
+		    ./barvinok_enumerate --verify $$opt < $$i; \
+		done \
 	    fi \
 	done
 	@for dir in $(BEE_TESTDIRS); do \
-	    for options in '' '--pip' '--pip --omega'; do \
-		for i in $(top_srcdir)/tests/$$dir/*; do \
-		    if test -f $$i; then \
-			echo $$i $$options; \
-			./barvinok_enumerate_e --verify $$options < $$i; \
-		    fi \
-		done \
+	    for i in $(top_srcdir)/tests/$$dir/*; do \
+		if test -f $$i; then \
+		    for options in '' '--pip' '--pip --omega'; do \
+			for spec in 'random' 'bf' 'df'; do \
+			    opt="--specialization=$$spec $$options"; \
+			    echo $$i $$opt; \
+			    ./barvinok_enumerate_e --verify $$opt < $$i; \
+			done \
+		    done \
+		fi \
 	    done \
 	done
 	@for i in $(top_srcdir)/tests/ehrhart_e/scarf/*; do \
 	    if test -f $$i; then \
-		echo $$i --scarf; \
-		./barvinok_enumerate_e --verify --scarf < $$i; \
+		for spec in 'random' 'bf' 'df'; do \
+		    opt="--specialization=$$spec --scarf"; \
+		    echo $$i $$opt; \
+		    ./barvinok_enumerate_e --verify $$opt < $$i; \
+		done \
 	    fi \
 	done
 	@for i in $(top_srcdir)/tests/*; do \
-	    for options in '--index=10' '--primal --index=10'; do \
-		if test -f $$i; then \
-		    echo -n $$i $$options; \
-		    ./test $$options < $$i || echo -n " NOT"; \
-		    echo " ok"; \
-		fi \
-	    done \
+	    if test -f $$i; then \
+		for options in '--index=10' '--primal --index=10'; do \
+		    for spec in 'random' 'bf' 'df'; do \
+			opt="--specialization=$$spec $$options"; \
+			echo -n $$i $$opt; \
+			./test $$opt < $$i || echo -n " NOT"; \
+			echo " ok"; \
+		    done \
+		done \
+	    fi \
 	done
 if HAVE_GLPK
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
-		echo $$i; \
-		./lexmin --verify < $$i; \
+		for spec in 'random' 'bf' 'df'; do \
+		    opt="--specialization=$$spec"; \
+		    echo $$i $$opt; \
+		    ./lexmin --verify $$opt < $$i; \
+		done \
 	    fi \
 	done
 endif
