@@ -183,28 +183,21 @@ else
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
 endif
 
-check-series:
+check: check-enumerate check-enumerate_e check-test check-lexmin
+check-enumerate:
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
-		for options in '' '--primal'; do \
+		echo $$i; \
+		for options in '' '--series' '--series --primal'; do \
 		    for spec in 'random' 'bf' 'df'; do \
 			opt="--specialization=$$spec $$options"; \
-			echo $$i $$opt; \
-			./barvinok_enumerate --verify --series $$opt < $$i; \
+			echo "        $$opt"; \
+			./barvinok_enumerate --verify $$opt < $$i; \
 		    done \
 		done \
 	    fi \
 	done
-check:
-	@for i in $(top_srcdir)/tests/ehrhart/*; do \
-	    if test -f $$i; then \
-		for spec in 'random' 'bf' 'df'; do \
-		    opt="--specialization=$$spec"; \
-		    echo $$i $$opt; \
-		    ./barvinok_enumerate --verify $$opt < $$i; \
-		done \
-	    fi \
-	done
+check-enumerate_e:
 	@for dir in $(BEE_TESTDIRS); do \
 	    for i in $(top_srcdir)/tests/$$dir/*; do \
 		if test -f $$i; then \
@@ -227,6 +220,7 @@ check:
 		done \
 	    fi \
 	done
+check-test:
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		for options in '--index=10' '--primal --index=10'; do \
@@ -239,6 +233,7 @@ check:
 		done \
 	    fi \
 	done
+check-lexmin:
 if HAVE_GLPK
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
