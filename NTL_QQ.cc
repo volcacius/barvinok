@@ -3,6 +3,8 @@
 
 NTL_vector_impl(QQ,vec_QQ);
 
+ZZ QQ::tmp;
+
 vec_QQ& operator *= (vec_QQ& a, const ZZ& b)
 {
     for (int i = 0; i < a.length(); ++i)
@@ -28,6 +30,7 @@ std::istream& operator>> (std::istream& is, QQ& q)
     char slash;
     is >> q.n >> slash >> q.d;
     assert(slash == '/');
+    q.canonicalize();
     return is;
 }
 

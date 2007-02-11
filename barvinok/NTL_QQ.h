@@ -11,6 +11,8 @@ using namespace NTL;
 struct QQ {
     ZZ	n;
     ZZ	d;
+    /* This is not thread-safe, but neither is NTL */
+    static ZZ tmp;
 
     QQ() {}
     QQ(int n, int d) {
@@ -18,23 +20,25 @@ struct QQ {
 	this->d = d;
     }
 
-    QQ& operator += (const QQ& a) {
-	/* This is not thread-safe, but neither is NTL */
-	static ZZ tmp;
-	n *= a.d;
-	mul(tmp, d, a.n);
-	n += tmp;
-	d *= a.d;
+    QQ& canonicalize() {
 	GCD(tmp, n, d);
 	n /= tmp;
 	d /= tmp;
 	return *this;
     }
 
+    QQ& operator += (const QQ& a) {
+	n *= a.d;
+	mul(tmp, d, a.n);
+	n += tmp;
+	d *= a.d;
+	return canonicalize();
+    }
+
     QQ& operator *= (const QQ& a) {
 	n *= a.n;
 	d *= a.d;
-	return *this;
+	return canonicalize();
     }
 
     QQ& operator *= (const ZZ& a) {
