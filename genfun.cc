@@ -81,13 +81,13 @@ void short_rat::normalize()
     for (int i = 0; i < d.power.NumRows(); ++i) {
 	int j;
 	for (j = d.power.NumCols()-1; j >= 0; --j)
-	    if (d.power[i][j] != 0)
+	    if (!IsZero(d.power[i][j]))
 		break;
 	assert(j >= 0);
-	if (d.power[i][j] < 0) {
-	    d.power[i] = -d.power[i];
+	if (sign(d.power[i][j]) < 0) {
+	    negate(d.power[i], d.power[i]);
 	    for (int k = 0; k < n.coeff.length(); ++k) {
-		n.coeff[k].n = -n.coeff[k].n;
+		negate(n.coeff[k].n, n.coeff[k].n);
 		n.power[k] += d.power[i];
 	    }
 	}
