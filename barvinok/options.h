@@ -39,6 +39,12 @@ struct barvinok_options {
     int		    	    lookup_table;
     int		    	    count_sample_infinite;
 
+    #define	BV_POLAPPROX_NONE	0
+    #define	BV_POLAPPROX_PRE_LOWER	1
+    #define	BV_POLAPPROX_PRE_UPPER	2
+    #define	BV_POLAPPROX_PRE_APPROX	3
+    int			    polynomial_approximation;
+
     /* basis reduction options */
     #define	BV_GBR_NONE	0
     #define	BV_GBR_GLPK	1
@@ -56,7 +62,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_TABLE		258
 #define BV_OPT_GBR		259
 #define BV_OPT_MAXINDEX		260
-#define BV_OPT_LAST		260
+#define BV_OPT_POLAPPROX	261
+#define BV_OPT_LAST		261
 
 struct argp;
 extern struct argp barvinok_argp;

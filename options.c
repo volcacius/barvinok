@@ -68,6 +68,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->count_sample_infinite = 0;
 #endif
 
+    options->polynomial_approximation = BV_POLAPPROX_NONE;
+
 #ifdef HAVE_LIBGLPK
     options->gbr_lp_solver = BV_GBR_GLPK;
 #elif defined HAVE_LIBCDDGMP
@@ -91,6 +93,9 @@ struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
+    { "polynomial-approximation",
+			    BV_OPT_POLAPPROX,
+			    "pre-lower|pre-upper|pre-approx",	0 },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
     { "version",	    'V',		    0,			0 },
@@ -125,6 +130,14 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case BV_OPT_MAXINDEX:
 	options->max_index = strtoul(arg, NULL, 0);
+	break;
+    case BV_OPT_POLAPPROX:
+	if (!strcmp(arg, "pre-lower"))
+	    options->polynomial_approximation = BV_POLAPPROX_PRE_LOWER;
+	else if (!strcmp(arg, "pre-upper"))
+	    options->polynomial_approximation = BV_POLAPPROX_PRE_UPPER;
+	else if (!strcmp(arg, "pre-approx"))
+	    options->polynomial_approximation = BV_POLAPPROX_PRE_APPROX;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;

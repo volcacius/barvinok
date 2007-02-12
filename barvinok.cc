@@ -1787,12 +1787,62 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     return E;
 }
 
+/* adapted from mpolyhedron_inflate in PolyLib */
+static Polyhedron *Polyhedron_Inflate(Polyhedron *P, unsigned nparam,
+				      unsigned MaxRays)
+{
+    Value sum;
+    int nvar = P->Dimension - nparam;
+    Matrix *C = Polyhedron2Constraints(P);
+    Polyhedron *P2;
+
+    value_init(sum);
+    /* subtract the sum of the negative coefficients of each inequality */
+    for (int i = 0; i < C->NbRows; ++i) {
+	value_set_si(sum, 0);
+	for (int j = 0; j < nvar; ++j)
+	    if (value_neg_p(C->p[i][1+j]))
+		value_addto(sum, sum, C->p[i][1+j]);
+	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
+    }
+    value_clear(sum);
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+    return P2;
+}
+
+/* adapted from mpolyhedron_deflate in PolyLib */
+static Polyhedron *Polyhedron_Deflate(Polyhedron *P, unsigned nparam,
+				      unsigned MaxRays)
+{
+    Value sum;
+    int nvar = P->Dimension - nparam;
+    Matrix *C = Polyhedron2Constraints(P);
+    Polyhedron *P2;
+
+    value_init(sum);
+    /* subtract the sum of the positive coefficients of each inequality */
+    for (int i = 0; i < C->NbRows; ++i) {
+	value_set_si(sum, 0);
+	for (int j = 0; j < nvar; ++j)
+	    if (value_pos_p(C->p[i][1+j]))
+		value_addto(sum, sum, C->p[i][1+j]);
+	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
+    }
+    value_clear(sum);
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+    return P2;
+}
+
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
 				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
+    bool pre_approx = options->polynomial_approximation >= BV_POLAPPROX_PRE_LOWER &&
+		      options->polynomial_approximation <= BV_POLAPPROX_PRE_APPROX;
 
-    if (P->Dimension - nparam == 1)
+    if (P->Dimension - nparam == 1 && !pre_approx)
 	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
@@ -1802,8 +1852,19 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     Param_Vertices *V;
     evalue *eres;
     Polyhedron *Porig = P;
+    Value det;
+    Polyhedron *T;
 
-    PP = Polyhedron2Param_SD(&P,C,options->MaxRays,&CEq,&CT);
+    if (options->polynomial_approximation == BV_POLAPPROX_PRE_UPPER)
+	P = Polyhedron_Inflate(P, nparam, options->MaxRays);
+    if (options->polynomial_approximation == BV_POLAPPROX_PRE_LOWER)
+	P = Polyhedron_Deflate(P, nparam, options->MaxRays);
+
+    T = P;
+    PP = Polyhedron2Param_SD(&T, C, options->MaxRays, &CEq, &CT);
+    if (T != P && P != Porig)
+	Polyhedron_Free(P);
+    P = T;
 
     if (isIdentity(CT)) {
 	Matrix_Free(CT);
@@ -1823,6 +1884,15 @@ out:
 	    return eres;
 	}
 	nparam = CT->NbRows - 1;
+    }
+
+    if (pre_approx) {
+	value_init(det);
+	Polyhedron *T = P;
+	Param_Polyhedron_Scale_Integer(PP, &T, &det, options->MaxRays);
+	if (P != Porig)
+	    Polyhedron_Free(P);
+	P = T;
     }
 
     unsigned dim = P->Dimension - nparam;
@@ -1896,6 +1966,11 @@ try_again:
     }
     delete [] s;
     delete [] fVD;
+
+    if (pre_approx) {
+	evalue_div(eres, det);
+	value_clear(det);
+    }
 
     if (CEq)
 	Polyhedron_Free(CEq);
