@@ -233,8 +233,8 @@ check-test: test
 		done \
 	    fi \
 	done
-check-lexmin: lexmin
 if HAVE_GLPK
+check-lexmin: lexmin
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
 		for spec in 'random' 'bf' 'df'; do \
@@ -244,6 +244,8 @@ if HAVE_GLPK
 		done \
 	    fi \
 	done
+else
+check-lexmin:
 endif
 
 version.h: @GIT_HEAD@
