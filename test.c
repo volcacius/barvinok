@@ -33,7 +33,7 @@ static void time_diff(struct tms *before, struct tms *after)
 
 int main(int argc, char **argv)
 {
-    int i, nbPol, nbVec, func, j;
+    int i, nbPol, nbVec, nbMat, func, j;
     Polyhedron *A, *B, *C, *D, *E, *F, *G;
     char s[128];
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -43,7 +43,9 @@ int main(int argc, char **argv)
     nbPol = nbVec = 0;
     fgets(s, 128, stdin);
     while ((*s=='#') ||
-	    ((sscanf(s, "D %d", &nbPol)<1) && (sscanf(s, "V %d", &nbVec)<1)) )
+	    ((sscanf(s, "D %d", &nbPol) < 1) &&
+	     (sscanf(s, "V %d", &nbVec) < 1) &&
+	     (sscanf(s, "M %d", &nbMat) < 1)))
 	fgets(s, 128, stdin);
 
     for (i = 0; i < nbPol; ++i) {
@@ -178,6 +180,18 @@ int main(int argc, char **argv)
 	Matrix_Print(stdout, P_VALUE_FMT, M);
 	Matrix_Free(M);
 	Vector_Free(V);
+    }
+    for (i = 0; i < nbMat; ++i) {
+	Matrix *U, *V, *S;
+	Matrix *M = Matrix_Read();
+	Smith(M, &U, &V, &S);
+	Matrix_Print(stdout, P_VALUE_FMT, U);
+	Matrix_Print(stdout, P_VALUE_FMT, V);
+	Matrix_Print(stdout, P_VALUE_FMT, S);
+	Matrix_Free(M);
+	Matrix_Free(U);
+	Matrix_Free(V);
+	Matrix_Free(S);
     }
 
     barvinok_options_free(options);
