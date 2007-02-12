@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
     argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
 
-    nbPol = nbVec = 0;
+    nbPol = nbVec = nbMat = 0;
     fgets(s, 128, stdin);
     while ((*s=='#') ||
 	    ((sscanf(s, "D %d", &nbPol) < 1) &&
