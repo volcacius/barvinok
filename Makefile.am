@@ -184,7 +184,7 @@ BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
 endif
 
 check: check-enumerate check-enumerate_e check-test check-lexmin
-check-enumerate:
+check-enumerate: barvinok_enumerate
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
@@ -197,7 +197,7 @@ check-enumerate:
 		done \
 	    fi \
 	done
-check-enumerate_e:
+check-enumerate_e: barvinok_enumerate_e
 	@for dir in $(BEE_TESTDIRS); do \
 	    for i in $(top_srcdir)/tests/$$dir/*; do \
 		if test -f $$i; then \
@@ -220,7 +220,7 @@ check-enumerate_e:
 		done \
 	    fi \
 	done
-check-test:
+check-test: test
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		for options in '--index=10' '--primal --index=10'; do \
@@ -233,7 +233,7 @@ check-test:
 		done \
 	    fi \
 	done
-check-lexmin:
+check-lexmin: lexmin
 if HAVE_GLPK
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
