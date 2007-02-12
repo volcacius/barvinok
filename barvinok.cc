@@ -24,6 +24,11 @@ extern "C" {
 #include "genfun_constructor.h"
 #include "remove_equalities.h"
 
+#ifndef HAVE_PARAM_POLYHEDRON_SCALE_INTEGER
+extern "C" void Param_Polyhedron_Scale_Integer(Param_Polyhedron *PP, Polyhedron **P,
+					       Value *det, unsigned MaxRays);
+#endif
+
 #ifdef NTL_STD_CXX
 using namespace NTL;
 #endif
