@@ -5,7 +5,13 @@
 
 #ifndef HAVE_LIBCDDGMP
 enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
-					    struct lexmin_options *options)
+					    struct barvinok_options *options)
+{
+    assert(0);
+}
+
+enum order_sign cddf_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
+					    struct barvinok_options *options)
 {
     assert(0);
 }
