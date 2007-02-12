@@ -29,6 +29,7 @@ extern "C" {
 #define compute_poly _new_compute_poly
 #define in_domain _new_in_domain
 #define Enumeration_Free _new_Enumeration_Free
+#define evalue_div _new_evalue_div
 
 typedef enum { polynomial, periodic, evector, fractional, relation, 
                partition, flooring } enode_type;
@@ -107,6 +108,7 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift);
 evalue *esum(evalue *E, int nvar);
 void eor(evalue *e1, evalue *res);
 void evalue_denom(evalue *e, Value *d);
+void evalue_div(evalue * e, Value n);
 
 #if defined(__cplusplus)
 }

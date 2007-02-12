@@ -3347,3 +3347,30 @@ void evalue_denom(evalue *e, Value *d)
     for (i = e->x.p->size-1; i >= offset; --i)
 	evalue_denom(&e->x.p->arr[i], d);
 }
+
+/* Divides the evalue e by the integer n */
+void evalue_div(evalue * e, Value n)
+{
+    int i, offset;
+
+    if (value_notzero_p(e->d)) {
+	Value gc;
+	value_init(gc);
+	value_multiply(e->d, e->d, n);
+	Gcd(e->x.n, e->d, &gc);
+	if (value_notone_p(gc)) {
+	    value_division(e->d, e->d, gc);
+	    value_division(e->x.n, e->x.n, gc);
+	}
+	value_clear(gc);
+	return;
+    }
+    if (e->x.p->type == partition) {
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    evalue_div(&e->x.p->arr[2*i+1], n);
+	return;
+    }
+    offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	evalue_div(&e->x.p->arr[i], n);
+}
