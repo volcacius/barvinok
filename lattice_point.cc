@@ -354,6 +354,12 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
     Matrix_Free(Rays);
     Matrix_Free(U);
 
+    /* Sanity check */
+    unsigned long det2 = 1;
+    for (int i = 0 ; i < D->NbRows; ++i)
+	det2 *= mpz_get_ui(D->p[i][i]);
+    assert(det == det2);
+
     Matrix *T = Matrix_Alloc(W->NbRows+1, W->NbColumns+1);
     for (int i = 0; i < W->NbRows; ++i)
 	Vector_Scale(W->p[i], T->p[i], values[dim], W->NbColumns);
