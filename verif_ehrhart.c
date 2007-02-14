@@ -89,29 +89,28 @@ void check_poly_init(Polyhedron *C, struct verify_options *options)
 int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 	       int nparam, int pos, Value *z, const struct verify_options *options)
 {
-  int k;
-  Value c, tmp;
-  int ok;
-  int pa = options->barvinok->polynomial_approximation;
+    int k;
+    Value c, tmp;
+    int ok;
+    int pa = options->barvinok->polynomial_approximation;
   
-  value_init(c); value_init(tmp);
+    value_init(c);
+    value_init(tmp);
   
-  if(pos == nparam) {
-    
-    /* Computes the ehrhart polynomial */
-    value_set_double(c, compute_evalue(EP,&z[S->Dimension-nparam+1])+.25);
+    if (pos == nparam) {
+	/* Computes the ehrhart polynomial */
+	value_set_double(c, compute_evalue(EP, &z[S->Dimension-nparam+1])+.25);
 
-    if (options->print_all) {
-      printf("EP( ");
-      value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
-      for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-	printf(", ");
-	value_print(stdout,VALUE_FMT,z[k]);
-      }
-      printf(" ) = ");
-      value_print(stdout,VALUE_FMT,c);
-      printf(" ");
-    }
+	if (options->print_all) {
+	    printf("EP(");
+	    value_print(stdout, VALUE_FMT, z[S->Dimension-nparam+1]);
+	    for(k=S->Dimension-nparam+2; k<=S->Dimension; ++k) {
+		printf(", ");
+		value_print(stdout,VALUE_FMT,z[k]);
+	    }
+	    printf(") = ");
+	    value_print(stdout, VALUE_FMT, c);
+	}
 
 	/* Manually count the number of points */
 	if (exist)
@@ -119,11 +118,11 @@ int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 	else
 	    count_points(1, S, z, &tmp);
 
-    if (options->print_all) {
-	printf(", count = ");
-	value_print(stdout, P_VALUE_FMT, tmp);
-	printf(". ");
-    }
+	if (options->print_all) {
+	    printf(", count = ");
+	    value_print(stdout, VALUE_FMT, tmp);
+	    printf(". ");
+	}
 
 	if (pa == BV_POLAPPROX_PRE_APPROX)
 	    /* just accept everything */
@@ -135,21 +134,21 @@ int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 	else
 	    ok = value_eq(c, tmp);
 
-      if (!ok) {
-        printf("\n"); 
-        fflush(stdout);
-        fprintf(stderr,"Error !\n");
-        fprintf(stderr,"EP( ");
-        value_print(stderr,VALUE_FMT,z[S->Dimension-nparam+1]);
-        for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-          fprintf(stderr,", ");
-          value_print(stderr,VALUE_FMT,z[k]);
-        }
-        fprintf(stderr," ) should be ");
-        value_print(stderr,VALUE_FMT,tmp);
-        fprintf(stderr,", while EP eval gives ");
-        value_print(stderr,VALUE_FMT,c);
-        fprintf(stderr,".\n");
+	if (!ok) {
+	    printf("\n"); 
+	    fflush(stdout);
+	    fprintf(stderr, "Error !\n");
+	    fprintf(stderr, "EP(");
+	    value_print(stderr, VALUE_FMT, z[S->Dimension-nparam+1]);
+	    for(k=S->Dimension-nparam+2; k<=S->Dimension; ++k) {
+		fprintf(stderr,", ");
+		value_print(stderr,VALUE_FMT,z[k]);
+	    }
+	    fprintf(stderr, ") should be ");
+	    value_print(stderr, VALUE_FMT, tmp);
+	    fprintf(stderr, ", while EP eval gives ");
+	    value_print(stderr, VALUE_FMT, c);
+	    fprintf(stderr, ".\n");
 	    print_evalue(stderr, EP, options->params);
 	    if (value_zero_p(EP->d) && EP->x.p->type == partition)
 		for (k = 0; k < EP->x.p->size/2; ++k) {
@@ -159,14 +158,13 @@ int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 			print_evalue(stderr, &EP->x.p->arr[2*k+1], options->params);
 		    }
 	    }
-	if (!options->continue_on_error) {
-	    value_clear(c); value_clear(tmp);
-	    return 0;
-	}
-      } else if (options->print_all)
-	printf("OK.\n");
-  }
-  else {
+	    if (!options->continue_on_error) {
+		value_clear(c); value_clear(tmp);
+		return 0;
+	    }
+	} else if (options->print_all)
+	    printf("OK.\n");
+    } else {
 	Value LB, UB;
 	int ok;
 	value_init(LB);
@@ -184,17 +182,18 @@ int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 	      
 	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
 	    if (!check_poly(S, CS->next, EP, exist, nparam, pos+1, z, options)) {
-		value_clear(c); value_clear(tmp);
+		value_clear(c);
+		value_clear(tmp);
 		value_clear(LB);
 		value_clear(UB);
 		return 0;
 	    }
 	}
-	value_set_si(z[pos+S->Dimension-nparam+1],0);
+	value_set_si(z[pos+S->Dimension-nparam+1], 0);
 	value_clear(LB);
 	value_clear(UB);
-  }
-  value_clear(c); value_clear(tmp);
-  return(1);
+    }
+    value_clear(c);
+    value_clear(tmp);
+    return 1;
 } /* check_poly */
-
