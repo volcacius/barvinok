@@ -10,6 +10,7 @@
 #include "omega/convert.h"
 #endif
 #include "verify.h"
+#include "verif_ehrhart.h"
 
 /* The input of this example program is a polytope in combined
  * data and parameter space followed by two lines indicating
@@ -108,16 +109,8 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 /* define this to continue the test after first error found */
 /* #define DONT_BREAK_ON_ERROR */
 
-static Value min_val, max_val;
-
-static char **params;
-
-static int st;
-
-static int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
-		      int exist, int nparam, int pos, Value *z, int print_all);
-static void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, 
-			   int m, int M, int print_all, unsigned MaxRays);
+static void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
+			   verify_options *options);
 
 int main(int argc, char **argv)
 {
@@ -219,10 +212,10 @@ int main(int argc, char **argv)
 	    if (print_solution)
 		print_evalue(stdout, EP, param_name);
 	}
-	if (arguments.verify.verify)
-	    verify_results(A, EP, exist, nparam, arguments.verify.m,
-			    arguments.verify.M, arguments.verify.print_all,
-			    options->MaxRays);
+	if (arguments.verify.verify) {
+	    arguments.verify.params = param_name;
+	    verify_results(A, EP, exist, nparam, &arguments.verify);
+	}
 	free_evalue_refs(EP);
 	free(EP);
     }
@@ -231,18 +224,15 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int M,
-		    int print_all, unsigned MaxRays)
+void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
+		    verify_options *options)
 {
     int i;
     int res;
     Value *p, tmp;
-    Polyhedron *S;
+    Polyhedron *S, *CS;
+    unsigned MaxRays = options->barvinok->MaxRays;
     Polyhedron *C = Polyhedron_Project(P, nparam);
-    value_init(min_val);
-    value_init(max_val);
-    value_set_si(min_val,m);
-    value_set_si(max_val,M);
     value_init(tmp);
 
     p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
@@ -256,28 +246,18 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int
     /* S = scanning list of polyhedra */
     S = Polyhedron_Scan(P, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
 
-    if (!print_all) {
-	if (C->Dimension > 0) {
-	  value_subtract(tmp,max_val,min_val);
-	  if (VALUE_TO_INT(tmp) > 80)
-	    st = 1+(VALUE_TO_INT(tmp))/80;
-	  else
-	    st=1;
-	  for(i=VALUE_TO_INT(min_val);i<=VALUE_TO_INT(max_val);i+=st)
-	    printf(".");
-	  printf( "\r" );
-	  fflush(stdout);
-	}
-    }
+    CS = check_poly_context_scan(C, options);
+
+    check_poly_init(C, options);
 
     /******* CHECK NOW *********/
     res = 0;
-    if(S && !check_poly(S, C, EP, exist, nparam, 0, p, print_all)) {
+    if (S && !check_poly(S, CS, EP, exist, nparam, 0, p, options)) {
       fprintf(stderr,"Check failed !\n");
       res = -1;
     }
       
-    if (!print_all)
+    if (!options->print_all)
 	printf( "\n" );
     
     for(i=0;i<=(P->Dimension+1);i++) 
@@ -286,97 +266,6 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam, int m, int
     value_clear(tmp);
     Domain_Free(S);
     Polyhedron_Free(C);
+    if (CS)
+	Domain_Free(CS);
 }
-
-/****************************************************/
-/* function check_poly :                            */
-/* scans the parameter space from min to max (all   */
-/* directions). Computes the number of points in    */
-/* the polytope using both methods, and compare them*/
-/* returns 1 on success                             */
-/****************************************************/
-
-int check_poly(Polyhedron *S, Polyhedron *C, evalue *EP,
-	       int exist, int nparam, int pos, Value *z, int print_all)
-{  
-  int k;
-  Value c,tmp;
-  
-  value_init(c); value_init(tmp);
-  
-  if(pos == nparam) {
-    
-    /* Computes the ehrhart polynomial */
-    value_set_double(c, compute_evalue(EP,&z[S->Dimension-nparam+1])+.25);
-    /* if c=0 we may be out of context. */
-    /* scanning is useless in this case*/
-    if(!in_domain(C,&z[S->Dimension-nparam+1])) {
-   
-      /* ok */ ;
-    }
-    else {
-      
-    if (print_all) {
-      printf("EP( ");
-      value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
-      for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-	printf(", ");
-	value_print(stdout,VALUE_FMT,z[k]);
-      }
-      printf(" ) = ");
-      value_print(stdout,VALUE_FMT,c);
-      printf(" ");
-    }
-
-      /* Manually count the number of points */
-      count_points_e(1, S, exist, nparam, z, &tmp);
-    if (print_all) {
-	printf(", count = ");
-	value_print(stdout, P_VALUE_FMT, tmp);
-	printf(". ");
-    }
-
-      if(value_ne(tmp,c)) {
-        printf("\n"); 
-        fflush(stdout);
-        fprintf(stderr,"Error !\n");
-        fprintf(stderr,"EP( ");
-        value_print(stderr,VALUE_FMT,z[S->Dimension-nparam+1]);
-        for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-          fprintf(stderr,", ");
-          value_print(stderr,VALUE_FMT,z[k]);
-        }
-        fprintf(stderr," ) should be ");
-        value_print(stderr,VALUE_FMT,tmp);
-        fprintf(stderr,", while EP eval gives ");
-        value_print(stderr,VALUE_FMT,c);
-        fprintf(stderr,".\n");
-	print_evalue(stderr, EP, params);
-#ifndef DONT_BREAK_ON_ERROR
-	value_clear(c); value_clear(tmp);
-	return(0);
-#endif
-      }
-      else if (print_all)
-	printf("OK.\n");
-    }
-  }
-  else
-    for(value_assign(tmp,min_val); value_le(tmp,max_val); value_increment(tmp,tmp)) {
-      if (!print_all) {
-	  k = VALUE_TO_INT(tmp);
-	  if(!pos && !(k%st)) {
-	    printf("o");
-	    fflush(stdout);
-	  }
-       }
-      
-      value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if(!check_poly(S, C, EP, exist, nparam, pos+1, z, print_all)) {
-	value_clear(c); value_clear(tmp);
-	return(0);
-      }
-    }
-  value_clear(c); value_clear(tmp);
-  return(1);
-} /* check_poly */

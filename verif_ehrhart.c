@@ -30,6 +30,54 @@
 	}
 #endif
 
+Polyhedron *check_poly_context_scan(Polyhedron *C, struct verify_options *options)
+{
+    int i;
+    Matrix *MM;
+    Polyhedron *CC, *CS, *U;
+
+    if (C->Dimension <= 0)
+	return NULL;
+
+    /* Intersect context with range */
+    MM = Matrix_Alloc(2*C->Dimension, C->Dimension+2);
+    for (i = 0; i < C->Dimension; ++i) {
+	value_set_si(MM->p[2*i][0], 1);
+	value_set_si(MM->p[2*i][1+i], 1);
+	value_set_si(MM->p[2*i][1+C->Dimension], -options->m);
+	value_set_si(MM->p[2*i+1][0], 1);
+	value_set_si(MM->p[2*i+1][1+i], -1);
+	value_set_si(MM->p[2*i+1][1+C->Dimension], options->M);
+    }
+    CC = AddConstraints(MM->p[0], 2*C->Dimension, C, options->barvinok->MaxRays);
+    U = Universe_Polyhedron(0);
+    CS = Polyhedron_Scan(CC, U, options->barvinok->MaxRays);
+    Polyhedron_Free(U);
+    Polyhedron_Free(CC);
+    Matrix_Free(MM);
+    return CS;
+}
+
+void check_poly_init(Polyhedron *C, struct verify_options *options)
+{
+    int d, i;
+
+    if (options->print_all)
+	return;
+    if (C->Dimension <= 0)
+	return;
+
+    d = options->M - options->m;
+    if (d > 80)
+	options->st = 1+d/80;
+    else
+	options->st = 1;
+    for (i = options->m; i <= options->M; i += options->st)
+	printf(".");
+    printf( "\r" );
+    fflush(stdout);
+}
+
 /****************************************************/
 /* function check_poly :                            */
 /* scans the parameter space from Min to Max (all   */
@@ -38,27 +86,20 @@
 /* returns 1 on success                             */
 /****************************************************/
 
-int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
+int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 	       int nparam, int pos, Value *z, const struct verify_options *options)
 {
   int k;
-  Value c,tmp,*ctmp;
-  Value LB, UB;
+  Value c, tmp;
   int ok;
   int pa = options->barvinok->polynomial_approximation;
   
   value_init(c); value_init(tmp);
-  value_init(LB);
-  value_init(UB);
   
   if(pos == nparam) {
     
     /* Computes the ehrhart polynomial */
-    value_assign(c,*(ctmp=compute_poly(en,&z[S->Dimension-nparam+1])));
-    value_clear(*ctmp);
-    free(ctmp);
-    /* if c=0 we may be out of context. */
-    /* scanning is useless in this case*/
+    value_set_double(c, compute_evalue(EP,&z[S->Dimension-nparam+1])+.25);
 
     if (options->print_all) {
       printf("EP( ");
@@ -72,8 +113,12 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
       printf(" ");
     }
 
-      /* Manually count the number of points */
-      count_points(1,S,z,&tmp);
+	/* Manually count the number of points */
+	if (exist)
+	    count_points_e(1, S, exist, nparam, z, &tmp);
+	else
+	    count_points(1, S, z, &tmp);
+
     if (options->print_all) {
 	printf(", count = ");
 	value_print(stdout, P_VALUE_FMT, tmp);
@@ -105,54 +150,51 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
         fprintf(stderr,", while EP eval gives ");
         value_print(stderr,VALUE_FMT,c);
         fprintf(stderr,".\n");
-        {
-        	 Enumeration *ee;
-        	 Enumeration_Print(stderr, en, options->params);
-        	 ee = en;
-        	 while (ee) {
-		    if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
-                	 Print_Domain(stderr, ee->ValidityDomain, options->params);
-                	 print_evalue(stderr, &ee->EP, options->params);
+	    print_evalue(stderr, EP, options->params);
+	    if (value_zero_p(EP->d) && EP->x.p->type == partition)
+		for (k = 0; k < EP->x.p->size/2; ++k) {
+		    Polyhedron *D = EVALUE_DOMAIN(EP->x.p->arr[2*k]);
+		    if (in_domain(D, &z[S->Dimension-nparam+1])) {
+			Print_Domain(stderr, D, options->params);
+			print_evalue(stderr, &EP->x.p->arr[2*k+1], options->params);
 		    }
-		    ee = ee->next;
-		 }
-        }
+	    }
 #ifndef DONT_BREAK_ON_ERROR
 	value_clear(c); value_clear(tmp);
-	value_clear(LB);
-	value_clear(UB);
 	return(0);
 #endif
       } else if (options->print_all)
 	printf("OK.\n");
   }
   else {
-    int ok = 
-	!(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
-    assert(ok);
-    for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-
-    if (!options->print_all) {
-      k = VALUE_TO_INT(tmp);
-      if (!pos && !(k % options->st)) {
-	printf("o");
-	fflush(stdout);
-      }
-    }
-      
-      value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if (!check_poly(S, CS->next, en, nparam, pos+1, z, options)) {
-	value_clear(c); value_clear(tmp);
+	Value LB, UB;
+	int ok;
+	value_init(LB);
+	value_init(UB);
+	ok = !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
+	assert(ok);
+	for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
+	    if (!options->print_all) {
+		k = VALUE_TO_INT(tmp);
+		if (!pos && !(k % options->st)) {
+		    printf("o");
+		    fflush(stdout);
+		}
+	    }
+	      
+	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
+	    if (!check_poly(S, CS->next, EP, exist, nparam, pos+1, z, options)) {
+		value_clear(c); value_clear(tmp);
+		value_clear(LB);
+		value_clear(UB);
+		return 0;
+	    }
+	}
+	value_set_si(z[pos+S->Dimension-nparam+1],0);
 	value_clear(LB);
 	value_clear(UB);
-	return(0);
-      }
-    }
-    value_set_si(z[pos+S->Dimension-nparam+1],0);
   }
   value_clear(c); value_clear(tmp);
-  value_clear(LB);
-  value_clear(UB);
   return(1);
 } /* check_poly */
 

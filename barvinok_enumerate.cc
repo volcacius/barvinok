@@ -267,11 +267,11 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
     return 1;
 }
 
-static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun *gf,
+static int verify(Polyhedron *P, Polyhedron **C, evalue *EP, skewed_gen_fun *gf,
 		   arguments *options)
 {
-    Polyhedron *CC, *PP, *CS, *S, *U;
-    Matrix *C1, *MM;
+    Polyhedron *CC, *PP, *CS, *S;
+    Matrix *C1;
     Vector *p;
     int result = 0;
 
@@ -293,26 +293,7 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
     Domain_Free(*C);
     *C = CC;
 
-    /* Intersect context with range */
-    if ((*C)->Dimension > 0) {
-	MM = Matrix_Alloc(2*(*C)->Dimension, (*C)->Dimension+2);
-	for (int i = 0; i < (*C)->Dimension; ++i) {
-	    value_set_si(MM->p[2*i][0], 1);
-	    value_set_si(MM->p[2*i][1+i], 1);
-	    value_set_si(MM->p[2*i][1+(*C)->Dimension], -options->verify.m);
-	    value_set_si(MM->p[2*i+1][0], 1);
-	    value_set_si(MM->p[2*i+1][1+i], -1);
-	    value_set_si(MM->p[2*i+1][1+(*C)->Dimension], options->verify.M);
-	}
-	CC = AddConstraints(MM->p[0], 2*(*C)->Dimension, *C,
-			    options->verify.barvinok->MaxRays);
-	U = Universe_Polyhedron(0);
-	CS = Polyhedron_Scan(CC, U, options->verify.barvinok->MaxRays);
-	Polyhedron_Free(U);
-	Polyhedron_Free(CC);
-	Matrix_Free(MM);
-    } else
-	CS = NULL;
+    CS = check_poly_context_scan(*C, &options->verify);
 
     p = Vector_Alloc(P->Dimension+2);
     value_set_si(p->p[P->Dimension+1], 1);
@@ -320,24 +301,13 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
     /* S = scanning list of polyhedra */
     S = Polyhedron_Scan(P, *C, options->verify.barvinok->MaxRays);
 
-    if (!options->verify.print_all)
-	if ((*C)->Dimension > 0) {
-	    int d = options->verify.M - options->verify.m;
-	    if (d > 80)
-		options->verify.st = 1+d/80;
-	    else
-		options->verify.st = 1;
-	    for (int i = options->verify.m; i <= options->verify.M; 
-					    i += options->verify.st)
-		printf(".");
-	    printf( "\r" );
-	    fflush(stdout);
-	}
+    check_poly_init(*C, &options->verify);
 
     /******* CHECK NOW *********/
     if (S) {
 	if (!options->series || options->function) {
-	    if (!check_poly(S, CS, en, (*C)->Dimension, 0, p->p, &options->verify))
+	    if (!check_poly(S, CS, EP, 0, (*C)->Dimension, 0, p->p,
+			    &options->verify))
 		result = -1;
 	} else {
 	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p, &options->verify))
@@ -516,7 +486,6 @@ int main(int argc, char **argv)
     Polyhedron *A, *C;
     Matrix *M;
     evalue *EP = NULL;
-    Enumeration *en = NULL;
     skewed_gen_fun *gf = NULL;
     char **param_name;
     int print_solution = 1;
@@ -582,16 +551,10 @@ int main(int argc, char **argv)
     }
 
     if (options.verify.verify) {
-	if (EP) {
-	    en = partition2enumeration(EP);
-	    EP = NULL;
-	}
 	options.verify.params = param_name;
-	result = verify(A, &C, en, gf, &options);
+	result = verify(A, &C, EP, gf, &options);
     }
 
-    if (en)
-	Enumeration_Free(en);
     if (gf)
 	delete gf;
     if (EP) {

@@ -103,9 +103,11 @@ barvinok_enumerate_SOURCES = \
 	verif_ehrhart.h \
 	verif_ehrhart.c
 barvinok_enumerate_e_SOURCES = \
+	barvinok_enumerate_e.cc \
 	verify.h \
 	verify.c \
-	barvinok_enumerate_e.cc \
+	verif_ehrhart.h \
+	verif_ehrhart.c \
 	$(BEEO_SOURCES)
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
