@@ -231,10 +231,10 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 	    fprintf(stderr,", while EP eval gives ");
 	    value_print(stderr,VALUE_FMT,c);
 	    fprintf(stderr,".\n");
-#ifndef DONT_BREAK_ON_ERROR
-	    value_clear(c); value_clear(tmp);
-	    return 0;
-#endif
+	    if (!options->continue_on_error) {
+		value_clear(c); value_clear(tmp);
+		return 0;
+	    }
 	} else if (options->print_all)
 	    printf("OK.\n");
     } else {

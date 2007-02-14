@@ -106,9 +106,6 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 }
 #endif
 
-/* define this to continue the test after first error found */
-/* #define DONT_BREAK_ON_ERROR */
-
 static void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
 			   verify_options *options);
 

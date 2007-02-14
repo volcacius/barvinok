@@ -159,10 +159,10 @@ int check_poly(Polyhedron *S, Polyhedron *CS, evalue *EP, int exist,
 			print_evalue(stderr, &EP->x.p->arr[2*k+1], options->params);
 		    }
 	    }
-#ifndef DONT_BREAK_ON_ERROR
-	value_clear(c); value_clear(tmp);
-	return(0);
-#endif
+	if (!options->continue_on_error) {
+	    value_clear(c); value_clear(tmp);
+	    return 0;
+	}
       } else if (options->print_all)
 	printf("OK.\n");
   }

@@ -19,6 +19,7 @@
 static struct argp_option argp_options[] = {
     { "verify",     	    'T',    0,	    0 },
     { "print-all",  	    'A',    0,	    0 },
+    { "continue-on-error",  'C',    0,	    0 },
     { "min",   	    	    'm',    "int",  0 },
     { "max",   	    	    'M',    "int",  0 },
     { "range",      	    'r',    "int",  0 },
@@ -43,6 +44,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case 'A':
 	options->print_all = 1;
+	break;
+    case 'C':
+	options->continue_on_error = 1;
 	break;
     case 'm':
 	options->m = atoi(arg);
