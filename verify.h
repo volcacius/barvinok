@@ -13,6 +13,10 @@ struct verify_options {
     int print_all;
     int m;
     int M;
+
+    /* "generated" options */
+    int st;
+    char **params;
 };
 
 extern struct argp verify_argp;

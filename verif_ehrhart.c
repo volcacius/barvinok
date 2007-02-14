@@ -30,10 +30,6 @@
 	}
 #endif
 
-char **params;
-
-int st;
-
 /****************************************************/
 /* function check_poly :                            */
 /* scans the parameter space from Min to Max (all   */
@@ -43,7 +39,7 @@ int st;
 /****************************************************/
 
 int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
-	       int nparam, int pos, Value *z, int print_all)
+	       int nparam, int pos, Value *z, const struct verify_options *options)
 {
   int k;
   Value c,tmp,*ctmp;
@@ -62,7 +58,7 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
     /* if c=0 we may be out of context. */
     /* scanning is useless in this case*/
 
-    if (print_all) {
+    if (options->print_all) {
       printf("EP( ");
       value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
       for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
@@ -76,7 +72,7 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
 
       /* Manually count the number of points */
       count_points(1,S,z,&tmp);
-    if (print_all) {
+    if (options->print_all) {
 	printf(", count = ");
 	value_print(stdout, P_VALUE_FMT, tmp);
 	printf(". ");
@@ -99,15 +95,15 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
         fprintf(stderr,".\n");
         {
         	 Enumeration *ee;
-        	 Enumeration_Print(stderr, en, params);
+        	 Enumeration_Print(stderr, en, options->params);
         	 ee = en;
         	 while (ee) {
-                if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
-                	 Print_Domain(stderr, ee->ValidityDomain, params);
-                	 print_evalue(stderr, &ee->EP, params);
-                }
-                ee = ee->next;
-          }
+		    if (in_domain(ee->ValidityDomain,&z[S->Dimension-nparam+1])) {
+                	 Print_Domain(stderr, ee->ValidityDomain, options->params);
+                	 print_evalue(stderr, &ee->EP, options->params);
+		    }
+		    ee = ee->next;
+		 }
         }
 #ifndef DONT_BREAK_ON_ERROR
 	value_clear(c); value_clear(tmp);
@@ -115,7 +111,7 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
 	value_clear(UB);
 	return(0);
 #endif
-      } else if (print_all)
+      } else if (options->print_all)
 	printf("OK.\n");
   }
   else {
@@ -124,16 +120,16 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
     assert(ok);
     for(value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
 
-    if (!print_all) {
+    if (!options->print_all) {
       k = VALUE_TO_INT(tmp);
-      if(!pos && !(k%st)) {
+      if (!pos && !(k % options->st)) {
 	printf("o");
 	fflush(stdout);
       }
     }
       
       value_assign(z[pos+S->Dimension-nparam+1],tmp);
-      if (!check_poly(S, CS->next, en, nparam, pos+1, z, print_all)) {
+      if (!check_poly(S, CS->next, en, nparam, pos+1, z, options)) {
 	value_clear(c); value_clear(tmp);
 	value_clear(LB);
 	value_clear(UB);

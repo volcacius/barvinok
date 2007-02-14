@@ -179,8 +179,7 @@ void skewed_gen_fun::coefficient(Value* params, Value* c,
 }
 
 static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
-			int nparam, int pos, Value *z, int print_all,
-			barvinok_options *options)
+			int nparam, int pos, Value *z, arguments *options)
 {
     int k;
     Value c, tmp;
@@ -193,12 +192,12 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 
     if (pos == nparam) {
 	/* Computes the coefficient */
-	gf->coefficient(&z[S->Dimension-nparam+1], &c, options);
+	gf->coefficient(&z[S->Dimension-nparam+1], &c, options->barvinok);
 
 	/* if c=0 we may be out of context. */
 	/* scanning is useless in this case*/
 
-	if (print_all) {
+	if (options->verify.print_all) {
 	    printf("EP( ");
 	    value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
 	    for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
@@ -212,7 +211,7 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 
 	/* Manually count the number of points */
 	count_points(1,S,z,&tmp);
-	if (print_all) {
+	if (options->verify.print_all) {
 	    printf(", count = ");
 	    value_print(stdout, P_VALUE_FMT, tmp);
 	    printf(". ");
@@ -237,23 +236,22 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 	    value_clear(c); value_clear(tmp);
 	    return 0;
 #endif
-	} else if (print_all)
+	} else if (options->verify.print_all)
 	    printf("OK.\n");
     } else {
         int ok = 
 	  !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
         assert(ok);
 	for (value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-	    if (!print_all) {
+	    if (!options->verify.print_all) {
 		k = VALUE_TO_INT(tmp);
-		if(!pos && !(k%st)) {
+		if(!pos && !(k % options->verify.st)) {
 		    printf("o");
 		    fflush(stdout);
 		}
 	    }
 	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	    if (!check_series(S, CS->next, gf, nparam, pos+1, z, print_all,
-			      options)) {
+	    if (!check_series(S, CS->next, gf, nparam, pos+1, z, options)) {
 		value_clear(c); value_clear(tmp);
 		value_clear(LB);
 		value_clear(UB);
@@ -327,10 +325,11 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
 	if ((*C)->Dimension > 0) {
 	    int d = options->verify.M - options->verify.m;
 	    if (d > 80)
-		st = 1+d/80;
+		options->verify.st = 1+d/80;
 	    else
-		st=1;
-	    for (int i = options->verify.m; i <= options->verify.M; i += st)
+		options->verify.st = 1;
+	    for (int i = options->verify.m; i <= options->verify.M; 
+					    i += options->verify.st)
 		printf(".");
 	    printf( "\r" );
 	    fflush(stdout);
@@ -339,12 +338,10 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
     /******* CHECK NOW *********/
     if (S) {
 	if (!options->series || options->function) {
-	    if (!check_poly(S, CS, en, (*C)->Dimension, 0, p->p,
-			    options->verify.print_all))
+	    if (!check_poly(S, CS, en, (*C)->Dimension, 0, p->p, &options->verify))
 		result = -1;
 	} else {
-	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p,
-			      options->verify.print_all, options->barvinok))
+	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p, options))
 		result = -1;
 	}
 	Domain_Free(S);
@@ -590,6 +587,7 @@ int main(int argc, char **argv)
 	    en = partition2enumeration(EP);
 	    EP = NULL;
 	}
+	options.verify.params = param_name;
 	result = verify(A, &C, en, gf, &options);
     }
 
