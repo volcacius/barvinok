@@ -3374,3 +3374,37 @@ void evalue_div(evalue * e, Value n)
     for (i = e->x.p->size-1; i >= offset; --i)
 	evalue_div(&e->x.p->arr[i], n);
 }
+
+/* Split the domains of e (which is assumed to be a partition)
+ * such that each resulting domain lies entirely in one orthant.
+ */
+void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays)
+{
+    int i, dim;
+    assert(value_zero_p(e->d));
+    assert(e->x.p->type == partition);
+    assert(e->x.p->size >= 2);
+    dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
+
+    for (i = 0; i < dim; ++i) {
+	evalue split;
+	Matrix *C, *C2;
+	C = Matrix_Alloc(1, 1 + dim + 1);
+	value_set_si(C->p[0][0], 1);
+	value_init(split.d);
+	value_set_si(split.d, 0);
+	split.x.p = new_enode(partition, 4, dim);
+	value_set_si(C->p[0][1+i], 1);
+	C2 = Matrix_Copy(C);
+	EVALUE_SET_DOMAIN(split.x.p->arr[0], Constraints2Polyhedron(C2, MaxRays));
+	Matrix_Free(C2);
+	evalue_set_si(&split.x.p->arr[1], 1, 1);
+	value_set_si(C->p[0][1+i], -1);
+	value_set_si(C->p[0][1+dim], -1);
+	EVALUE_SET_DOMAIN(split.x.p->arr[2], Constraints2Polyhedron(C, MaxRays));
+	evalue_set_si(&split.x.p->arr[3], 1, 1);
+	emul(&split, e);
+	free_evalue_refs(&split);
+	Matrix_Free(C);
+    }
+}

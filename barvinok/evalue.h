@@ -109,6 +109,7 @@ evalue *esum(evalue *E, int nvar);
 void eor(evalue *e1, evalue *res);
 void evalue_denom(evalue *e, Value *d);
 void evalue_div(evalue * e, Value n);
+void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays);
 
 #if defined(__cplusplus)
 }

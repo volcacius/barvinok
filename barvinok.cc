@@ -2324,28 +2324,7 @@ static evalue* enumerate_sum(Polyhedron *P,
 
     evalue *EP = barvinok_enumerate_e_with_options(P, exist, nparam, options);
 
-    for (int i = 0; i < /* nvar */ nparam; ++i) {
-	Matrix *C = Matrix_Alloc(1, 1 + nparam + 1);
-	value_set_si(C->p[0][0], 1);
-	evalue split;
-	value_init(split.d);
-	value_set_si(split.d, 0);
-	split.x.p = new_enode(partition, 4, nparam);
-	value_set_si(C->p[0][1+i], 1);
-	Matrix *C2 = Matrix_Copy(C);
-	EVALUE_SET_DOMAIN(split.x.p->arr[0],
-	    Constraints2Polyhedron(C2, options->MaxRays));
-	Matrix_Free(C2);
-	evalue_set_si(&split.x.p->arr[1], 1, 1);
-	value_set_si(C->p[0][1+i], -1);
-	value_set_si(C->p[0][1+nparam], -1);
-	EVALUE_SET_DOMAIN(split.x.p->arr[2],
-	    Constraints2Polyhedron(C, options->MaxRays));
-	evalue_set_si(&split.x.p->arr[3], 1, 1);
-	emul(&split, EP);
-	free_evalue_refs(&split);
-	Matrix_Free(C);
-    }
+    evalue_split_domains_into_orthants(EP, options->MaxRays);
     reduce_evalue(EP);
     evalue_range_reduction(EP);
 
