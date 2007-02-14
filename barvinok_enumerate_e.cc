@@ -32,7 +32,6 @@ struct argp_option argp_options[] = {
 };
 
 struct arguments {
-    struct barvinok_options *options;
     struct verify_options    verify;
     int range;
     int convert;
@@ -49,7 +48,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
     case ARGP_KEY_INIT:
-	state->child_inputs[0] = arguments->options;
+	state->child_inputs[0] = arguments->verify.barvinok;
 	state->child_inputs[1] = &arguments->verify;
 	break;
     case 's':
@@ -138,7 +137,7 @@ int main(int argc, char **argv)
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-    arguments.options = options;
+    arguments.verify.barvinok = options;
     arguments.range = 0;
     arguments.convert = 0;
     arguments.omega = 0;

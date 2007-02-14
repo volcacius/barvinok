@@ -32,7 +32,6 @@ struct argp_option argp_options[] = {
 };
 
 struct arguments {
-    struct barvinok_options *barvinok;
     int convert;
     int floor;
     int size;
@@ -49,7 +48,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
     case ARGP_KEY_INIT:
-	state->child_inputs[0] = options->barvinok;
+	state->child_inputs[0] = options->verify.barvinok;
 	state->child_inputs[1] = &options->verify;
 	options->convert = 0;
 	options->floor = 0;
@@ -179,7 +178,7 @@ void skewed_gen_fun::coefficient(Value* params, Value* c,
 }
 
 static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
-			int nparam, int pos, Value *z, arguments *options)
+			int nparam, int pos, Value *z, verify_options *options)
 {
     int k;
     Value c, tmp;
@@ -197,7 +196,7 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 	/* if c=0 we may be out of context. */
 	/* scanning is useless in this case*/
 
-	if (options->verify.print_all) {
+	if (options->print_all) {
 	    printf("EP( ");
 	    value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
 	    for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
@@ -211,7 +210,7 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 
 	/* Manually count the number of points */
 	count_points(1,S,z,&tmp);
-	if (options->verify.print_all) {
+	if (options->print_all) {
 	    printf(", count = ");
 	    value_print(stdout, P_VALUE_FMT, tmp);
 	    printf(". ");
@@ -236,16 +235,16 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 	    value_clear(c); value_clear(tmp);
 	    return 0;
 #endif
-	} else if (options->verify.print_all)
+	} else if (options->print_all)
 	    printf("OK.\n");
     } else {
         int ok = 
 	  !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
         assert(ok);
 	for (value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-	    if (!options->verify.print_all) {
+	    if (!options->print_all) {
 		k = VALUE_TO_INT(tmp);
-		if(!pos && !(k % options->verify.st)) {
+		if(!pos && !(k % options->st)) {
 		    printf("o");
 		    fflush(stdout);
 		}
@@ -277,8 +276,8 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
     int result = 0;
 
     /******* Compute true context *******/
-    CC = align_context(*C, P->Dimension, options->barvinok->MaxRays);
-    PP = DomainIntersection(P, CC, options->barvinok->MaxRays);
+    CC = align_context(*C, P->Dimension, options->verify.barvinok->MaxRays);
+    PP = DomainIntersection(P, CC, options->verify.barvinok->MaxRays);
     Domain_Free(CC);
     C1 = Matrix_Alloc((*C)->Dimension+1, P->Dimension+1);
 
@@ -288,7 +287,7 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
 		value_set_si(C1->p[i][j], 1);
 	    else
 		value_set_si(C1->p[i][j], 0);
-    CC = Polyhedron_Image(PP, C1, options->barvinok->MaxRays);
+    CC = Polyhedron_Image(PP, C1, options->verify.barvinok->MaxRays);
     Matrix_Free(C1);
     Domain_Free(PP);
     Domain_Free(*C);
@@ -306,9 +305,9 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
 	    value_set_si(MM->p[2*i+1][1+(*C)->Dimension], options->verify.M);
 	}
 	CC = AddConstraints(MM->p[0], 2*(*C)->Dimension, *C,
-			    options->barvinok->MaxRays);
+			    options->verify.barvinok->MaxRays);
 	U = Universe_Polyhedron(0);
-	CS = Polyhedron_Scan(CC, U, options->barvinok->MaxRays);
+	CS = Polyhedron_Scan(CC, U, options->verify.barvinok->MaxRays);
 	Polyhedron_Free(U);
 	Polyhedron_Free(CC);
 	Matrix_Free(MM);
@@ -319,7 +318,7 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
     value_set_si(p->p[P->Dimension+1], 1);
 
     /* S = scanning list of polyhedra */
-    S = Polyhedron_Scan(P, *C, options->barvinok->MaxRays);
+    S = Polyhedron_Scan(P, *C, options->verify.barvinok->MaxRays);
 
     if (!options->verify.print_all)
 	if ((*C)->Dimension > 0) {
@@ -341,7 +340,7 @@ static int verify(Polyhedron *P, Polyhedron **C, Enumeration *en, skewed_gen_fun
 	    if (!check_poly(S, CS, en, (*C)->Dimension, 0, p->p, &options->verify))
 		result = -1;
 	} else {
-	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p, options))
+	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p, &options->verify))
 		result = -1;
 	}
 	Domain_Free(S);
@@ -531,7 +530,7 @@ int main(int argc, char **argv)
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
-    options.barvinok = bv_options;
+    options.verify.barvinok = bv_options;
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     M = Matrix_Read();
@@ -601,7 +600,7 @@ int main(int argc, char **argv)
     }
 
     if (options.print_stats)
-	barvinok_stats_print(options.barvinok->stats, stdout);
+	barvinok_stats_print(options.verify.barvinok->stats, stdout);
 
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);

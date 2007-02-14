@@ -17,6 +17,7 @@ struct verify_options {
     /* "generated" options */
     int st;
     char **params;
+    struct barvinok_options *barvinok;
 };
 
 extern struct argp verify_argp;
