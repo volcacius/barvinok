@@ -44,6 +44,8 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
   int k;
   Value c,tmp,*ctmp;
   Value LB, UB;
+  int ok;
+  int pa = options->barvinok->polynomial_approximation;
   
   value_init(c); value_init(tmp);
   value_init(LB);
@@ -78,7 +80,17 @@ int check_poly(Polyhedron *S,Polyhedron *CS,Enumeration *en,
 	printf(". ");
     }
 
-      if(value_ne(tmp,c)) {
+	if (pa == BV_POLAPPROX_PRE_APPROX)
+	    /* just accept everything */
+	    ok = 1;
+	else if (pa == BV_POLAPPROX_PRE_LOWER || pa == BV_POLAPPROX_LOWER)
+	    ok = value_le(c, tmp);
+	else if (pa == BV_POLAPPROX_PRE_UPPER || pa == BV_POLAPPROX_UPPER)
+	    ok = value_ge(c, tmp);
+	else
+	    ok = value_eq(c, tmp);
+
+      if (!ok) {
         printf("\n"); 
         fflush(stdout);
         fprintf(stderr,"Error !\n");
