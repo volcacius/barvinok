@@ -95,7 +95,7 @@ struct argp_option barvinok_argp_options[] = {
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
     { "polynomial-approximation",
 			    BV_OPT_POLAPPROX,
-			    "pre-lower|pre-upper|pre-approx",	0 },
+			    "lower|upper|pre-lower|pre-upper|pre-approx",	0 },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
     { "version",	    'V',		    0,			0 },
@@ -138,6 +138,10 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->polynomial_approximation = BV_POLAPPROX_PRE_UPPER;
 	else if (!strcmp(arg, "pre-approx"))
 	    options->polynomial_approximation = BV_POLAPPROX_PRE_APPROX;
+	else if (!strcmp(arg, "lower"))
+	    options->polynomial_approximation = BV_POLAPPROX_LOWER;
+	else if (!strcmp(arg, "upper"))
+	    options->polynomial_approximation = BV_POLAPPROX_UPPER;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;

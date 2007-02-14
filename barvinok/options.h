@@ -43,6 +43,8 @@ struct barvinok_options {
     #define	BV_POLAPPROX_PRE_LOWER	1
     #define	BV_POLAPPROX_PRE_UPPER	2
     #define	BV_POLAPPROX_PRE_APPROX	3
+    #define	BV_POLAPPROX_LOWER	4
+    #define	BV_POLAPPROX_UPPER	5
     int			    polynomial_approximation;
 
     /* basis reduction options */

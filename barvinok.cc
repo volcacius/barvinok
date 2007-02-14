@@ -1702,6 +1702,10 @@ constant:
 	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), options);
 out:
 	emul(&factor, eres);
+	if (options->polynomial_approximation == BV_POLAPPROX_UPPER)
+	    evalue_frac2polynomial(eres, 1, options->MaxRays);
+	if (options->polynomial_approximation == BV_POLAPPROX_LOWER)
+	    evalue_frac2polynomial(eres, 0, options->MaxRays);
 	reduce_evalue(eres);
 	free_evalue_refs(&factor);
 	Domain_Free(P);
