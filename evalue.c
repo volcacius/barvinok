@@ -3375,6 +3375,84 @@ void evalue_div(evalue * e, Value n)
 	evalue_div(&e->x.p->arr[i], n);
 }
 
+static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_frac)
+{
+    int i, offset;
+    Value d;
+    enode *p;
+
+    if (value_notzero_p(e->d)) {
+	if (in_frac && sign * value_sign(e->x.n) < 0) {
+	    value_set_si(e->x.n, 0);
+	    value_set_si(e->d, 1);
+	}
+	return;
+    }
+
+    in_frac |= e->x.p->type == fractional;
+    if (e->x.p->type == polynomial) {
+	sign *= signs[e->x.p->pos-1];
+    }
+    offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	evalue_frac2polynomial_r(&e->x.p->arr[i], signs, sign, in_frac);
+
+    if (e->x.p->type != fractional)
+	return;
+
+    /* replace { a/m } by (m-1)/m */
+    value_init(d);
+    value_set_si(d, 1);
+    evalue_denom(&e->x.p->arr[0], &d);
+    free_evalue_refs(&e->x.p->arr[0]);
+    value_init(e->x.p->arr[0].d);
+    value_init(e->x.p->arr[0].x.n);
+    value_assign(e->x.p->arr[0].d, d);
+    value_decrement(e->x.p->arr[0].x.n, d);
+    value_clear(d);
+
+    p = e->x.p;
+    reorder_terms(p, &p->arr[0]);
+    value_clear(e->d);
+    *e = p->arr[1];
+    free(p);
+}
+
+/* Approximate the evalue in fractional representation by a polynomial.
+ * If sign > 0, the result is an upper bound;
+ * if sign < 0, the resutl is a lower bound.
+ */
+void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
+{
+    int i, j, k, dim;
+    int *signs;
+
+    if (value_notzero_p(e->d))
+	return;
+    assert(e->x.p->type == partition);
+    /* make sure all variables in the domains have a fixed sign */
+    evalue_split_domains_into_orthants(e, MaxRays);
+
+    assert(e->x.p->size >= 2);
+    dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
+
+    signs = alloca(sizeof(int) * dim);
+
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	POL_ENSURE_VERTICES(D);
+	for (j = 0; j < dim; ++j) {
+	    signs[j] = 0;
+	    for (k = 0; k < D->NbRays; ++k) {
+		signs[j] = value_sign(D->Ray[k][1+j]);
+		if (signs[j])
+		    break;
+	    }
+	}
+	evalue_frac2polynomial_r(&e->x.p->arr[2*i+1], signs, sign, 0);
+    }
+}
+
 /* Split the domains of e (which is assumed to be a partition)
  * such that each resulting domain lies entirely in one orthant.
  */
