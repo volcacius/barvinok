@@ -320,7 +320,7 @@ static int type_offset(enode *p)
 	  p->type == flooring ? 1 : 0;
 }
 
-static void reorder_terms(enode *p, evalue *v)
+static void reorder_terms_about(enode *p, evalue *v)
 {
     int i;
     int offset = type_offset(p);
@@ -332,6 +332,28 @@ static void reorder_terms(enode *p, evalue *v)
     }
     p->size = offset+1;
     free_evalue_refs(v);
+}
+
+static void reorder_terms(evalue *e)
+{
+    enode *p;
+    evalue f;
+
+    assert(value_zero_p(e->d));
+    p = e->x.p;
+    assert(p->type = fractional);  /* for now */
+
+    value_init(f.d);
+    value_set_si(f.d, 0);
+    f.x.p = new_enode(fractional, 3, -1);
+    value_clear(f.x.p->arr[0].d);
+    f.x.p->arr[0] = p->arr[0];
+    evalue_set_si(&f.x.p->arr[1], 0, 1);
+    evalue_set_si(&f.x.p->arr[2], 1, 1);
+    reorder_terms_about(p, &f);
+    value_clear(e->d);
+    *e = p->arr[1];
+    free(p);
 }
 
 void _reduce_evalue (evalue *e, struct subst *s, int fract) {
@@ -649,7 +671,7 @@ you_lose:   	/* OK, lets not do it */
 	}
 
 	if (reorder) {
-	    reorder_terms(p, &v);
+	    reorder_terms_about(p, &v);
 	    _reduce_evalue(&p->arr[1], s, fract);
 	}
 
@@ -2707,7 +2729,7 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	    f.x.p = new_enode(polynomial, 2, p->pos);
 	    evalue_set_si(&f.x.p->arr[0], 0, 1);
 	    evalue_set_si(&f.x.p->arr[1], 1, 1);
-	    reorder_terms(p, &f);
+	    reorder_terms_about(p, &f);
 	    value_clear(e->d);
 	    *e = p->arr[0];
 	    free(p);
@@ -2732,7 +2754,7 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	value_set_si(inc.d, 1);
 	value_oppose(inc.x.n, min);
 	eadd(&inc, &p->arr[0]);
-	reorder_terms(p, &p->arr[0]); /* frees arr[0] */
+	reorder_terms_about(p, &p->arr[0]); /* frees arr[0] */
 	value_clear(e->d);
 	*e = p->arr[1];
 	free(p);
@@ -2785,6 +2807,11 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	evalue_set_si(&f.x.p->arr[2], -1, 1);
 	eadd(&f, &factor);
 
+	if (r) {
+	    reorder_terms(&rem);
+	    reorder_terms(e);
+	}
+
 	emul(&factor, e);
 	eadd(&rem, e);
 
@@ -2799,20 +2826,8 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	r = 1;
     } else {
 	_reduce_evalue(&p->arr[0], 0, 1);
-	if (r == 1) {
-	    evalue f;
-	    value_init(f.d);
-	    value_set_si(f.d, 0);
-	    f.x.p = new_enode(fractional, 3, -1);
-	    value_clear(f.x.p->arr[0].d);
-	    f.x.p->arr[0] = p->arr[0];
-	    evalue_set_si(&f.x.p->arr[1], 0, 1);
-	    evalue_set_si(&f.x.p->arr[2], 1, 1);
-	    reorder_terms(p, &f);
-	    value_clear(e->d);
-	    *e = p->arr[1];
-	    free(p);
-	}
+	if (r)
+	    reorder_terms(e);
     }
 
     value_clear(d);
@@ -2900,7 +2915,7 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
 	    f.x.p = new_enode(polynomial, 2, p->pos);
 	    evalue_set_si(&f.x.p->arr[0], 0, 1);
 	    evalue_set_si(&f.x.p->arr[1], 1, 1);
-	    reorder_terms(p, &f);
+	    reorder_terms_about(p, &f);
 	    value_clear(e->d);
 	    *e = p->arr[0];
 	    free(p);
@@ -2953,7 +2968,7 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
     evalue_copy(&fl.x.p->arr[0], &p->arr[0]);
 
     eadd(&fl, &p->arr[0]);
-    reorder_terms(p, &p->arr[0]);
+    reorder_terms_about(p, &p->arr[0]);
     value_clear(e->d);
     *e = p->arr[1];
     free(p);
@@ -3051,7 +3066,7 @@ static void floor2frac_r(evalue *e, int nvar)
     evalue_copy(&f.x.p->arr[0], &p->arr[0]);
 
     eadd(&f, &p->arr[0]);
-    reorder_terms(p, &p->arr[0]);
+    reorder_terms_about(p, &p->arr[0]);
     value_clear(e->d);
     *e = p->arr[1];
     free(p);
@@ -3412,7 +3427,7 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
     value_clear(d);
 
     p = e->x.p;
-    reorder_terms(p, &p->arr[0]);
+    reorder_terms_about(p, &p->arr[0]);
     value_clear(e->d);
     *e = p->arr[1];
     free(p);
