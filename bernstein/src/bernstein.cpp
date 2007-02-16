@@ -55,7 +55,7 @@ exvector constructVariableVector(unsigned nbVariables, const char *prefix)
 }
 
 
-numeric value2numeric(Value v)
+numeric value2numeric(const Value v)
 {
     int sa = v[0]._mp_size;
     if (!sa)
