@@ -321,10 +321,10 @@ void gen_fun::substitute(Matrix *CP)
     term.swap(new_term);
 }
 
-struct cone {
+struct parallel_cones {
     int	    *pos;
     vector<pair<Vector *, QQ> >	    vertices;
-    cone(int *pos) : pos(pos) {}
+    parallel_cones(int *pos) : pos(pos) {}
 };
 
 #ifndef HAVE_COMPRESS_PARMS
@@ -341,7 +341,7 @@ struct parallel_polytopes {
     Matrix *CP, *T;
     int dim;
     int nparam;
-    vector<cone>    cones;
+    vector<parallel_cones>    cones;
     barvinok_options	*options;
 
     parallel_polytopes(int n, Polyhedron *context, int nparam,
@@ -439,7 +439,7 @@ struct parallel_polytopes {
 		if (!memcmp(pos, cones[j].pos, (1+C->NbConstraints)*sizeof(int)))
 		    break;
 	    if (j == cones.size())
-		cones.push_back(cone(pos));
+		cones.push_back(parallel_cones(pos));
 	    else
 		delete [] pos;
 
