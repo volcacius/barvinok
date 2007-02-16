@@ -197,6 +197,67 @@ static int mod_term_smaller(const evalue *e1, const evalue *e2)
     return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
 }
 
+static void check_order(const evalue *e)
+{
+    int i;
+    evalue *a;
+
+    if (value_notzero_p(e->d))
+	return;
+
+    switch (e->x.p->type) {
+    case partition:
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    check_order(&e->x.p->arr[2*i+1]);
+	break;
+    case relation:
+	for (i = 1; i < e->x.p->size; ++i) {
+	    a = &e->x.p->arr[i];
+	    if (value_notzero_p(a->d))
+		continue;
+	    switch (a->x.p->type) {
+	    case relation:
+		assert(mod_term_smaller(&e->x.p->arr[0], &a->x.p->arr[0]));
+		break;
+	    case partition:
+		assert(0);
+	    }
+	    check_order(a);
+	}
+	break;
+    case polynomial:
+	for (i = 0; i < e->x.p->size; ++i) {
+	    a = &e->x.p->arr[i];
+	    if (value_notzero_p(a->d))
+		continue;
+	    switch (a->x.p->type) {
+	    case polynomial:
+		assert(e->x.p->pos < a->x.p->pos);
+		break;
+	    case relation:
+	    case partition:
+		assert(0);
+	    }
+	    check_order(a);
+	}
+	break;
+    case fractional:
+    case flooring:
+	for (i = 1; i < e->x.p->size; ++i) {
+	    a = &e->x.p->arr[i];
+	    if (value_notzero_p(a->d))
+		continue;
+	    switch (a->x.p->type) {
+	    case polynomial:
+	    case relation:
+	    case partition:
+		assert(0);
+	    }
+	}
+	break;
+    }
+}
+
 /* Negative pos means inequality */
 /* s is negative of substitution if m is not zero */
 struct fixed_param {
