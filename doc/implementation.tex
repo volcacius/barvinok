@@ -1,0 +1,146 @@
+\section{Implementation details}
+
+\subsection{The integer points in the fundamental parallelepiped of a simple cone}
+
+This section is based on \shortciteN[Lemma 5.1]{Barvinok1992volume} and
+\shortciteN{Koeppe2006experiments}.
+
+\sindex{simple}{cone}
+\sindex{open}{facet}
+\sindex{open}{ray}
+\sindex{explicit}{representation}
+In this section we will deal exclusively with \ai{simple cone}s,
+i.e. $d$-dimensional cones with $d$ extremal rays and $d$ facets.
+\index{open facet}%
+Some of the facets of these cones may be open.
+Since we will mostly be dealing with cones in their
+\ai{explicit representation}, we will have occasion to speak of
+``\ai{open ray}s'', by which we will mean that the facet not
+containing the ray is open.  (There is only one such facet because the cone
+is simple.)
+
+\sindex{fundamental}{parallelepiped}
+\begin{definition}[Fundamental parallelepiped]
+Let $K = \vec v + \poshull \lb\, \vec u_i \,\rb$ be 
+a closed (shifted) cone, then the \defindex{fundamental parallelepiped} $\Pi$
+of $K$ is
+$$
+\Pi = \vec v +
+\lb\, \sum_i \alpha_i \vec u_i \mid 0 \leq \alpha_i < 1 \,\rb
+.
+$$
+If some of the rays $\vec u_i$ of $K$ are open, then the constraints on
+the corresponding coefficient $\alpha_i$ are such that $0 < \alpha_i \le 1$.
+\end{definition}
+
+\begin{lemma}[Integer points in the fundamental parallelepiped of a simple cone]
+Let $K = \vec v + \poshull \lb\, \vec u_i \,\rb$ be a closed simple cone
+and let $A$ be the matrix with the generators $\vec u_i$ of $K$
+as rows.
+Furthermore let $V A W^{-1} = S = \diag \vec s$ be the \indac{SNF} of $A$.
+Then the integer points in the fundamental parallelepiped of $K$ are given
+by
+\begin{eqnarray}
+\label{eq:parallelepiped}
+\vec w^\T & = & \vec v^\T + \fractional{(\vec k^\T W - \vec v^\T) A^{-1}} A
+\\
+\nonumber
+& = &
+\vec v^T +
+\sum_{i=1}^d
+    \fractional{\sps{\sum_{j=1}^d k_j \vec w^T_j - \vec v^\T}{\vec u^*_i}} \vec u_i,
+\end{eqnarray}
+where $\vec u^*_i$ are the columns of $A^{-1}$ and $k_j \in \ZZ$ ranges
+over $0 \le k_j < s_j$.
+\end{lemma}
+
+\begin{proof}
+Since $0 \le \fractional{x} < 1$, it is clear that each such $\vec w$
+lies inside the fundamental parallelepiped.
+Furthermore,
+\begin{eqnarray*}
+\vec w^\T & = & \vec v^\T + \fractional{(\vec k^\T W - \vec v^\T) A^{-1}} A
+\\
+& = &
+\vec v^T + 
+\left(
+(\vec k^\T W - \vec v^\T) A^{-1} - \floor{(\vec k^\T W - \vec v^\T) A^{-1}}
+\right) A
+\\
+& = &
+\underbrace{\vec k^\T W\mathstrut}_{\in \ZZ^{1\times d}}
++
+\underbrace{\floor{(\vec k^\T W - \vec v^\T) A^{-1}}}_{\in \ZZ^{1\times d}}
+\underbrace{A\mathstrut}_{\in \ZZ^{d\times d}} \in \ZZ^{1\times d}.
+\end{eqnarray*}
+Finally, if two such $\vec w$ are equal, i.e., $\vec w_1 = \vec w_2$,
+then
+\begin{eqnarray*}
+\vec 0^\T = \vec w_1^\T - \vec w_2^\T
+& = & \vec k_1^\T W - \vec k_2^\T W + \vec p^\T A
+\\
+& = & \left(\vec k_1^\T - \vec k_2^\T \right) W + \vec p^\T V^{-1} S W,
+\end{eqnarray*}
+with $\vec p \in \ZZ^d$,
+or $\vec k_1 \equiv \vec k_2 \mod \vec s$, i.e., $\vec k_1 = \vec k_2$.
+Since $\det S = \det A$, we obtain all points in the fundamental parallelepiped
+by taking all $\vec k \in \ZZ^d$ satisfying $0 \le k_j < s_j$.
+\end{proof}
+
+If the cone $K$ is not closed then the coefficients of the open rays
+should be in $(0,1]$ rather than in $[0,1)$.
+In (\ref{eq:parallelepiped}),
+we therefore need to replace the fractional part $\fractional{x} = x - \floor{x}$
+by $\cractional{x} = x - \ceil{x-1}$ for the open rays.
+
+\begin{figure}
+\intercol=1.2cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS@i@={(0,-3),(0,0),(4,2),(4,-3)},{0*[grey]\xypolyline{*}}
+\POS@i@={(0,-3),(0,0),(4,2)},{0*[|(2)]\xypolyline{}}
+\POS(-1,0)\ar(4.5,0)
+\POS(0,-3)\ar(0,3)
+\POS(0,0)\ar@[|(3)](0,-1)
+\POS(0,0)\ar@[|(3)](2,1)
+\POS(0,-1)\ar@{--}@[|(2)](2,0)
+\POS(2,1)\ar@{--}@[|(2)](2,0)
+\POS(0,0)*{\bullet}
+\POS(1,0)*{\bullet}
+\end{xy}
+\caption{The integer points in the fundamental parallelepiped of $K$}
+\label{f:parallelepiped}
+\end{figure}
+
+\begin{example}
+Let $K$ be the cone
+$$
+K = \sm{0 \\ 0} + \poshull \lb\, \sm{2 \\ 1}, \sm{0 \\ -1} \,\rb
+,
+$$
+shown in Figure~\ref{f:parallelepiped}.
+Then
+$$
+A = \sm{2 & 1\\0 & -1} \qquad A^{-1} = \sm{1/2 & 1/2 \\ 0 & -1 }
+$$
+and
+$$
+\sm{1 & 0 \\ 1 & 1 } \sm{2 & 1\\0 & -1} = \sm{1 & 0 \\ 0 & 2} \sm{2 & 1 \\ 1 & 0}.
+$$
+We have $\det A = \det S = 2$ and
+$\vec k_1^\T = \sm{0 & 0}$ and $\vec k_2^\T = \sm{0 & 1}$.
+Therefore,
+$$
+\vec w_1^\T = \fractional{\sm{0 & 0} \sm{2 & 1 \\ 1 & 0} \sm{1/2 & 1/2 \\ 0 & -1 }}
+\sm{2 & 1\\0 & -1} = \sm{0 & 0}
+$$
+and
+\begin{eqnarray*}
+\vec w_2^\T & = & 
+\fractional{\sm{0 & 1} \sm{2 & 1 \\ 1 & 0} \sm{1/2 & 1/2 \\ 0 & -1 }}
+\sm{2 & 1\\0 & -1}
+\\
+& = &
+\sm{1/2 & 1/2} \sm{2 & 1\\0 & -1} = \sm{1 & 0}.
+\end{eqnarray*}
+\end{example}

@@ -62,4 +62,5 @@
 @entry{PIP, PIP, Parametric Integer Programming}
 @entry{ADS, ADS, Accessed Data Set}
 @entry{OOM, OOM, Out Of Memory}
+@entry{SNF, SNF, Smith Normal Form}
 @entry{LBL, LBL, Linearly Bounded Lattice}
