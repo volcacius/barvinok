@@ -3,12 +3,7 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
-
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
+#include <barvinok/options.h>
 
 using namespace GiNaC;
 using namespace bernstein;
@@ -35,7 +30,8 @@ ex evalue2ex(evalue *e, const exvector& vars)
 /* if the evalue is a relation, we use the relation to cut off the 
  * the edges of the domain
  */
-static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly)
+static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly,
+				unsigned MaxRays)
 {
     *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
     *poly = e = &e->x.p->arr[2*i+1];
@@ -72,13 +68,13 @@ static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly)
 
     Polyhedron *E = NULL;
     for (Polyhedron *P = *D; P; P = P->next) {
-	Polyhedron *I = Polyhedron_Image(P, T, MAXRAYS);
-	I = DomainConstraintSimplify(I, MAXRAYS);
-	Polyhedron *R = Polyhedron_Preimage(I, T, MAXRAYS);
+	Polyhedron *I = Polyhedron_Image(P, T, MaxRays);
+	I = DomainConstraintSimplify(I, MaxRays);
+	Polyhedron *R = Polyhedron_Preimage(I, T, MaxRays);
 	Polyhedron_Free(I);
 	Polyhedron *next = P->next;
 	P->next = NULL;
-	Polyhedron *S = DomainIntersection(P, R, MAXRAYS);
+	Polyhedron *S = DomainIntersection(P, R, MaxRays);
 	Polyhedron_Free(R);
 	P->next = next;
 	if (emptyQ2(S))
@@ -95,6 +91,17 @@ static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly)
 piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e, 
 				      Polyhedron *ctx, const exvector& params)
 {
+    piecewise_lst *pl;
+    barvinok_options *options = barvinok_options_new_with_defaults();
+    pl = evalue_bernstein_coefficients(pl_all, e, ctx, params, options);
+    barvinok_options_free(options);
+    return pl;
+}
+
+piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e, 
+				      Polyhedron *ctx, const exvector& params,
+				      barvinok_options *options)
+{
     unsigned nparam = ctx->Dimension;
     if (EVALUE_IS_ZERO(*e))
 	return pl_all;
@@ -102,6 +109,9 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
     assert(e->x.p->type == partition);
     assert(e->x.p->size >= 2);
     unsigned nvars = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension - nparam;
+    unsigned PP_MaxRays = options->MaxRays;
+    if (PP_MaxRays & POL_NO_DUAL)
+	PP_MaxRays = 0;
 
     exvector vars = constructVariableVector(nvars, "v");
     exvector allvars = vars;
@@ -111,7 +121,7 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
 	Param_Polyhedron *PP;
 	Polyhedron *E;
 	evalue *EP;
-	evalue_extract_poly(e, i, &E, &EP);
+	evalue_extract_poly(e, i, &E, &EP, options->MaxRays);
 	ex poly = evalue2ex(EP, allvars);
 	if (is_exactly_a<fail>(poly)) {
 	    if (E != EVALUE_DOMAIN(e->x.p->arr[2*i]))
@@ -124,7 +134,7 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
 	    piecewise_lst *pl = new piecewise_lst(params);
 	    Polyhedron *P1 = P;
 	    P->next = NULL;
-	    PP = Polyhedron2Param_Domain(P, ctx, 0);
+	    PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
 	    for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
 		matrix VM = domainVertices(PP, Q, params);
 		lst coeffs = bernsteinExpansion(VM, poly, vars, params);
