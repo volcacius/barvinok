@@ -29,6 +29,7 @@ struct argp_option argp_options[] = {
     { "convert",    	    'c',    0,	    0 },
     { "floor",      	    'f',    0,	    0 },
     { "range-reduction",    'R',    0,	    0 },
+    { "verbose",    	    'v' },
     { 0 }
 };
 
@@ -41,6 +42,7 @@ struct arguments {
     int scarf;
     int series;
     int floor;
+    int verbose;
 };
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -80,6 +82,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case 'R':
 	arguments->range = 1;
+	break;
+    case 'v':
+	arguments->verbose = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -135,6 +140,7 @@ int main(int argc, char **argv)
     arguments.scarf = 0;
     arguments.series = 0;
     arguments.floor = 0;
+    arguments.verbose = 0;
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
@@ -157,10 +163,12 @@ int main(int argc, char **argv)
 	fgets(s, 128, stdin);
 
     /******* Read the options: initialize Min and Max ********/
-    verify_options_set_range(&arguments.verify, A);
 
-    if (arguments.verify.verify)
-	print_solution = 0;
+    if (arguments.verify.verify) {
+	verify_options_set_range(&arguments.verify, A);
+	if (!arguments.verbose)
+	    print_solution = 0;
+    }
 
     if (print_solution) {
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
