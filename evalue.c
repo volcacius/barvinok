@@ -2822,6 +2822,9 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	free_evalue_refs(&inc);
 	r = 1;
     } else if (bounded && value_one_p(d) && p->size > 3) {
+	/* replace {g}^2 by -(g-min)^2 + (2{g}+1)*(g-min) - {g}
+	 * See pages 199-200 of PhD thesis.
+	 */
 	evalue rem;
 	evalue inc;
 	evalue t;
