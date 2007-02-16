@@ -866,6 +866,7 @@ void scarf_complex::print(FILE *out)
 struct scarf_collector {
     virtual void add(Polyhedron *P, int sign, Polyhedron *C,
 		     barvinok_options *options) = 0;
+    virtual ~scarf_collector() {}
 };
 
 static void scarf(Polyhedron *P, unsigned exist, unsigned nparam,

@@ -1067,6 +1067,7 @@ struct cumulator {
     void cumulate(barvinok_options *options);
 
     virtual void add_term(const vector<int>& powers, evalue *f2) = 0;
+    virtual ~cumulator() {}
 };
 
 void cumulator::cumulate(barvinok_options *options)
