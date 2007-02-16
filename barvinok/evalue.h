@@ -77,7 +77,7 @@ void evalue_copy(evalue *dst, const evalue *src);
 evalue *evalue_zero();
 enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);
-int eequal(evalue *e1,evalue *e2);
+int eequal(const evalue *e1, const evalue *e2);
 void free_evalue_refs(evalue *e);
 void print_evalue(FILE *DST,evalue *e,char **pname);
 void print_enode(FILE *DST,enode *p,char **pname);
@@ -108,7 +108,7 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift);
 void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays);
 evalue *esum(evalue *E, int nvar);
 void eor(evalue *e1, evalue *res);
-void evalue_denom(evalue *e, Value *d);
+void evalue_denom(const evalue *e, Value *d);
 void evalue_div(evalue * e, Value n);
 void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays);
 

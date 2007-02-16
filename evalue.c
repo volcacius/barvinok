@@ -1894,8 +1894,8 @@ int ecmp(const evalue *e1, const evalue *e2)
     return 0;
 }
 
-int eequal(evalue *e1,evalue *e2) { 
- 
+int eequal(const evalue *e1, const evalue *e2)
+{ 
     int i;
     enode *p1, *p2;
   
@@ -3332,7 +3332,7 @@ void eor(evalue *e1, evalue *res)
 /* computes denominator of polynomial evalue 
  * d should point to a value initialized to 1
  */
-void evalue_denom(evalue *e, Value *d)
+void evalue_denom(const evalue *e, Value *d)
 {
     int i, offset;
 
