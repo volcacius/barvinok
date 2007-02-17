@@ -3468,12 +3468,13 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
 	return;
     }
 
-    in_frac |= e->x.p->type == fractional;
     if (e->x.p->type == polynomial) {
 	sign *= signs[e->x.p->pos-1];
     }
     offset = type_offset(e->x.p);
-    for (i = e->x.p->size-1; i >= offset; --i)
+    evalue_frac2polynomial_r(&e->x.p->arr[offset], signs, sign, in_frac);
+    in_frac |= e->x.p->type == fractional;
+    for (i = e->x.p->size-1; i > offset; --i)
 	evalue_frac2polynomial_r(&e->x.p->arr[i], signs, sign, in_frac);
 
     if (e->x.p->type != fractional)
