@@ -11,7 +11,7 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart
 noinst_PROGRAMS = test randomtest \
 		  remove_redundant_equalities \
-		  barvinok_union \
+		  barvinok_union barvinok_maximize \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan
@@ -112,6 +112,7 @@ barvinok_enumerate_e_SOURCES = \
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
+barvinok_maximize_SOURCES = maximize.cc
 4coins_SOURCES = 4coins.cc
 if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc
