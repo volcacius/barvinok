@@ -363,6 +363,9 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
     evalue *e = NULL;
 
     tok = stream_next_token(s);
+    if (!tok)
+	return NULL;
+
     if (tok->type == '(') {
 	token_free(tok);
 	e = evalue_read_term(s, p);
