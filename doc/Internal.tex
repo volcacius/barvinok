@@ -819,6 +819,8 @@ The function \ai[\tt]{barvinok\_count} or
 polytope \verb+P+ and returns the result in the \ai[\tt]{Value}
 pointed to by \verb+result+, which needs to have been allocated
 and initialized.
+If \verb+P+ is a union, then only the first set in the union will
+be taken into account.
 For the meaning of the argument \verb+NbMaxCons+, see
 the discussion on \ai[\tt]{MaxRays} in Section~\ref{a:options}.
 
@@ -845,6 +847,8 @@ in \verb+P+ refer to parameters as any constraint in \verb+C+
 could equally well have been added to \verb+P+ itself.
 Note that the dimensions referring to the parameters should
 appear {\em last}.
+If either \verb+P+ or \verb+C+ is a union,
+then only the first set in the union will be taken into account.
 The result is a newly allocated \ai[\tt]{Enumeration}.
 As an alternative we also provide a function 
 (\ai[\tt]{barvinok\_enumerate\_ev} or

@@ -701,6 +701,10 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
     Polyhedron *Q;
     bool infinite = false;
 
+    if (P->next)
+	fprintf(stderr,
+	    "barvinok_count: input is a union; only first polyhedron is counted\n");
+
     if (emptyQ2(P)) {
 	value_set_si(*result, 0);
 	return;
@@ -1678,18 +1682,33 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options)
 {
     //P = unfringe(P, MaxRays);
+    Polyhedron *next, *Cnext;
     Polyhedron *Corig = C;
+    Polyhedron *Porig = P;
     Polyhedron *CEq = NULL, *rVD, *CA;
     int r = 0;
     unsigned nparam = C->Dimension;
     evalue *eres;
 
+    if (P->next)
+	fprintf(stderr,
+    "barvinok_enumerate: input is a union; only first polyhedron is enumerated\n");
+
+    if (C->next)
+	fprintf(stderr,
+    "barvinok_enumerate: context is a union; only first polyhedron is considered\n");
+
     evalue factor;
     value_init(factor.d);
     evalue_set_si(&factor, 1, 1);
 
+    Cnext = C->next;
+    C->next = NULL;
     CA = align_context(C, P->Dimension, options->MaxRays);
+    next = P->next;
+    P->next = NULL;
     P = DomainIntersection(P, CA, options->MaxRays);
+    Porig->next = next;
     Polyhedron_Free(CA);
 
     /* for now */
@@ -1713,6 +1732,7 @@ out:
 	if (C != Corig)
 	    Polyhedron_Free(C);
 	   
+	Corig->next = Cnext;
 	return eres;
     }
     if (Polyhedron_is_infinite_param(P, nparam))
@@ -1762,7 +1782,7 @@ out:
 	}
     }
 
-    Polyhedron *next = P->next;
+    next = P->next;
     P->next = NULL;
     eres = barvinok_enumerate_ev_f(P, C, options);
     P->next = next;
