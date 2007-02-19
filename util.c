@@ -982,17 +982,18 @@ void Free_ParamNames(char **params, int m)
     free(params);
 }
 
-int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2)
+/* Check whether every set in D2 is included in some set of D1 */
+int DomainIncludes(Polyhedron *D1, Polyhedron *D2)
 {
-    Polyhedron *P2;
-    for ( ; Pol1; Pol1 = Pol1->next) {
-	for (P2 = Pol2; P2; P2 = P2->next)
-	    if (!PolyhedronIncludes(Pol1, P2))
+    for ( ; D2; D2 = D2->next) {
+	Polyhedron *P1;
+	for (P1 = D1; P1; P1 = P1->next)
+	    if (PolyhedronIncludes(P1, D2))
 		break;
-	if (!P2)
-	    return 1;
+	if (!P1)
+	    return 0;
     }
-    return 0;
+    return 1;
 }
 
 int line_minmax(Polyhedron *I, Value *min, Value *max)

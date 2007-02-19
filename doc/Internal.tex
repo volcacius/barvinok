@@ -938,14 +938,14 @@ The function \ai[\tt]{unimodular\_complete} extends
 algorithm of \shortciteN{Bik1996PhD}.
 
 \begin{verbatim}
-int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2);
+int DomainIncludes(Polyhedron *D1, Polyhedron *D2);
 \end{verbatim}
 The function \ai[\tt]{DomainIncludes} extends
 the function \ai[\tt]{PolyhedronIncludes}
 provided by \PolyLib/ 
 to unions of polyhedra.
-It checks whether its first argument is a superset of
-its second argument.
+It checks whether every polyhedron in the union {\tt D2}
+is included in some polyhedron of {\tt D1}.
 
 \begin{verbatim}
 Polyhedron *DomainConstraintSimplify(Polyhedron *P, 
