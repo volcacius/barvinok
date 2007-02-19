@@ -516,7 +516,7 @@ int main(int argc, char **argv)
 	    print_solution = 0;
     }
 
-    if (print_solution) {
+    if (print_solution && options.verbose) {
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	Polyhedron_Print(stdout, P_VALUE_FMT, C);
     }
@@ -534,21 +534,25 @@ int main(int argc, char **argv)
 	}
     } else {
 	EP = barvinok_enumerate_with_options(A, C, bv_options);
-	if (print_solution)
+	if (print_solution && options.verbose)
 	    print_evalue(stdout, EP, param_name);
 	if (options.size)
 	    printf("\nSize: %d\n", evalue_size(EP));
 	if (options.floor) {
 	    fprintf(stderr, "WARNING: floor conversion not supported\n");
 	    evalue_frac2floor2(EP, 0);
-	    print_evalue(stdout, EP, param_name);
+	    if (print_solution && options.verbose)
+		print_evalue(stdout, EP, param_name);
 	} else if (options.convert) {
 	    evalue_mod2table(EP, C->Dimension);
-	    print_evalue(stdout, EP, param_name);
+	    if (print_solution && options.verbose)
+		print_evalue(stdout, EP, param_name);
 	    if (options.size)
 		printf("\nSize: %d\n", evalue_size(EP));
 	}
     }
+    if (print_solution && !options.verbose)
+	print_evalue(stdout, EP, param_name);
 
     if (options.verify.verify) {
 	options.verify.params = param_name;

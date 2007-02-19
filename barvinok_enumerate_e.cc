@@ -170,7 +170,7 @@ int main(int argc, char **argv)
 	    print_solution = 0;
     }
 
-    if (print_solution) {
+    if (print_solution && arguments.verbose) {
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	printf("exist: %d, nparam: %d\n", exist, nparam);
     }
@@ -205,22 +205,24 @@ int main(int argc, char **argv)
 	evalue_combine(EP);
 	if (arguments.range)
 	    evalue_range_reduction(EP);
-	if (print_solution)
+	if (print_solution && arguments.verbose)
 	    print_evalue(stdout, EP, param_name);
 	if (arguments.floor) {
 	    fprintf(stderr, "WARNING: floor conversion not supported\n");
 	    evalue_frac2floor2(EP, 0);
-	    if (print_solution)
+	    if (print_solution && arguments.verbose)
 		print_evalue(stdout, EP, param_name);
 	} else if (arguments.convert) {
 	    evalue_mod2table(EP, nparam);
-	    if (print_solution)
+	    if (print_solution && arguments.verbose)
 		print_evalue(stdout, EP, param_name);
 	}
 	if (arguments.verify.verify) {
 	    arguments.verify.params = param_name;
 	    verify_results(A, EP, exist, nparam, &arguments.verify);
 	}
+	if (print_solution && !arguments.verbose)
+	    print_evalue(stdout, EP, param_name);
 	free_evalue_refs(EP);
 	free(EP);
     }
