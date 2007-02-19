@@ -9,6 +9,7 @@
 using namespace GiNaC;
 using namespace bernstein;
 
+using std::pair;
 using std::vector;
 using std::cerr;
 using std::endl;
@@ -38,8 +39,32 @@ static int type_offset(enode *p)
 	  p->type == flooring ? 1 : 0;
 }
 
+typedef pair<bool, const evalue *> typed_evalue;
+
+static ex evalue2ex_add_var(evalue *e, exvector& extravar,
+			    vector<typed_evalue>& expr, bool is_fract)
+{
+    ex base_var = 0;
+
+    for (int i = 0; i < expr.size(); ++i) {
+	if (is_fract == expr[i].first && eequal(e, expr[i].second)) {
+	    base_var = extravar[i];
+	    break;
+	}
+    }
+    if (base_var != 0)
+	return base_var;
+
+    char name[20];
+    snprintf(name, sizeof(name), "f%c%d", is_fract ? 'r' : 'l', expr.size());
+    extravar.push_back(base_var = symbol(name));
+    expr.push_back(typed_evalue(is_fract, e));
+
+    return base_var;
+}
+
 static ex evalue2ex_r(const evalue *e, const exvector& vars,
-		      exvector& floorvar, vector<const evalue *>& floors)
+		      exvector& extravar, vector<typed_evalue>& expr)
 {
     if (value_notzero_p(e->d))
 	return value2numeric(e->x.n)/value2numeric(e->d);
@@ -51,18 +76,10 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
 	base_var = vars[e->x.p->pos-1];
 	break;
     case flooring:
-	for (int i = 0; i < floors.size(); ++i) {
-	    if (eequal(&e->x.p->arr[0], floors[i])) {
-		base_var = floorvar[i];
-		break;
-	    }
-	}
-	if (base_var != 0)
-	    break;
-	char name[20];
-	snprintf(name, sizeof(name), "f%d", floors.size());
-	floorvar.push_back(base_var = symbol(name));
-	floors.push_back(&e->x.p->arr[0]);
+	base_var = evalue2ex_add_var(&e->x.p->arr[0], extravar, expr, false);
+	break;
+    case fractional:
+	base_var = evalue2ex_add_var(&e->x.p->arr[0], extravar, expr, true);
 	break;
     default:
 	return fail();
@@ -71,7 +88,7 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
     int offset = type_offset(e->x.p);
     for (int i = e->x.p->size-1; i >= offset; --i) {
 	poly *= base_var;
-	ex t = evalue2ex_r(&e->x.p->arr[i], vars, floorvar, floors);
+	ex t = evalue2ex_r(&e->x.p->arr[i], vars, extravar, expr);
 	if (is_exactly_a<fail>(t))
 	    return t;
 	poly += t;
@@ -85,44 +102,57 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
  *	-e + d t + d-1 >= 0
  *
  * e is assumed to be an affine expression.
+ *
+ * For each t = fract(e/d), set up two constraints
+ *
+ *          -d t + d-1 >= 0
+ *             t       >= 0
  */
-static Matrix *setup_floor_constraints(const vector<const evalue*> floors, int nvar)
+static Matrix *setup_constraints(const vector<typed_evalue> expr, int nvar)
 {
-    int extra = floors.size();
+    int extra = expr.size();
     if (!extra)
 	return NULL;
     Matrix *M = Matrix_Alloc(2*extra, 1+extra+nvar+1);
     for (int i = 0; i < extra; ++i) {
 	Value *d = &M->p[2*i][1+i];
 	value_set_si(*d, 1);
-	evalue_denom(floors[i], d);
-	const evalue *e;
-	for (e = floors[i]; value_zero_p(e->d); e = &e->x.p->arr[0]) {
-	    assert(e->x.p->type == polynomial);
-	    assert(e->x.p->size == 2);
-	    evalue *c = &e->x.p->arr[1];
-	    value_multiply(M->p[2*i][1+extra+e->x.p->pos-1], *d, c->x.n);
-	    value_division(M->p[2*i][1+extra+e->x.p->pos-1],
-			   M->p[2*i][1+extra+e->x.p->pos-1], c->d);
+	evalue_denom(expr[i].second, d);
+	if (expr[i].first) {
+	    value_set_si(M->p[2*i][0], 1);
+	    value_decrement(M->p[2*i][1+extra+nvar], *d);
+	    value_oppose(*d, *d);
+	    value_set_si(M->p[2*i+1][0], 1);
+	    value_set_si(M->p[2*i+1][1+i], 1);
+	} else {
+	    const evalue *e;
+	    for (e = expr[i].second; value_zero_p(e->d); e = &e->x.p->arr[0]) {
+		assert(e->x.p->type == polynomial);
+		assert(e->x.p->size == 2);
+		evalue *c = &e->x.p->arr[1];
+		value_multiply(M->p[2*i][1+extra+e->x.p->pos-1], *d, c->x.n);
+		value_division(M->p[2*i][1+extra+e->x.p->pos-1],
+			       M->p[2*i][1+extra+e->x.p->pos-1], c->d);
+	    }
+	    value_multiply(M->p[2*i][1+extra+nvar], *d, e->x.n);
+	    value_division(M->p[2*i][1+extra+nvar], M->p[2*i][1+extra+nvar], e->d);
+	    value_oppose(*d, *d);
+	    value_set_si(M->p[2*i][0], -1);
+	    Vector_Scale(M->p[2*i], M->p[2*i+1], M->p[2*i][0], 1+extra+nvar+1);
+	    value_set_si(M->p[2*i][0], 1);
+	    value_subtract(M->p[2*i+1][1+extra+nvar], M->p[2*i+1][1+extra+nvar], *d);
+	    value_decrement(M->p[2*i+1][1+extra+nvar], M->p[2*i+1][1+extra+nvar]);
 	}
-	value_multiply(M->p[2*i][1+extra+nvar], *d, e->x.n);
-	value_division(M->p[2*i][1+extra+nvar], M->p[2*i][1+extra+nvar], e->d);
-	value_oppose(*d, *d);
-	value_set_si(M->p[2*i][0], -1);
-	Vector_Scale(M->p[2*i], M->p[2*i+1], M->p[2*i][0], 1+extra+nvar+1);
-	value_set_si(M->p[2*i][0], 1);
-	value_subtract(M->p[2*i+1][1+extra+nvar], M->p[2*i+1][1+extra+nvar], *d);
-	value_decrement(M->p[2*i+1][1+extra+nvar], M->p[2*i+1][1+extra+nvar]);
     }
     return M;
 }
 
 ex evalue2ex(const evalue *e, const exvector& vars, exvector& floorvar, Matrix **C)
 {
-    vector<const evalue *> floors;
-    ex poly = evalue2ex_r(e, vars, floorvar, floors);
+    vector<typed_evalue> expr;
+    ex poly = evalue2ex_r(e, vars, floorvar, expr);
     assert(C);
-    Matrix *M = setup_floor_constraints(floors, vars.size());
+    Matrix *M = setup_constraints(expr, vars.size());
     *C = M;
     return poly;
 }
