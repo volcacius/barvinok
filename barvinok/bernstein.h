@@ -14,5 +14,7 @@ bernstein::piecewise_lst *evalue_bernstein_coefficients(
 	    Polyhedron *ctx, const GiNaC::exvector& params,
 	    barvinok_options *options);
 GiNaC::ex evalue2ex(evalue *e, const GiNaC::exvector& vars);
+GiNaC::ex evalue2ex(const evalue *e, const GiNaC::exvector& vars,
+		     GiNaC::exvector& floorvar, Matrix **C);
 
 }
