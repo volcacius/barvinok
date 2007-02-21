@@ -117,6 +117,22 @@ matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, const exvector& par
 lst bernsteinExpansion(const matrix& vert, const ex& poly, const exvector& vars,
 		       const exvector& Params)
 {
+	if (is_exactly_a<lst>(poly)) {
+		lst polylst = ex_to<lst>(poly);
+		lst::const_iterator j = polylst.begin();
+
+		lst coeff = bernsteinExpansion(vert, *j, vars, Params);
+
+		for (++j; j != polylst.end(); ++j) {
+			lst::const_iterator k;
+			lst new_coeff = bernsteinExpansion(vert, *j, vars, Params);
+			for (k = new_coeff.begin(); k != new_coeff.end(); ++k)
+			    coeff.append(*k);
+			coeff.sort().unique();
+		}
+		return coeff;
+	}
+
 	unsigned maxDegree = findMaxDegree(poly, vars);
 	matrix A = getAiMatrix(vert.rows());
 
