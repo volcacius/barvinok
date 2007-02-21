@@ -64,7 +64,8 @@ static ex evalue2ex_add_var(evalue *e, exvector& extravar,
 }
 
 static ex evalue2ex_r(const evalue *e, const exvector& vars,
-		      exvector& extravar, vector<typed_evalue>& expr)
+		      exvector& extravar, vector<typed_evalue>& expr,
+		      Vector *coset)
 {
     if (value_notzero_p(e->d))
 	return value2numeric(e->x.n)/value2numeric(e->d);
@@ -81,6 +82,10 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
     case fractional:
 	base_var = evalue2ex_add_var(&e->x.p->arr[0], extravar, expr, true);
 	break;
+    case periodic:
+	assert(coset);
+	return evalue2ex_r(&e->x.p->arr[VALUE_TO_INT(coset->p[e->x.p->pos-1])],
+			   vars, extravar, expr, coset);
     default:
 	return fail();
     }
@@ -88,7 +93,7 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
     int offset = type_offset(e->x.p);
     for (int i = e->x.p->size-1; i >= offset; --i) {
 	poly *= base_var;
-	ex t = evalue2ex_r(&e->x.p->arr[i], vars, extravar, expr);
+	ex t = evalue2ex_r(&e->x.p->arr[i], vars, extravar, expr, coset);
 	if (is_exactly_a<fail>(t))
 	    return t;
 	poly += t;
@@ -147,14 +152,72 @@ static Matrix *setup_constraints(const vector<typed_evalue> expr, int nvar)
     return M;
 }
 
+static bool evalue_is_periodic(const evalue *e, Vector *periods)
+{
+    int i, offset;
+    bool is_periodic = false;
+
+    if (value_notzero_p(e->d))
+	return false;
+
+    assert(e->x.p->type != partition);
+    if (e->x.p->type == periodic) {
+	Value size;
+	value_init(size);
+	value_set_si(size, e->x.p->size);
+	value_lcm(periods->p[e->x.p->pos-1], size, &periods->p[e->x.p->pos-1]);
+	value_clear(size);
+	is_periodic = true;
+    }
+    offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	is_periodic = evalue_is_periodic(&e->x.p->arr[i], periods) || is_periodic;
+    return is_periodic;
+}
+
+static ex evalue2lst(const evalue *e, const exvector& vars,
+		     exvector& extravar, vector<typed_evalue>& expr,
+		     Vector *periods)
+{
+    Vector *coset = Vector_Alloc(periods->Size);
+    lst list;
+    for (;;) {
+	int i;
+	list.append(evalue2ex_r(e, vars, extravar, expr, coset));
+	for (i = coset->Size-1; i >= 0; --i) {
+	    value_increment(coset->p[i], coset->p[i]);
+	    if (value_lt(coset->p[i], periods->p[i]))
+		break;
+	    value_set_si(coset->p[i], 0);
+	}
+	if (i < 0)
+	    break;
+    }
+    Vector_Free(coset);
+    return list;
+}
+
 ex evalue2ex(const evalue *e, const exvector& vars, exvector& floorvar, Matrix **C)
 {
     vector<typed_evalue> expr;
-    ex poly = evalue2ex_r(e, vars, floorvar, expr);
-    assert(C);
-    Matrix *M = setup_constraints(expr, vars.size());
-    *C = M;
-    return poly;
+    Vector *periods = Vector_Alloc(vars.size());
+    for (int i = 0; i < periods->Size; ++i)
+	value_set_si(periods->p[i], 1);
+    if (evalue_is_periodic(e, periods)) {
+	ex polys = evalue2lst(e, vars, floorvar, expr, periods);
+	Vector_Free(periods);
+	assert(expr.size() == 0);
+	assert(C);
+	*C = NULL;
+	return polys;
+    } else {
+	Vector_Free(periods);
+	ex poly = evalue2ex_r(e, vars, floorvar, expr, NULL);
+	assert(C);
+	Matrix *M = setup_constraints(expr, vars.size());
+	*C = M;
+	return poly;
+    }
 }
 
 /* if the evalue is a relation, we use the relation to cut off the 
