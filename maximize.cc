@@ -191,6 +191,8 @@ static struct token *stream_next_token(struct stream *s)
 	c == '*' ||
 	c == '^' ||
 	c == '=' ||
+	c == ',' ||
+	c == '_' ||
 	c == '[' ||
 	c == ']' ||
 	c == '{' ||
@@ -312,36 +314,11 @@ static int optional_power(struct stream *s)
 static evalue *evalue_read_factor(struct stream *s, struct parameter **p);
 static evalue *evalue_read_term(struct stream *s, struct parameter **p);
 
-static evalue *read_fract_like(struct stream *s, struct token *tok,
-			       struct parameter **p)
+static evalue *create_fract_like(struct stream *s, evalue *arg, enode_type type,
+			         struct parameter **p)
 {
-    int pow;
-    evalue *arg;
     evalue *e;
-    char next;
-    char *error;
-    enode_type type;
-
-    if (tok->type == '[') {
-	next = ']';
-	error = "expecting \"]\"";
-	type = flooring;
-    } else if (tok->type == '{') {
-	next = '}';
-	error = "expecting \"}\"";
-	type = fractional;
-    } else
-	assert(0);
-
-    token_free(tok);
-    arg = evalue_read_term(s, p);
-    tok = stream_next_token(s);
-    if (!tok || tok->type != next) {
-	stream_error(s, tok, error);
-	if (tok)
-	    stream_push_token(s, tok);
-    } else
-	token_free(tok);
+    int pow;
     pow = optional_power(s);
 
     e = ALLOC(evalue);
@@ -354,6 +331,112 @@ static evalue *read_fract_like(struct stream *s, struct token *tok,
     while (--pow >= 0)
 	evalue_set_si(&e->x.p->arr[1+pow], 0, 1);
 
+    return e;
+}
+
+static evalue *read_fract(struct stream *s, struct token *tok, struct parameter **p)
+{
+    evalue *arg;
+
+    tok = stream_next_token(s);
+    assert(tok);
+    assert(tok->type == '{');
+
+    token_free(tok);
+    arg = evalue_read_term(s, p);
+    tok = stream_next_token(s);
+    if (!tok || tok->type != '}') {
+	stream_error(s, tok, "expecting \"}\"");
+	if (tok)
+	    stream_push_token(s, tok);
+    } else
+	token_free(tok);
+
+    return create_fract_like(s, arg, fractional, p);
+}
+
+static evalue *read_periodic(struct stream *s, struct parameter **p)
+{
+    evalue **list;
+    int len;
+    int n;
+    evalue *e = NULL;
+
+    struct token *tok;
+    tok = stream_next_token(s);
+    assert(tok && tok->type == '[');
+    token_free(tok);
+
+    len = 100;
+    list = (evalue **)malloc(len * sizeof(evalue *));
+    n = 0;
+
+    for (;;) {
+	evalue *e = evalue_read_term(s, p);
+	if (!e) {
+	    stream_error(s, NULL, "missing argument or list element");
+	    goto out;
+	}
+	if (n >= len) {
+	    len = (3*len)/2;
+	    list = (evalue **)realloc(list, len * sizeof(evalue *));
+	}
+	list[n++] = e;
+
+	tok = stream_next_token(s);
+	if (!tok) {
+	    stream_error(s, NULL, "unexpected EOF");
+	    goto out;
+	}
+	if (tok->type != ',')
+	    break;
+	token_free(tok);
+    }
+
+    if (tok->type != ']') {
+	stream_error(s, tok, "expecting \"]\"");
+	stream_push_token(s, tok);
+	goto out;
+    }
+
+    token_free(tok);
+
+    tok = stream_next_token(s);
+    if (tok->type == '_') {
+	int pos;
+	token_free(tok);
+	tok = stream_next_token(s);
+	if (!tok || tok->type != TOKEN_IDENT) {
+	    stream_error(s, tok, "expecting identifier");
+	    if (tok)
+		stream_push_token(s, tok);
+	    goto out;
+	}
+	e = ALLOC(evalue);
+	value_init(e->d);
+	pos = parameter_pos(p, tok->u.s);
+	token_free(tok);
+	e->x.p = new_enode(periodic, n, pos+1);
+	while (--n >= 0) {
+	    value_clear(e->x.p->arr[n].d);
+	    e->x.p->arr[n] = *list[n];
+	    free(list[n]);
+	}
+    } else if (n == 1) {
+	stream_push_token(s, tok);
+	e = create_fract_like(s, list[0], flooring, p);
+	n = 0;
+    } else {
+	stream_error(s, tok, "unexpected token");
+	stream_push_token(s, tok);
+    }
+
+out:
+    while (--n >= 0) {
+	free_evalue_refs(list[n]);
+	free(list[n]);
+    }
+    free(list);
     return e;
 }
 
@@ -407,8 +490,13 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 	evalue_set_si(&e->x.p->arr[pow], 1, 1);
 	while (--pow >= 0)
 	    evalue_set_si(&e->x.p->arr[pow], 0, 1);
-    } else if (tok->type == '[' || tok->type == '{')
-	e = read_fract_like(s, tok, p);
+    } else if (tok->type == '[') {
+	stream_push_token(s, tok);
+	e = read_periodic(s, p);
+    } else if (tok->type == '{') {
+	stream_push_token(s, tok);
+	e = read_fract(s, tok, p);
+    }
 
     tok = stream_next_token(s);
     if (tok && tok->type == '*') {
@@ -464,7 +552,7 @@ struct constraint {
     struct constraint 	*next;
 };
 
-struct constraint *constraint_new()
+static struct constraint *constraint_new()
 {
     struct constraint *c = ALLOC(struct constraint);
     c->type = -1;
@@ -473,7 +561,7 @@ struct constraint *constraint_new()
     return c;
 }
 
-void constraint_free(struct constraint *c)
+static void constraint_free(struct constraint *c)
 {
     while (c) {
 	struct constraint *next = c->next;
@@ -483,7 +571,7 @@ void constraint_free(struct constraint *c)
     }
 }
 
-void constraint_extend(struct constraint *c, int pos)
+static void constraint_extend(struct constraint *c, int pos)
 {
     Vector *v;
     if (pos < c->v->Size)
