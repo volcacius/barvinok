@@ -197,23 +197,24 @@ static ex evalue2lst(const evalue *e, const exvector& vars,
     return list;
 }
 
-ex evalue2ex(const evalue *e, const exvector& vars, exvector& floorvar, Matrix **C)
+ex evalue2ex(const evalue *e, const exvector& vars, exvector& floorvar,
+	     Matrix **C, Vector **p)
 {
     vector<typed_evalue> expr;
     Vector *periods = Vector_Alloc(vars.size());
+    assert(p);
+    assert(C);
     for (int i = 0; i < periods->Size; ++i)
 	value_set_si(periods->p[i], 1);
     if (evalue_is_periodic(e, periods)) {
-	ex polys = evalue2lst(e, vars, floorvar, expr, periods);
-	Vector_Free(periods);
-	assert(expr.size() == 0);
-	assert(C);
+	*p = periods;
 	*C = NULL;
-	return polys;
+	lst list;
+	return list;
     } else {
 	Vector_Free(periods);
+	*p = NULL;
 	ex poly = evalue2ex_r(e, vars, floorvar, expr, NULL);
-	assert(C);
 	Matrix *M = setup_constraints(expr, vars.size());
 	*C = M;
 	return poly;
@@ -291,6 +292,104 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
     return pl;
 }
 
+static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
+			    Polyhedron *D, const ex& poly,
+			    Polyhedron *ctx,
+			    const exvector& params, const exvector& floorvar,
+			    barvinok_options *options)
+{
+    unsigned PP_MaxRays = options->MaxRays;
+    if (PP_MaxRays & POL_NO_DUAL)
+	PP_MaxRays = 0;
+
+    for (Polyhedron *P = D; P; P = P->next) {
+	Param_Polyhedron *PP;
+	Polyhedron *next = P->next;
+	piecewise_lst *pl = new piecewise_lst(params);
+	Polyhedron *P1 = P;
+	P->next = NULL;
+	PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
+	for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
+	    matrix VM = domainVertices(PP, Q, params);
+	    lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
+	    pl->list.push_back(guarded_lst(Polyhedron_Copy(Q->Domain), coeffs));
+	}
+	Param_Polyhedron_Free(PP);
+	if (!pl_all)
+	    pl_all = pl;
+	else {
+	    pl_all->combine(*pl);
+	    delete pl;
+	}
+	P->next = next;
+    }
+    return pl_all;
+}
+
+/* Compute the coefficients of the polynomial corresponding to each coset
+ * on its own domain.  This allows us to cut the domain on multiples of
+ * the period.
+ * To perform the cutting for a coset "i mod n = c" we map the domain
+ * to the quotient space trough "i = i' n + c", simplify the constraints
+ * (implicitly) and then map back to the original space.
+ */
+static piecewise_lst *bernstein_coefficients_periodic(piecewise_lst *pl_all,
+			    Polyhedron *D, const evalue *e,
+			    Polyhedron *ctx, const exvector& vars,
+			    const exvector& params, Vector *periods,
+			    barvinok_options *options)
+{
+    assert(D->Dimension == periods->Size);
+    Matrix *T = Matrix_Alloc(D->Dimension+1, D->Dimension+1);
+    Matrix *T2 = Matrix_Alloc(D->Dimension+1, D->Dimension+1);
+    Vector *coset = Vector_Alloc(periods->Size);
+    exvector extravar;
+    vector<typed_evalue> expr;
+    exvector allvars = vars;
+    allvars.insert(allvars.end(), params.begin(), params.end());
+
+    value_set_si(T2->p[D->Dimension][D->Dimension], 1);
+    for (int i = 0; i < D->Dimension; ++i) {
+	value_assign(T->p[i][i], periods->p[i]);
+	value_lcm(T2->p[D->Dimension][D->Dimension], periods->p[i],
+		  &T2->p[D->Dimension][D->Dimension]);
+    }
+    value_set_si(T->p[D->Dimension][D->Dimension], 1);
+    for (int i = 0; i < D->Dimension; ++i)
+	value_division(T2->p[i][i], T2->p[D->Dimension][D->Dimension],
+		       periods->p[i]);
+    for (;;) {
+	int i;
+	ex poly = evalue2ex_r(e, allvars, extravar, expr, coset);
+	assert(extravar.size() == 0);
+	assert(expr.size() == 0);
+	Polyhedron *E = DomainPreimage(D, T, options->MaxRays);
+	Polyhedron *F = DomainPreimage(E, T2, options->MaxRays);
+	Polyhedron_Free(E);
+	if (!emptyQ2(F))
+	    pl_all = bernstein_coefficients(pl_all, F, poly, ctx, params,
+					    vars, options);
+	Polyhedron_Free(F);
+	for (i = D->Dimension-1; i >= 0; --i) {
+	    value_increment(coset->p[i], coset->p[i]);
+	    value_increment(T->p[i][D->Dimension], T->p[i][D->Dimension]);
+	    value_subtract(T2->p[i][D->Dimension], T2->p[i][D->Dimension],
+			   T2->p[i][i]);
+	    if (value_lt(coset->p[i], periods->p[i]))
+		break;
+	    value_set_si(coset->p[i], 0);
+	    value_set_si(T->p[i][D->Dimension], 0);
+	    value_set_si(T2->p[i][D->Dimension], 0);
+	}
+	if (i < 0)
+	    break;
+    }
+    Vector_Free(coset);
+    Matrix_Free(T);
+    Matrix_Free(T2);
+    return pl_all;
+}
+
 piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e, 
 				      Polyhedron *ctx, const exvector& params,
 				      barvinok_options *options)
@@ -302,23 +401,20 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
     assert(e->x.p->type == partition);
     assert(e->x.p->size >= 2);
     unsigned nvars = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension - nparam;
-    unsigned PP_MaxRays = options->MaxRays;
-    if (PP_MaxRays & POL_NO_DUAL)
-	PP_MaxRays = 0;
 
     exvector vars = constructVariableVector(nvars, "v");
     exvector allvars = vars;
     allvars.insert(allvars.end(), params.begin(), params.end());
 
     for (int i = 0; i < e->x.p->size/2; ++i) {
-	Param_Polyhedron *PP;
 	Polyhedron *E;
 	evalue *EP;
 	Matrix *M;
+	Vector *periods;
 	exvector floorvar;
 
 	evalue_extract_poly(e, i, &E, &EP, options->MaxRays);
-	ex poly = evalue2ex(EP, allvars, floorvar, &M);
+	ex poly = evalue2ex(EP, allvars, floorvar, &M, &periods);
 	floorvar.insert(floorvar.end(), vars.begin(), vars.end());
 	if (M) {
 	    Polyhedron *AE = align_context(E, M->NbColumns-2, options->MaxRays);
@@ -334,26 +430,14 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
 	    delete pl_all;
 	    return NULL;
 	}
-	for (Polyhedron *P = E; P; P = P->next) {
-	    Polyhedron *next = P->next;
-	    piecewise_lst *pl = new piecewise_lst(params);
-	    Polyhedron *P1 = P;
-	    P->next = NULL;
-	    PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
-	    for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
-		matrix VM = domainVertices(PP, Q, params);
-		lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
-		pl->list.push_back(guarded_lst(Polyhedron_Copy(Q->Domain), coeffs));
-	    }
-	    Param_Polyhedron_Free(PP);
-	    if (!pl_all)
-		pl_all = pl;
-	    else {
-		pl_all->combine(*pl);
-		delete pl;
-	    }
-	    P->next = next;
-	}
+	if (periods)
+	    pl_all = bernstein_coefficients_periodic(pl_all, E, EP, ctx, vars,
+						     params, periods, options);
+	else
+	    pl_all = bernstein_coefficients(pl_all, E, poly, ctx, params,
+					    floorvar, options);
+	if (periods)
+	    Vector_Free(periods);
 	if (E != EVALUE_DOMAIN(e->x.p->arr[2*i]))
 	    Domain_Free(E);
     }
