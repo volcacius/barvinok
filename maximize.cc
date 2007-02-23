@@ -14,8 +14,10 @@ using namespace bernstein;
 using namespace barvinok;
 
 #define OPT_VARS  	    (BV_OPT_LAST+1)
+#define OPT_SPLIT  	    (BV_OPT_LAST+2)
 
 struct argp_option argp_options[] = {
+    { "split",		    OPT_SPLIT,	"int" },
     { "variables",	    OPT_VARS,  	"int",	0,
 	"number of variables over which to maximize" },
     { "verbose",	    'V',  	0,	0, },
@@ -25,6 +27,7 @@ struct argp_option argp_options[] = {
 struct options {
     int nvar;
     int verbose;
+    int split;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -35,12 +38,16 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
 	options->nvar = -1;
 	options->verbose = 0;
+	options->split = 0;
 	break;
     case 'V':
 	options->verbose = 1;
 	break;
     case OPT_VARS:
 	options->nvar = atoi(arg);
+	break;
+    case OPT_SPLIT:
+	options->split = atoi(arg);
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -803,6 +810,9 @@ int main(int argc, char **argv)
 
     EP = evalue_read(stdin, &all_vars, &ntotal, bv_options->MaxRays);
     assert(EP);
+
+    if (options.split)
+	evalue_split_periods(EP, options.split, bv_options->MaxRays);
 
     if (options.verbose)
 	print_evalue(stderr, EP, all_vars);
