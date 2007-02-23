@@ -33,7 +33,7 @@ extern "C" {
 #define POL_INTEGER		0
 #endif
 
-void value_lcm(Value i, Value j, Value* lcm);
+void value_lcm(const Value i, const Value j, Value* lcm);
 int random_int(int max);
 Polyhedron *Polyhedron_Read(unsigned MaxRays);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);

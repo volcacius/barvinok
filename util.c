@@ -164,7 +164,7 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     return P;
 }
 
-void value_lcm(Value i, Value j, Value* lcm)
+void value_lcm(const Value i, const Value j, Value* lcm)
 {
     Value aux;
     value_init(aux);
