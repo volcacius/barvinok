@@ -2702,7 +2702,10 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     I = DomainImage(D, T, 0);
     H = DomainConvex(I, 0);
     Domain_Free(I);
-    *R = T;
+    if (R)
+	*R = T;
+    else
+	Matrix_Free(T);
 
     return H;
 }
@@ -2714,7 +2717,6 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
     Value d, min, max;
     int r = 0;
     Polyhedron *I;
-    Matrix *T;
     int bounded;
 
     if (value_notzero_p(e->d))
@@ -2723,6 +2725,7 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
     p = e->x.p;
 
     if (p->type == relation) {
+	Matrix *T;
 	int equal;
 	value_init(d);
 	value_init(min);
@@ -2819,8 +2822,7 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
     value_init(min);
     value_init(max);
     fractional_minimal_coefficients(p);
-    I = polynomial_projection(p, D, &d, &T);
-    Matrix_Free(T);
+    I = polynomial_projection(p, D, &d, NULL);
     bounded = line_minmax(I, &min, &max); /* frees I */
     mpz_fdiv_q(min, min, d);
     mpz_fdiv_q(max, max, d);
@@ -2975,7 +2977,6 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
     int r = 0;
     int i;
     Polyhedron *I;
-    Matrix *T;
     Value d, min;
     evalue fl;
 
@@ -3007,7 +3008,7 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
 
     if (shift) {
 	value_init(d);
-	I = polynomial_projection(p, D, &d, &T);
+	I = polynomial_projection(p, D, &d, NULL);
 
 	/*
 	Polyhedron_Print(stderr, P_VALUE_FMT, I);
@@ -3038,7 +3039,6 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
 	}
 
 	Polyhedron_Free(I);
-	Matrix_Free(T);
 	value_clear(d);
     }
 
