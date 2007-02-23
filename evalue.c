@@ -3584,3 +3584,139 @@ void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays)
 	Matrix_Free(C);
     }
 }
+
+static Matrix *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
+						int max_periods,
+						Value *min, Value *max)
+{
+    Matrix *T;
+    Value d;
+    int i;
+
+    if (value_notzero_p(e->d))
+	return NULL;
+
+    if (e->x.p->type == fractional) {
+	Polyhedron *I;
+	int bounded;
+
+	value_init(d);
+	I = polynomial_projection(e->x.p, D, &d, &T);
+	bounded = line_minmax(I, min, max); /* frees I */
+	if (bounded) {
+	    Value mp;
+	    value_init(mp);
+	    value_set_si(mp, max_periods);
+	    mpz_fdiv_q(*min, *min, d);
+	    mpz_fdiv_q(*max, *max, d);
+	    value_assign(T->p[1][D->Dimension], d);
+	    value_subtract(d, *max, *min);
+	    if (value_ge(d, mp)) {
+		Matrix_Free(T);
+		T = NULL;
+	    }
+	    value_clear(mp);
+	} else {
+	    Matrix_Free(T);
+	    T = NULL;
+	}
+	value_clear(d);
+	if (T)
+	    return T;
+    }
+
+    for (i = type_offset(e->x.p); i < e->x.p->size; ++i)
+	if ((T = find_fractional_with_max_periods(&e->x.p->arr[i], D, max_periods,
+						  min, max)))
+	    return T;
+
+    return NULL;
+}
+
+/* Look for fractional parts that can be removed by splitting the corresponding
+ * domain into at most max_periods parts.
+ * We use a very simply strategy that looks for the first fractional part
+ * that satisfies the condition, performs the split and then continues
+ * looking for other fractional parts in the split domains until no
+ * such fractional part can be found anymore.
+ */
+void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays)
+{
+    int i, j, n;
+    Value min;
+    Value max;
+    Value d;
+    assert(value_zero_p(e->d));
+    assert(e->x.p->type == partition);
+
+    value_init(min);
+    value_init(max);
+    value_init(d);
+
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	enode *p;
+	Matrix *T = NULL;
+	Matrix *M;
+	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	Polyhedron *E;
+	T = find_fractional_with_max_periods(&e->x.p->arr[2*i+1], D, max_periods,
+					     &min, &max);
+	if (!T)
+	    continue;
+
+	M = Matrix_Alloc(2, 2+D->Dimension);
+
+	value_subtract(d, max, min);
+	n = VALUE_TO_INT(d)+1;
+
+	value_set_si(M->p[0][0], 1);
+	Vector_Copy(T->p[0], M->p[0]+1, D->Dimension+1);
+	value_multiply(d, max, T->p[1][D->Dimension]);
+	value_subtract(M->p[0][1+D->Dimension], M->p[0][1+D->Dimension], d);
+	value_set_si(d, -1);
+	value_set_si(M->p[1][0], 1);
+	Vector_Scale(T->p[0], M->p[1]+1, d, D->Dimension+1);
+	value_addmul(M->p[1][1+D->Dimension], max, T->p[1][D->Dimension]);
+	value_addto(M->p[1][1+D->Dimension], M->p[1][1+D->Dimension],
+		    T->p[1][D->Dimension]);
+	value_decrement(M->p[1][1+D->Dimension], M->p[1][1+D->Dimension]);
+
+	p = new_enode(partition, e->x.p->size + (n-1)*2, e->x.p->pos);
+	for (j = 0; j < 2*i; ++j) {
+	    value_clear(p->arr[j].d);
+	    p->arr[j] = e->x.p->arr[j];
+	}
+	for (j = 2*i+2; j < e->x.p->size; ++j) {
+	    value_clear(p->arr[j+2*(n-1)].d);
+	    p->arr[j+2*(n-1)] = e->x.p->arr[j];
+	}
+	for (j = n-1; j >= 0; --j) {
+	    if (j == 0) {
+		value_clear(p->arr[2*i+1].d);
+		p->arr[2*i+1] = e->x.p->arr[2*i+1];
+	    } else
+		evalue_copy(&p->arr[2*(i+j)+1], &e->x.p->arr[2*i+1]);
+	    if (j != n-1) {
+		value_subtract(M->p[1][1+D->Dimension], M->p[1][1+D->Dimension],
+			       T->p[1][D->Dimension]);
+		value_addto(M->p[0][1+D->Dimension], M->p[0][1+D->Dimension],
+			    T->p[1][D->Dimension]);
+	    }
+	    E = DomainAddConstraints(D, M, MaxRays);
+	    EVALUE_SET_DOMAIN(p->arr[2*(i+j)], E);
+	    if (evalue_range_reduction_in_domain(&p->arr[2*(i+j)+1], E))
+		reduce_evalue(&p->arr[2*(i+j)+1]);
+	}
+	value_clear(e->x.p->arr[2*i].d);
+	Domain_Free(D);
+	Matrix_Free(M);
+	Matrix_Free(T);
+	free(e->x.p);
+	e->x.p = p;
+	--i;
+    }
+
+    value_clear(d);
+    value_clear(min);
+    value_clear(max);
+}

@@ -111,6 +111,7 @@ void eor(evalue *e1, evalue *res);
 void evalue_denom(const evalue *e, Value *d);
 void evalue_div(evalue * e, Value n);
 void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays);
+void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays);
 
 #if defined(__cplusplus)
 }
