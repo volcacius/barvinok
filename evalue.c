@@ -2648,18 +2648,40 @@ void evalue_combine(evalue *e)
     }
 }
 
-/* May change coefficients to become non-standard if fiddle is set
- * => reduce p afterwards to correct
+/* Use smallest representative for coefficients in affine form in
+ * argument of fractional.
+ * Since any change will make the argument non-standard,
+ * the containing evalue will have to be reduced again afterward.
  */
+static void fractional_minimal_coefficients(enode *p)
+{
+    evalue *pp;
+    Value twice;
+    value_init(twice);
+
+    assert(p->type == fractional);
+    pp = &p->arr[0];
+    while (value_zero_p(pp->d)) {
+	assert(pp->x.p->type == polynomial);
+	assert(pp->x.p->size == 2);
+	assert(value_notzero_p(pp->x.p->arr[1].d));
+	mpz_mul_ui(twice, pp->x.p->arr[1].x.n, 2);
+	if (value_gt(twice, pp->x.p->arr[1].d))
+	    value_subtract(pp->x.p->arr[1].x.n, 
+			   pp->x.p->arr[1].x.n, pp->x.p->arr[1].d);
+	pp = &pp->x.p->arr[0];
+    }
+
+    value_clear(twice);
+}
+
 static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
-					 Matrix **R, int fiddle)
+					 Matrix **R)
 {
     Polyhedron *I, *H;
     evalue *pp;
     unsigned dim = D->Dimension;
     Matrix *T = Matrix_Alloc(2, dim+1);
-    Value twice;
-    value_init(twice);
     assert(T);
 
     assert(p->type == fractional);
@@ -2671,10 +2693,6 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
 	assert(pp->x.p->size == 2);
 	assert(value_notzero_p(pp->x.p->arr[1].d));
 	value_division(T->p[0][pp->x.p->pos-1], *d, pp->x.p->arr[1].d);
-	mpz_mul_ui(twice, pp->x.p->arr[1].x.n, 2);
-	if (fiddle && value_gt(twice, pp->x.p->arr[1].d))
-	    value_subtract(pp->x.p->arr[1].x.n, 
-			    pp->x.p->arr[1].x.n, pp->x.p->arr[1].d);
 	value_multiply(T->p[0][pp->x.p->pos-1], 
 		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
 	pp = &pp->x.p->arr[0];
@@ -2685,8 +2703,6 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     H = DomainConvex(I, 0);
     Domain_Free(I);
     *R = T;
-
-    value_clear(twice);
 
     return H;
 }
@@ -2712,7 +2728,8 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	value_init(min);
 	value_init(max);
 
-	I = polynomial_projection(p->arr[0].x.p, D, &d, &T, 1);
+	fractional_minimal_coefficients(p->arr[0].x.p);
+	I = polynomial_projection(p->arr[0].x.p, D, &d, &T);
 	bounded = line_minmax(I, &min, &max); /* frees I */
 	equal = value_eq(min, max);
 	mpz_cdiv_q(min, min, d);
@@ -2801,7 +2818,8 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
     value_init(d);
     value_init(min);
     value_init(max);
-    I = polynomial_projection(p, D, &d, &T, 1);
+    fractional_minimal_coefficients(p);
+    I = polynomial_projection(p, D, &d, &T);
     Matrix_Free(T);
     bounded = line_minmax(I, &min, &max); /* frees I */
     mpz_fdiv_q(min, min, d);
@@ -2989,7 +3007,7 @@ int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift)
 
     if (shift) {
 	value_init(d);
-	I = polynomial_projection(p, D, &d, &T, 0);
+	I = polynomial_projection(p, D, &d, &T);
 
 	/*
 	Polyhedron_Print(stderr, P_VALUE_FMT, I);
