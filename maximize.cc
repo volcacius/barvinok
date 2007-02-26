@@ -59,7 +59,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
-enum token_type { TOKEN_UNKNOWN = 256, TOKEN_VALUE, TOKEN_IDENT, TOKEN_GE };
+enum token_type { TOKEN_UNKNOWN = 256, TOKEN_VALUE, TOKEN_IDENT, TOKEN_GE,
+		  TOKEN_UNION };
 
 struct token {
     enum token_type  type;
@@ -227,14 +228,18 @@ static struct token *stream_next_token(struct stream *s)
     }
     if (isalpha(c)) {
 	tok = token_new(line, col);
-	tok->type = TOKEN_IDENT;
 	stream_push_char(s, c);
 	while ((c = stream_getc(s)) != -1 && isalpha(c))
 	    stream_push_char(s, c);
 	if (c != -1)
 	    stream_ungetc(s, c);
 	stream_push_char(s, '\0');
-	tok->u.s = strdup(s->buffer);
+	if (!strcmp(s->buffer, "UNION")) {
+	    tok->type = TOKEN_UNION;
+	} else {
+	    tok->type = TOKEN_IDENT;
+	    tok->u.s = strdup(s->buffer);
+	}
 	return tok;
     }
     if (c == '>') {
@@ -557,6 +562,7 @@ struct constraint {
     int	    		 type;
     Vector  		*v;
     struct constraint 	*next;
+    struct constraint 	*union_next;
 };
 
 static struct constraint *constraint_new()
@@ -565,13 +571,14 @@ static struct constraint *constraint_new()
     c->type = -1;
     c->v = Vector_Alloc(16);
     c->next = NULL;
+    c->union_next = NULL;
     return c;
 }
 
 static void constraint_free(struct constraint *c)
 {
     while (c) {
-	struct constraint *next = c->next;
+	struct constraint *next = c->next ? c->next : c->union_next;
 	Vector_Free(c->v);
 	free(c);
 	c = next;
@@ -591,7 +598,8 @@ static void constraint_extend(struct constraint *c, int pos)
 }
 
 static int evalue_read_constraint(struct stream *s, struct parameter **p,
-				  struct constraint **constraints)
+				  struct constraint **constraints,
+				  struct constraint *union_next)
 {
     struct token *tok;
     struct constraint *c = NULL;
@@ -636,6 +644,7 @@ static int evalue_read_constraint(struct stream *s, struct parameter **p,
 	    } else {
 		c->type = type;
 		c->next = *constraints;
+		c->union_next = union_next;
 		*constraints = c;
 		token_free(tok);
 	    }
@@ -657,6 +666,7 @@ static struct constraint *evalue_read_domain(struct stream *s, struct parameter 
 					     unsigned MaxRays)
 {
     struct constraint *constraints = NULL;
+    struct constraint *union_next = NULL;
     struct token *tok;
     int line;
 
@@ -666,13 +676,20 @@ static struct constraint *evalue_read_domain(struct stream *s, struct parameter 
     stream_push_token(s, tok);
 
     line = tok->line;
-    while (evalue_read_constraint(s, p, &constraints)) {
+    while (evalue_read_constraint(s, p, &constraints, union_next)) {
 	tok = stream_next_token(s);
 	if (tok) {
-	    stream_push_token(s, tok);
-	    /* empty line separates domain from evalue */
-	    if (tok->line > line+1)
-		break;
+	    if (tok->type == TOKEN_UNION) {
+		token_free(tok);
+		union_next = constraints;
+		constraints = NULL;
+	    } else {
+		union_next = NULL;
+		stream_push_token(s, tok);
+		/* empty line separates domain from evalue */
+		if (tok->line > line+1)
+		    break;
+	    }
 	    line = tok->line;
 	}
     }
@@ -701,6 +718,38 @@ static char **extract_parameters(struct parameter *p, unsigned *nparam)
     return params;
 }
 
+static Polyhedron *constraints2domain(struct constraint *constraints,
+				      unsigned nparam, unsigned MaxRays)
+{
+    Polyhedron *D;
+    Matrix *M;
+    int n;
+    struct constraint *c;
+    struct constraint *union_next = NULL;
+
+    for (n = 0, c = constraints; c; ++n, c = c->next)
+	;
+    M = Matrix_Alloc(n, 1+nparam+1);
+    while (--n >= 0) {
+	struct constraint *next = constraints->next;
+	union_next = constraints->union_next;
+	Vector_Copy(constraints->v->p+1, M->p[n]+1, nparam);
+	if (constraints->type)
+	    value_set_si(M->p[n][0], 1);
+	value_assign(M->p[n][1+nparam], constraints->v->p[0]);
+	constraints->next = NULL;
+	constraints->union_next = NULL;
+	constraint_free(constraints);
+	constraints = next;
+    }
+    D = Constraints2Polyhedron(M, MaxRays);
+    Matrix_Free(M);
+
+    if (union_next)
+	D = DomainConcat(D, constraints2domain(union_next, nparam, MaxRays));
+    return D;
+}
+
 static evalue *evalue_read_partition(struct stream *s, char ***ppp,
 				     unsigned *nparam, unsigned MaxRays)
 {
@@ -726,7 +775,6 @@ static evalue *evalue_read_partition(struct stream *s, char ***ppp,
 
     if (part) {
 	Polyhedron *D;
-	Matrix *M;
 	int j;
 
 	*ppp = extract_parameters(p, nparam);
@@ -737,23 +785,8 @@ static evalue *evalue_read_partition(struct stream *s, char ***ppp,
 	for (j = 0; j < m; ++j) {
 	    int n;
 	    struct section *next = part->next;
-	    struct constraint *c;
 	    constraints = part->constraints;
-	    for (n = 0, c = constraints; c; ++n, c = c->next)
-		;
-	    M = Matrix_Alloc(n, 1+*nparam+1);
-	    while (--n >= 0) {
-		struct constraint *next = constraints->next;
-		Vector_Copy(constraints->v->p+1, M->p[n]+1, *nparam);
-		if (constraints->type)
-		    value_set_si(M->p[n][0], 1);
-		value_assign(M->p[n][1+*nparam], constraints->v->p[0]);
-		constraints->next = NULL;
-		constraint_free(constraints);
-		constraints = next;
-	    }
-	    D = Constraints2Polyhedron(M, MaxRays);
-	    Matrix_Free(M);
+	    D = constraints2domain(part->constraints, *nparam, MaxRays);
 	    EVALUE_SET_DOMAIN(e->x.p->arr[2*j], D);
 	    value_clear(e->x.p->arr[2*j+1].d);
 	    e->x.p->arr[2*j+1] = *part->e;
