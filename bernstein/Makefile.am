@@ -5,7 +5,7 @@ pkginclude_HEADERS = \
 	include/bernstein/maximize.h \
 	include/bernstein/piecewise_lst.h
 
-AM_CPPFLAGS = -I$(srcdir)/include
+AM_CPPFLAGS = -I$(srcdir)/include @GINACLIB_CPPFLAGS@
 
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
@@ -14,7 +14,7 @@ libbernstein_la_SOURCES = \
     src/polylib++.h \
     src/polynomial.cpp \
     src/polynomial.h
-libbernstein_la_LIBADD = -lginac -lcln
+libbernstein_la_LIBADD = @GINACLIB_LIBS@
 libbernstein_la_LDFLAGS = -version-info @versioninfo@
 LDADD = libbernstein.la
 

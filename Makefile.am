@@ -3,7 +3,7 @@ if HAVE_GINAC
 endif
 SUBDIRS = $(MAYBE_BERNSTEIN) lib . omega doc
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib @GINACLIB_CPPFLAGS@
 AM_LDFLAGS = -Llib
 
 lib_LTLIBRARIES = libbarvinok.la
