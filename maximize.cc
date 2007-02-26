@@ -15,12 +15,14 @@ using namespace barvinok;
 
 #define OPT_VARS  	    (BV_OPT_LAST+1)
 #define OPT_SPLIT  	    (BV_OPT_LAST+2)
+#define OPT_MIN  	    (BV_OPT_LAST+3)
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
     { "variables",	    OPT_VARS,  	"int",	0,
 	"number of variables over which to maximize" },
     { "verbose",	    'V',  	0,	0, },
+    { "minimize",	    OPT_MIN,  	0, 0,	"minimize instead of maximize"},
     { 0 }
 };
 
@@ -28,6 +30,7 @@ struct options {
     int nvar;
     int verbose;
     int split;
+    int minimize;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -39,6 +42,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->nvar = -1;
 	options->verbose = 0;
 	options->split = 0;
+	options->minimize = 0;
 	break;
     case 'V':
 	options->verbose = 1;
@@ -48,6 +52,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case OPT_SPLIT:
 	options->split = atoi(arg);
+	break;
+    case OPT_MIN:
+	options->minimize = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -860,7 +867,10 @@ int main(int argc, char **argv)
 
     pl = evalue_bernstein_coefficients(NULL, EP, U, params, bv_options);
     assert(pl);
-    pl->maximize();
+    if (options.minimize)
+    	pl->minimize();
+    else
+    	pl->maximize();
     cout << *pl << endl;
     delete pl;
 
