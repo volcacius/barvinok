@@ -298,6 +298,9 @@ static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
 			    const exvector& params, const exvector& floorvar,
 			    barvinok_options *options)
 {
+    if (emptyQ2(D))
+	return pl_all;
+
     unsigned PP_MaxRays = options->MaxRays;
     if (PP_MaxRays & POL_NO_DUAL)
 	PP_MaxRays = 0;
