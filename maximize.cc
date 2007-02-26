@@ -686,6 +686,7 @@ static struct constraint *evalue_read_domain(struct stream *s, struct parameter 
     while (evalue_read_constraint(s, p, &constraints, union_next)) {
 	tok = stream_next_token(s);
 	if (tok) {
+	    line = tok->line;
 	    if (tok->type == TOKEN_UNION) {
 		token_free(tok);
 		union_next = constraints;
@@ -697,7 +698,6 @@ static struct constraint *evalue_read_domain(struct stream *s, struct parameter 
 		if (tok->line > line+1)
 		    break;
 	    }
-	    line = tok->line;
 	}
     }
     return constraints;
