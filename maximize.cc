@@ -19,15 +19,15 @@ using namespace barvinok;
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
-    { "variables",	    OPT_VARS,  	"int",	0,
-	"number of variables over which to maximize" },
+    { "variables",	    OPT_VARS,  	"list",	0,
+	"comma separated list of variables over which to maximize" },
     { "verbose",	    'V',  	0,	0, },
     { "minimize",	    OPT_MIN,  	0, 0,	"minimize instead of maximize"},
     { 0 }
 };
 
 struct options {
-    int nvar;
+    char* var_list;
     int verbose;
     int split;
     int minimize;
@@ -39,7 +39,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
     case ARGP_KEY_INIT:
-	options->nvar = -1;
+	options->var_list = NULL;
 	options->verbose = 0;
 	options->split = 0;
 	options->minimize = 0;
@@ -48,7 +48,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->verbose = 1;
 	break;
     case OPT_VARS:
-	options->nvar = atoi(arg);
+	options->var_list = strdup(arg);
 	break;
     case OPT_SPLIT:
 	options->split = atoi(arg);
@@ -757,14 +757,14 @@ static Polyhedron *constraints2domain(struct constraint *constraints,
     return D;
 }
 
-static evalue *evalue_read_partition(struct stream *s, char ***ppp,
+static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
+				     char ***ppp,
 				     unsigned *nparam, unsigned MaxRays)
 {
     struct section *part = NULL;
     struct constraint *constraints;
     evalue *e = NULL;
     int m = 0;
-    struct parameter *p = NULL;
 
     while ((constraints = evalue_read_domain(s, &p, MaxRays))) {
 	evalue *e = evalue_read_term(s, &p);
@@ -805,13 +805,29 @@ static evalue *evalue_read_partition(struct stream *s, char ***ppp,
     return e;
 }
 
-static evalue *evalue_read(FILE *in, char ***ppp, unsigned *nparam,
-			   unsigned MaxRays)
+static evalue *evalue_read(FILE *in, char *var_list, char ***ppp, unsigned *nvar,
+			   unsigned *nparam, unsigned MaxRays)
 {
     struct stream *s = stream_new(in);
     struct token *tok;
     evalue *e;
     struct parameter *p = NULL;
+    char *next;
+    int nv;
+
+    if (var_list) {
+	while ((next = strchr(var_list, ','))) {
+	    *next = '\0';
+	    if (next > var_list)
+		parameter_pos(&p, var_list);
+	    *next = ',';
+	    var_list = next+1;
+	}
+	if (strlen(var_list) > 0)
+	    parameter_pos(&p, var_list);
+	nv = p ? p->pos+1 : 0;
+    } else
+	nv = -1;
 
     if (!(tok = stream_next_token(s)))
 	return NULL;
@@ -822,16 +838,21 @@ static evalue *evalue_read(FILE *in, char ***ppp, unsigned *nparam,
 	    stream_push_token(s, tok2);
 	stream_push_token(s, tok);
 	if (tok2 && (tok2->type == TOKEN_IDENT || tok2->type == TOKEN_GE))
-	    e = evalue_read_partition(s, ppp, nparam, MaxRays);
+	    e = evalue_read_partition(s, p, ppp, nparam, MaxRays);
 	else {
 	    e = evalue_read_term(s, &p);
 	    *ppp = extract_parameters(p, nparam);
 	}
     } else if (tok->type == TOKEN_IDENT) {
 	stream_push_token(s, tok);
-	e = evalue_read_partition(s, ppp, nparam, MaxRays);
+	e = evalue_read_partition(s, p, ppp, nparam, MaxRays);
     }
     stream_free(s);
+    if (nv == -1)
+	*nvar = *nparam;
+    else
+	*nvar = nv;
+    *nparam -= *nvar;
     return e;
 }
 
@@ -839,7 +860,8 @@ int main(int argc, char **argv)
 {
     evalue *EP;
     char **all_vars = NULL;
-    unsigned ntotal;
+    unsigned nvar;
+    unsigned nparam;
     struct options options;
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
     static struct argp argp = { argp_options, parse_opt, 0, 0, 0 };
@@ -848,7 +870,8 @@ int main(int argc, char **argv)
 
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
-    EP = evalue_read(stdin, &all_vars, &ntotal, bv_options->MaxRays);
+    EP = evalue_read(stdin, options.var_list, &all_vars, &nvar, &nparam,
+		     bv_options->MaxRays);
     assert(EP);
 
     if (options.split)
@@ -857,13 +880,10 @@ int main(int argc, char **argv)
     if (options.verbose)
 	print_evalue(stderr, EP, all_vars);
 
-    if (options.nvar == -1)
-	options.nvar = ntotal;
-
-    U = Universe_Polyhedron(ntotal - options.nvar);
+    U = Universe_Polyhedron(nparam);
 
     exvector params;
-    params = constructParameterVector(all_vars+options.nvar, ntotal-options.nvar);
+    params = constructParameterVector(all_vars+nvar, nparam);
 
     pl = evalue_bernstein_coefficients(NULL, EP, U, params, bv_options);
     assert(pl);
@@ -877,8 +897,10 @@ int main(int argc, char **argv)
     free_evalue_refs(EP);
     free(EP);
 
+    if (options.var_list)
+	free(options.var_list);
     Polyhedron_Free(U);
-    Free_ParamNames(all_vars, ntotal);
+    Free_ParamNames(all_vars, nvar+nparam);
     barvinok_options_free(bv_options);
     return 0;
 }
