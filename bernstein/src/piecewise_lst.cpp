@@ -163,6 +163,14 @@ void piecewise_lst::maximize()
     }
 }
 
+void piecewise_lst::minimize()
+{
+    exvector params;
+    for (int i = 0; i < list.size(); ++i) {
+	list[i].second = bernstein::minimize(list[i].first, list[i].second, vars);
+    }
+}
+
 void piecewise_lst::simplify_domains(Polyhedron *ctx, unsigned MaxRays)
 {
     for (int i = 0; i < list.size(); ++i) {
