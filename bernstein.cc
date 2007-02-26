@@ -292,6 +292,31 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
     return pl;
 }
 
+static Polyhedron *Recession_Cone(Polyhedron *P, unsigned nparam, unsigned MaxRays)
+{
+    unsigned nvar = P->Dimension - nparam;
+    Matrix *M = Matrix_Alloc(P->NbConstraints, 1 + nvar + 1);
+    for (int i = 0; i < P->NbConstraints; ++i)
+	Vector_Copy(P->Constraint[i], M->p[i], 1+nvar);
+    Polyhedron *R = Constraints2Polyhedron(M, MaxRays);
+    Matrix_Free(M);
+    return R;
+}
+
+static bool Polyhedron_Is_Infinite(Polyhedron *P, unsigned nparam, unsigned MaxRays)
+{
+    int i;
+    bool infinite;
+    Polyhedron *R = Recession_Cone(P, nparam, MaxRays);
+    POL_ENSURE_VERTICES(R);
+    for (i = 0; i < R->NbRays; ++i)
+	if (value_zero_p(R->Ray[i][1+R->Dimension]))
+	    break;
+    infinite = i < R->NbRays;
+    Polyhedron_Free(R);
+    return infinite;
+}
+
 static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
 			    Polyhedron *D, const ex& poly,
 			    Polyhedron *ctx,
@@ -308,10 +333,16 @@ static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
     for (Polyhedron *P = D; P; P = P->next) {
 	Param_Polyhedron *PP;
 	Polyhedron *next = P->next;
-	piecewise_lst *pl = new piecewise_lst(params);
 	Polyhedron *P1 = P;
 	P->next = NULL;
+	if (Polyhedron_Is_Infinite(P, ctx->Dimension, options->MaxRays)) {
+	    fprintf(stderr, "warning: infinite domain skipped\n");
+	    Polyhedron_Print(stderr, P_VALUE_FMT, P);
+	    P->next = next;
+	    continue;
+	}
 	PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
+	piecewise_lst *pl = new piecewise_lst(params);
 	for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
 	    matrix VM = domainVertices(PP, Q, params);
 	    lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
