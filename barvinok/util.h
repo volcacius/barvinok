@@ -92,6 +92,7 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam);
 Matrix *left_inverse(Matrix *M, Matrix **Eq);
 
 int Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam);
+int Polyhedron_is_unbounded(Polyhedron *P, unsigned nparam, unsigned MaxRays);
 
 const char *barvinok_version();
 

@@ -888,20 +888,6 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     return R;
 }
 
-/* this procedure may have false negatives */
-static bool Polyhedron_is_infinite_param(Polyhedron *P, unsigned nparam)
-{
-    int r;
-    for (r = 0; r < P->NbRays; ++r) {
-	if (!value_zero_p(P->Ray[r][0]) &&
-		!value_zero_p(P->Ray[r][P->Dimension+1]))
-	    continue;
-	if (First_Non_Zero(P->Ray[r]+1+P->Dimension-nparam, nparam) == -1)
-	    return true;
-    }
-    return false;
-}
-
 /* Check whether all rays point in the positive directions
  * for the parameters
  */
@@ -1735,7 +1721,7 @@ out:
 	Corig->next = Cnext;
 	return eres;
     }
-    if (Polyhedron_is_infinite_param(P, nparam))
+    if (Polyhedron_is_unbounded(P, nparam, options->MaxRays))
 	goto constant;
 
     if (P->NbEq != 0) {
@@ -3585,7 +3571,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
 	return new gen_fun;
     }
 
-    assert(!Polyhedron_is_infinite_param(P, nparam));
+    assert(!Polyhedron_is_unbounded(P, nparam, options->MaxRays));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_revlex_positive_rays(P, nparam));
     if (P->NbEq != 0)
@@ -3651,7 +3637,7 @@ static Polyhedron *skew_into_positive_orthant(Polyhedron *D, unsigned nparam,
     value_init(tmp);
     for (Polyhedron *P = D; P; P = P->next) {
 	POL_ENSURE_VERTICES(P);
-	assert(!Polyhedron_is_infinite_param(P, nparam));
+	assert(!Polyhedron_is_unbounded(P, nparam, MaxRays));
 	assert(P->NbBid == 0);
 	assert(Polyhedron_has_positive_rays(P, nparam));
 

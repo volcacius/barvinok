@@ -1580,3 +1580,30 @@ int Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam)
     }
     return 1;
 }
+
+static Polyhedron *Recession_Cone(Polyhedron *P, unsigned nparam, unsigned MaxRays)
+{
+    int i;
+    unsigned nvar = P->Dimension - nparam;
+    Matrix *M = Matrix_Alloc(P->NbConstraints, 1 + nvar + 1);
+    for (i = 0; i < P->NbConstraints; ++i)
+	Vector_Copy(P->Constraint[i], M->p[i], 1+nvar);
+    Polyhedron *R = Constraints2Polyhedron(M, MaxRays);
+    Matrix_Free(M);
+    return R;
+}
+
+int Polyhedron_is_unbounded(Polyhedron *P, unsigned nparam, unsigned MaxRays)
+{
+    int i;
+    int is_unbounded;
+    Polyhedron *R = Recession_Cone(P, nparam, MaxRays);
+    POL_ENSURE_VERTICES(R);
+    if (R->NbBid == 0)
+	for (i = 0; i < R->NbRays; ++i)
+	    if (value_zero_p(R->Ray[i][1+R->Dimension]))
+		break;
+    is_unbounded = R->NbBid > 0 || i < R->NbRays;
+    Polyhedron_Free(R);
+    return is_unbounded;
+}
