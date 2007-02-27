@@ -96,6 +96,8 @@ BEEO_SOURCES =
 endif
 barvinok_enumerate_SOURCES = \
 	barvinok_enumerate.cc \
+	evalue_convert.c \
+	evalue_convert.h \
 	fdstream.cc \
 	fdstream.h \
 	verify.h \
@@ -104,6 +106,8 @@ barvinok_enumerate_SOURCES = \
 	verif_ehrhart.c
 barvinok_enumerate_e_SOURCES = \
 	barvinok_enumerate_e.cc \
+	evalue_convert.c \
+	evalue_convert.h \
 	verify.h \
 	verify.c \
 	verif_ehrhart.h \

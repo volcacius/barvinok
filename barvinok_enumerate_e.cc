@@ -11,6 +11,7 @@
 #endif
 #include "verify.h"
 #include "verif_ehrhart.h"
+#include "evalue_convert.h"
 
 /* The input of this example program is a polytope in combined
  * data and parameter space followed by two lines indicating
@@ -26,22 +27,17 @@ struct argp_option argp_options[] = {
     { "pip",   	    	    'p',    0,      0 },
     { "series",     	    's',    0,	    0 },
     { "scarf",      	    'S',    0,	    0 },
-    { "convert",    	    'c',    0,	    0 },
-    { "floor",      	    'f',    0,	    0 },
-    { "range-reduction",    'R',    0,	    0 },
     { "verbose",    	    'v' },
     { 0 }
 };
 
 struct arguments {
     struct verify_options    verify;
-    int range;
-    int convert;
+    struct convert_options   convert;
     int omega;
     int pip;
     int scarf;
     int series;
-    int floor;
     int verbose;
 };
 
@@ -53,6 +49,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = arguments->verify.barvinok;
 	state->child_inputs[1] = &arguments->verify;
+	state->child_inputs[2] = &arguments->convert;
 	break;
     case 's':
 	arguments->series = 1;
@@ -73,15 +70,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 #else
 	error(0, 0, "--pip option not supported");
 #endif
-	break;
-    case 'f':
-	arguments->floor = 1;
-	break;
-    case 'c':
-	arguments->convert = 1;
-	break;
-    case 'R':
-	arguments->range = 1;
 	break;
     case 'v':
 	arguments->verbose = 1;
@@ -125,21 +113,19 @@ int main(int argc, char **argv)
     int print_solution = 1;
     struct arguments arguments;
     static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    	0,	0,  		0 },
-	{ &verify_argp,    	0,	"verification",	1 },
+	{ &barvinok_argp,    	0,	0,  			0 },
+	{ &verify_argp,    	0,	"verification",		1 },
+	{ &convert_argp,    	0,	"output conversion",	2 },
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     arguments.verify.barvinok = options;
-    arguments.range = 0;
-    arguments.convert = 0;
     arguments.omega = 0;
     arguments.pip = 0;
     arguments.scarf = 0;
     arguments.series = 0;
-    arguments.floor = 0;
     arguments.verbose = 0;
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
@@ -202,27 +188,14 @@ int main(int argc, char **argv)
 	else
 	    EP = barvinok_enumerate_e_with_options(A, exist, nparam, options);
 	reduce_evalue(EP);
-	evalue_combine(EP);
-	if (arguments.range)
-	    evalue_range_reduction(EP);
-	if (print_solution && arguments.verbose)
+	evalue_convert(EP, &arguments.convert, nparam,
+		       arguments.verbose ? param_name : NULL);
+	if (print_solution && !arguments.verbose)
 	    print_evalue(stdout, EP, param_name);
-	if (arguments.floor) {
-	    fprintf(stderr, "WARNING: floor conversion not supported\n");
-	    evalue_frac2floor2(EP, 0);
-	    if (print_solution && arguments.verbose)
-		print_evalue(stdout, EP, param_name);
-	} else if (arguments.convert) {
-	    evalue_mod2table(EP, nparam);
-	    if (print_solution && arguments.verbose)
-		print_evalue(stdout, EP, param_name);
-	}
 	if (arguments.verify.verify) {
 	    arguments.verify.params = param_name;
 	    verify_results(A, EP, exist, nparam, &arguments.verify);
 	}
-	if (print_solution && !arguments.verbose)
-	    print_evalue(stdout, EP, param_name);
 	free_evalue_refs(EP);
 	free(EP);
     }

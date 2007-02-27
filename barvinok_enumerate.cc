@@ -8,6 +8,7 @@
 #include "verify.h"
 #include "verif_ehrhart.h"
 #include "remove_equalities.h"
+#include "evalue_convert.h"
 
 #undef CS   /* for Solaris 10 */
 
@@ -21,8 +22,6 @@
 #define PRINT_STATS  	    (BV_OPT_LAST+1)
 
 struct argp_option argp_options[] = {
-    { "convert",   'c', 0, 0, "convert fractionals to periodics" },
-    { "floor",     'f', 0, 0, "convert fractionals to floorings" },
     { "size",      'S' },
     { "series",    's', 0, 0, "compute rational generating function" },
     { "explicit",  'e', 0, 0, "convert rgf to psp" },
@@ -32,14 +31,13 @@ struct argp_option argp_options[] = {
 };
 
 struct arguments {
-    int convert;
-    int floor;
     int size;
     int series;
     int function;
     int verbose;
     int print_stats;
     struct verify_options    verify;
+    struct convert_options   convert;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -50,8 +48,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = options->verify.barvinok;
 	state->child_inputs[1] = &options->verify;
-	options->convert = 0;
-	options->floor = 0;
+	state->child_inputs[2] = &options->convert;
 	options->size = 0;
 	options->series = 0;
 	options->function = 0;
@@ -60,12 +57,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case PRINT_STATS:
 	options->print_stats = 1;
-	break;
-    case 'c':
-	options->convert = 1;
-	break;
-    case 'f':
-	options->floor = 1;
 	break;
     case 'S':
 	options->size = 1;
@@ -494,6 +485,7 @@ int main(int argc, char **argv)
     static struct argp_child argp_children[] = {
 	{ &barvinok_argp,    	0,	0,  		0 },
 	{ &verify_argp,    	0,	"verification",	1 },
+	{ &convert_argp,    	0,	"output conversion",	2 },
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
@@ -534,22 +526,10 @@ int main(int argc, char **argv)
 	}
     } else {
 	EP = barvinok_enumerate_with_options(A, C, bv_options);
-	if (print_solution && options.verbose)
-	    print_evalue(stdout, EP, param_name);
+	evalue_convert(EP, &options.convert, C->Dimension,
+		       options.verbose ? param_name : NULL);
 	if (options.size)
 	    printf("\nSize: %d\n", evalue_size(EP));
-	if (options.floor) {
-	    fprintf(stderr, "WARNING: floor conversion not supported\n");
-	    evalue_frac2floor2(EP, 0);
-	    if (print_solution && options.verbose)
-		print_evalue(stdout, EP, param_name);
-	} else if (options.convert) {
-	    evalue_mod2table(EP, C->Dimension);
-	    if (print_solution && options.verbose)
-		print_evalue(stdout, EP, param_name);
-	    if (options.size)
-		printf("\nSize: %d\n", evalue_size(EP));
-	}
     }
     if (print_solution && !options.verbose)
 	print_evalue(stdout, EP, param_name);
