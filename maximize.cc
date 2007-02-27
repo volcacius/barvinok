@@ -5,6 +5,7 @@
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
 #include "argp.h"
+#include "evalue_convert.h"
 
 using std::cout;
 using std::cerr;
@@ -27,6 +28,7 @@ struct argp_option argp_options[] = {
 };
 
 struct options {
+    struct convert_options   convert;
     char* var_list;
     int verbose;
     int split;
@@ -39,6 +41,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
     case ARGP_KEY_INIT:
+	state->child_inputs[0] = &options->convert;
 	options->var_list = NULL;
 	options->verbose = 0;
 	options->split = 0;
@@ -864,7 +867,11 @@ int main(int argc, char **argv)
     unsigned nparam;
     struct options options;
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
-    static struct argp argp = { argp_options, parse_opt, 0, 0, 0 };
+    static struct argp_child argp_children[] = {
+	{ &convert_argp,    	0,	"input conversion",	1 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     Polyhedron *U;
     piecewise_lst *pl = NULL;
 
@@ -877,8 +884,7 @@ int main(int argc, char **argv)
     if (options.split)
 	evalue_split_periods(EP, options.split, bv_options->MaxRays);
 
-    if (options.verbose)
-	print_evalue(stderr, EP, all_vars);
+    evalue_convert(EP, &options.convert, nparam, options.verbose ? all_vars : NULL);
 
     U = Universe_Polyhedron(nparam);
 

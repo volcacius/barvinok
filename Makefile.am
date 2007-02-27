@@ -116,7 +116,10 @@ barvinok_enumerate_e_SOURCES = \
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
-barvinok_maximize_SOURCES = maximize.cc
+barvinok_maximize_SOURCES = \
+	evalue_convert.c \
+	evalue_convert.h \
+	maximize.cc
 4coins_SOURCES = 4coins.cc
 if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc
