@@ -298,7 +298,7 @@ static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
 			    const exvector& params, const exvector& floorvar,
 			    barvinok_options *options)
 {
-    if (emptyQ2(D))
+    if (!D->next && emptyQ2(D))
 	return pl_all;
 
     unsigned PP_MaxRays = options->MaxRays;
@@ -306,6 +306,9 @@ static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
 	PP_MaxRays = 0;
 
     for (Polyhedron *P = D; P; P = P->next) {
+	/* This shouldn't happen */
+	if (emptyQ2(P))
+	    continue;
 	Param_Polyhedron *PP;
 	Polyhedron *next = P->next;
 	Polyhedron *P1 = P;
