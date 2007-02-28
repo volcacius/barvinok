@@ -690,8 +690,13 @@ static struct constraint *evalue_read_domain(struct stream *s, struct parameter 
 	tok = stream_next_token(s);
 	if (tok) {
 	    if (tok->type == TOKEN_UNION) {
-		line = tok->line;
 		token_free(tok);
+		tok = stream_next_token(s);
+		if (!tok) {
+		    stream_error(s, NULL, "unexpected EOF");
+		    return constraints;
+		}
+		stream_push_token(s, tok);
 		union_next = constraints;
 		constraints = NULL;
 	    } else {
@@ -700,8 +705,8 @@ static struct constraint *evalue_read_domain(struct stream *s, struct parameter 
 		/* empty line separates domain from evalue */
 		if (tok->line > line+1)
 		    break;
-		line = tok->line;
 	    }
+	    line = tok->line;
 	}
     }
     return constraints;
