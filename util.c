@@ -606,12 +606,16 @@ void Line_Length(Polyhedron *P, Value *len)
  * If no factors can be found, NULL is returned.
  * Otherwise, a linked list of the factors is returned.
  *
+ * If there are factors and if T is not NULL, then a matrix will be
+ * returned through T expressing the old variables in terms of the
+ * new variables as they appear in the sequence of factors.
+ *
  * The algorithm works by first computing the Hermite normal form
  * and then grouping columns linked by one or more constraints together,
  * where a constraints "links" two or more columns if the constraint
  * has nonzero coefficients in the columns.
  */
-Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, 
+Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 			      unsigned NbMaxRays)
 {
     int i, j, k;
@@ -637,7 +641,6 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam,
     left_hermite(M, &H, &Q, &U);
     Matrix_Free(M);
     Matrix_Free(Q);
-    Matrix_Free(U);
 
     for (i = 0; i < P->NbConstraints; ++i)
 	rowgroup[i] = -1;
@@ -686,6 +689,9 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam,
     if (cnt[0] != nvar) {
 	/* Extract out pure context constraints separately */
 	Polyhedron **next = &F;
+	int tot_d = 0;
+	if (T)
+	    *T = Matrix_Alloc(nvar, nvar);
 	for (i = nparam ? -1 : 0; i < nvar; ++i) {
 	    int d;
 
@@ -712,6 +718,16 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam,
 		    }
 	    }
 
+	    if (T)
+		for (j = 0; j < nvar; ++j) {
+		    int l, m;
+		    for (l = 0, m = 0; m < d; ++l) {
+			if (group[l] != i)
+			    continue;
+			value_assign((*T)->p[j][tot_d+m++], U->p[j][l]);
+		    }
+		}
+
 	    M = Matrix_Alloc(k, d+nparam+2);
 	    for (j = 0, k = 0; j < P->NbConstraints; ++j) {
 		int l, m;
@@ -729,8 +745,10 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam,
 	    *next = Constraints2Polyhedron(M, NbMaxRays);
 	    next = &(*next)->next;
 	    Matrix_Free(M);
+	    tot_d += d;
 	}
     }
+    Matrix_Free(U);
     Matrix_Free(H);
     free(pos);
     free(group);

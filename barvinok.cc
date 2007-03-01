@@ -738,7 +738,7 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
 	    Polyhedron_Free(P);
 	return;
     }
-    Q = Polyhedron_Factor(P, 0, options->MaxRays);
+    Q = Polyhedron_Factor(P, 0, NULL, options->MaxRays);
     if (Q) {
 	if (allocated)
 	    Polyhedron_Free(P);
@@ -1736,7 +1736,7 @@ out:
 	goto constant;
     }
 
-    Polyhedron *T = Polyhedron_Factor(P, nparam, options->MaxRays);
+    Polyhedron *T = Polyhedron_Factor(P, nparam, NULL, options->MaxRays);
     if (T || (P->Dimension == nparam+1)) {
 	Polyhedron *Q;
 	Polyhedron *C2;

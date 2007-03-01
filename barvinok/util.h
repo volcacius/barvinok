@@ -45,7 +45,7 @@ void check_triangulization(Polyhedron *P, Polyhedron *T);
 Polyhedron *remove_equalities(Polyhedron *P);
 Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor);
 void manual_count(Polyhedron *P, Value* result);
-Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, 
+Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 			      unsigned NbMaxRays);
 void Line_Length(Polyhedron *P, Value *len);
 struct barvinok_options;
