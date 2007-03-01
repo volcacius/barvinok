@@ -23,8 +23,6 @@ static std::string int2String(int n);
 static unsigned int findMaxDegree(ex polynomial, const exvector& Vars);
 static matrix getAiMatrix(unsigned int nbVert);
 static ex getBasis(unsigned int nbVert, matrix &A);
-static ex replaceVariablesInPolynomial(const ex &poly, const exvector& V,
-				       ex &variables);
 static ex powerMonomials(polynomial &poly, matrix &A, unsigned int nbVert,
 			 unsigned int maxDegree, ex &basis);
 static lst getCoefficients(ex hom, unsigned d, const matrix& A);
@@ -320,7 +318,7 @@ lst getCoefficients(ex hom, unsigned d, const matrix& A)
 
 // replace the variables in the polynomial
 ex replaceVariablesInPolynomial(const ex &poly, const exvector &vars,
-				ex &substitutions)
+				const ex &substitutions)
 {
 	lst replace;
 
