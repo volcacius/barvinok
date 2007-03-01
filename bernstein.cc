@@ -412,6 +412,11 @@ static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
     Polyhedron_Free(P);
     Polyhedron_Free(PC);
 
+    if (options->bernstein_optimize == BV_BERNSTEIN_MIN)
+	pl->minimize();
+    else if (options->bernstein_optimize == BV_BERNSTEIN_MAX)
+	pl->maximize();
+
     unsigned done = F->Dimension-nparam;
     for (F = F->next ; F; F = F->next) {
 	exvector pl_vars;
@@ -436,6 +441,11 @@ static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
 
 	delete pl;
 	pl = new_pl;
+
+	if (options->bernstein_optimize == BV_BERNSTEIN_MIN)
+	    pl->minimize();
+	else if (options->bernstein_optimize == BV_BERNSTEIN_MAX)
+	    pl->maximize();
 
 	Polyhedron_Free(U);
 	done += F->Dimension-nparam;

@@ -78,6 +78,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->gbr_lp_solver = BV_GBR_NONE;
 #endif
 
+    options->bernstein_optimize = BV_BERNSTEIN_NONE;
+
     return options;
 }
 

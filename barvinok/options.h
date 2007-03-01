@@ -53,6 +53,12 @@ struct barvinok_options {
     #define	BV_GBR_CDD	2
     int		gbr_lp_solver;
 
+    /* bernstein options */
+    #define	BV_BERNSTEIN_NONE   0
+    #define	BV_BERNSTEIN_MAX    1
+    #define	BV_BERNSTEIN_MIN    2
+    int		bernstein_optimize;
+
     struct barvinok_stats   *stats;
 };
 

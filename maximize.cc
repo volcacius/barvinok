@@ -897,6 +897,10 @@ int main(int argc, char **argv)
     exvector params;
     params = constructParameterVector(all_vars+nvar, nparam);
 
+    if (options.minimize)
+	bv_options->bernstein_optimize = BV_BERNSTEIN_MIN;
+    else
+	bv_options->bernstein_optimize = BV_BERNSTEIN_MAX;
     pl = evalue_bernstein_coefficients(NULL, EP, U, params, bv_options);
     assert(pl);
     if (options.minimize)
