@@ -317,43 +317,202 @@ static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
 			    Polyhedron *D, const ex& poly,
 			    Polyhedron *ctx,
 			    const exvector& params, const exvector& floorvar,
+			    barvinok_options *options);
+
+static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
+			    Polyhedron *F, Matrix *T, const ex& poly,
+			    Polyhedron *ctx,
+			    const exvector& params, const exvector& vars,
 			    barvinok_options *options)
 {
-    if (!D->next && emptyQ2(D))
+    if (emptyQ2(ctx))
 	return pl_all;
+    for (Polyhedron *G = F; G; G = G->next)
+	if (emptyQ2(G))
+	    return pl_all;
+
+    unsigned nparam = params.size();
+    unsigned nvar = vars.size();
+    unsigned constraints;
+    Polyhedron *C = NULL;
+
+    /* More context constraints */
+    if (F->Dimension == ctx->Dimension) {
+	C = F;
+	F = F->next;
+    }
+    assert(F);
+    assert(F->next);
+
+    Matrix *M;
+    Polyhedron *P;
+    Polyhedron *PC;
+    M = Matrix_Alloc(F->NbConstraints, 1+nvar+nparam+1);
+    for (int i = 0; i < F->NbConstraints; ++i) {
+	Vector_Copy(F->Constraint[i], M->p[i], 1+F->Dimension-nparam);
+	Vector_Copy(F->Constraint[i]+1+F->Dimension-nparam,
+		    M->p[i]+1+nvar, nparam+1);
+    }
+    P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    constraints = C ? C->NbConstraints : 0;
+    constraints += ctx->NbConstraints;
+    for (Polyhedron *G = F->next; G; G = G->next)
+	constraints += G->NbConstraints;
+
+    unsigned total_var = nvar-(F->Dimension-nparam);
+    unsigned skip = 0;
+    unsigned c = 0;
+    M = Matrix_Alloc(constraints, 1+total_var+nparam+1);
+    for (Polyhedron *G = F->next; G; G = G->next) {
+	unsigned this_var = G->Dimension - nparam;
+	for (int i = 0; i < G->NbConstraints; ++i) {
+	    value_assign(M->p[c+i][0], G->Constraint[i][0]);
+	    Vector_Copy(G->Constraint[i]+1, M->p[c+i]+1+skip, this_var);
+	    Vector_Copy(G->Constraint[i]+1+this_var, M->p[c+i]+1+total_var,
+			nparam+1);
+	}
+	c += G->NbConstraints;
+	skip += this_var;
+    }
+    assert(skip == total_var);
+    if (C) {
+	for (int i = 0; i < C->NbConstraints; ++i) {
+	    value_assign(M->p[c+i][0], C->Constraint[i][0]);
+	    Vector_Copy(C->Constraint[i]+1, M->p[c+i]+1+total_var,
+			nparam+1);
+	}
+	c += C->NbConstraints;
+    }
+    for (int i = 0; i < ctx->NbConstraints; ++i) {
+	value_assign(M->p[c+i][0], ctx->Constraint[i][0]);
+	Vector_Copy(ctx->Constraint[i]+1, M->p[c+i]+1+total_var, nparam+1);
+    }
+    PC = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    exvector newvars = constructVariableVector(nvar, "t");
+    matrix subs(1, nvar);
+    for (int i = 0; i < nvar; ++i)
+	for (int j = 0; j < nvar; ++j)
+	    subs(0,i) += value2numeric(T->p[i][j]) * newvars[j];
+
+    ex newpoly = replaceVariablesInPolynomial(poly, vars, subs);
+
+    exvector P_vars;
+    P_vars.insert(P_vars.end(), newvars.begin(),
+		  newvars.begin()+(F->Dimension-nparam));
+    exvector P_params;
+    P_params.insert(P_params.end(), newvars.begin()+(F->Dimension-nparam),
+		    newvars.end());
+    P_params.insert(P_params.end(), params.begin(), params.end());
+    piecewise_lst *pl;
+    pl = bernstein_coefficients(NULL, P, newpoly, PC, P_params, P_vars, options);
+    Polyhedron_Free(P);
+    Polyhedron_Free(PC);
+
+    unsigned done = F->Dimension-nparam;
+    for (F = F->next ; F; F = F->next) {
+	exvector pl_vars;
+	pl_vars.insert(pl_vars.end(), newvars.begin()+done,
+		       newvars.begin()+done+(F->Dimension-nparam));
+	exvector pl_params;
+	pl_params.insert(pl_params.end(), newvars.begin()+done+(F->Dimension-nparam),
+			 newvars.end());
+	pl_params.insert(pl_params.end(), params.begin(), params.end());
+	piecewise_lst *new_pl = NULL;
+	Polyhedron *U = Universe_Polyhedron(pl_params.size());
+
+	for (int i = 0; i < pl->list.size(); ++i) {
+	    Polyhedron *D = pl->list[i].first;
+	    lst polys = pl->list[i].second;
+	    lst::const_iterator j;
+	    for (j = polys.begin(); j != polys.end(); ++j) {
+		new_pl = bernstein_coefficients(new_pl, D, *j, U, pl_params,
+						pl_vars, options);
+	    }
+	}
+
+	delete pl;
+	pl = new_pl;
+
+	Polyhedron_Free(U);
+	done += F->Dimension-nparam;
+    }
+
+    if (!pl_all)
+	pl_all = pl;
+    else {
+	pl_all->combine(*pl);
+	delete pl;
+    }
+
+    return pl_all;
+}
+
+static piecewise_lst *bernstein_coefficients_polyhedron(piecewise_lst *pl_all,
+			    Polyhedron *P, const ex& poly,
+			    Polyhedron *ctx,
+			    const exvector& params, const exvector& floorvar,
+			    barvinok_options *options)
+{
+    if (Polyhedron_is_unbounded(P, ctx->Dimension, options->MaxRays)) {
+	fprintf(stderr, "warning: unbounded domain skipped\n");
+	Polyhedron_Print(stderr, P_VALUE_FMT, P);
+	return pl_all;
+    }
+
+    Matrix *T = NULL;
+    Polyhedron *F = Polyhedron_Factor(P, ctx->Dimension, &T, options->MaxRays);
+    if (F) {
+	pl_all = bernstein_coefficients_product(pl_all, F, T, poly, ctx, params,
+						floorvar, options);
+	Domain_Free(F);
+	Matrix_Free(T);
+	return pl_all;
+    }
 
     unsigned PP_MaxRays = options->MaxRays;
     if (PP_MaxRays & POL_NO_DUAL)
 	PP_MaxRays = 0;
 
+    Param_Polyhedron *PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
+    assert(PP);
+    piecewise_lst *pl = new piecewise_lst(params);
+    for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
+	matrix VM = domainVertices(PP, Q, params);
+	lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
+	pl->list.push_back(guarded_lst(Polyhedron_Copy(Q->Domain), coeffs));
+    }
+    Param_Polyhedron_Free(PP);
+    if (!pl_all)
+	pl_all = pl;
+    else {
+	pl_all->combine(*pl);
+	delete pl;
+    }
+
+    return pl_all;
+}
+
+static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
+			    Polyhedron *D, const ex& poly,
+			    Polyhedron *ctx,
+			    const exvector& params, const exvector& floorvar,
+			    barvinok_options *options)
+{
+    if (!D->next && emptyQ2(D))
+	return pl_all;
+
     for (Polyhedron *P = D; P; P = P->next) {
 	/* This shouldn't happen */
 	if (emptyQ2(P))
 	    continue;
-	Param_Polyhedron *PP;
 	Polyhedron *next = P->next;
-	Polyhedron *P1 = P;
 	P->next = NULL;
-	if (Polyhedron_is_unbounded(P, ctx->Dimension, options->MaxRays)) {
-	    fprintf(stderr, "warning: unbounded domain skipped\n");
-	    Polyhedron_Print(stderr, P_VALUE_FMT, P);
-	    P->next = next;
-	    continue;
-	}
-	PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
-	piecewise_lst *pl = new piecewise_lst(params);
-	for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
-	    matrix VM = domainVertices(PP, Q, params);
-	    lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
-	    pl->list.push_back(guarded_lst(Polyhedron_Copy(Q->Domain), coeffs));
-	}
-	Param_Polyhedron_Free(PP);
-	if (!pl_all)
-	    pl_all = pl;
-	else {
-	    pl_all->combine(*pl);
-	    delete pl;
-	}
+	pl_all = bernstein_coefficients_polyhedron(pl_all, P, poly, ctx,
+						   params, floorvar, options);
 	P->next = next;
     }
     return pl_all;
