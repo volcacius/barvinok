@@ -63,6 +63,27 @@ static ex evalue2ex_add_var(evalue *e, exvector& extravar,
     return base_var;
 }
 
+/* For the argument e=(f/d) of a fractional, return (d-1)/d times
+ * a variable in [0,1] (see setup_constraints).
+ */
+static ex evalue2ex_get_fract(evalue *e, exvector& extravar,
+				vector<typed_evalue>& expr)
+{
+    ex f;
+    Value d;
+    ex den;
+    value_init(d);
+    value_set_si(d, 1);
+    evalue_denom(e, &d);
+    den = value2numeric(d);
+    value_clear(d);
+    f = (den-1)/den;
+
+    ex base_var = evalue2ex_add_var(e, extravar, expr, true);
+    base_var *= f;
+    return base_var;
+}
+
 static ex evalue2ex_r(const evalue *e, const exvector& vars,
 		      exvector& extravar, vector<typed_evalue>& expr,
 		      Vector *coset)
@@ -80,7 +101,7 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
 	base_var = evalue2ex_add_var(&e->x.p->arr[0], extravar, expr, false);
 	break;
     case fractional:
-	base_var = evalue2ex_add_var(&e->x.p->arr[0], extravar, expr, true);
+	base_var = evalue2ex_get_fract(&e->x.p->arr[0], extravar, expr);
 	break;
     case periodic:
 	assert(coset);
@@ -120,16 +141,16 @@ static Matrix *setup_constraints(const vector<typed_evalue> expr, int nvar)
 	return NULL;
     Matrix *M = Matrix_Alloc(2*extra, 1+extra+nvar+1);
     for (int i = 0; i < extra; ++i) {
-	Value *d = &M->p[2*i][1+i];
-	value_set_si(*d, 1);
-	evalue_denom(expr[i].second, d);
 	if (expr[i].first) {
 	    value_set_si(M->p[2*i][0], 1);
-	    value_decrement(M->p[2*i][1+extra+nvar], *d);
-	    value_oppose(*d, *d);
+	    value_set_si(M->p[2*i][1+i], -1);
+	    value_set_si(M->p[2*i][1+extra+nvar], 1);
 	    value_set_si(M->p[2*i+1][0], 1);
 	    value_set_si(M->p[2*i+1][1+i], 1);
 	} else {
+	    Value *d = &M->p[2*i][1+i];
+	    value_set_si(*d, 1);
+	    evalue_denom(expr[i].second, d);
 	    const evalue *e;
 	    for (e = expr[i].second; value_zero_p(e->d); e = &e->x.p->arr[0]) {
 		assert(e->x.p->type == polynomial);
