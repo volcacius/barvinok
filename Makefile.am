@@ -96,7 +96,7 @@ BEEO_SOURCES =
 endif
 barvinok_enumerate_SOURCES = \
 	barvinok_enumerate.cc \
-	evalue_convert.c \
+	evalue_convert.cc \
 	evalue_convert.h \
 	fdstream.cc \
 	fdstream.h \
@@ -106,7 +106,7 @@ barvinok_enumerate_SOURCES = \
 	verif_ehrhart.c
 barvinok_enumerate_e_SOURCES = \
 	barvinok_enumerate_e.cc \
-	evalue_convert.c \
+	evalue_convert.cc \
 	evalue_convert.h \
 	verify.h \
 	verify.c \
@@ -117,7 +117,7 @@ barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 barvinok_maximize_SOURCES = \
-	evalue_convert.c \
+	evalue_convert.cc \
 	evalue_convert.h \
 	maximize.cc
 4coins_SOURCES = 4coins.cc

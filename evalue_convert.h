@@ -13,6 +13,7 @@ struct convert_options {
     int convert;
     int combine;
     int floor;
+    int list;
 };
 
 void evalue_convert(evalue *EP, struct convert_options *options, unsigned nparam,
