@@ -432,11 +432,8 @@ static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
 	for (int i = 0; i < pl->list.size(); ++i) {
 	    Polyhedron *D = pl->list[i].first;
 	    lst polys = pl->list[i].second;
-	    lst::const_iterator j;
-	    for (j = polys.begin(); j != polys.end(); ++j) {
-		new_pl = bernstein_coefficients(new_pl, D, *j, U, pl_params,
-						pl_vars, options);
-	    }
+	    new_pl = bernstein_coefficients(new_pl, D, polys, U, pl_params,
+					    pl_vars, options);
 	}
 
 	delete pl;
