@@ -149,19 +149,8 @@ static Matrix *setup_constraints(const vector<typed_evalue> expr, int nvar)
 	    value_set_si(M->p[2*i+1][1+i], 1);
 	} else {
 	    Value *d = &M->p[2*i][1+i];
-	    value_set_si(*d, 1);
-	    evalue_denom(expr[i].second, d);
-	    const evalue *e;
-	    for (e = expr[i].second; value_zero_p(e->d); e = &e->x.p->arr[0]) {
-		assert(e->x.p->type == polynomial);
-		assert(e->x.p->size == 2);
-		evalue *c = &e->x.p->arr[1];
-		value_multiply(M->p[2*i][1+extra+e->x.p->pos-1], *d, c->x.n);
-		value_division(M->p[2*i][1+extra+e->x.p->pos-1],
-			       M->p[2*i][1+extra+e->x.p->pos-1], c->d);
-	    }
-	    value_multiply(M->p[2*i][1+extra+nvar], *d, e->x.n);
-	    value_division(M->p[2*i][1+extra+nvar], M->p[2*i][1+extra+nvar], e->d);
+	    evalue_extract_affine(expr[i].second, M->p[2*i]+1+extra,
+				  M->p[2*i]+1+extra+nvar, d);
 	    value_oppose(*d, *d);
 	    value_set_si(M->p[2*i][0], -1);
 	    Vector_Scale(M->p[2*i], M->p[2*i+1], M->p[2*i][0], 1+extra+nvar+1);
