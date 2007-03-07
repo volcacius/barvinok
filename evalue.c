@@ -3646,8 +3646,14 @@ void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays)
     Value min;
     Value max;
     Value d;
-    assert(value_zero_p(e->d));
-    assert(e->x.p->type == partition);
+
+    if (EVALUE_IS_ZERO(*e))
+	return;
+    if (value_notzero_p(e->d) || e->x.p->type != partition) {
+	fprintf(stderr,
+		"WARNING: evalue_split_periods called on incorrect evalue type\n");
+	return;
+    }
 
     value_init(min);
     value_init(max);
