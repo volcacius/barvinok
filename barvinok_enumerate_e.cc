@@ -169,7 +169,6 @@ int main(int argc, char **argv)
     }
     if (arguments.series) {
 	gen_fun *gf;
-	barvinok_options *options = barvinok_options_new_with_defaults();
 	assert(arguments.scarf);
 	gf = barvinok_enumerate_scarf_series(A, exist, nparam, options);
 	if (print_solution) {
@@ -177,13 +176,10 @@ int main(int argc, char **argv)
 	    puts("");
 	}
 	delete gf;
-	barvinok_options_free(options);
     } else {
-	if (arguments.scarf) {
-	    barvinok_options *options = barvinok_options_new_with_defaults();
+	if (arguments.scarf)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
-	    barvinok_options_free(options);
-	} else if (arguments.pip && exist > 0)
+	else if (arguments.pip && exist > 0)
 	    EP = barvinok_enumerate_pip_with_options(A, exist, nparam, options);
 	else
 	    EP = barvinok_enumerate_e_with_options(A, exist, nparam, options);
@@ -201,6 +197,7 @@ int main(int argc, char **argv)
     }
     Free_ParamNames(param_name, nparam);
     Polyhedron_Free(A);
+    barvinok_options_free(options);
     return 0;
 }
 
