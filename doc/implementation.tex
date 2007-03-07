@@ -2,6 +2,8 @@
 
 \subsection{The integer points in the fundamental parallelepiped of a simple cone}
 
+\label{s:fundamental}
+
 This section is based on \shortciteN[Lemma 5.1]{Barvinok1992volume} and
 \shortciteN{Koeppe2006experiments}.
 
@@ -144,3 +146,700 @@ and
 \sm{1/2 & 1/2} \sm{2 & 1\\0 & -1} = \sm{1 & 0}.
 \end{eqnarray*}
 \end{example}
+
+
+
+
+\subsection{Barvinok's decomposition of simple cones in primal space}
+
+As described by \shortciteN{DeLoera2003effective}, the first
+implementation of Barvinok's counting algorithm applied
+\ai{Barvinok's decomposition} \shortcite{Barvinok1994} in the \ai{dual space}.
+\ai{Brion's polarization trick} \shortcite{Brion88} then ensures that you
+do not need to worry about lower-dimensional faces in the decomposition.
+Another way of avoiding the lower-dimensional faces, in the \ai{primal space},
+is to perturb the vertex of the cone such that none of the lower-dimensional
+face encountered contain any integer points \shortcite{Koeppe2006primal}.
+In this section, we describe another technique that is based on allowing
+some of the facets of the cone to be open.
+
+The basic step in Barvinok's decomposition is to replace a
+$d$-dimensional simple cone 
+$K = \poshull \lb\, \vec u_i \,\rb_{i=1}^d \subset \QQ^d$
+by a signed sum of (at most) $d$ cones $K_j$
+with a smaller determinant (in absolute value).
+The cones are obtained by successively replacing each generator
+of $K$ by an appropriately chosen
+$\vec w = \sum_{i=1}^d \alpha_i \vec u_i$, i.e.,
+\begin{equation}
+\label{eq:K_j}
+K_j = 
+\poshull \left(\lb\, \vec u_i \,\rb_{i=1}^d 
+\setminus \{\, \vec u_j \,\} \cup \{\, \vec w \,\}\right)
+.
+\end{equation}
+To see that we can use these $K_j$ to perform a decomposition,
+rearrange the $\vec u_i$ such that for all $1 \le i \le k$ we have
+$\alpha_i < 0$ and for all $k+1 \le i \le d'$ we have $\alpha_i > 0$,
+with $d - d'$ the number of zero $\alpha_i$.
+We may assume $k < d'$; otherwise replace $\vec w \in B$ by
+$-\vec w \in B$.  We have
+$$
+\vec w + \sum_{i=1}^k (-\alpha_i) \vec u_i =
+\sum_{i=k+1}^{d'} \alpha_i \vec u_i
+$$
+or
+\begin{equation}
+\label{eq:sub}
+\sum_{i=0}^k \beta_i \vec u_i =
+\sum_{i=k+1}^{d'} \alpha_i \vec u_i
+,
+\end{equation}
+with $\vec u_0 = \vec w$, $\beta_0 = 1$ and $\beta_i = -\alpha_i > 0$
+for $1 \le i \le k$.  Any two $\vec u_j$ and $\vec u_l$ on the same side
+of the equality are on opposite sides of the affine hull $H$ of
+the other $\vec u_i$s since their exists a convex combination
+of $\vec u_j$ and $\vec u_l$ on this hyperplane.
+In particular, since $\alpha_j$ and $\alpha_l$ have the same sign,
+we have
+$$
+\frac {\alpha_j}{\alpha_j+\alpha_l} \vec u_j
++
+\frac {\alpha_l}{\alpha_j+\alpha_l} \vec u_l
+\in H
+.
+$$
+The corresponding cones $K_j$ and $K_l$ (with $K_0 = K$)
+therefore intersect in a common face $F \subset H$.
+Let 
+$$
+K' := 
+\poshull \left(\lb\, \vec u_i \,\rb_{i=1}^d \cup \{\, \vec w \,\}\right)
+,
+$$
+then any $\vec x \in K'$ lies both in some cone $K_i$ with
+$0 \le i \le k$ and in some cone $K_i$ with $k+1 \le i \le d'$.
+(Just subtract an appropriate multiple of Equation~(\ref{eq:sub}).)
+The cones 
+$\{\, K_i \,\}_{i=0}^k$
+and
+$\{\, K_i \,\}_{i=k+1}^{d'}$
+therefore both form a triangulation of $K'$ and hence
+\begin{equation}
+\label{eq:triangulations}
+\indf{K'}
+=
+\indf{K} + \sum_{i=1}^k \indf{K_i} - \sum_{j\in J_1} \indf{F_j}
+=
+\sum_{i=k+1}^{d'} \indf{K_i} - \sum_{j\in J_2} \indf{F_j}
+\end{equation}
+or
+\begin{equation}
+\label{eq:decomposition}
+\indf{K} = \sum_{i=1}^{d'} \varepsilon_i \indf{K_i} + \sum_j \delta_j \indf{F_j}
+,
+\end{equation}
+with $\varepsilon_i = -1$ for $1 \le i \le k$,
+$\varepsilon_i = 1$ for $k+1 \le i \le d'$,
+$\delta_j \in \{ -1, 1 \}$ and $F_j$ some lower-dimensional faces.
+Figure~\ref{fig:w} shows the possible configurations
+in the case of a $3$-dimensional cone.
+
+\begin{figure}
+\intercol=0.48cm
+\begin{center}
+\begin{minipage}{0cm}
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+*
+\xybox{
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"a"\ar@{-}"b"
+\POS"b"\ar@{-}"c"
+\POS"c"\ar@{-}"a"
+\POS"a"\ar@{--}"w"
+\POS"b"\ar@{--}"w"
+\POS"c"\ar@{--}"w"
+}="a"
++R+(2,0)*!L
+\xybox{
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{-}
+\POS(0,2)="c"*+!D{+}
+\POS(-3,1)="w"*+!DR{\vec w}
+\POS"a"\ar@{-}"b"
+\POS"b"\ar@{-}"c"
+\POS"c"\ar@{-}"a"
+\POS"a"\ar@{--}"w"
+\POS"b"\ar@{--}"w"
+\POS"c"\ar@{--}"w"
+}="b"
++R+(2,0)*!L
+\xybox{
+\POS(-2,-1)="a"*+!U{-}
+\POS(2,0)="b"*+!U{+}
+\POS(0,2)="c"*+!D{-}
+\POS(5,-1)="w"*+!L{\vec w}
+\POS"a"\ar@{-}"b"
+\POS"b"\ar@{-}"c"
+\POS"c"\ar@{-}"a"
+\POS"a"\ar@{--}"w"
+\POS"b"\ar@{--}"w"
+\POS"c"\ar@{--}"w"
+}
+\POS"a"
++D-(0,1)*!U
+\xybox{
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS(1,1)="w"*+!DL{\vec w}
+\POS"a"\ar@{-}"b"
+\POS"b"\ar@{-}"c"
+\POS"c"\ar@{-}"a"
+\POS"a"\ar@{--}"w"
+}
+\POS"b"
++DL-(0,1)*!UL
+\xybox{
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!U{+}
+\POS(0,2)="c"*+!D{-}
+\POS(4,-2)="w"*+!L{\vec w}
+\POS"a"\ar@{-}"b"
+\POS"b"\ar@{-}"c"
+\POS"c"\ar@{-}"a"
+\POS"a"\ar@{--}"w"
+\POS"b"\ar@{--}"w"
+}
+\end{xy}
+\end{minipage}
+\end{center}
+\caption[Possible locations of the vector $\vec w$ with respect to the rays
+of a $3$-dimensional cone.]
+{Possible locations of $\vec w$ with respect to the rays
+of a $3$-dimensional cone.  The figure shows a section of the cones.}
+\label{fig:w}
+\end{figure}
+
+As explained above there are several ways of avoiding the lower-dimensional
+faces in (\ref{eq:decomposition}).  Here we will apply the following proposition.
+\begin{proposition}[\shortciteN{Koeppe2007parametric}]
+  Let 
+  \begin{equation}
+    \label{eq:full-source-identity}
+    \sum_{i\in {I_1}} \epsilon_i [P_i] + \sum_{i\in {I_2}} \delta_k [P_i] = 0
+  \end{equation}
+  be a (finite) linear identity of indicator functions of closed
+  polyhedra~$P_i\subseteq\QQ^d$, where the
+  polyhedra~$P_i$ with $i \in I_1$ are full-dimensional and those with $i \in I_2$
+  lower-dimensional.  Let each closed polyhedron be given as 
+$$
+    P_i = \left\{\, \vec x \mid \sp{b^*_{i,j}}{x} \ge \beta_{i,j} \text{
+      for $j\in J_i$}\,\right\}
+  .
+$$
+  Let $\vec y\in\QQ^d$ be a vector such that $\langle \vec b^*_{i,j}, \vec
+  y\rangle \neq 0$ for all $i\in I_1\cup I_2$, $j\in J_i$.
+  For each $i\in I_1$, we define the half-open polyhedron
+  \begin{equation}
+    \label{eq:half-open-by-y}
+    \begin{aligned}
+      \tilde P_i = \Bigl\{\, \vec x\in\QQ^d \mid {}&
+	    \sp{b^*_{i,j}}{x} \ge \beta_{i,j}
+      \text{ for $j\in J_i$ with $\sp{b^*_{i,j}}{y} > 0$,} \\
+      & \sp{b^*_{i,j}}{x} > \beta_{i,j}
+      \text{ for $j\in J_i$ with $\sp{b^*_{i,j}}{y} < 0$} \,\Bigr\}.
+    \end{aligned}
+  \end{equation}
+  Then 
+  \begin{equation}
+    \label{eq:target-identity}
+    \sum_{i\in I_1} \epsilon_i [\tilde P_i] = 0.
+  \end{equation}
+\end{proposition}
+When applying this proposition to (\ref{eq:decomposition}), we obtain
+\begin{equation}
+\label{eq:decomposition:2}
+\indf{\tilde K} = \sum_{i=1}^{d'} \varepsilon_i \indf{\tilde K_i}
+,
+\end{equation}
+where we start out
+from a given $\tilde K$, which may be $K$ itself, i.e., a fully closed cone,
+or the result of a previous application of the proposition.
+In either case, a suitable $\vec y$ is available, either as an interior
+point of the cone or as the vector used in the previous application
+(which may require a slight perturbation if it happens to lie on one of
+the new facets of the cones $K_i$).
+We are, however, free to construct a new $\vec y$ on each application
+of the proposition.
+In fact, we will not even construct such a vector explicitly, but
+rather apply a set of rules that is equivalent to a valid choice of $\vec y$.
+
+The vector $\vec y$ has to satisfy $\sp{b^*_j}y > 0$ for normals $b^*_j$
+of closed facets and $\sp{b^*_j}y < 0$ for normals $b^*_j$ of open facets of
+$\tilde K$.
+These constraints delineate a non-empty open cone $R$ from which
+$\vec y$ should be selected.  For some of the new facets of the cones
+$\tilde K_j$, the cone $R$ will not be cut by the affine hull of the facet.
+The closedness of these facets is therefore predetermined by $\tilde K$.
+For the other facets, a choice will have to be made.
+To be able to make the choice based on local information and without
+computing an explicit vector $\vec y$, we use the following convention.
+We first assign an arbitrary total order to the rays.
+If (the affine hull of) a facet separates the two remaining rays $\vec u_i$
+and $\vec u_j$, i.e., $\alpha_i \alpha_j > 0$, then
+we choose $\vec y$ to lie on the side of the smallest ray, according
+to the chosen order.
+That is, $\sp{{\tilde n}_{ij}}y > 0$, for
+$\vec {\tilde n}_{ij}$ the normal of the facet pointing towards the smallest ray.
+Otherwise, i.e., if $\alpha_i \alpha_j < 0$,
+the interior of $K$ will lie on one side
+of the facet and then we choose $\vec y$ to lie on the other side.
+That is, $\sp{{\tilde n}_{ij}}y > 0$, for
+$\vec {\tilde n}_{ij}$ the normal of the facet pointing away from the cone $K$.
+Figure~\ref{fig:primal:examples} shows some example decompositions with
+an explicitly marked $\vec y$.
+
+\begin{figure}
+\begin{align*}
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS"a"\ar@{-}@[|(3)]"b"
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS(0.3,0.6)*{\bullet},*+!L{\vec y}
+\end{xy}
+& =
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"b"\ar@{-}@[|(3)]"w"
+\POS"c"\ar@{-}@[|(3)]"w"
+\POS(0.3,0.6)*{\bullet},*+!L{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS"a"\ar@{-}@[|(3)]"w"
+\POS"c"\ar@{--}@[|(3)]"w"
+\POS(0.3,0.6)*{\bullet},*+!L{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"a"\ar@{-}@[|(3)]"b"
+\POS"a"\ar@{--}@[|(3)]"w"
+\POS"b"\ar@{--}@[|(3)]"w"
+\POS(0.3,0.6)*{\bullet},*+!L{\vec y}
+\end{xy}
+\\
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS"a"\ar@{--}@[|(3)]"b"
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"c"\ar@{--}@[|(3)]"a"
+\POS(-2.5,-1.5)*{\bullet},*+!U{\vec y}
+\end{xy}
+& =
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"b"\ar@{--}@[|(3)]"w"
+\POS"c"\ar@{--}@[|(3)]"w"
+\POS(-2.5,-1.5)*{\bullet},*+!U{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"c"\ar@{--}@[|(3)]"a"
+\POS"a"\ar@{--}@[|(3)]"w"
+\POS"c"\ar@{-}@[|(3)]"w"
+\POS(-2.5,-1.5)*{\bullet},*+!U{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"a"\ar@{--}@[|(3)]"b"
+\POS"a"\ar@{-}@[|(3)]"w"
+\POS"b"\ar@{-}@[|(3)]"w"
+\POS(-2.5,-1.5)*{\bullet},*+!U{\vec y}
+\end{xy}
+\\
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS"a"\ar@{--}@[|(3)]"b"
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS(1,-1.5)*{\bullet},*+!L{\vec y}
+\end{xy}
+& =
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"b"\ar@{--}@[|(3)]"w"
+\POS"c"\ar@{-}@[|(3)]"w"
+\POS(1,-1.5)*{\bullet},*+!L{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(0,2)="c"*+!D{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS"a"\ar@{--}@[|(3)]"w"
+\POS"c"\ar@{--}@[|(3)]"w"
+\POS(1,-1.5)*{\bullet},*+!L{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{+}
+\POS(2,0)="b"*+!L{+}
+\POS(0,0)="w"*+!DR{\vec w}
+\POS"a"\ar@{--}@[|(3)]"b"
+\POS"a"\ar@{-}@[|(3)]"w"
+\POS"b"\ar@{-}@[|(3)]"w"
+\POS(1,-1.5)*{\bullet},*+!L{\vec y}
+\end{xy}
+\\
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!L{+}
+\POS(0,2)="c"*+!D{+}
+\POS"a"\ar@{-}@[|(3)]"b"
+\POS"b"\ar@{-}@[|(3)]"c"
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS(1,0.2)*{\bullet},*+!R{\vec y}
+\end{xy}
+& =
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!L{+}
+\POS(1,1)="w"*+!DL{\vec w}
+\POS"a"\ar@{-}@[|(3)]"b"
+\POS"a"\ar@{-}@[|(3)]"w"
+\POS"b"\ar@{-}@[|(3)]"w"
+\POS(1,0.2)*{\bullet},*+!R{\vec y}
+\end{xy}
++
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(0,2)="c"*+!D{+}
+\POS(1,1)="w"*+!DL{\vec w}
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS"a"\ar@{--}@[|(3)]"w"
+\POS"c"\ar@{-}@[|(3)]"w"
+\POS(1,0.2)*{\bullet},*+!R{\vec y}
+\end{xy}
+\\
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!U{+}
+\POS(0,2)="c"*+!D{-}
+\POS"a"\ar@{-}@[|(3)]"b"
+\POS"b"\ar@{--}@[|(3)]"c"
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS(1.5,1.5)*{\bullet},*+!D{\vec y}
+\end{xy}
+& =
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(0,2)="c"*+!D{-}
+\POS(4,-2)="w"*+!L{\vec w}
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS"a"\ar@{-}@[|(3)]"w"
+\POS"c"\ar@{--}@[|(3)]"w"
+\POS(1.5,1.5)*{\bullet},*+!D{\vec y}
+\end{xy}
+-
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!U{+}
+\POS(4,-2)="w"*+!L{\vec w}
+\POS"a"\ar@{--}@[|(3)]"b"
+\POS"a"\ar@{-}@[|(3)]"w"
+\POS"b"\ar@{--}@[|(3)]"w"
+\POS(1.5,1.5)*{\bullet},*+!D{\vec y}
+\end{xy}
+\\
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!U{+}
+\POS(0,2)="c"*+!D{-}
+\POS"a"\ar@{--}@[|(3)]"b"
+\POS"b"\ar@{--}@[|(3)]"c"
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS(3.5,-.5)*{\bullet},*+!D{\vec y}
+\end{xy}
+& =
+\intercol=0.48cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(0,2)="c"*+!D{-}
+\POS(4,-2)="w"*+!L{\vec w}
+\POS"c"\ar@{-}@[|(3)]"a"
+\POS"a"\ar@{--}@[|(3)]"w"
+\POS"c"\ar@{--}@[|(3)]"w"
+\POS(3.5,-.5)*{\bullet},*+!D{\vec y}
+\end{xy}
+-
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-2,-1)="a"*+!U{0}
+\POS(2,0)="b"*+!U{+}
+\POS(4,-2)="w"*+!L{\vec w}
+\POS"a"\ar@{-}@[|(3)]"b"
+\POS"a"\ar@{--}@[|(3)]"w"
+\POS"b"\ar@{--}@[|(3)]"w"
+\POS(3.5,-.5)*{\bullet},*+!D{\vec y}
+\end{xy}
+\end{align*}
+\caption{Examples of decompositions in primal space.}
+\label{fig:primal:examples}
+\end{figure}
+
+To see that there is a $\vec y$ satisfying the above constraints,
+we need to show that
+$S = \{ \vec y \mid \sp{{\tilde n}_{i_kj_k}}y > 0 \text{ for all $k$}\}$
+is non-empty.  Since each of the facets cuts $R$, it then follows that
+$R \cap S$ is also non-empty.
+Assume that $S$ is empty, then there exist $\lambda_k \ge 0$ not all zero
+such that $\sum_k \lambda_k \vec {\tilde n}_{i_kj_k} = 0$.
+However, for the first type of facets each normal is of the
+form $\vec {\tilde n}_{i_kj_k} = a_k \vec u_{i_k} - b_k \vec u_{j_k}$, with 
+$a_k, b_k > 0$ and ${i_k} < {j_k}$,
+while for the second type each normal if of the form
+$\vec {\tilde n}_{i_kj_k} = -a_k \vec u_{i_k} - b_k \vec u_{j_k}$, with 
+$a_k, b_k > 0$.
+Since the $\vec u_j$ are linearly independent, each positive combination
+of $\vec {\tilde n}_{i_kj_k}$ will therefore have a strictly negative
+coefficient for the smallest $\vec u_i$ associated to any facet of the
+first type, or have all strictly negative coefficients if no such facet exists.
+
+For each ray $\vec u_j$ of cone $K_i$, i.e., the cone with $\vec u_i$ replaced
+by $\vec w$, we now need to determine whether the facet not containing this
+ray is closed or not.  We denote the (inward) normal of this cone by
+$\vec n_{ij}$.  Note that cone $K_j$ (if it appears in (\ref{eq:triangulations}),
+i.e., $\alpha_j \ne 0$) has the same facet opposite $\vec u_i$
+and its normal $\vec n_{ji}$ will be equal to either $\vec n_{ij}$ or
+$-\vec n_{ij}$, depending on whether we are dealing with an ``external'' facet,
+i.e., a facet of $K'$, or an ``internal'' facet.
+If, on the other hand, $\alpha_j = 0$, then $\vec n_{ij} = \vec n_{0j}$.
+If $\sp{n_{ij}}y > 0$, then the facet is closed.
+Otherwise it is open.
+That is, the two (or more) occurrences of external facets are either all open
+or all closed, while for internal facets, exactly one is closed.
+
+First consider the facet not containing $\vec u_0 = \vec w$.
+If $\alpha_i > 0$, then $\vec u_i$ and $\vec w$ are on the same side of the facet
+and so $\vec n_{i0} = \vec n_{0i}$.  Otherwise, $\vec n_{i0} = -\vec n_{i0}$.
+Second, if $\alpha_j = 0$, then replacing $\vec u_i$ by $\vec w$ does not
+change the affine hull of the facet and so $\vec n_{ij} = \vec n_{0j}$.
+Now consider the case that $\alpha_i \alpha_j < 0$, i.e., $\vec u_i$
+and $\vec u_j$ are on the same side of the hyperplane through the other rays.
+If we project $\vec u_i$, $\vec u_j$ and $\vec w$ onto a plane orthogonal
+to the ridge through the other rays, then the possible locations of $\vec w$
+with respect to $\vec u_i$ and $\vec u_j$ are shown in Figure~\ref{fig:w:same}.
+If both $\vec n_{0i}$ and $\vec n_{0j}$ are closed then $\vec y$ lies in region~1
+and therefore $\vec n_{ij}$ (as well as $\vec n_{ji}$) is closed too.
+Similarly, if both $\vec n_{0i}$ and $\vec n_{0j}$ are open then so is
+$\vec n_{ij}$.  If only one of the facets is closed, then, as explained above,
+we choose $\vec n_{ij}$ to be open, i.e., we take $\vec y$ to lie in region~3
+or~5.
+Figure~\ref{fig:w:opposite} shows the possible configurations
+for the case that $\alpha_i \alpha_j > 0$.
+If exactly one of $\vec n_{0i}$ and $\vec n_{0j}$ is closed, then
+$\vec y$ lies in region~3 or region~5 and therefore $\vec n_{ij}$ is closed iff
+$\vec n_{0j}$.
+Otherwise, as explained above, we choose $\vec n_{ij}$ to be closed if $i < j$.
+
+\begin{figure}
+\intercol=0.7cm
+\begin{minipage}{0cm}
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-4,0)="a"\ar@[|(2)]@{-}(4,0)
+\POS?(0)/\intercol/="b"\POS(2,0)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0i}}(0,0.75)}
+\POS(2,0)*{\bullet},*+!U{\vec u_j}
+\POS(-2,-3)="a"\ar@[|(2)]@{-}(2,3)
+\POS?(0)/\intercol/="b"\POS(1,1.5)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0j}}(0,-0.75)}
+\POS(1,1.5)*{\bullet},*+!R{\vec u_i}
+\POS(-2,3)="a"\ar@{-}(2,-3)
+\POS?(0)/\intercol/="b"\POS(1.5,-2.25)
+*\xybox{"b"-"a":(0,0)\ar_{\vec n_{ji}}^{\vec n_{ij}}(0,+0.75)}
+\POS(1.5,-2.25)*{\bullet},*+!R{\vec u_0 = \vec w}
+\POS(0,0)*{\bullet}
+\POS(3,1.5)*+[o][F]{\scriptstyle 1}
+\POS(0,2.5)*+[o][F]{\scriptstyle 2}
+\POS(-3,1.5)*+[o][F]{\scriptstyle 3}
+\POS(-3,-1.5)*+[o][F]{\scriptstyle 4}
+\POS(0,-3)*+[o][F]{\scriptstyle 5}
+\POS(3,-1.5)*+[o][F]{\scriptstyle 6}
+\end{xy}
+\end{minipage}
+\begin{minipage}{0cm}
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-4,0)="a"\ar@[|(2)]@{-}(4,0)
+\POS?(0)/\intercol/="b"\POS(2,0)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0i}}(0,0.75)}
+\POS(2,0)*{\bullet},*+!U{\vec u_j}
+\POS(-2,-3)="a"\ar@[|(2)]@{-}(2,3)
+\POS?(0)/\intercol/="b"\POS(1,1.5)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0j}}(0,-0.75)}
+\POS(1,1.5)*{\bullet},*+!R{\vec u_i}
+\POS(-2,3)="a"\ar@{-}(2,-3)
+\POS?(0)/\intercol/="b"\POS(-1.5,2.25)
+*\xybox{"b"-"a":(0,0)\ar_{\vec n_{ji}}^{\vec n_{ij}}(0,+0.75)}
+\POS(-1.5,2.25)*{\bullet},*+!R{\vec u_0 = \vec w}
+\POS(0,0)*{\bullet}
+\POS(3,1.5)*+[o][F]{\scriptstyle 1}
+\POS(0,2.5)*+[o][F]{\scriptstyle 2}
+\POS(-3,1.5)*+[o][F]{\scriptstyle 3}
+\POS(-3,-1.5)*+[o][F]{\scriptstyle 4}
+\POS(0,-3)*+[o][F]{\scriptstyle 5}
+\POS(3,-1.5)*+[o][F]{\scriptstyle 6}
+\end{xy}
+\end{minipage}
+\caption{Possible locations of $\vec w$ with respect to $\vec u_i$ and
+$\vec u_j$, projected onto a plane orthogonal to the other rays, when
+$\alpha_i \alpha_j < 0$.}
+\label{fig:w:same}
+\end{figure}
+
+\begin{figure}
+\intercol=0.7cm
+\begin{minipage}{0cm}
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-4,0)="a"\ar@[|(2)]@{-}(4,0)
+\POS?(0)/\intercol/="b"\POS(2,0)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0i}}(0,0.75)}
+\POS(2,0)*{\bullet},*+!U{\vec u_j}
+\POS(-2,3)="a"\ar@[|(2)]@{-}(2,-3)
+\POS?(0)/\intercol/="b"\POS(-1,1.5)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0j}}(0,+0.75)}
+\POS(-1,1.5)*{\bullet},*+!R{\vec u_i}
+\POS(-2,-3)="a"\ar@{-}(2,3)
+\POS?(0)/\intercol/="b"\POS(1.5,2.25)
+*\xybox{"b"-"a":(0,0)\ar^{\vec n_{ji}}(0,+0.75)
+\POS(0,0)\ar_{\vec n_{ij}}(0,-0.75)}
+\POS(1.5,2.25)*{\bullet},*+!L{\vec u_0 = \vec w}
+\POS(0,0)*{\bullet}
+\POS(3,1.5)*+[o][F]{\scriptstyle 1}
+\POS(0,2.5)*+[o][F]{\scriptstyle 2}
+\POS(-3,1.5)*+[o][F]{\scriptstyle 3}
+\POS(-3,-1.5)*+[o][F]{\scriptstyle 4}
+\POS(0,-3)*+[o][F]{\scriptstyle 5}
+\POS(3,-1.5)*+[o][F]{\scriptstyle 6}
+\end{xy}
+\end{minipage}
+\begin{minipage}{0cm}
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-4,0)="a"\ar@[|(2)]@{-}(4,0)
+\POS?(0)/\intercol/="b"\POS(2,0)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0i}}(0,0.75)}
+\POS(2,0)*{\bullet},*+!U{\vec u_j}
+\POS(-2,3)="a"\ar@[|(2)]@{-}(2,-3)
+\POS?(0)/\intercol/="b"\POS(-1,1.5)*\xybox{"b"-"a":(0,0)\ar^{\vec n_{0j}}(0,+0.75)}
+\POS(-1,1.5)*{\bullet},*+!R{\vec u_i}
+\POS(-2,-3)="a"\ar@{-}(2,3)
+\POS?(0)/\intercol/="b"\POS(-1.5,-2.25)
+*\xybox{"b"-"a":(0,0)\ar^{\vec n_{ji}}(0,+0.75)
+\POS(0,0)\ar_{\vec n_{ij}}(0,-0.75)}
+\POS(-1.5,-2.25)*{\bullet},*+!L{\vec u_0 = \vec w}
+\POS(0,0)*{\bullet}
+\POS(3,1.5)*+[o][F]{\scriptstyle 1}
+\POS(0,2.5)*+[o][F]{\scriptstyle 2}
+\POS(-3,1.5)*+[o][F]{\scriptstyle 3}
+\POS(-3,-1.5)*+[o][F]{\scriptstyle 4}
+\POS(0,-3)*+[o][F]{\scriptstyle 5}
+\POS(3,-1.5)*+[o][F]{\scriptstyle 6}
+\end{xy}
+\end{minipage}
+\caption{Possible locations of $\vec w$ with respect to $\vec u_i$ and
+$\vec u_j$, projected onto a plane orthogonal to the other rays, when
+$\alpha_i \alpha_j > 0$.}
+\label{fig:w:opposite}
+\end{figure}
+
+The algorithm is summarized in Algorithm~\ref{alg:closed}, where
+we use the convention that in cone $K_i$, $\vec u_i$ refers to
+$\vec u_0 = \vec w$.
+Note that we do not need any of the rays or normals in this code.
+The only information we need is the closedness of the facets in the
+original cone and the signs of the $\alpha_i$.
+
+\begin{algorithm}
+\begin{tabbing}
+next \= next \= next \= \kill
+if $\alpha_j = 0$ \\
+\> closed[$K_i$][$\vec u_j$] := closed[$\tilde K$][$\vec u_j$] \\
+else if $i = j$ \\
+\> if $\alpha_j > 0$ \\
+\> \> closed[$K_i$][$\vec u_j$] := closed[$\tilde K$][$\vec u_j$] \\
+\> else \\
+\> \> closed[$K_i$][$\vec u_j$] := $\lnot$closed[$\tilde K$][$\vec u_j$] \\
+else if $\alpha_i \alpha_j > 0$ \\
+\> if closed[$\tilde K$][$\vec u_i$] = closed[$\tilde K$][$\vec u_j$] \\
+\> \> closed[$K_i$][$\vec u_j$] := $i < j$ \\
+\> else \\
+\> \> closed[$K_i$][$\vec u_j$] := closed[$\tilde K$][$\vec u_j$] \\
+else \\
+\> closed[$K_i$][$\vec u_j$] := closed[$\tilde K$][$\vec u_i$] and
+closed[$\tilde K$][$\vec u_j$]
+\end{tabbing}
+\caption{Determine whether the facet opposite $\vec u_j$ is closed in $K_i$.}
+\label{alg:closed}
+\end{algorithm}
