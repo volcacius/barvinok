@@ -865,6 +865,32 @@ static evalue *evalue_read(FILE *in, char *var_list, char ***ppp, unsigned *nvar
     return e;
 }
 
+static void optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
+		     struct options *options, barvinok_options *bv_options)
+{
+    Polyhedron *U;
+    piecewise_lst *pl = NULL;
+    U = Universe_Polyhedron(nparam);
+
+    exvector params;
+    params = constructParameterVector(all_vars+nvar, nparam);
+
+    if (options->minimize)
+	bv_options->bernstein_optimize = BV_BERNSTEIN_MIN;
+    else
+	bv_options->bernstein_optimize = BV_BERNSTEIN_MAX;
+    pl = evalue_bernstein_coefficients(NULL, EP, U, params, bv_options);
+    assert(pl);
+    if (options->minimize)
+    	pl->minimize();
+    else
+    	pl->maximize();
+    cout << *pl << endl;
+    delete pl;
+
+    Polyhedron_Free(U);
+}
+
 int main(int argc, char **argv)
 {
     evalue *EP;
@@ -878,8 +904,6 @@ int main(int argc, char **argv)
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
-    Polyhedron *U;
-    piecewise_lst *pl = NULL;
 
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
@@ -892,30 +916,16 @@ int main(int argc, char **argv)
 
     evalue_convert(EP, &options.convert, nparam, options.verbose ? all_vars : NULL);
 
-    U = Universe_Polyhedron(nparam);
-
-    exvector params;
-    params = constructParameterVector(all_vars+nvar, nparam);
-
-    if (options.minimize)
-	bv_options->bernstein_optimize = BV_BERNSTEIN_MIN;
+    if (EVALUE_IS_ZERO(*EP))
+	print_evalue(stdout, EP, all_vars);
     else
-	bv_options->bernstein_optimize = BV_BERNSTEIN_MAX;
-    pl = evalue_bernstein_coefficients(NULL, EP, U, params, bv_options);
-    assert(pl);
-    if (options.minimize)
-    	pl->minimize();
-    else
-    	pl->maximize();
-    cout << *pl << endl;
-    delete pl;
+	optimize(EP, all_vars, nvar, nparam, &options, bv_options);
 
     free_evalue_refs(EP);
     free(EP);
 
     if (options.var_list)
 	free(options.var_list);
-    Polyhedron_Free(U);
     Free_ParamNames(all_vars, nvar+nparam);
     barvinok_options_free(bv_options);
     return 0;
