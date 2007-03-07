@@ -1873,8 +1873,15 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 
     if (options->polynomial_approximation == BV_POLAPPROX_PRE_UPPER)
 	P = Polyhedron_Inflate(P, nparam, options->MaxRays);
-    if (options->polynomial_approximation == BV_POLAPPROX_PRE_LOWER)
+    if (options->polynomial_approximation == BV_POLAPPROX_PRE_LOWER) {
 	P = Polyhedron_Deflate(P, nparam, options->MaxRays);
+	POL_ENSURE_VERTICES(P);
+	if (emptyQ(P)) {
+	    eres = barvinok_enumerate_cst(P, Polyhedron_Copy(C), options);
+	    Polyhedron_Free(P);
+	    return eres;
+	}
+    }
 
     T = P;
     PP = Polyhedron2Param_SD(&T, C, options->MaxRays, &CEq, &CT);
