@@ -1711,7 +1711,7 @@ out:
 	if (options->polynomial_approximation == BV_POLAPPROX_UPPER)
 	    evalue_frac2polynomial(eres, 1, options->MaxRays);
 	if (options->polynomial_approximation == BV_POLAPPROX_LOWER)
-	    evalue_frac2polynomial(eres, 0, options->MaxRays);
+	    evalue_frac2polynomial(eres, -1, options->MaxRays);
 	reduce_evalue(eres);
 	free_evalue_refs(&factor);
 	Domain_Free(P);
