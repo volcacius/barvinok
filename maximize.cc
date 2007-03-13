@@ -17,6 +17,7 @@ using namespace barvinok;
 #define OPT_VARS  	    (BV_OPT_LAST+1)
 #define OPT_SPLIT  	    (BV_OPT_LAST+2)
 #define OPT_MIN  	    (BV_OPT_LAST+3)
+#define OPT_RECURSE  	    (BV_OPT_LAST+4)
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
@@ -24,6 +25,8 @@ struct argp_option argp_options[] = {
 	"comma separated list of variables over which to maximize" },
     { "verbose",	    'V',  	0,	0, },
     { "minimize",	    OPT_MIN,  	0, 0,	"minimize instead of maximize"},
+    { "recurse",	    OPT_RECURSE,    "none|factors|intervals|full",    0,
+	"[default: factors]" },
     { 0 }
 };
 
@@ -33,6 +36,7 @@ struct options {
     int verbose;
     int split;
     int minimize;
+    int recurse;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -46,6 +50,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->verbose = 0;
 	options->split = 0;
 	options->minimize = 0;
+	options->recurse = BV_BERNSTEIN_FACTORS;
 	break;
     case 'V':
 	options->verbose = 1;
@@ -58,6 +63,16 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case OPT_MIN:
 	options->minimize = 1;
+	break;
+    case OPT_RECURSE:
+	if (!strcmp(arg, "none"))
+	    options->recurse = 0;
+	else if (!strcmp(arg, "factors"))
+	    options->recurse = BV_BERNSTEIN_FACTORS;
+	else if (!strcmp(arg, "intervals"))
+	    options->recurse = BV_BERNSTEIN_INTERVALS;
+	else if (!strcmp(arg, "full"))
+	    options->recurse = BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -875,6 +890,7 @@ static void optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam
     exvector params;
     params = constructParameterVector(all_vars+nvar, nparam);
 
+    bv_options->bernstein_recurse = options->recurse;
     if (options->minimize)
 	bv_options->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
