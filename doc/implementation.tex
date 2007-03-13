@@ -197,18 +197,20 @@ or
 \end{equation}
 with $\vec u_0 = \vec w$, $\beta_0 = 1$ and $\beta_i = -\alpha_i > 0$
 for $1 \le i \le k$.  Any two $\vec u_j$ and $\vec u_l$ on the same side
-of the equality are on opposite sides of the affine hull $H$ of
-the other $\vec u_i$s since their exists a convex combination
+of the equality are on opposite sides of the linear hull $H$ of
+the other $\vec u_i$s since there exists a convex combination
 of $\vec u_j$ and $\vec u_l$ on this hyperplane.
 In particular, since $\alpha_j$ and $\alpha_l$ have the same sign,
 we have
-$$
+\begin{equation}
+\label{eq:opposite}
 \frac {\alpha_j}{\alpha_j+\alpha_l} \vec u_j
 +
 \frac {\alpha_l}{\alpha_j+\alpha_l} \vec u_l
 \in H
+\qquad\text{for $\alpha_i \alpha_l > 0$}
 .
-$$
+\end{equation}
 The corresponding cones $K_j$ and $K_l$ (with $K_0 = K$)
 therefore intersect in a common face $F \subset H$.
 Let 
@@ -379,8 +381,8 @@ of the proposition.
 In fact, we will not even construct such a vector explicitly, but
 rather apply a set of rules that is equivalent to a valid choice of $\vec y$.
 
-The vector $\vec y$ has to satisfy $\sp{b^*_j}y > 0$ for normals $b^*_j$
-of closed facets and $\sp{b^*_j}y < 0$ for normals $b^*_j$ of open facets of
+The vector $\vec y$ has to satisfy $\sp{b^*_j}y > 0$ for normals $\vec b^*_j$
+of closed facets and $\sp{b^*_j}y < 0$ for normals $\vec b^*_j$ of open facets of
 $\tilde K$.
 These constraints delineate a non-empty open cone $R$ from which
 $\vec y$ should be selected.  For some of the new facets of the cones
@@ -390,12 +392,12 @@ For the other facets, a choice will have to be made.
 To be able to make the choice based on local information and without
 computing an explicit vector $\vec y$, we use the following convention.
 We first assign an arbitrary total order to the rays.
-If (the affine hull of) a facet separates the two remaining rays $\vec u_i$
-and $\vec u_j$, i.e., $\alpha_i \alpha_j > 0$, then
+If (the affine hull of) a facet separates the two rays not on the facet $\vec u_i$
+and $\vec u_j$, i.e., $\alpha_i \alpha_j > 0$ (\ref{eq:opposite}), then
 we choose $\vec y$ to lie on the side of the smallest ray, according
 to the chosen order.
 That is, $\sp{{\tilde n}_{ij}}y > 0$, for
-$\vec {\tilde n}_{ij}$ the normal of the facet pointing towards the smallest ray.
+$\vec {\tilde n}_{ij}$ the normal of the facet pointing towards this smallest ray.
 Otherwise, i.e., if $\alpha_i \alpha_j < 0$,
 the interior of $K$ will lie on one side
 of the facet and then we choose $\vec y$ to lie on the other side.
