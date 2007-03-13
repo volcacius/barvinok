@@ -308,6 +308,65 @@ static piecewise_lst *bernstein_coefficients(piecewise_lst *pl_all,
 			    const exvector& params, const exvector& floorvar,
 			    barvinok_options *options);
 
+/* Recursively apply Bernstein expansion on P, optimizing over dims[i]
+ * variables in each level.  The context ctx is assumed to have been adapted
+ * to the first level in the recursion.
+ */
+static piecewise_lst *bernstein_coefficients_recursive(piecewise_lst *pl_all,
+			    Polyhedron *P, const vector<int>& dims, const ex& poly,
+			    Polyhedron *ctx,
+			    const exvector& params, const exvector& vars,
+			    barvinok_options *options)
+{
+    assert(dims.size() > 0);
+    assert(ctx->Dimension == P->Dimension - dims[0]);
+    piecewise_lst *pl;
+    unsigned done = 0;
+    for (int j = 0; j < dims.size(); ++j) {
+	exvector pl_vars;
+	pl_vars.insert(pl_vars.end(), vars.begin()+done, vars.begin()+done+dims[j]);
+	exvector pl_params;
+	pl_params.insert(pl_params.end(), vars.begin()+done+dims[j], vars.end());
+	pl_params.insert(pl_params.end(), params.begin(), params.end());
+
+	if (!j)
+	    pl = bernstein_coefficients(NULL, P, poly, ctx,
+					pl_params, pl_vars, options);
+	else {
+	    piecewise_lst *new_pl = NULL;
+	    Polyhedron *U = Universe_Polyhedron(pl_params.size());
+
+	    for (int i = 0; i < pl->list.size(); ++i) {
+		Polyhedron *D = pl->list[i].first;
+		lst polys = pl->list[i].second;
+		new_pl = bernstein_coefficients(new_pl, D, polys, U, pl_params,
+						pl_vars, options);
+	    }
+
+	    Polyhedron_Free(U);
+
+	    delete pl;
+	    pl = new_pl;
+	}
+
+	if (options->bernstein_optimize == BV_BERNSTEIN_MIN)
+	    pl->minimize();
+	else if (options->bernstein_optimize == BV_BERNSTEIN_MAX)
+	    pl->maximize();
+
+	done += dims[j];
+    }
+
+    if (!pl_all)
+	pl_all = pl;
+    else {
+	pl_all->combine(*pl);
+	delete pl;
+    }
+
+    return pl_all;
+}
+
 static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
 			    Polyhedron *F, Matrix *T, const ex& poly,
 			    Polyhedron *ctx,
@@ -323,6 +382,7 @@ static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
     unsigned nparam = params.size();
     unsigned nvar = vars.size();
     unsigned constraints;
+    unsigned factors;
     Polyhedron *C = NULL;
 
     /* More context constraints */
@@ -345,10 +405,13 @@ static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
     P = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
 
+    factors = 1;
     constraints = C ? C->NbConstraints : 0;
     constraints += ctx->NbConstraints;
-    for (Polyhedron *G = F->next; G; G = G->next)
+    for (Polyhedron *G = F->next; G; G = G->next) {
 	constraints += G->NbConstraints;
+	++factors;
+    }
 
     unsigned total_var = nvar-(F->Dimension-nparam);
     unsigned skip = 0;
@@ -389,60 +452,15 @@ static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
 
     ex newpoly = replaceVariablesInPolynomial(poly, vars, subs);
 
-    exvector P_vars;
-    P_vars.insert(P_vars.end(), newvars.begin(),
-		  newvars.begin()+(F->Dimension-nparam));
-    exvector P_params;
-    P_params.insert(P_params.end(), newvars.begin()+(F->Dimension-nparam),
-		    newvars.end());
-    P_params.insert(P_params.end(), params.begin(), params.end());
-    piecewise_lst *pl;
-    pl = bernstein_coefficients(NULL, P, newpoly, PC, P_params, P_vars, options);
+    vector<int> dims(factors);
+    for (int i = 0; F; ++i, F = F->next)
+	dims[i] = F->Dimension-nparam;
+
+    pl_all = bernstein_coefficients_recursive(pl_all, P, dims, newpoly, PC,
+					      params, newvars, options);
+
     Polyhedron_Free(P);
     Polyhedron_Free(PC);
-
-    if (options->bernstein_optimize == BV_BERNSTEIN_MIN)
-	pl->minimize();
-    else if (options->bernstein_optimize == BV_BERNSTEIN_MAX)
-	pl->maximize();
-
-    unsigned done = F->Dimension-nparam;
-    for (F = F->next ; F; F = F->next) {
-	exvector pl_vars;
-	pl_vars.insert(pl_vars.end(), newvars.begin()+done,
-		       newvars.begin()+done+(F->Dimension-nparam));
-	exvector pl_params;
-	pl_params.insert(pl_params.end(), newvars.begin()+done+(F->Dimension-nparam),
-			 newvars.end());
-	pl_params.insert(pl_params.end(), params.begin(), params.end());
-	piecewise_lst *new_pl = NULL;
-	Polyhedron *U = Universe_Polyhedron(pl_params.size());
-
-	for (int i = 0; i < pl->list.size(); ++i) {
-	    Polyhedron *D = pl->list[i].first;
-	    lst polys = pl->list[i].second;
-	    new_pl = bernstein_coefficients(new_pl, D, polys, U, pl_params,
-					    pl_vars, options);
-	}
-
-	delete pl;
-	pl = new_pl;
-
-	if (options->bernstein_optimize == BV_BERNSTEIN_MIN)
-	    pl->minimize();
-	else if (options->bernstein_optimize == BV_BERNSTEIN_MAX)
-	    pl->maximize();
-
-	Polyhedron_Free(U);
-	done += F->Dimension-nparam;
-    }
-
-    if (!pl_all)
-	pl_all = pl;
-    else {
-	pl_all->combine(*pl);
-	delete pl;
-    }
 
     return pl_all;
 }
