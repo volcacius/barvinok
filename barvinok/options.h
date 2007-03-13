@@ -59,6 +59,10 @@ struct barvinok_options {
     #define	BV_BERNSTEIN_MIN    2
     int		bernstein_optimize;
 
+    #define	BV_BERNSTEIN_FACTORS	1
+    #define	BV_BERNSTEIN_INTERVALS	2
+    int		bernstein_recurse;
+
     struct barvinok_stats   *stats;
 };
 

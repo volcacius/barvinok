@@ -367,6 +367,23 @@ static piecewise_lst *bernstein_coefficients_recursive(piecewise_lst *pl_all,
     return pl_all;
 }
 
+static piecewise_lst *bernstein_coefficients_full_recurse(piecewise_lst *pl_all,
+			    Polyhedron *P, const ex& poly,
+			    Polyhedron *ctx,
+			    const exvector& params, const exvector& vars,
+			    barvinok_options *options)
+{
+    Polyhedron *CR = align_context(ctx, P->Dimension-1, options->MaxRays);
+    vector<int> dims(vars.size());
+    for (int i = 0; i < dims.size(); ++i)
+	dims[i] = 1;
+    pl_all = bernstein_coefficients_recursive(pl_all, P, dims, poly, CR,
+					      params, vars, options);
+    Polyhedron_Free(CR);
+
+    return pl_all;
+}
+
 static piecewise_lst *bernstein_coefficients_product(piecewise_lst *pl_all,
 			    Polyhedron *F, Matrix *T, const ex& poly,
 			    Polyhedron *ctx,
@@ -477,15 +494,21 @@ static piecewise_lst *bernstein_coefficients_polyhedron(piecewise_lst *pl_all,
 	return pl_all;
     }
 
-    Matrix *T = NULL;
-    Polyhedron *F = Polyhedron_Factor(P, ctx->Dimension, &T, options->MaxRays);
-    if (F) {
-	pl_all = bernstein_coefficients_product(pl_all, F, T, poly, ctx, params,
-						floorvar, options);
-	Domain_Free(F);
-	Matrix_Free(T);
-	return pl_all;
+    if (options->bernstein_recurse & BV_BERNSTEIN_FACTORS) {
+	Matrix *T = NULL;
+	Polyhedron *F = Polyhedron_Factor(P, ctx->Dimension, &T, options->MaxRays);
+	if (F) {
+	    pl_all = bernstein_coefficients_product(pl_all, F, T, poly, ctx, params,
+						    floorvar, options);
+	    Domain_Free(F);
+	    Matrix_Free(T);
+	    return pl_all;
+	}
     }
+    if (floorvar.size() > 1 &&
+		options->bernstein_recurse & BV_BERNSTEIN_INTERVALS)
+	return bernstein_coefficients_full_recurse(pl_all, P, poly, ctx,
+						   params, floorvar, options);
 
     unsigned PP_MaxRays = options->MaxRays;
     if (PP_MaxRays & POL_NO_DUAL)

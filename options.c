@@ -80,6 +80,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->bernstein_optimize = BV_BERNSTEIN_NONE;
 
+    options->bernstein_recurse = BV_BERNSTEIN_FACTORS;
+
     return options;
 }
 
