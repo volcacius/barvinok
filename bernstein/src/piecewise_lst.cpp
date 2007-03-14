@@ -81,7 +81,8 @@ std::ostream & operator<< (std::ostream & os, const piecewise_lst & pl)
 }
 
 static std::vector<guarded_lst> combine(const std::vector<guarded_lst>& one,
-					const std::vector<guarded_lst>& other)
+					const std::vector<guarded_lst>& other,
+					const GiNaC::exvector& vars, int sign)
 {
     Polyhedron *fd;
     std::vector<guarded_lst> newlist;
@@ -115,13 +116,9 @@ static std::vector<guarded_lst> combine(const std::vector<guarded_lst>& one,
 	    fd = DomainDifference(fd, other[j].first, 0);
 	    if (t != one[i].first)
 		Domain_Free(t);
-	    lst list = one[i].second;
-	    lst::const_iterator k;
-	    for (k = other[j].second.begin(); k != other[j].second.end(); ++k)
-		list.append(*k);
-	    //std::copy(other[j].second.begin(), other[j].second.end(), 
-		      //std::back_insert_iterator<lst>(list));
-	    newlist.push_back(guarded_lst(d, list.sort().unique()));
+	    lst list = remove_redundants(d, one[i].second, other[j].second,
+					 vars, sign);
+	    newlist.push_back(guarded_lst(d, list));
 	}
 	if (!emptyQ(fd))
 	    newlist.push_back(guarded_lst(fd, one[i].second));
@@ -147,10 +144,18 @@ ostream & operator<< (ostream & os, const exvector & v)
     return os;
 }
 
+void piecewise_lst::add_guarded_lst(Polyhedron *D, GiNaC::lst coeffs)
+{
+    coeffs = remove_redundants(D, coeffs, coeffs, vars, sign);
+    assert(coeffs.nops() > 0);
+    list.push_back(guarded_lst(D, coeffs));
+}
+
 piecewise_lst& piecewise_lst::combine(const piecewise_lst& other)
 {
     assert(vars == other.vars);
-    list = bernstein::combine(list, other.list);
+    assert(sign == other.sign);
+    list = bernstein::combine(list, other.list, vars, sign);
     return *this;
 }
 

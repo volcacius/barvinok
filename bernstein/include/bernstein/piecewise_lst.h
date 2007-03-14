@@ -16,8 +16,15 @@ typedef std::pair< Polyhedron *, GiNaC::lst > guarded_lst;
 struct piecewise_lst {
     const GiNaC::exvector vars;
     std::vector<guarded_lst> list;
+    /*  0: just collect terms
+     *  1: remove obviously smaller terms (maximize)
+     * -1: remove obviously bigger terms (minimize)
+     */
+    int sign;
 
-    piecewise_lst(const GiNaC::exvector& vars) : vars(vars) {}
+    piecewise_lst(const GiNaC::exvector& vars, int sign = 0) :
+			vars(vars), sign(sign) {}
+    void add_guarded_lst(Polyhedron *D, GiNaC::lst coeffs);
     piecewise_lst& combine(const piecewise_lst& other);
     void maximize();
     void minimize();
