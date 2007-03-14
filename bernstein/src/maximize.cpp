@@ -3,6 +3,9 @@
 
 using namespace GiNaC;
 
+using std::cerr;
+using std::endl;
+
 namespace bernstein {
 
 static void domainVerticesAndRays(Polyhedron *P, GiNaC::matrix& VM, GiNaC::matrix& RM)
@@ -97,7 +100,8 @@ enum poly_sign {
 };
 
 static poly_sign polynomial_sign(ex poly, Polyhedron *D, const GiNaC::matrix& VM,
-				 const GiNaC::matrix& RM, const exvector& vars);
+				 const GiNaC::matrix& RM, const exvector& vars,
+				 bool expensive_tests);
 
 /* bernstein requires a bounded domain, so if the domain is unbounded,
  * we need a different trick.
@@ -108,7 +112,8 @@ static poly_sign polynomial_sign(ex poly, Polyhedron *D, const GiNaC::matrix& VM
  */
 static poly_sign polynomial_sign_with_rays(ex poly, Polyhedron *D, 
 				 const GiNaC::matrix& VM,
-				 const GiNaC::matrix& RM, const exvector& vars)
+				 const GiNaC::matrix& RM, const exvector& vars,
+				 bool expensive_tests)
 {
     int i;
     for (i = 0; i < vars.size(); ++i)
@@ -135,10 +140,10 @@ static poly_sign polynomial_sign_with_rays(ex poly, Polyhedron *D,
 	q += cum;
     }
     ex r = cum * min + poly.coeff(vars[i], 0);
-    poly_sign s1 = polynomial_sign(q.expand(), D, VM, RM, vars);
+    poly_sign s1 = polynomial_sign(q.expand(), D, VM, RM, vars, expensive_tests);
     if (s1 == unknown)
 	return unknown;
-    poly_sign s2 = polynomial_sign(r, D, VM, RM, vars);
+    poly_sign s2 = polynomial_sign(r, D, VM, RM, vars, expensive_tests);
     if (s2 == unknown)
 	return unknown;
     if (s1 == zero)
@@ -172,7 +177,8 @@ static ex substitute_equalities(ex poly, Polyhedron *D, const exvector& vars)
 }
 
 static poly_sign polynomial_sign(ex poly, Polyhedron *D, const GiNaC::matrix& VM,
-				 const GiNaC::matrix& RM, const exvector& vars)
+				 const GiNaC::matrix& RM, const exvector& vars,
+				 bool expensive_tests)
 {
     exvector params;
     ex minc, maxc;
@@ -182,11 +188,11 @@ static poly_sign polynomial_sign(ex poly, Polyhedron *D, const GiNaC::matrix& VM
 	minc = maxc = poly;
     else if (is_linear_constraint(poly, vars, linear))
 	find_linear_minmax(D, linear, minc, maxc);
-    else if (RM.rows() == 0) {
+    else if (expensive_tests && RM.rows() == 0) {
 	lst coeffs = bernsteinExpansion(VM, poly, vars, params);
 	find_lst_minmax(coeffs, minc, maxc);
     } else
-	return polynomial_sign_with_rays(poly, D, VM, RM, vars);
+	return polynomial_sign_with_rays(poly, D, VM, RM, vars, expensive_tests);
     if (maxc <= 0 && minc >= 0)
 	return zero;
     if (maxc <= 0)
@@ -194,6 +200,68 @@ static poly_sign polynomial_sign(ex poly, Polyhedron *D, const GiNaC::matrix& VM
     if (minc >= 0)
 	return positive;
     return unknown;
+}
+
+/* Combine list1 and list2 into a single list with the redundant elements
+ * removed according to sign.  If sign = 1, obviously smaller elements are
+ * removed; if sign = -1, obviously bigger elements are removed; if sign = 0,
+ * no elements are removed.
+ * If list1 and list2 are the same, the whole list is checked for redundant
+ * elements.  If the lists are different, the individual lists are assumed
+ * to have no redundant elements.
+ */
+GiNaC::lst remove_redundants(Polyhedron *domain, GiNaC::lst list1, GiNaC::lst list2,
+			     const GiNaC::exvector& vars, int sign)
+{
+    bool same_list = list1 == list2;
+
+    lst::const_iterator j, k;
+    if (sign == 0) {
+	if (same_list)
+	    return list1;
+	lst list = list1;
+	for (k = list2.begin(); k != list2.end(); ++k)
+	    list.append(*k);
+	return list.sort().unique();
+    }
+
+    int sign_better = sign > 0 ? positive : negative;
+    int sign_worse = sign > 0 ? negative : positive;
+
+    GiNaC::matrix VM, RM;
+    domainVerticesAndRays(domain, VM, RM);
+    lst newlist;
+    lst removed;
+    for (j = list1.begin(); j != list1.end(); ++j) {
+	if (same_list && find(removed.begin(), removed.end(), *j) != removed.end())
+	    continue;
+	bool needed = true;
+	if (same_list) {
+	    k = j; ++k;
+	} else
+	    k = list2.begin();
+	for (; k != (same_list ? list1.end() : list2.end()); ++k) {
+	    if (find(removed.begin(), removed.end(), *k) != removed.end())
+		continue;
+	    ex diff = *j - *k;
+	    poly_sign s = polynomial_sign(diff, domain, VM, RM, vars, false);
+	    if (s == zero || s == sign_worse)
+		needed = false;
+	    else if (s == sign_better)
+		removed.append(*k);
+	    if (!needed)
+		break;
+	}
+	if (needed)
+	    newlist.append(*j);
+    }
+    if (!same_list)
+	for (k = list2.begin(); k != list2.end(); ++k) {
+	    if (find(removed.begin(), removed.end(), *k) != removed.end())
+		continue;
+	    newlist.append(*k);
+	}
+    return newlist;
 }
 
 GiNaC::lst maximize(Polyhedron *domain, GiNaC::lst coeffs,
@@ -213,7 +281,7 @@ GiNaC::lst maximize(Polyhedron *domain, GiNaC::lst coeffs,
 	    if (find(removed.begin(), removed.end(), *k) != removed.end())
 		continue;
 	    ex diff = *j - *k;
-	    poly_sign s = polynomial_sign(diff, domain, VM, RM, vars);
+	    poly_sign s = polynomial_sign(diff, domain, VM, RM, vars, true);
 	    if (s == zero || s == negative)
 		needed = false;
 	    else if (s == positive)
