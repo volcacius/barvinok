@@ -56,7 +56,7 @@ struct barvinok_options {
     /* bernstein options */
     #define	BV_BERNSTEIN_NONE   0
     #define	BV_BERNSTEIN_MAX    1
-    #define	BV_BERNSTEIN_MIN    2
+    #define	BV_BERNSTEIN_MIN   -1
     int		bernstein_optimize;
 
     #define	BV_BERNSTEIN_FACTORS	1

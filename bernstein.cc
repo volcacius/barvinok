@@ -349,11 +349,6 @@ static piecewise_lst *bernstein_coefficients_recursive(piecewise_lst *pl_all,
 	    pl = new_pl;
 	}
 
-	if (options->bernstein_optimize == BV_BERNSTEIN_MIN)
-	    pl->minimize();
-	else if (options->bernstein_optimize == BV_BERNSTEIN_MAX)
-	    pl->maximize();
-
 	done += dims[j];
     }
 
@@ -516,11 +511,11 @@ static piecewise_lst *bernstein_coefficients_polyhedron(piecewise_lst *pl_all,
 
     Param_Polyhedron *PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
     assert(PP);
-    piecewise_lst *pl = new piecewise_lst(params);
+    piecewise_lst *pl = new piecewise_lst(params, options->bernstein_optimize);
     for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
 	matrix VM = domainVertices(PP, Q, params);
 	lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
-	pl->list.push_back(guarded_lst(Polyhedron_Copy(Q->Domain), coeffs));
+	pl->add_guarded_lst(Polyhedron_Copy(Q->Domain), coeffs);
     }
     Param_Polyhedron_Free(PP);
     if (!pl_all)
