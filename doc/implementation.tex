@@ -656,22 +656,61 @@ an explicitly marked $\vec y$.
 \end{figure}
 
 To see that there is a $\vec y$ satisfying the above constraints,
-we need to show that
-$S = \{ \vec y \mid \sp{{\tilde n}_{i_kj_k}}y > 0 \text{ for all $k$}\}$
-is non-empty.  Since each of the facets cuts $R$, it then follows that
-$R \cap S$ is also non-empty.
-Assume that $S$ is empty, then there exist $\lambda_k \ge 0$ not all zero
-such that $\sum_k \lambda_k \vec {\tilde n}_{i_kj_k} = 0$.
-However, for the first type of facets each normal is of the
+we need to show that $R \cap S$ is non-empty, with
+$S = \{ \vec y \mid \sp{{\tilde n}_{i_kj_k}}y > 0 \text{ for all $k$}\}$.
+It will be easier to show this set is non-empty when the $\vec u_i$ form
+an ortogonal basis.  Applying a non-singular linear transformation $T$
+does not change the decomposition of $\vec w$ in terms of the $\vec u_i$ (i.e., the
+$\alpha_i$ remain unchanged), nor does this change
+any of the scalar products in the constraints that define $R \cap S$
+(the normals are transformed by $\left(T^{-1}\right)^\T$).
+Finding a vector $\vec y \in T(R \cap S)$ ensures that
+$T^{-1}(\vec y) \in R \cap S$.
+Without loss of generality, we can therefore assume for the purpose of
+showing that $R \cap S$ is non-empty that
+the $\vec u_i$ indeed form an orthogonal basis.
+
+In the orthogonal basis, the $\vec b_i^*$ are either $\vec u_i$ or $-\vec u_i$.
+Furthermore, each normal of a facet of $S$ of the first type is of the
 form $\vec {\tilde n}_{i_kj_k} = a_k \vec u_{i_k} - b_k \vec u_{j_k}$, with 
 $a_k, b_k > 0$ and ${i_k} < {j_k}$,
-while for the second type each normal if of the form
+while for the second type each normal is of the form
 $\vec {\tilde n}_{i_kj_k} = -a_k \vec u_{i_k} - b_k \vec u_{j_k}$, with 
 $a_k, b_k > 0$.
-Since the $\vec u_j$ are linearly independent, each positive combination
-of $\vec {\tilde n}_{i_kj_k}$ will therefore have a strictly negative
-coefficient for the smallest $\vec u_i$ associated to any facet of the
-first type, or have all strictly negative coefficients if no such facet exists.
+If $\vec {\tilde n}_{i_kj_k} = a_k \vec u_{i_k} - b_k \vec u_{j_k}$
+is the normal of a facet of $S$
+then either
+$(\vec b_{i_k}^*, \vec b_{j_k}*) = (\vec u_{i_k}, \vec u_{j_k})$
+or
+$(\vec b_{i_k}^*, \vec b_{j_k}*) = (-\vec u_{i_k}, -\vec u_{j_k})$.
+Otherwise, the facet would not cut $R$.
+Similarly,
+if $\vec {\tilde n}_{i_kj_k} = -a_k \vec u_{i_k} - b_k \vec u_{j_k}$
+is the normal of a facet of $S$
+then either
+$(\vec b_{i_k}^*, \vec b_{j_k}*) = (\vec u_{i_k}, -\vec u_{j_k})$
+or
+$(\vec b_{i_k}^*, \vec b_{j_k}*) = (-\vec u_{i_k}, \vec u_{j_k})$.
+Assume now that $R \cap S$ is empty, then there exist
+$\lambda_k, \mu_i \ge 0$ not all zero
+such that
+$\sum_k \lambda_k \vec {\tilde n}_{i_kj_k} + \sum_l \mu_i \vec b_i^* = \vec 0$.
+Assume $\lambda_k > 0$ for some facet of the first type.
+If $\vec b_{j_k}^* = -\vec u_{j_k}$, then $-b_k$ can only be cancelled
+by another facet $k'$ of the first type with $j_k = i_{k'}$, but then
+also $\vec b_{j_{k'}}^* = -\vec u_{j_{k'}}$.  Since the $j_k$ are strictly
+increasing, this sequence has to stop with a strictly positive coefficient
+for the largest $\vec u_{j_k}$ in this sequence.
+If, on the other hand, $\vec b_{i_k}^* = \vec u_{i_k}$, then $a_k$ can only
+be cancelled by the normal of a facet $k'$ of the second kind
+with $i_k = j_{k'}$, but then
+$\vec b_{i_{k'}}^* = -\vec u_{i_{k'}}$ and we return to the first case.
+Finally, if $\lambda_k > 0$ only for normals of facets of the second type,
+then either $\vec b_{i_k}^* = -\vec u_{i_k}$ or $\vec b_{j_k}* = -\vec u_{j_k}$
+and so the coefficient of one of these basis vectors will be strictly
+negative.
+That is, the sum of the normals will never by zero and
+the set $R \cap S$ is non-empty.
 
 For each ray $\vec u_j$ of cone $K_i$, i.e., the cone with $\vec u_i$ replaced
 by $\vec w$, we now need to determine whether the facet not containing this
