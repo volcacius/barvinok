@@ -4,8 +4,6 @@
 #include "verify.h"
 
 struct lexmin_options {
-    struct barvinok_options *barvinok;
-
 		/* Check for integer points in domain
 		 */
     #define	BV_LEXMIN_EMPTINESS_CHECK_NONE		0

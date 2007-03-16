@@ -50,11 +50,11 @@ struct argp_option argp_options[] = {
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct lexmin_options *options = (struct lexmin_options *)(state->input);
-    struct barvinok_options *bv_options = options->barvinok;
+    struct barvinok_options *bv_options = options->verify.barvinok;
 
     switch (key) {
     case ARGP_KEY_INIT:
-	state->child_inputs[0] = options->barvinok;
+	state->child_inputs[0] = options->verify.barvinok;
 	state->child_inputs[1] = &options->verify;
 	options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_SAMPLE;
 	options->reduce = 1;
@@ -1218,7 +1218,7 @@ struct indicator {
 	int nparam = ic.P->Dimension - ic.vertex.length();
 	if (options->reduce) {
 	    Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
-	    Q = DomainConstraintSimplify(Q, options->barvinok->MaxRays);
+	    Q = DomainConstraintSimplify(Q, options->verify.barvinok->MaxRays);
 	    if (!P || !PolyhedronIncludes(Q, P))
 		reduce_in_domain(Q);
 	    if (P)
@@ -1459,7 +1459,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
     unsigned dim = a->den.NumCols();
     order_sign sign = order_eq;
     EDomain *D = ind->D;
-    unsigned MaxRays = ind->options->barvinok->MaxRays;
+    unsigned MaxRays = ind->options->verify.barvinok->MaxRays;
     bool rational = a->sign == 0 || b->sign == 0;
 
     order_sign cached_sign = order_eq;
@@ -1480,10 +1480,10 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	return cached_sign;
     }
 
-    if (rational && POL_ISSET(ind->options->barvinok->MaxRays, POL_INTEGER)) {
-	ind->options->barvinok->MaxRays &= ~POL_INTEGER;
-	if (ind->options->barvinok->MaxRays)
-	    ind->options->barvinok->MaxRays |= POL_HIGH_BIT;
+    if (rational && POL_ISSET(MaxRays, POL_INTEGER)) {
+	ind->options->verify.barvinok->MaxRays &= ~POL_INTEGER;
+	if (ind->options->verify.barvinok->MaxRays)
+	    ind->options->verify.barvinok->MaxRays |= POL_HIGH_BIT;
     }
 
     sign = order_eq;
@@ -1566,7 +1566,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	delete term[1];
     }
 
-    ind->options->barvinok->MaxRays = MaxRays;
+    ind->options->verify.barvinok->MaxRays = MaxRays;
     return sign;
 }
 
@@ -1833,7 +1833,7 @@ void indicator::expand_rational_vertex(const indicator_term *initial)
 	Param_Vertices *V;
 	FORALL_PVertex_in_ParamPolyhedron(V, PD, ic.PP) // _i is internal counter
 	    if (_i == pos) {
-		ic.decompose_at_vertex(V, pos, options->barvinok);
+		ic.decompose_at_vertex(V, pos, options->verify.barvinok);
 		break;
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;
@@ -2248,16 +2248,16 @@ static void split_on(const split& sp, EDomain *D,
     *Dgt = NULL;
     ge_constraint *ge = D->compute_ge_constraint(sp.constraint);
     if (sp.sign == split::lge || sp.sign == split::ge)
-	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options->barvinok);
+	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options->verify.barvinok);
     else
 	ED[2] = NULL;
     if (sp.sign == split::lge || sp.sign == split::le)
-	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options->barvinok);
+	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options->verify.barvinok);
     else
 	ED[0] = NULL;
 
     assert(sp.sign == split::lge || sp.sign == split::ge || sp.sign == split::le);
-    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options->barvinok);
+    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options->verify.barvinok);
 
     delete ge;
 
@@ -2657,7 +2657,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     assert(P->NbBid == 0);
 
     if (P->NbEq > 0) {
-	remove_all_equalities(&P, &C, &CP, &T, nparam, options->barvinok->MaxRays);
+	remove_all_equalities(&P, &C, &CP, &T, nparam,
+			      options->verify.barvinok->MaxRays);
 	if (CP)
 	    nparam = CP->NbColumns-1;
 	if (!P) {
@@ -2667,10 +2668,10 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	}
     }
 
-    if (options->barvinok->MaxRays & POL_NO_DUAL)
+    if (options->verify.barvinok->MaxRays & POL_NO_DUAL)
 	P2PSD_MaxRays = 0;
     else
-	P2PSD_MaxRays = options->barvinok->MaxRays;
+	P2PSD_MaxRays = options->verify.barvinok->MaxRays;
 
     Q = P;
     PP = Polyhedron2Param_SimplifiedDomain(&P, C, P2PSD_MaxRays, &CEq, &CT);
@@ -2702,11 +2703,11 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	next = D->next;
 
 	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, options->barvinok);
+					fVD, nd, options->verify.barvinok);
 	if (!rVD)
 	    continue;
 
-	pVD = CT ? DomainImage(rVD, CT, options->barvinok->MaxRays) : rVD;
+	pVD = CT ? DomainImage(rVD, CT, options->verify.barvinok->MaxRays) : rVD;
 
 	EDomain *epVD = new EDomain(pVD);
 	indicator ind(ic, D, epVD, options);
@@ -2721,7 +2722,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	vector<max_term*> maxima = lexmin(ind, nparam, loc);
 	if (CP)
 	    for (int j = 0; j < maxima.size(); ++j)
-		maxima[j]->substitute(CP, options->barvinok);
+		maxima[j]->substitute(CP, options->verify.barvinok);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
 	++nd;
@@ -2751,8 +2752,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 }
 
 static void verify_results(Polyhedron *A, Polyhedron *C, 
-			   vector<max_term*>& maxima, int m, int M,
-			   int print_all, unsigned MaxRays);
+			   vector<max_term*>& maxima,
+			   struct verify_options *options);
 
 int main(int argc, char **argv)
 {
@@ -2773,7 +2774,7 @@ int main(int argc, char **argv)
     bv_options = barvinok_options_new_with_defaults();
     bv_options->lookup_table = 0;
 
-    options.barvinok = bv_options;
+    options.verify.barvinok = bv_options;
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     MA = Matrix_Read();
@@ -2799,11 +2800,10 @@ int main(int argc, char **argv)
     vector<max_term*> maxima = lexmin(A, C, &options);
     if (print_solution)
 	for (int i = 0; i < maxima.size(); ++i)
-	    maxima[i]->print(cout, param_names, options.barvinok);
+	    maxima[i]->print(cout, param_names, options.verify.barvinok);
 
     if (options.verify.verify)
-	verify_results(A, C, maxima, options.verify.m, options.verify.M,
-		       options.verify.print_all, bv_options->MaxRays);
+	verify_results(A, C, maxima, &options.verify);
 
     for (int i = 0; i < maxima.size(); ++i)
 	delete maxima[i];
@@ -2865,95 +2865,83 @@ static void print_list(FILE *out, Value *z, char* brackets, int len)
     fprintf(out, "%c", brackets[1]);
 }
 
-static int check_poly(Polyhedron *S, Polyhedron *CS, vector<max_term*>& maxima, 
-		      int nparam, int pos, Value *z, int print_all, int st,
-		      unsigned MaxRays)
-{
-    if (pos == nparam) {
-	int k;
-	bool found = lexmin(1, S, z);
+static int check_poly_lexmin(const struct check_poly_data *data,
+			     int nparam, Value *z,
+			     const struct verify_options *options);
 
-	if (print_all) {
-	    printf("lexmin");
-	    print_list(stdout, z+S->Dimension-nparam+1, "()", nparam);
-	    printf(" = ");
-	    if (found)
-		print_list(stdout, z+1, "[]", S->Dimension-nparam);
-	    printf(" ");
-	}
+struct check_poly_lexmin_data : public check_poly_data {
+    Polyhedron	    	*S;
+    vector<max_term*>&	 maxima;
 
-	Vector *min = NULL;
-	for (int i = 0; i < maxima.size(); ++i)
-	    if ((min = maxima[i]->eval(z+S->Dimension-nparam+1, MaxRays)))
-		break;
-
-	int ok = !(found ^ !!min);
-	if (found && min)
-	    for (int i = 0; i < S->Dimension-nparam; ++i)
-		if (value_ne(z[1+i], min->p[i])) {
-		    ok = 0;
-		    break;
-		}
-	if (!ok) {
-	    printf("\n"); 
-	    fflush(stdout);
-	    fprintf(stderr, "Error !\n");
-	    fprintf(stderr, "lexmin");
-	    print_list(stderr, z+S->Dimension-nparam+1, "()", nparam);
-	    fprintf(stderr, " should be ");
-	    if (found)
-		print_list(stderr, z+1, "[]", S->Dimension-nparam);
-	    fprintf(stderr, " while digging gives ");
-	    if (min)
-		print_list(stderr, min->p, "[]", S->Dimension-nparam);
-	    fprintf(stderr, ".\n");
-	    return 0;
-	} else if (print_all)
-	    printf("OK.\n");
-	if (min)
-	    Vector_Free(min);
-
-	for (k = 1; k <= S->Dimension-nparam; ++k)
-	    value_set_si(z[k], 0);
-    } else {
-	Value tmp;
-	Value LB, UB;
-	value_init(tmp);
-	value_init(LB);
-	value_init(UB);
-	int ok = 
-	    !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
-	for (value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-	    if (!print_all) {
-		int k = VALUE_TO_INT(tmp);
-		if (!pos && !(k%st)) {
-		    printf("o");
-		    fflush(stdout);
-		}
-	    }
-	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	    if (!check_poly(S, CS->next, maxima, nparam, pos+1, z, print_all, st,
-			    MaxRays)) {
-		value_clear(tmp);
-		value_clear(LB);
-		value_clear(UB);
-		return 0;
-	    }
-	}
-	value_set_si(z[pos+S->Dimension-nparam+1],0);
-	value_clear(tmp);
-	value_clear(LB);
-	value_clear(UB);
+    check_poly_lexmin_data(Polyhedron *S, Value *z,
+			   vector<max_term*>& maxima) : S(S), maxima(maxima) {
+	this->z = z;
+	this->check = check_poly_lexmin;
     }
-    return 1;
+};
+
+static int check_poly_lexmin(const struct check_poly_data *data,
+			     int nparam, Value *z,
+			     const struct verify_options *options)
+{
+    const check_poly_lexmin_data *lexmin_data;
+    lexmin_data = static_cast<const check_poly_lexmin_data *>(data);
+    Polyhedron *S = lexmin_data->S;
+    vector<max_term*>& maxima = lexmin_data->maxima;
+    int k;
+    bool found = lexmin(1, S, lexmin_data->z);
+
+    if (options->print_all) {
+	printf("lexmin");
+	print_list(stdout, z, "()", nparam);
+	printf(" = ");
+	if (found)
+	    print_list(stdout, lexmin_data->z+1, "[]", S->Dimension-nparam);
+	printf(" ");
+    }
+
+    Vector *min = NULL;
+    for (int i = 0; i < maxima.size(); ++i)
+	if ((min = maxima[i]->eval(z, options->barvinok->MaxRays)))
+	    break;
+
+    int ok = !(found ^ !!min);
+    if (found && min)
+	for (int i = 0; i < S->Dimension-nparam; ++i)
+	    if (value_ne(lexmin_data->z[1+i], min->p[i])) {
+		ok = 0;
+		break;
+	    }
+    if (!ok) {
+	printf("\n"); 
+	fflush(stdout);
+	fprintf(stderr, "Error !\n");
+	fprintf(stderr, "lexmin");
+	print_list(stderr, z, "()", nparam);
+	fprintf(stderr, " should be ");
+	if (found)
+	    print_list(stderr, lexmin_data->z+1, "[]", S->Dimension-nparam);
+	fprintf(stderr, " while digging gives ");
+	if (min)
+	    print_list(stderr, min->p, "[]", S->Dimension-nparam);
+	fprintf(stderr, ".\n");
+	return 0;
+    } else if (options->print_all)
+	printf("OK.\n");
+    if (min)
+	Vector_Free(min);
+
+    for (k = 1; k <= S->Dimension-nparam; ++k)
+	value_set_si(lexmin_data->z[k], 0);
 }
 
 void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima, 
-		    int m, int M, int print_all, unsigned MaxRays)
+		    struct verify_options *options)
 {
     Polyhedron *CC, *CC2, *CS, *S;
     unsigned nparam = C->Dimension;
-    Value *p;
+    unsigned MaxRays = options->barvinok->MaxRays;
+    Vector *p;
     int i;
     int st;
 
@@ -2962,62 +2950,27 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
     Domain_Free(CC);
     CC = CC2;
 
-    /* Intersect context with range */
-    if (nparam > 0) {
-	Matrix *MM;
-	Polyhedron *U;
+    CS = check_poly_context_scan(CC, options);
 
-	MM = Matrix_Alloc(2*C->Dimension, C->Dimension+2);
-	for (int i = 0; i < C->Dimension; ++i) {
-	    value_set_si(MM->p[2*i][0], 1);
-	    value_set_si(MM->p[2*i][1+i], 1);
-	    value_set_si(MM->p[2*i][1+C->Dimension], -m);
-	    value_set_si(MM->p[2*i+1][0], 1);
-	    value_set_si(MM->p[2*i+1][1+i], -1);
-	    value_set_si(MM->p[2*i+1][1+C->Dimension], M);
-	}
-	CC2 = AddConstraints(MM->p[0], 2*CC->Dimension, CC, MaxRays);
-	U = Universe_Polyhedron(0);
-	CS = Polyhedron_Scan(CC2, U, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
-	Polyhedron_Free(U);
-	Polyhedron_Free(CC2);
-	Matrix_Free(MM);
-    } else
-	CS = NULL;
-
-    p = ALLOCN(Value, A->Dimension+2);
-    for (i=0; i <= A->Dimension; i++) {
-	value_init(p[i]);
-	value_set_si(p[i],0);
-    }
-    value_init(p[i]);
-    value_set_si(p[i], 1);
+    p = Vector_Alloc(A->Dimension+2);
+    value_set_si(p->p[A->Dimension+1], 1);
 
     S = Polyhedron_Scan(A, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
 
-    if (!print_all && C->Dimension > 0) {
-	if (M-m > 80)
-	    st = 1+(M-m)/80;
-	else
-	    st = 1;
-	for (int i = m; i <= M; i += st)
-	    printf(".");
-	printf( "\r" );
-	fflush(stdout);
-    }
+    check_poly_init(C, options);
 
     if (S) {
-	if (!(CS && emptyQ2(CS)))
-	    check_poly(S, CS, maxima, nparam, 0, p, print_all, st, MaxRays);
+	if (!(CS && emptyQ2(CS))) {
+	    check_poly_lexmin_data data(S, p->p, maxima);
+	    check_poly(CS, &data, nparam, 0, p->p+S->Dimension-nparam+1, options);
+	}
 	Domain_Free(S);
     }
 
-    if (!print_all)
+    if (!options->print_all)
 	printf("\n");
 
-    for (i=0; i <= (A->Dimension+1); i++) 
-	value_clear(p[i]);
-    free(p);
+    Vector_Free(p);
     if (CS)
 	Domain_Free(CS);
     Polyhedron_Free(CC);

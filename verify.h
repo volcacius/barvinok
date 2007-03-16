@@ -24,6 +24,23 @@ struct verify_options {
 extern struct argp verify_argp;
 void verify_options_set_range(struct verify_options *options, int dim);
 
+Polyhedron *check_poly_context_scan(Polyhedron *C,
+				    const struct verify_options *options);
+void check_poly_init(Polyhedron *C, struct verify_options *options);
+
+struct check_poly_data;
+typedef int (*check_poly_fun)(const struct check_poly_data *data,
+			      int nparam, Value *z,
+		 	      const struct verify_options *options);
+struct check_poly_data {
+    Value	    *z;
+    check_poly_fun   check;
+};
+
+int check_poly(Polyhedron *CS, const struct check_poly_data *data,
+	       int nparam, int pos, Value *z,
+	       const struct verify_options *options);
+
 #if defined(__cplusplus)
 }
 #endif

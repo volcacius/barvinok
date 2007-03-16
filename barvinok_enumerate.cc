@@ -297,8 +297,8 @@ static int verify(Polyhedron *P, Polyhedron **C, evalue *EP, skewed_gen_fun *gf,
     /******* CHECK NOW *********/
     if (S) {
 	if (!options->series || options->function) {
-	    if (!check_poly(S, CS, EP, 0, (*C)->Dimension, 0, p->p,
-			    &options->verify))
+	    if (!check_poly_EP(S, CS, EP, 0, (*C)->Dimension, 0, p->p,
+				&options->verify))
 		result = -1;
 	} else {
 	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p, &options->verify))

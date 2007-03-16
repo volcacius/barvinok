@@ -229,7 +229,7 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
 
     /******* CHECK NOW *********/
     res = 0;
-    if (S && !check_poly(S, CS, EP, exist, nparam, 0, p, options)) {
+    if (S && !check_poly_EP(S, CS, EP, exist, nparam, 0, p, options)) {
       fprintf(stderr,"Check failed !\n");
       res = -1;
     }

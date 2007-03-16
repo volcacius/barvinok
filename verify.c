@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <barvinok/options.h>
 #include "verify.h"
 
 /* RANGE : normal range for evalutations (-RANGE -> RANGE) */
@@ -92,3 +93,98 @@ void verify_options_set_range(struct verify_options *options, int dim)
 struct argp verify_argp = {
     argp_options, parse_opt, 0, 0
 };
+
+Polyhedron *check_poly_context_scan(Polyhedron *C,
+				    const struct verify_options *options)
+{
+    int i;
+    Matrix *MM;
+    Polyhedron *CC, *CS, *U;
+    unsigned MaxRays = options->barvinok->MaxRays;
+
+    if (C->Dimension <= 0)
+	return NULL;
+
+    /* Intersect context with range */
+    MM = Matrix_Alloc(2*C->Dimension, C->Dimension+2);
+    for (i = 0; i < C->Dimension; ++i) {
+	value_set_si(MM->p[2*i][0], 1);
+	value_set_si(MM->p[2*i][1+i], 1);
+	value_set_si(MM->p[2*i][1+C->Dimension], -options->m);
+	value_set_si(MM->p[2*i+1][0], 1);
+	value_set_si(MM->p[2*i+1][1+i], -1);
+	value_set_si(MM->p[2*i+1][1+C->Dimension], options->M);
+    }
+    CC = AddConstraints(MM->p[0], 2*C->Dimension, C, options->barvinok->MaxRays);
+    U = Universe_Polyhedron(0);
+    CS = Polyhedron_Scan(CC, U, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
+    Polyhedron_Free(U);
+    Polyhedron_Free(CC);
+    Matrix_Free(MM);
+    return CS;
+}
+
+void check_poly_init(Polyhedron *C, struct verify_options *options)
+{
+    int d, i;
+
+    if (options->print_all)
+	return;
+    if (C->Dimension <= 0)
+	return;
+
+    d = options->M - options->m;
+    if (d > 80)
+	options->st = 1+d/80;
+    else
+	options->st = 1;
+    for (i = options->m; i <= options->M; i += options->st)
+	printf(".");
+    printf( "\r" );
+    fflush(stdout);
+}
+
+/****************************************************/
+/* function check_poly :                            */
+/* scans the parameter space from Min to Max (all   */
+/* directions). Computes the number of points in    */
+/* the polytope using both methods, and compare them*/
+/* returns 1 on success                             */
+/****************************************************/
+
+int check_poly(Polyhedron *CS, const struct check_poly_data *data,
+	       int nparam, int pos, Value *z,
+	       const struct verify_options *options)
+{
+    if (pos == nparam) {
+	if (!data->check(data, nparam, z, options) && !options->continue_on_error)
+	    return 0;
+    } else {
+	Value LB, UB;
+	int ok;
+	value_init(LB);
+	value_init(UB);
+	ok = !(lower_upper_bounds(1+pos, CS, z-1, &LB, &UB));
+	assert(ok);
+	for (; value_le(LB, UB); value_increment(LB, LB)) {
+	    if (!options->print_all) {
+		int k = VALUE_TO_INT(LB);
+		if (!pos && !(k % options->st)) {
+		    printf("o");
+		    fflush(stdout);
+		}
+	    }
+	      
+	    value_assign(z[pos], LB);
+	    if (!check_poly(CS->next, data, nparam, pos+1, z, options)) {
+		value_clear(LB);
+		value_clear(UB);
+		return 0;
+	    }
+	}
+	value_set_si(z[pos], 0);
+	value_clear(LB);
+	value_clear(UB);
+    }
+    return 1;
+} /* check_poly */
