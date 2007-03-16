@@ -3067,8 +3067,13 @@ int evalue_frac2floor_in_domain(evalue *e, Polyhedron *D)
 void evalue_frac2floor2(evalue *e, int shift)
 {
     int i;
-    if (value_notzero_p(e->d) || e->x.p->type != partition)
+    if (value_notzero_p(e->d) || e->x.p->type != partition) {
+	if (!shift) {
+	    if (evalue_frac2floor_in_domain3(e, NULL, 0))
+		reduce_evalue(e);
+	}
 	return;
+    }
 
     for (i = 0; i < e->x.p->size/2; ++i)
 	if (evalue_frac2floor_in_domain3(&e->x.p->arr[2*i+1],
