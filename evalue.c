@@ -949,8 +949,8 @@ void reduce_evalue (evalue *e) {
 	free(s.fixed);
 }
 
-void print_evalue(FILE *DST,evalue *e,char **pname) {
-  
+void print_evalue(FILE *DST, const evalue *e, char **pname)
+{
   if(value_notzero_p(e->d)) {    
     if(value_notone_p(e->d)) {
       value_print(DST,VALUE_FMT,e->x.n);
@@ -2288,8 +2288,8 @@ static double compute_enode(enode *p, Value *list_args) {
 /* might not be integral                         */
 /*************************************************/
 
-double compute_evalue(evalue *e,Value *list_args) {
-  
+double compute_evalue(const evalue *e, Value *list_args)
+{
   double res;
   
   if (value_notzero_p(e->d)) {
