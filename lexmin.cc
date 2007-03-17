@@ -2785,7 +2785,7 @@ int main(int argc, char **argv)
     A = Constraints2Polyhedron(MA, bv_options->MaxRays);
     Matrix_Free(MA);
 
-    verify_options_set_range(&options.verify, A);
+    verify_options_set_range(&options.verify, A->Dimension);
 
     if (options.verify.verify)
 	print_solution = 0;

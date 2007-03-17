@@ -503,7 +503,7 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, C->Dimension);
 
     if (options.verify.verify) {
-	verify_options_set_range(&options.verify, A);
+	verify_options_set_range(&options.verify, A->Dimension);
 	if (!options.verbose)
 	    print_solution = 0;
     }

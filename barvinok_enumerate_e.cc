@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     /******* Read the options: initialize Min and Max ********/
 
     if (arguments.verify.verify) {
-	verify_options_set_range(&arguments.verify, A);
+	verify_options_set_range(&arguments.verify, A->Dimension);
 	if (!arguments.verbose)
 	    print_solution = 0;
     }

@@ -68,13 +68,13 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-void verify_options_set_range(struct verify_options *options, Polyhedron *P)
+void verify_options_set_range(struct verify_options *options, int dim)
 {
     int r;
 
-    if (P->Dimension >= VBIGDIM)
+    if (dim >= VBIGDIM)
 	r = VSRANGE;
-    else if (P->Dimension >= BIGDIM)
+    else if (dim >= BIGDIM)
 	r = SRANGE;
     else
 	r = RANGE;

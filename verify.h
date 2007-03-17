@@ -22,7 +22,7 @@ struct verify_options {
 };
 
 extern struct argp verify_argp;
-void verify_options_set_range(struct verify_options *options, Polyhedron *P);
+void verify_options_set_range(struct verify_options *options, int dim);
 
 #if defined(__cplusplus)
 }
