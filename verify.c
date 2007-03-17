@@ -34,6 +34,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
 	options->verify = 0;
 	options->print_all = 0;
+	options->continue_on_error = 0;
 	options->m = INT_MAX;
 	options->M = INT_MIN;
 	break;
