@@ -119,7 +119,9 @@ barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
-	maximize.cc
+	maximize.cc \
+	verify.h \
+	verify.c
 4coins_SOURCES = 4coins.cc
 if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc
