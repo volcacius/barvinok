@@ -20,6 +20,7 @@ extern "C" {
 namespace bernstein {
 
 GiNaC::numeric value2numeric(const Value v);
+void numeric2value(const GiNaC::numeric& n, Value& v);
 GiNaC::exvector constructParameterVector(const char * const *param_names, 
 					 unsigned nbParams);
 GiNaC::exvector constructVariableVector(unsigned nbVariables, const char *prefix);

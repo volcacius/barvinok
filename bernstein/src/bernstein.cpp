@@ -68,6 +68,36 @@ numeric value2numeric(const Value v)
 }
 
 
+#if (GMP_LIMB_BITS==32)
+inline mp_limb_t cl_I_to_limb(const cln::cl_I& x) { return cln::cl_I_to_UL(x); }
+#elif (GMP_LIMB_BITS==64)
+inline mp_limb_t cl_I_to_limb(const cln::cl_I& x) { return cln::cl_I_to_UQ(x); }
+#endif
+
+void numeric2value(const numeric& n, Value& v)
+{
+    cln::cl_I mask;
+    cln::cl_I abs_n = cln::the<cln::cl_I>(abs(n).to_cl_N());
+    int abs_sa;
+
+    for (abs_sa = 0; abs_n != 0; abs_sa++)
+	abs_n = abs_n >> GMP_LIMB_BITS;
+    _mpz_realloc(v, abs_sa);
+
+    mask = 1;
+    mask = mask << GMP_LIMB_BITS;
+    mask = mask - 1;
+    abs_n = cln::the<cln::cl_I>(abs(n).to_cl_N());
+    for (int i = 0; i < abs_sa; ++i) {
+	cln::cl_I digit = abs_n & mask;
+	v[0]._mp_d[i] = cl_I_to_limb(digit);
+	abs_n >> GMP_LIMB_BITS;
+    }
+
+    v[0]._mp_size = n < 0 ? -abs_sa : abs_sa;
+}
+
+
 matrix domainVertices(Param_Polyhedron *PP, Param_Domain *Q, const exvector& params)
 {
 	Param_Vertices *V;
