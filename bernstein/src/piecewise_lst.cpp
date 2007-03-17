@@ -188,19 +188,40 @@ void piecewise_lst::simplify_domains(Polyhedron *ctx, unsigned MaxRays)
 numeric piecewise_lst::evaluate(const exvector& values)
 {
     Value *v = new Value[values.size()];
-    numeric result = 0;
+    numeric result;
 
     for (int i = 0; i < values.size(); ++i) {
 	value_init(v[i]);
 	assert(is_a<numeric>(values[i]));
 	numeric2value(ex_to<numeric>(values[i]), v[i]);
     }
+    result = evaluate(values, values.size(), v);
+    for (int i = 0; i < values.size(); ++i)
+	value_clear(v[i]);
+    delete [] v;
+    return result;
+}
+
+void piecewise_lst::evaluate(int n, Value *v, Value *num, Value *den)
+{
+    exvector values(n);
+    numeric result;
+    for (int i = 0; i < values.size(); ++i)
+	values[i] = value2numeric(v[i]);
+    result = evaluate(values, values.size(), v);
+    numeric2value(result.numer(), *num);
+    numeric2value(result.denom(), *den);
+}
+
+numeric piecewise_lst::evaluate(const exvector& values, int n, Value *v)
+{
+    numeric result = 0;
 
     for (int i = 0; i < list.size(); ++i) {
 	if (!in_domain(list[i].first, v))
 	    continue;
 	exmap m;
-	for (int j = 0; j < values.size(); ++j)
+	for (int j = 0; j < n; ++j)
 	    m[vars[j]] = values[j];
 	ex ex_val = list[i].second.subs(m);
 	assert(is_a<lst>(ex_val));
@@ -213,9 +234,6 @@ numeric piecewise_lst::evaluate(const exvector& values)
 	result = ex_to<numeric>(max);
 	break;
     }
-    for (int i = 0; i < values.size(); ++i)
-	value_clear(v[i]);
-    delete [] v;
     return result;
 }
 
