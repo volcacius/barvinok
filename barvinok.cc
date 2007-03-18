@@ -1708,10 +1708,12 @@ constant:
 	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), options);
 out:
 	emul(&factor, eres);
-	if (options->polynomial_approximation == BV_POLAPPROX_UPPER)
-	    evalue_frac2polynomial(eres, 1, options->MaxRays);
-	if (options->polynomial_approximation == BV_POLAPPROX_LOWER)
-	    evalue_frac2polynomial(eres, -1, options->MaxRays);
+	if (options->approximation_method == BV_APPROX_DROP) {
+	    if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
+		evalue_frac2polynomial(eres, 1, options->MaxRays);
+	    if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
+		evalue_frac2polynomial(eres, -1, options->MaxRays);
+	}
 	reduce_evalue(eres);
 	free_evalue_refs(&factor);
 	Domain_Free(P);
@@ -1855,8 +1857,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
-    bool pre_approx = options->polynomial_approximation >= BV_POLAPPROX_PRE_LOWER &&
-		      options->polynomial_approximation <= BV_POLAPPROX_PRE_APPROX;
+    bool pre_approx = options->approximation_method == BV_APPROX_SCALE;
 
     if (P->Dimension - nparam == 1 && !pre_approx)
 	return ParamLine_Length(P, C, options);
@@ -1871,15 +1872,17 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     Value det;
     Polyhedron *T;
 
-    if (options->polynomial_approximation == BV_POLAPPROX_PRE_UPPER)
-	P = Polyhedron_Inflate(P, nparam, options->MaxRays);
-    if (options->polynomial_approximation == BV_POLAPPROX_PRE_LOWER) {
-	P = Polyhedron_Deflate(P, nparam, options->MaxRays);
-	POL_ENSURE_VERTICES(P);
-	if (emptyQ(P)) {
-	    eres = barvinok_enumerate_cst(P, Polyhedron_Copy(C), options);
-	    Polyhedron_Free(P);
-	    return eres;
+    if (options->approximation_method == BV_APPROX_SCALE) {
+	if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
+	    P = Polyhedron_Inflate(P, nparam, options->MaxRays);
+	if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER) {
+	    P = Polyhedron_Deflate(P, nparam, options->MaxRays);
+	    POL_ENSURE_VERTICES(P);
+	    if (emptyQ(P)) {
+		eres = barvinok_enumerate_cst(P, Polyhedron_Copy(C), options);
+		Polyhedron_Free(P);
+		return eres;
+	    }
 	}
     }
 

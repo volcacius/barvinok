@@ -68,7 +68,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->count_sample_infinite = 0;
 #endif
 
-    options->polynomial_approximation = BV_POLAPPROX_NONE;
+    options->polynomial_approximation = BV_APPROX_SIGN_NONE;
+    options->approximation_method = BV_APPROX_NONE;
 
 #ifdef HAVE_LIBGLPK
     options->gbr_lp_solver = BV_GBR_GLPK;
@@ -97,9 +98,9 @@ struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
-    { "polynomial-approximation",
-			    BV_OPT_POLAPPROX,
-			    "lower|upper|pre-lower|pre-upper|pre-approx",	0 },
+    { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
+    { "approximation-method", BV_OPT_APPROX,        "scale|drop",	0,
+	"method to use in polynomial approximation [default: drop]" },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
     { "version",	    'V',		    0,			0 },
@@ -136,16 +137,36 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	options->max_index = strtoul(arg, NULL, 0);
 	break;
     case BV_OPT_POLAPPROX:
-	if (!strcmp(arg, "pre-lower"))
-	    options->polynomial_approximation = BV_POLAPPROX_PRE_LOWER;
-	else if (!strcmp(arg, "pre-upper"))
-	    options->polynomial_approximation = BV_POLAPPROX_PRE_UPPER;
-	else if (!strcmp(arg, "pre-approx"))
-	    options->polynomial_approximation = BV_POLAPPROX_PRE_APPROX;
-	else if (!strcmp(arg, "lower"))
-	    options->polynomial_approximation = BV_POLAPPROX_LOWER;
-	else if (!strcmp(arg, "upper"))
-	    options->polynomial_approximation = BV_POLAPPROX_UPPER;
+	if (!arg) {
+	    options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
+	    if (options->approximation_method == BV_APPROX_NONE)
+		options->approximation_method = BV_APPROX_SCALE;
+	} else {
+	    if (!strcmp(arg, "lower"))
+		options->polynomial_approximation = BV_APPROX_SIGN_LOWER;
+	    else if (!strcmp(arg, "upper"))
+		options->polynomial_approximation = BV_APPROX_SIGN_UPPER;
+	    if (options->approximation_method == BV_APPROX_NONE)
+		options->approximation_method = BV_APPROX_DROP;
+	}
+	break;
+    case BV_OPT_APPROX:
+	if (!strcmp(arg, "scale"))
+	    options->approximation_method = BV_APPROX_SCALE;
+	else if (!strcmp(arg, "drop"))
+	    options->approximation_method = BV_APPROX_DROP;
+	break;
+    case ARGP_KEY_END:
+	if (options->polynomial_approximation == BV_APPROX_SIGN_APPROX &&
+	    options->approximation_method == BV_APPROX_DROP)
+		argp_error(state,
+			   "drop method only available for lower and upper bounds");
+	if (options->polynomial_approximation == BV_APPROX_SIGN_NONE &&
+	    options->approximation_method != BV_APPROX_NONE) {
+	    fprintf(stderr,
+	"no polynomial approximation selected; reseting approximation method\n");
+	    options->approximation_method = BV_APPROX_NONE;
+	}
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;

@@ -78,12 +78,12 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
 	printf(". ");
     }
 
-    if (pa == BV_POLAPPROX_PRE_APPROX)
+    if (pa == BV_APPROX_SIGN_APPROX)
 	/* just accept everything */
 	ok = 1;
-    else if (pa == BV_POLAPPROX_PRE_LOWER || pa == BV_POLAPPROX_LOWER)
+    else if (pa == BV_APPROX_SIGN_LOWER)
 	ok = value_le(c, tmp);
-    else if (pa == BV_POLAPPROX_PRE_UPPER || pa == BV_POLAPPROX_UPPER)
+    else if (pa == BV_APPROX_SIGN_UPPER)
 	ok = value_ge(c, tmp);
     else
 	ok = value_eq(c, tmp);
