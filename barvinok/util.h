@@ -39,6 +39,7 @@ Polyhedron *Polyhedron_Read(unsigned MaxRays);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);
 void Polyhedron_Polarize(Polyhedron *P);
 Polyhedron* supporting_cone(Polyhedron *P, int v);
+unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n);
 Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v);
 Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons);
 void check_triangulization(Polyhedron *P, Polyhedron *T);

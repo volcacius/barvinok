@@ -46,7 +46,8 @@ struct barvinok_options {
     int			    polynomial_approximation;
     #define	BV_APPROX_NONE		0
     #define	BV_APPROX_DROP		1
-    #define	BV_APPROX_SCALE		2
+    #define	BV_APPROX_SCALE_FAST	2
+    #define	BV_APPROX_SCALE		3
     int			    approximation_method;
 
     /* basis reduction options */

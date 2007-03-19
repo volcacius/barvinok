@@ -23,6 +23,7 @@ extern "C" {
 #include "reduce_domain.h"
 #include "genfun_constructor.h"
 #include "remove_equalities.h"
+#include "scale.h"
 
 #ifndef HAVE_PARAM_POLYHEDRON_SCALE_INTEGER
 extern "C" void Param_Polyhedron_Scale_Integer(Param_Polyhedron *PP, Polyhedron **P,
@@ -1857,9 +1858,10 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
-    bool pre_approx = options->approximation_method == BV_APPROX_SCALE;
+    bool scale_fast = options->approximation_method == BV_APPROX_SCALE_FAST;
+    bool scale = options->approximation_method == BV_APPROX_SCALE;
 
-    if (P->Dimension - nparam == 1 && !pre_approx)
+    if (P->Dimension - nparam == 1 && !scale_fast)
 	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
@@ -1872,7 +1874,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     Value det;
     Polyhedron *T;
 
-    if (options->approximation_method == BV_APPROX_SCALE) {
+    if (scale || scale_fast) {
 	if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
 	    P = Polyhedron_Inflate(P, nparam, options->MaxRays);
 	if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER) {
@@ -1912,10 +1914,13 @@ out:
 	nparam = CT->NbRows - 1;
     }
 
-    if (pre_approx) {
+    if (scale || scale_fast) {
 	value_init(det);
 	Polyhedron *T = P;
-	Param_Polyhedron_Scale_Integer(PP, &T, &det, options->MaxRays);
+	if (scale_fast)
+	    Param_Polyhedron_Scale_Integer(PP, &T, &det, options->MaxRays);
+	else
+	    Param_Polyhedron_Scale_Integer_Slow(PP, &T, &det, options->MaxRays);
 	if (P != Porig)
 	    Polyhedron_Free(P);
 	P = T;
@@ -1993,7 +1998,7 @@ try_again:
     delete [] s;
     delete [] fVD;
 
-    if (pre_approx) {
+    if (scale || scale_fast) {
 	evalue_div(eres, det);
 	value_clear(det);
     }

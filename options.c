@@ -99,7 +99,7 @@ struct argp_option barvinok_argp_options[] = {
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
     { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
-    { "approximation-method", BV_OPT_APPROX,        "scale|drop",	0,
+    { "approximation-method", BV_OPT_APPROX,        "scale|scale-fast|drop",	0,
 	"method to use in polynomial approximation [default: drop]" },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
@@ -140,7 +140,7 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	if (!arg) {
 	    options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
 	    if (options->approximation_method == BV_APPROX_NONE)
-		options->approximation_method = BV_APPROX_SCALE;
+		options->approximation_method = BV_APPROX_SCALE_FAST;
 	} else {
 	    if (!strcmp(arg, "lower"))
 		options->polynomial_approximation = BV_APPROX_SIGN_LOWER;
@@ -153,6 +153,8 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     case BV_OPT_APPROX:
 	if (!strcmp(arg, "scale"))
 	    options->approximation_method = BV_APPROX_SCALE;
+	else if (!strcmp(arg, "scale-fast"))
+	    options->approximation_method = BV_APPROX_SCALE_FAST;
 	else if (!strcmp(arg, "drop"))
 	    options->approximation_method = BV_APPROX_DROP;
 	break;

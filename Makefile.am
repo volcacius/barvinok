@@ -66,6 +66,8 @@ libbarvinok_la_SOURCES = \
     reducer.cc \
     reducer.h \
     remove_equalities.h \
+    scale.c \
+    scale.h \
     scarf.cc \
     mat_util.cc \
     mat_util.h \

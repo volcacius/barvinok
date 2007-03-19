@@ -174,15 +174,14 @@ void value_lcm(const Value i, const Value j, Value* lcm)
     value_clear(aux);
 }
 
-Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
+unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n)
 {
-    Matrix *M;
     Value lcm, tmp, tmp2;
-    unsigned char *supporting = (unsigned char *)malloc(P->NbConstraints);
     unsigned dim = P->Dimension + 2;
     unsigned nparam = v->Vertex->NbColumns - 2;
     unsigned nvar = dim - nparam - 2;
-    int i, n, j;
+    unsigned char *supporting = (unsigned char *)malloc(P->NbConstraints);
+    int i, j;
     Vector *row;
 
     assert(supporting);
@@ -192,7 +191,7 @@ Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
     value_init(tmp);
     value_init(tmp2);
     value_set_si(lcm, 1);
-    for (i = 0, n = 0; i < P->NbConstraints; ++i) {
+    for (i = 0, *n = 0; i < P->NbConstraints; ++i) {
 	Vector_Set(row->p, 0, nparam+1);
 	for (j = 0 ; j < nvar; ++j) {
 	    value_set_si(tmp, 1);
@@ -213,13 +212,27 @@ Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
 	    if (value_notzero_p(row->p[j]))
 		break;
 	if ((supporting[i] = (j == nparam + 1)))
-	    ++n;
+	    ++*n;
     }
-    assert(n >= nvar);
+    assert(*n >= nvar);
     value_clear(tmp);
     value_clear(tmp2);
     value_clear(lcm);
     Vector_Free(row);
+
+    return supporting;
+}
+
+Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
+{
+    Matrix *M;
+    unsigned dim = P->Dimension + 2;
+    unsigned nparam = v->Vertex->NbColumns - 2;
+    unsigned nvar = dim - nparam - 2;
+    int i, n, j;
+    unsigned char *supporting;
+
+    supporting = supporting_constraints(P, v, &n);
     M = Matrix_Alloc(n, nvar+2);
     assert(M);
     for (i = 0, j = 0; i < P->NbConstraints; ++i)
