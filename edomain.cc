@@ -535,7 +535,7 @@ bool EDomain::not_empty(lexmin_options *options)
 	bool notzero;
 	Value cb;
 	value_init(cb);
-	barvinok_count_with_options(P, &cb, options->barvinok);
+	barvinok_count_with_options(P, &cb, options->verify.barvinok);
 	notzero = value_notzero_p(cb);
 	value_clear(cb);
 	return notzero;
@@ -544,7 +544,7 @@ bool EDomain::not_empty(lexmin_options *options)
     Matrix *T = NULL;
     while (P && !emptyQ2(P) && P->NbEq > 0) {
 	Polyhedron *Q = P;
-	Matrix *T2 = remove_equalities(&P, 0, options->barvinok->MaxRays);
+	Matrix *T2 = remove_equalities(&P, 0, options->verify.barvinok->MaxRays);
 	if (!T)
 	    T = T2;
 	else {
@@ -560,7 +560,7 @@ bool EDomain::not_empty(lexmin_options *options)
 	}
     }
     if (P)
-	sample = Polyhedron_Sample(P, options->barvinok);
+	sample = Polyhedron_Sample(P, options->verify.barvinok);
     if (sample) {
 	if (T) {
 	    Vector *P_sample = Vector_Alloc(Porig->Dimension + 1);
