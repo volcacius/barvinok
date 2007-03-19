@@ -936,16 +936,16 @@ void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
   for(P=PP->D;P;P=P->next) {
     
     /* prints current val. dom. */
-    printf( "---------------------------------------\n" );
-    printf( "Domain :\n");
-    Print_Domain( stdout, P->Domain, param_names );
+    fprintf(DST, "---------------------------------------\n");
+    fprintf(DST, "Domain :\n");
+    Print_Domain(DST, P->Domain, param_names);
     
     /* scan the vertices */
-    printf( "Vertices :\n");
+    fprintf(DST, "Vertices :\n");
     FORALL_PVertex_in_ParamPolyhedron(V,P,PP) {
 	
       /* prints each vertex */
-      Print_Vertex( stdout, V->Vertex, param_names );
+      Print_Vertex(DST, V->Vertex, param_names);
       printf( "\n" );
     }
     END_FORALL_PVertex_in_ParamPolyhedron;
