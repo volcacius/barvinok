@@ -1861,7 +1861,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     bool scale_fast = options->approximation_method == BV_APPROX_SCALE_FAST;
     bool scale = options->approximation_method == BV_APPROX_SCALE;
 
-    if (P->Dimension - nparam == 1 && !scale_fast)
+    if (P->Dimension - nparam == 1 && !scale_fast && !scale)
 	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
