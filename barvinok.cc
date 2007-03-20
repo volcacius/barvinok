@@ -1807,10 +1807,9 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
-    bool scale_fast = options->approximation_method == BV_APPROX_SCALE_FAST;
     bool do_scale = options->approximation_method == BV_APPROX_SCALE;
 
-    if (P->Dimension - nparam == 1 && !scale_fast && !do_scale)
+    if (P->Dimension - nparam == 1 && !do_scale)
 	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
@@ -1823,7 +1822,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     scale_data scaling;
     Polyhedron *T;
 
-    if (do_scale || scale_fast) {
+    if (do_scale) {
 	P = scale_init(P, C, &scaling, options);
 	if (P != Porig) {
 	    eres = barvinok_enumerate_with_options(P, C, options);
@@ -1859,7 +1858,7 @@ out:
 	nparam = CT->NbRows - 1;
     }
 
-    if (do_scale || scale_fast)
+    if (do_scale)
 	P = scale(PP, P, &scaling, P != Porig, options);
 
     unsigned dim = P->Dimension - nparam;
@@ -1934,7 +1933,7 @@ try_again:
     delete [] s;
     delete [] fVD;
 
-    if (do_scale || scale_fast)
+    if (do_scale)
 	scale_finish(eres, &scaling, options);
 
     if (CEq)

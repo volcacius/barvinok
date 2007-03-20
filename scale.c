@@ -132,6 +132,8 @@ static void Param_Vertex_Image(Param_Vertices *V, Matrix *T)
  * such that the number of integer points can be represented by a polynomial.
  * Both *P and P->Vertex are adapted according to the scaling.
  * The scaling factor is returned in *det.
+ * The transformation that maps the new coordinates to the original
+ * coordinates is returned in *Lat (if Lat != NULL).
  * The enumerator of the scaled parametric polyhedron should be divided
  * by this number to obtain an approximation of the enumerator of the
  * original parametric polyhedron.
@@ -140,6 +142,7 @@ static void Param_Vertex_Image(Param_Vertices *V, Matrix *T)
  * affine transformations" by B. Meister.
  */
 void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
+				         Lattice **Lat,
 					 Value *det, unsigned MaxRays)
 {
     Param_Vertices *V;
@@ -183,6 +186,9 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
 	}
     }
 
+    if (Lat)
+	*Lat = Matrix_Copy(L);
+
     /* apply the variable expansion to the polyhedron (constraints) */
     expansion = Matrix_Alloc(nvar + nparam + 1,  nvar + nparam + 1);
     for (i = 0; i < nvar; ++i)
@@ -215,6 +221,8 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
  * such that the number of integer points can be represented by a polynomial.
  * Both *P and P->Vertex are adapted according to the scaling.
  * The scaling factor is returned in *det.
+ * The transformation that maps the new coordinates to the original
+ * coordinates is returned in *Lat (if Lat != NULL).
  * The enumerator of the scaled parametric polyhedron should be divided
  * by this number to obtain an approximation of the enumerator of the
  * original parametric polyhedron.
@@ -223,6 +231,7 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
  * affine transformations" by B. Meister.
  */
 void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
+				         Lattice **Lat,
 					 Value *det, unsigned MaxRays)
 {
   int i;
@@ -288,6 +297,14 @@ void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
   if (P)
     *P = Polyhedron_Preimage(*P, expansion, MaxRays);
 
+  if (Lat) {
+    Lattice *L = Matrix_Alloc(nb_vars+1, nb_vars+1);
+    for (i = 0; i < nb_vars; ++i)
+	value_assign(L->p[i][i], denoms->p[i]);
+    value_assign(L->p[nb_vars][nb_vars], global_var_lcm);
+    *Lat = L;
+  }
+
   Matrix_Free(expansion);
   value_clear(global_var_lcm);
   Vector_Free(denoms);
@@ -318,6 +335,87 @@ static Polyhedron *Polyhedron_Inflate(Polyhedron *P, unsigned nparam,
     return P2;
 }
 
+static void linear_min(Polyhedron *D, Value *obj, Value *min)
+{
+    int i;
+    Value tmp;
+    value_init(tmp);
+    POL_ENSURE_VERTICES(D);
+    for (i = 0; i < D->NbRays; ++i) {
+	Inner_Product(obj, D->Ray[i]+1, D->Dimension, &tmp);
+	mpz_cdiv_q(tmp, tmp, D->Ray[i][1+D->Dimension]);
+	if (!i || value_lt(tmp, *min))
+	    value_assign(*min, tmp);
+    }
+    value_clear(tmp);
+}
+
+static void Vector_Oppose(Value *p1, Value *p2, unsigned len)
+{
+    unsigned i;
+
+    for (i = 0; i < len; ++i)
+	value_oppose(p2[i], p1[i]);
+}
+
+static Polyhedron *inflate_deflate_domain(Lattice *L, unsigned MaxRays)
+{
+    unsigned nvar = L->NbRows-1;
+    int i;
+    Matrix *M;
+    Polyhedron *D;
+
+    M = Matrix_Alloc(2*nvar, 1+nvar+1);
+    for (i = 0; i < nvar; ++i) {
+	value_set_si(M->p[2*i][0], 1);
+	Vector_Copy(L->p[i], M->p[2*i]+1, nvar);
+	Vector_Normalize(M->p[2*i]+1, nvar);
+
+	value_set_si(M->p[2*i+1][0], 1);
+	Vector_Oppose(L->p[i], M->p[2*i+1]+1, nvar);
+	value_assign(M->p[2*i+1][1+nvar], L->p[nvar][nvar]);
+	Vector_Normalize(M->p[2*i+1]+1, nvar+1);
+	value_decrement(M->p[2*i+1][1+nvar], M->p[2*i+1][1+nvar]);
+    }
+    D = Constraints2Polyhedron(M, MaxRays);
+    Matrix_Free(M);
+
+    return D;
+}
+
+static Polyhedron *Polyhedron_Inflate4(Polyhedron *P, Lattice *L,
+				       unsigned nparam, unsigned MaxRays)
+{
+    int i;
+    unsigned nvar = P->Dimension - nparam;
+    Vector *obj;
+    Value min;
+    Matrix *C;
+    Polyhedron *D;
+    Polyhedron *P2;
+
+    if (!L)
+	return Polyhedron_Inflate(P, nparam, MaxRays);
+
+    D = inflate_deflate_domain(L, MaxRays);
+    value_init(min);
+    obj = Vector_Alloc(nvar);
+    C = Polyhedron2Constraints(P);
+
+    for (i = 0; i < C->NbRows; ++i) {
+	Vector_Copy(C->p[i]+1, obj->p, nvar);
+	linear_min(D, obj->p, &min);
+	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], min);
+    }
+
+    Polyhedron_Free(D);
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+    Vector_Free(obj);
+    value_clear(min);
+    return P2;
+}
+
 /* adapted from mpolyhedron_deflate in PolyLib */
 static Polyhedron *Polyhedron_Deflate(Polyhedron *P, unsigned nparam,
 				      unsigned MaxRays)
@@ -343,10 +441,57 @@ static Polyhedron *Polyhedron_Deflate(Polyhedron *P, unsigned nparam,
     return P2;
 }
 
+static Polyhedron *Polyhedron_Deflate4(Polyhedron *P, Lattice *L,
+				       unsigned nparam, unsigned MaxRays)
+{
+    unsigned nvar = P->Dimension - nparam;
+    Vector *obj;
+    Value min;
+    Matrix *C;
+    Polyhedron *D;
+    Polyhedron *P2;
+    int i;
+
+    if (!L)
+	return Polyhedron_Deflate(P, nparam, MaxRays);
+
+    D = inflate_deflate_domain(L, MaxRays);
+    value_init(min);
+    obj = Vector_Alloc(nvar);
+    C = Polyhedron2Constraints(P);
+
+    for (i = 0; i < C->NbRows; ++i) {
+	Vector_Oppose(C->p[i]+1, obj->p, nvar);
+	linear_min(D, obj->p, &min);
+	value_addto(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], min);
+    }
+
+    Polyhedron_Free(D);
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+    Vector_Free(obj);
+    value_clear(min);
+    return P2;
+}
+
+static void Param_Polyhedron_Scale(Param_Polyhedron *PP, Polyhedron **P,
+				   Lattice **L,
+				   Value *det, struct barvinok_options *options)
+{
+    if (options->scale_flags & BV_APPROX_SCALE_FAST)
+	Param_Polyhedron_Scale_Integer_Fast(PP, P, L, det, options->MaxRays);
+    else
+	Param_Polyhedron_Scale_Integer_Slow(PP, P, L, det, options->MaxRays);
+}
+
 Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
 		       struct barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
+    Polyhedron *Porig = P;
+    Polyhedron *T;
+    int scale_narrow = options->scale_flags & BV_APPROX_SCALE_NARROW;
+    Lattice *L = NULL;
 
     value_init(scaling->det);
     value_set_si(scaling->det, 1);
@@ -356,14 +501,30 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
         options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
 	return P;
 
+    if (scale_narrow) {
+	Param_Polyhedron *PP;
+	unsigned PP_MaxRays = options->MaxRays;
+	if (PP_MaxRays & POL_NO_DUAL)
+	    PP_MaxRays = 0;
+	PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
+	Param_Polyhedron_Scale(PP, &P, &L, &scaling->det, options);
+	Param_Polyhedron_Free(PP);
+	/* Don't scale again (on this polytope) */
+	options->approximation_method = BV_APPROX_NONE;
+    }
+    T = P;
     if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
-	P = Polyhedron_Inflate(P, nparam, options->MaxRays);
+	P = Polyhedron_Inflate4(P, L, nparam, options->MaxRays);
     if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
-	P = Polyhedron_Deflate(P, nparam, options->MaxRays);
+	P = Polyhedron_Deflate4(P, L, nparam, options->MaxRays);
 
     /* Don't deflate/inflate again (on this polytope) */
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
 
+    if (T != Porig)
+	Polyhedron_Free(T);
+    if (L)
+	Matrix_Free(L);
     return P;
 }
 
@@ -377,10 +538,7 @@ Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
     MaxRays = options->MaxRays;
     POL_UNSET(options->MaxRays, POL_INTEGER);
 
-    if (options->scale_flags & BV_APPROX_SCALE_FAST)
-	Param_Polyhedron_Scale_Integer_Fast(PP, &T, &scaling->det, options->MaxRays);
-    else
-	Param_Polyhedron_Scale_Integer_Slow(PP, &T, &scaling->det, options->MaxRays);
+    Param_Polyhedron_Scale(PP, &T, NULL, &scaling->det, options);
     if (free_P)
 	Polyhedron_Free(P);
 
@@ -396,5 +554,6 @@ void scale_finish(evalue *e, struct scale_data *scaling,
 	evalue_div(e, scaling->det);
     value_clear(scaling->det);
     /* reset options that may have been changed */
+    options->approximation_method = BV_APPROX_SCALE;
     options->polynomial_approximation = scaling->save_approximation;
 }
