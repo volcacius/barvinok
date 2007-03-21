@@ -50,6 +50,7 @@ struct barvinok_options {
     int			    approximation_method;
     #define	BV_APPROX_SCALE_FAST	(1 << 0)
     #define	BV_APPROX_SCALE_NARROW	(1 << 1)
+    #define	BV_APPROX_SCALE_NARROW2	(1 << 2)
     int			    scale_flags;
 
     /* basis reduction options */

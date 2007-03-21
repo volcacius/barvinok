@@ -310,28 +310,81 @@ void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
   Vector_Free(denoms);
 }
 
+/* Compute negated sum of all positive or negative coefficients in a row */
+static void negated_sum(Value *v, int len, int negative, Value *sum)
+{
+    int j;
+
+    value_set_si(*sum, 0);
+    for (j = 0; j < len; ++j)
+	if (negative ? value_neg_p(v[j]) : value_pos_p(v[j]))
+	    value_subtract(*sum, *sum, v[j]);
+}
+
 /* adapted from mpolyhedron_inflate in PolyLib */
-static Polyhedron *Polyhedron_Inflate(Polyhedron *P, unsigned nparam,
-				      unsigned MaxRays)
+static Polyhedron *flate(Polyhedron *P, unsigned nparam, int inflate,
+			 unsigned MaxRays)
 {
     Value sum;
     int nvar = P->Dimension - nparam;
     Matrix *C = Polyhedron2Constraints(P);
     Polyhedron *P2;
-    int i, j;
+    int i;
 
     value_init(sum);
     /* subtract the sum of the negative coefficients of each inequality */
     for (i = 0; i < C->NbRows; ++i) {
-	value_set_si(sum, 0);
-	for (j = 0; j < nvar; ++j)
-	    if (value_neg_p(C->p[i][1+j]))
-		value_addto(sum, sum, C->p[i][1+j]);
-	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
+	negated_sum(C->p[i]+1, nvar, inflate, &sum);
+	value_addto(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
     }
     value_clear(sum);
     P2 = Constraints2Polyhedron(C, MaxRays);
     Matrix_Free(C);
+    return P2;
+}
+
+static Polyhedron *flate_narrow2(Polyhedron *P, Lattice *L,
+				 unsigned nparam, int inflate,
+				 unsigned MaxRays)
+{
+    Value sum;
+    unsigned nvar = P->Dimension - nparam;
+    Matrix *expansion;
+    Matrix *C;
+    int i, j;
+    Polyhedron *P2;
+
+    expansion = Matrix_Alloc(nvar + nparam + 1,  nvar + nparam + 1);
+    for (i = 0; i < nvar; ++i)
+	Vector_Copy(L->p[i], expansion->p[i], nvar);
+    for (i = nvar; i < nvar+nparam+1; ++i)
+	value_assign(expansion->p[i][i], L->p[nvar][nvar]);
+
+    C = Matrix_Alloc(P->NbConstraints+1, 1+P->Dimension+1);
+    value_init(sum);
+    for (i = 0; i < P->NbConstraints; ++i) {
+	negated_sum(P->Constraint[i]+1, nvar, inflate, &sum);
+	value_assign(C->p[i][0], P->Constraint[i][0]);
+	Vector_Matrix_Product(P->Constraint[i]+1, expansion, C->p[i]+1);
+	if (value_zero_p(sum))
+	    continue;
+	Vector_Copy(C->p[i]+1, C->p[i+1]+1, P->Dimension+1);
+	value_addmul(C->p[i][1+P->Dimension], sum, L->p[nvar][nvar]);
+	ConstraintSimplify(C->p[i], C->p[i], P->Dimension+2, &sum);
+	ConstraintSimplify(C->p[i+1], C->p[i+1], P->Dimension+2, &sum);
+	if (value_ne(C->p[i][1+P->Dimension], C->p[i+1][1+P->Dimension])) {
+	    if (inflate)
+		value_decrement(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension]);
+	    else
+		value_increment(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension]);
+	}
+    }
+    value_clear(sum);
+    C->NbRows--;
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+
+    Matrix_Free(expansion);
     return P2;
 }
 
@@ -383,8 +436,8 @@ static Polyhedron *inflate_deflate_domain(Lattice *L, unsigned MaxRays)
     return D;
 }
 
-static Polyhedron *Polyhedron_Inflate4(Polyhedron *P, Lattice *L,
-				       unsigned nparam, unsigned MaxRays)
+static Polyhedron *flate_narrow(Polyhedron *P, Lattice *L,
+				unsigned nparam, int inflate, unsigned MaxRays)
 {
     int i;
     unsigned nvar = P->Dimension - nparam;
@@ -394,18 +447,21 @@ static Polyhedron *Polyhedron_Inflate4(Polyhedron *P, Lattice *L,
     Polyhedron *D;
     Polyhedron *P2;
 
-    if (!L)
-	return Polyhedron_Inflate(P, nparam, MaxRays);
-
     D = inflate_deflate_domain(L, MaxRays);
     value_init(min);
     obj = Vector_Alloc(nvar);
     C = Polyhedron2Constraints(P);
 
     for (i = 0; i < C->NbRows; ++i) {
-	Vector_Copy(C->p[i]+1, obj->p, nvar);
+	if (inflate)
+	    Vector_Copy(C->p[i]+1, obj->p, nvar);
+	else
+	    Vector_Oppose(C->p[i]+1, obj->p, nvar);
 	linear_min(D, obj->p, &min);
-	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], min);
+	if (inflate)
+	    value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], min);
+	else
+	    value_addto(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], min);
     }
 
     Polyhedron_Free(D);
@@ -416,62 +472,16 @@ static Polyhedron *Polyhedron_Inflate4(Polyhedron *P, Lattice *L,
     return P2;
 }
 
-/* adapted from mpolyhedron_deflate in PolyLib */
-static Polyhedron *Polyhedron_Deflate(Polyhedron *P, unsigned nparam,
-				      unsigned MaxRays)
+static Polyhedron *Polyhedron_Flate(Polyhedron *P, Lattice *L,
+				    unsigned nparam, int inflate,
+				    struct barvinok_options *options)
 {
-    Value sum;
-    int nvar = P->Dimension - nparam;
-    Matrix *C = Polyhedron2Constraints(P);
-    Polyhedron *P2;
-    int i, j;
-
-    value_init(sum);
-    /* subtract the sum of the positive coefficients of each inequality */
-    for (i = 0; i < C->NbRows; ++i) {
-	value_set_si(sum, 0);
-	for (j = 0; j < nvar; ++j)
-	    if (value_pos_p(C->p[i][1+j]))
-		value_addto(sum, sum, C->p[i][1+j]);
-	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
-    }
-    value_clear(sum);
-    P2 = Constraints2Polyhedron(C, MaxRays);
-    Matrix_Free(C);
-    return P2;
-}
-
-static Polyhedron *Polyhedron_Deflate4(Polyhedron *P, Lattice *L,
-				       unsigned nparam, unsigned MaxRays)
-{
-    unsigned nvar = P->Dimension - nparam;
-    Vector *obj;
-    Value min;
-    Matrix *C;
-    Polyhedron *D;
-    Polyhedron *P2;
-    int i;
-
-    if (!L)
-	return Polyhedron_Deflate(P, nparam, MaxRays);
-
-    D = inflate_deflate_domain(L, MaxRays);
-    value_init(min);
-    obj = Vector_Alloc(nvar);
-    C = Polyhedron2Constraints(P);
-
-    for (i = 0; i < C->NbRows; ++i) {
-	Vector_Oppose(C->p[i]+1, obj->p, nvar);
-	linear_min(D, obj->p, &min);
-	value_addto(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], min);
-    }
-
-    Polyhedron_Free(D);
-    P2 = Constraints2Polyhedron(C, MaxRays);
-    Matrix_Free(C);
-    Vector_Free(obj);
-    value_clear(min);
-    return P2;
+    if (options->scale_flags & BV_APPROX_SCALE_NARROW2)
+	return flate_narrow2(P, L, nparam, inflate, options->MaxRays);
+    else if (options->scale_flags & BV_APPROX_SCALE_NARROW)
+	return flate_narrow(P, L, nparam, inflate, options->MaxRays);
+    else
+	return flate(P, nparam, inflate, options->MaxRays);
 }
 
 static void Param_Polyhedron_Scale(Param_Polyhedron *PP, Polyhedron **P,
@@ -491,6 +501,7 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
     Polyhedron *Porig = P;
     Polyhedron *T;
     int scale_narrow = options->scale_flags & BV_APPROX_SCALE_NARROW;
+    int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
     Lattice *L = NULL;
 
     value_init(scaling->det);
@@ -501,7 +512,7 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
         options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
 	return P;
 
-    if (scale_narrow) {
+    if (scale_narrow || scale_narrow2) {
 	Param_Polyhedron *PP;
 	unsigned PP_MaxRays = options->MaxRays;
 	if (PP_MaxRays & POL_NO_DUAL)
@@ -509,14 +520,18 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
 	PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
 	Param_Polyhedron_Scale(PP, &P, &L, &scaling->det, options);
 	Param_Polyhedron_Free(PP);
+	if (scale_narrow2) {
+	    Polyhedron_Free(P);
+	    P = Porig;
+	}
 	/* Don't scale again (on this polytope) */
 	options->approximation_method = BV_APPROX_NONE;
     }
     T = P;
     if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
-	P = Polyhedron_Inflate4(P, L, nparam, options->MaxRays);
+	P = Polyhedron_Flate(P, L, nparam, 1, options);
     if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
-	P = Polyhedron_Deflate4(P, L, nparam, options->MaxRays);
+	P = Polyhedron_Flate(P, L, nparam, 0, options);
 
     /* Don't deflate/inflate again (on this polytope) */
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;

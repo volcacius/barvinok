@@ -95,13 +95,15 @@ void barvinok_options_free(struct barvinok_options *options)
 enum {
     SCALE_FAST,
     SCALE_SLOW,
-    SCALE_NARROW
+    SCALE_NARROW,
+    SCALE_NARROW2
 };
 
 const char *scale_opts[] = {
     "fast",
     "slow",
     "narrow",
+    "narrow2",
     NULL
 };
 
@@ -114,7 +116,7 @@ struct argp_option barvinok_argp_options[] = {
     { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
     { "approximation-method", BV_OPT_APPROX,        "scale|drop",	0,
 	"method to use in polynomial approximation [default: drop]" },
-    { "scale-options",	    BV_OPT_SCALE,	    "fast|slow,narrow",	0 },
+    { "scale-options",	    BV_OPT_SCALE,	    "fast|slow,narrow|narrow2",	0 },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
     { "version",	    'V',		    0,			0 },
@@ -185,6 +187,11 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	    case SCALE_NARROW:
 		options->scale_flags |= BV_APPROX_SCALE_NARROW;
+		options->scale_flags &= ~BV_APPROX_SCALE_NARROW2;
+		break;
+	    case SCALE_NARROW2:
+		options->scale_flags |= BV_APPROX_SCALE_NARROW2;
+		options->scale_flags &= ~BV_APPROX_SCALE_NARROW;
 		break;
 	    default:
 		argp_error(state, "unknown suboption '%s'\n", subopt);
