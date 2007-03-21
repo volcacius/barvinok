@@ -2,11 +2,6 @@
 #include <barvinok/options.h>
 #include "scale.h"
 
-#ifndef HAVE_PARAM_POLYHEDRON_SCALE_INTEGER
-void Param_Polyhedron_Scale_Integer(Param_Polyhedron *PP, Polyhedron **P,
-					       Value *det, unsigned MaxRays);
-#endif
-
 /* If a vertex is described by A x + B p + c = 0, then
  * M = [A B] and we want to compute a linear transformation L such
  * that H L = A and H \Z contains both A \Z and B \Z.
@@ -216,6 +211,80 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
     Matrix_Free(T);
 }
 
+/* Scales the parametric polyhedron with constraints *P and vertices PP
+ * such that the number of integer points can be represented by a polynomial.
+ * Both *P and P->Vertex are adapted according to the scaling.
+ * The scaling factor is returned in *det.
+ * The enumerator of the scaled parametric polyhedron should be divided
+ * by this number to obtain an approximation of the enumerator of the
+ * original parametric polyhedron.
+ *
+ * The algorithm is described in "Approximating Ehrhart Polynomials using
+ * affine transformations" by B. Meister.
+ */
+void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
+					 Value *det, unsigned MaxRays)
+{
+  int i;
+  int nb_param, nb_vars;
+  Vector *denoms;
+  Param_Vertices *V;
+  Value global_var_lcm;
+  Matrix *expansion;
+
+  value_set_si(*det, 1);
+  if (!PP->nbV)
+    return;
+
+  nb_param = PP->D->Domain->Dimension;
+  nb_vars = PP->V->Vertex->NbRows;
+
+  /* Scan the vertices and make an orthogonal expansion of the variable
+     space */
+  /* a- prepare the array of common denominators */
+  denoms = Vector_Alloc(nb_vars);
+  value_init(global_var_lcm);
+
+  /* b- scan the vertices and compute the variables' global lcms */
+  for (V = PP->V; V; V = V->next)
+    for (i = 0; i < nb_vars; i++)
+      Lcm3(denoms->p[i], V->Vertex->p[i][nb_param+1], &denoms->p[i]);
+
+  value_set_si(global_var_lcm, 1);
+  for (i = 0; i < nb_vars; i++) {
+    value_multiply(*det, *det, denoms->p[i]);
+    Lcm3(global_var_lcm, denoms->p[i], &global_var_lcm);
+  }
+
+  /* scale vertices */
+  for (V = PP->V; V; V = V->next)
+    for (i = 0; i < nb_vars; i++) {
+      Vector_Scale(V->Vertex->p[i], V->Vertex->p[i], denoms->p[i], nb_param+1);
+      Vector_Normalize(V->Vertex->p[i], nb_param+2);
+    }
+
+  /* the expansion can be actually writen as global_var_lcm.L^{-1} */
+  /* this is equivalent to multiply the rows of P by denoms_det */
+  for (i = 0; i < nb_vars; i++)
+    value_division(denoms->p[i], global_var_lcm, denoms->p[i]);
+
+  /* OPT : we could use a vector instead of a diagonal matrix here (c- and d-).*/
+  /* c- make the quick expansion matrix */
+  expansion = Matrix_Alloc(nb_vars+nb_param+1, nb_vars+nb_param+1);
+  for (i = 0; i < nb_vars; i++)
+    value_assign(expansion->p[i][i], denoms->p[i]);
+  for (i = nb_vars; i < nb_vars+nb_param+1; i++)
+    value_assign(expansion->p[i][i], global_var_lcm);
+
+  /* d- apply the variable expansion to the polyhedron */
+  if (P)
+    *P = Polyhedron_Preimage(*P, expansion, MaxRays);
+
+  Matrix_Free(expansion);
+  value_clear(global_var_lcm);
+  Vector_Free(denoms);
+}
+
 /* adapted from mpolyhedron_inflate in PolyLib */
 static Polyhedron *Polyhedron_Inflate(Polyhedron *P, unsigned nparam,
 				      unsigned MaxRays)
@@ -297,7 +366,7 @@ Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
     Polyhedron *T = P;
 
     if (options->scale_flags & BV_APPROX_SCALE_FAST)
-	Param_Polyhedron_Scale_Integer(PP, &T, &scaling->det, options->MaxRays);
+	Param_Polyhedron_Scale_Integer_Fast(PP, &T, &scaling->det, options->MaxRays);
     else
 	Param_Polyhedron_Scale_Integer_Slow(PP, &T, &scaling->det, options->MaxRays);
     if (free_P)
