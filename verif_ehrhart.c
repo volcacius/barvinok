@@ -53,7 +53,19 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
     value_init(tmp);
   
     /* Computes the ehrhart polynomial */
-    value_set_double(c, compute_evalue(EP, z)+.25);
+    if (!options->exact)
+	value_set_double(c, compute_evalue(EP, z)+.25);
+    else {
+	evalue *res = evalue_eval(EP, z);
+	if (pa == BV_APPROX_SIGN_LOWER)
+	    mpz_cdiv_q(c, res->x.n, res->d);
+	else if (pa == BV_APPROX_SIGN_UPPER)
+	    mpz_fdiv_q(c, res->x.n, res->d);
+	else
+	    mpz_tdiv_q(c, res->x.n, res->d);
+	free_evalue_refs(res);
+	free(res);
+    }
 
     if (options->print_all) {
 	printf("EP(");

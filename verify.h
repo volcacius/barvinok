@@ -10,6 +10,7 @@ extern "C" {
 
 struct verify_options {
     int verify;
+    int exact;
     int print_all;
     int continue_on_error;
     int m;

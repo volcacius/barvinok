@@ -2376,7 +2376,7 @@ static evalue *eval_polynomial(const enode *p, int offset,
 
 evalue *evalue_eval(const evalue *e, Value *values)
 {
-    evalue *res;
+    evalue *res = NULL;
     evalue param;
     evalue *param2;
     int i;
@@ -2421,6 +2421,8 @@ evalue *evalue_eval(const evalue *e, Value *values)
 		res = evalue_eval(&e->x.p->arr[2*i+1], values);
 		break;
 	    }
+	if (!res)
+	    res = evalue_zero();
 	break;
     default:
 	assert(0);
