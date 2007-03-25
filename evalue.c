@@ -3482,6 +3482,7 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
     int i, offset;
     Value d;
     enode *p;
+    int sign_odd = sign;
 
     if (value_notzero_p(e->d)) {
 	if (in_frac && sign * value_sign(e->x.n) < 0) {
@@ -3491,14 +3492,14 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
 	return;
     }
 
-    if (e->x.p->type == polynomial) {
-	sign *= signs[e->x.p->pos-1];
-    }
+    if (e->x.p->type == polynomial)
+	sign_odd *= signs[e->x.p->pos-1];
     offset = type_offset(e->x.p);
     evalue_frac2polynomial_r(&e->x.p->arr[offset], signs, sign, in_frac);
     in_frac |= e->x.p->type == fractional;
     for (i = e->x.p->size-1; i > offset; --i)
-	evalue_frac2polynomial_r(&e->x.p->arr[i], signs, sign, in_frac);
+	evalue_frac2polynomial_r(&e->x.p->arr[i], signs,
+				 (i - offset) % 2 ? sign_odd : sign, in_frac);
 
     if (e->x.p->type != fractional)
 	return;
