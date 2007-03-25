@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
@@ -53,9 +54,14 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
     value_init(tmp);
   
     /* Computes the ehrhart polynomial */
-    if (!options->exact)
-	value_set_double(c, compute_evalue(EP, z)+.25);
-    else {
+    if (!options->exact) {
+	double d = compute_evalue(EP, z);
+	if (pa == BV_APPROX_SIGN_LOWER)
+	    d = ceil(d-0.1);
+	else if (pa == BV_APPROX_SIGN_UPPER)
+	    d = floor(d+0.1);
+	value_set_double(c, d+.25);
+    } else {
 	evalue *res = evalue_eval(EP, z);
 	if (pa == BV_APPROX_SIGN_LOWER)
 	    mpz_cdiv_q(c, res->x.n, res->d);
