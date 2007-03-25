@@ -2352,6 +2352,82 @@ Value *compute_poly(Enumeration *en,Value *list_args) {
   return(tmp); /* no compatible domain with the arguments */
 } /* compute_poly */ 
 
+static evalue *eval_polynomial(const enode *p, int offset,
+			       evalue *base, Value *values)
+{
+    int i;
+    evalue *res, *c;
+
+    res = evalue_zero();
+    for (i = p->size-1; i > offset; --i) {
+	c = evalue_eval(&p->arr[i], values);
+	eadd(c, res);
+	free_evalue_refs(c);
+	free(c);
+	emul(base, res);
+    }
+    c = evalue_eval(&p->arr[offset], values);
+    eadd(c, res);
+    free_evalue_refs(c);
+    free(c);
+
+    return res;
+}
+
+evalue *evalue_eval(const evalue *e, Value *values)
+{
+    evalue *res;
+    evalue param;
+    evalue *param2;
+    int i;
+
+    if (value_notzero_p(e->d)) {
+	res = ALLOC(evalue);
+	value_init(res->d);
+	evalue_copy(res, e);
+	return res;
+    }
+    switch (e->x.p->type) {
+    case polynomial:
+	value_init(param.x.n);
+	value_assign(param.x.n, values[e->x.p->pos-1]);
+	value_init(param.d);
+	value_set_si(param.d, 1);
+
+	res = eval_polynomial(e->x.p, 0, &param, values);
+	free_evalue_refs(&param);
+	break;
+    case fractional:
+	param2 = evalue_eval(&e->x.p->arr[0], values);
+	mpz_fdiv_r(param2->x.n, param2->x.n, param2->d);
+
+	res = eval_polynomial(e->x.p, 1, param2, values);
+	free_evalue_refs(param2);
+	free(param2);
+	break;
+    case flooring:
+	param2 = evalue_eval(&e->x.p->arr[0], values);
+	mpz_fdiv_q(param2->x.n, param2->x.n, param2->d);
+	value_set_si(param2->d, 1);
+
+	res = eval_polynomial(e->x.p, 1, param2, values);
+	free_evalue_refs(param2);
+	free(param2);
+	break;
+    case partition:
+    	assert(e->x.p->pos == EVALUE_DOMAIN(e->x.p->arr[0])->Dimension);
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    if (in_domain(EVALUE_DOMAIN(e->x.p->arr[2*i]), values)) {
+		res = evalue_eval(&e->x.p->arr[2*i+1], values);
+		break;
+	    }
+	break;
+    default:
+	assert(0);
+    }
+    return res;
+}
+
 size_t value_size(Value v) {
     return (v[0]._mp_size > 0 ? v[0]._mp_size : -v[0]._mp_size)
 	    * sizeof(v[0]._mp_d[0]);

@@ -93,6 +93,7 @@ void emask(evalue *mask, evalue *res);
 int in_domain(Polyhedron *P, Value *list_args);
 double compute_evalue(const evalue *e, Value *list_args);
 Value *compute_poly(Enumeration *en,Value *list_args);
+evalue *evalue_eval(const evalue *e, Value *values);
 void evalue_mod2table(evalue *ev, int nparam);
 void evalue_mod2relation(evalue *e);
 void evalue_combine(evalue *e);
