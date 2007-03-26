@@ -11,7 +11,7 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart
 noinst_PROGRAMS = test randomtest \
 		  remove_redundant_equalities \
-		  barvinok_union barvinok_maximize polytope_volume \
+		  barvinok_union barvinok_maximize polytope_volume test_approx \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan
@@ -152,6 +152,10 @@ lexmin_SOURCES = \
 	verify.h \
 	verify.c
 EXTRA_lexmin_SOURCE = polysign_cddf.cc polysign_cdd.cc polysign.c
+test_approx_SOURCES = \
+	test_approx.c \
+	verify.h \
+	verify.c
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
