@@ -1046,7 +1046,7 @@ static int verify(Polyhedron *D, piecewise_lst *pl, evalue *EP,
     assert(EP->x.p->type == partition);
     int ok = 1;
 
-    CS = check_poly_context_scan(D, options);
+    CS = check_poly_context_scan(NULL, &D, D->Dimension, options);
 
     check_poly_init(D, options);
 
@@ -1066,8 +1066,10 @@ static int verify(Polyhedron *D, piecewise_lst *pl, evalue *EP,
     if (!options->print_all)
 	printf("\n");
 
-    if (CS)
+    if (CS) {
 	Domain_Free(CS);
+	Domain_Free(D);
+    }
 
     return ok;
 }

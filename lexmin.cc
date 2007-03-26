@@ -2938,19 +2938,14 @@ static int check_poly_lexmin(const struct check_poly_data *data,
 void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima, 
 		    struct verify_options *options)
 {
-    Polyhedron *CC, *CC2, *CS, *S;
+    Polyhedron *CS, *S;
     unsigned nparam = C->Dimension;
     unsigned MaxRays = options->barvinok->MaxRays;
     Vector *p;
     int i;
     int st;
 
-    CC = Polyhedron_Project(A, nparam);
-    CC2 = DomainIntersection(C, CC, MaxRays);
-    Domain_Free(CC);
-    CC = CC2;
-
-    CS = check_poly_context_scan(CC, options);
+    CS = check_poly_context_scan(A, &C, nparam, options);
 
     p = Vector_Alloc(A->Dimension+2);
     value_set_si(p->p[A->Dimension+1], 1);
@@ -2971,7 +2966,8 @@ void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima,
 	printf("\n");
 
     Vector_Free(p);
-    if (CS)
+    if (CS) {
 	Domain_Free(CS);
-    Polyhedron_Free(CC);
+	Polyhedron_Free(C);
+    }
 }

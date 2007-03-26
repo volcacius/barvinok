@@ -258,50 +258,31 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
     return 1;
 }
 
-static int verify(Polyhedron *P, Polyhedron **C, evalue *EP, skewed_gen_fun *gf,
+static int verify(Polyhedron *P, Polyhedron *C, evalue *EP, skewed_gen_fun *gf,
 		   arguments *options)
 {
-    Polyhedron *CC, *PP, *CS, *S;
-    Matrix *C1;
+    Polyhedron *CS, *S;
     Vector *p;
     int result = 0;
 
-    /******* Compute true context *******/
-    CC = align_context(*C, P->Dimension, options->verify.barvinok->MaxRays);
-    PP = DomainIntersection(P, CC, options->verify.barvinok->MaxRays);
-    Domain_Free(CC);
-    C1 = Matrix_Alloc((*C)->Dimension+1, P->Dimension+1);
-
-    for (int i = 0; i < C1->NbRows; i++)
-	for (int j = 0; j < C1->NbColumns; j++)
-	    if (i == j-P->Dimension+(*C)->Dimension)
-		value_set_si(C1->p[i][j], 1);
-	    else
-		value_set_si(C1->p[i][j], 0);
-    CC = Polyhedron_Image(PP, C1, options->verify.barvinok->MaxRays);
-    Matrix_Free(C1);
-    Domain_Free(PP);
-    Domain_Free(*C);
-    *C = CC;
-
-    CS = check_poly_context_scan(*C, &options->verify);
+    CS = check_poly_context_scan(P, &C, C->Dimension, &options->verify);
 
     p = Vector_Alloc(P->Dimension+2);
     value_set_si(p->p[P->Dimension+1], 1);
 
     /* S = scanning list of polyhedra */
-    S = Polyhedron_Scan(P, *C, options->verify.barvinok->MaxRays);
+    S = Polyhedron_Scan(P, C, options->verify.barvinok->MaxRays);
 
-    check_poly_init(*C, &options->verify);
+    check_poly_init(C, &options->verify);
 
     /******* CHECK NOW *********/
     if (S) {
 	if (!options->series || options->function) {
-	    if (!check_poly_EP(S, CS, EP, 0, (*C)->Dimension, 0, p->p,
+	    if (!check_poly_EP(S, CS, EP, 0, C->Dimension, 0, p->p,
 				&options->verify))
 		result = -1;
 	} else {
-	    if (!check_series(S, CS, gf, (*C)->Dimension, 0, p->p, &options->verify))
+	    if (!check_series(S, CS, gf, C->Dimension, 0, p->p, &options->verify))
 		result = -1;
 	}
 	Domain_Free(S);
@@ -314,8 +295,10 @@ static int verify(Polyhedron *P, Polyhedron **C, evalue *EP, skewed_gen_fun *gf,
 	printf( "\n" );
   
     Vector_Free(p);
-    if (CS)
+    if (CS) {
 	Domain_Free(CS);
+	Domain_Free(C);
+    }
 
     return result;
 }
@@ -536,7 +519,7 @@ int main(int argc, char **argv)
 
     if (options.verify.verify) {
 	options.verify.params = param_name;
-	result = verify(A, &C, EP, gf, &options);
+	result = verify(A, C, EP, gf, &options);
     }
 
     if (gf)

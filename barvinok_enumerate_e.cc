@@ -209,7 +209,7 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
     Value *p, tmp;
     Polyhedron *S, *CS;
     unsigned MaxRays = options->barvinok->MaxRays;
-    Polyhedron *C = Polyhedron_Project(P, nparam);
+    Polyhedron *C = NULL;
     value_init(tmp);
 
     p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
@@ -220,10 +220,10 @@ void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
     value_init(p[i]);
     value_set_si(p[i],1);
 
+    CS = check_poly_context_scan(P, &C, nparam, options);
+
     /* S = scanning list of polyhedra */
     S = Polyhedron_Scan(P, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
-
-    CS = check_poly_context_scan(C, options);
 
     check_poly_init(C, options);
 

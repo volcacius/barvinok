@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <barvinok/options.h>
+#include <barvinok/util.h>
 #include "verify.h"
 
 /* RANGE : normal range for evalutations (-RANGE -> RANGE) */
@@ -99,32 +100,47 @@ struct argp verify_argp = {
     argp_options, parse_opt, 0, 0
 };
 
-Polyhedron *check_poly_context_scan(Polyhedron *C,
+Polyhedron *check_poly_context_scan(Polyhedron *P, Polyhedron **C,
+				    unsigned nparam,
 				    const struct verify_options *options)
 {
     int i;
     Matrix *MM;
-    Polyhedron *CC, *CS, *U;
+    Polyhedron *CC, *CC2, *CS, *U;
     unsigned MaxRays = options->barvinok->MaxRays;
 
-    if (C->Dimension <= 0)
+    if (nparam <= 0)
 	return NULL;
 
+    if (!P)
+	CC = *C;
+    else {
+	CC = Polyhedron_Project(P, nparam);
+	if (*C) {
+	    CC2 = DomainIntersection(*C, CC, MaxRays);
+	    Domain_Free(CC);
+	    CC = CC2;
+	}
+    }
+
     /* Intersect context with range */
-    MM = Matrix_Alloc(2*C->Dimension, C->Dimension+2);
-    for (i = 0; i < C->Dimension; ++i) {
+    MM = Matrix_Alloc(2*nparam, nparam+2);
+    for (i = 0; i < nparam; ++i) {
 	value_set_si(MM->p[2*i][0], 1);
 	value_set_si(MM->p[2*i][1+i], 1);
-	value_set_si(MM->p[2*i][1+C->Dimension], -options->m);
+	value_set_si(MM->p[2*i][1+nparam], -options->m);
 	value_set_si(MM->p[2*i+1][0], 1);
 	value_set_si(MM->p[2*i+1][1+i], -1);
-	value_set_si(MM->p[2*i+1][1+C->Dimension], options->M);
+	value_set_si(MM->p[2*i+1][1+nparam], options->M);
     }
-    CC = AddConstraints(MM->p[0], 2*C->Dimension, C, options->barvinok->MaxRays);
+    CC2 = AddConstraints(MM->p[0], 2*nparam, CC, options->barvinok->MaxRays);
+    if (CC != *C)
+	Domain_Free(CC);
+    CC = CC2;
     U = Universe_Polyhedron(0);
     CS = Polyhedron_Scan(CC, U, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
     Polyhedron_Free(U);
-    Polyhedron_Free(CC);
+    *C = CC;
     Matrix_Free(MM);
     return CS;
 }
