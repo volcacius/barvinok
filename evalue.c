@@ -3570,6 +3570,12 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
 	return;
     }
 
+    if (e->x.p->type == relation) {
+	for (i = e->x.p->size-1; i >= 1; --i)
+	    evalue_frac2polynomial_r(&e->x.p->arr[i], signs, sign, in_frac);
+	return;
+    }
+
     if (e->x.p->type == polynomial)
 	sign_odd *= signs[e->x.p->pos-1];
     offset = type_offset(e->x.p);
