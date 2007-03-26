@@ -184,10 +184,6 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    }
 	break;
     case ARGP_KEY_END:
-	if (options->polynomial_approximation == BV_APPROX_SIGN_APPROX &&
-	    options->approximation_method == BV_APPROX_DROP)
-		argp_error(state,
-			   "drop method only available for lower and upper bounds");
 	if (options->polynomial_approximation == BV_APPROX_SIGN_NONE &&
 	    options->approximation_method != BV_APPROX_NONE) {
 	    fprintf(stderr,

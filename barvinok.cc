@@ -1709,6 +1709,8 @@ out:
 		evalue_frac2polynomial(eres, 1, options->MaxRays);
 	    if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
 		evalue_frac2polynomial(eres, -1, options->MaxRays);
+	    if (options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
+		evalue_frac2polynomial(eres, 0, options->MaxRays);
 	}
 	reduce_evalue(eres);
 	free_evalue_refs(&factor);

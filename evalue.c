@@ -3582,14 +3582,19 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
     if (e->x.p->type != fractional)
 	return;
 
-    /* replace { a/m } by (m-1)/m */
+    /* replace { a/m } by (m-1)/m if sign != 0
+     * and by (m-1)/(2m) if sign == 0
+     */
     value_init(d);
     value_set_si(d, 1);
     evalue_denom(&e->x.p->arr[0], &d);
     free_evalue_refs(&e->x.p->arr[0]);
     value_init(e->x.p->arr[0].d);
     value_init(e->x.p->arr[0].x.n);
-    value_assign(e->x.p->arr[0].d, d);
+    if (sign == 0)
+	value_addto(e->x.p->arr[0].d, d, d);
+    else
+	value_assign(e->x.p->arr[0].d, d);
     value_decrement(e->x.p->arr[0].x.n, d);
     value_clear(d);
 
@@ -3602,7 +3607,8 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
 
 /* Approximate the evalue in fractional representation by a polynomial.
  * If sign > 0, the result is an upper bound;
- * if sign < 0, the resutl is a lower bound.
+ * if sign < 0, the result is a lower bound;
+ * if sign = 0, the result is an intermediate approximation.
  */
 void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 {
@@ -3613,7 +3619,8 @@ void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 	return;
     assert(e->x.p->type == partition);
     /* make sure all variables in the domains have a fixed sign */
-    evalue_split_domains_into_orthants(e, MaxRays);
+    if (sign)
+	evalue_split_domains_into_orthants(e, MaxRays);
 
     assert(e->x.p->size >= 2);
     dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
@@ -3625,6 +3632,8 @@ void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 	POL_ENSURE_VERTICES(D);
 	for (j = 0; j < dim; ++j) {
 	    signs[j] = 0;
+	    if (!sign)
+		continue;
 	    for (k = 0; k < D->NbRays; ++k) {
 		signs[j] = value_sign(D->Ray[k][1+j]);
 		if (signs[j])
