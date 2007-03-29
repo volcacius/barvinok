@@ -230,6 +230,7 @@ void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
   Vector *denoms;
   Param_Vertices *V;
   Value global_var_lcm;
+  Value tmp;
   Matrix *expansion;
 
   value_set_si(*det, 1);
@@ -245,10 +246,17 @@ void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
   denoms = Vector_Alloc(nb_vars);
   value_init(global_var_lcm);
 
+  value_init(tmp);
   /* b- scan the vertices and compute the variables' global lcms */
-  for (V = PP->V; V; V = V->next)
-    for (i = 0; i < nb_vars; i++)
-      Lcm3(denoms->p[i], V->Vertex->p[i][nb_param+1], &denoms->p[i]);
+  for (V = PP->V; V; V = V->next) {
+    for (i = 0; i < nb_vars; i++) {
+      Vector_Gcd(V->Vertex->p[i], nb_param, &tmp);
+      Gcd(tmp, V->Vertex->p[i][nb_param+1], &tmp);
+      value_division(tmp, V->Vertex->p[i][nb_param+1], tmp);
+      Lcm3(denoms->p[i], tmp, &denoms->p[i]);
+    }
+  }
+  value_clear(tmp);
 
   value_set_si(global_var_lcm, 1);
   for (i = 0; i < nb_vars; i++) {
