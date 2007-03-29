@@ -2414,6 +2414,17 @@ evalue *evalue_eval(const evalue *e, Value *values)
 	free_evalue_refs(param2);
 	free(param2);
 	break;
+    case relation:
+	param2 = evalue_eval(&e->x.p->arr[0], values);
+	if (value_zero_p(param2->x.n))
+	    res = evalue_eval(&e->x.p->arr[1], values);
+	else if (e->x.p->size > 2)
+	    res = evalue_eval(&e->x.p->arr[2], values);
+	else
+	    res = evalue_zero();
+	free_evalue_refs(param2);
+	free(param2);
+	break;
     case partition:
     	assert(e->x.p->pos == EVALUE_DOMAIN(e->x.p->arr[0])->Dimension);
 	for (i = 0; i < e->x.p->size/2; ++i)
