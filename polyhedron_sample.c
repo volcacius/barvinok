@@ -2,12 +2,6 @@
 #include <barvinok/sample.h>
 #include "config.h"
 
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    (POL_NO_DUAL | POL_INTEGER)
-#else
-#define MAXRAYS  600
-#endif
-
 int main(int argc, char **argv)
 {
     Matrix *M;
