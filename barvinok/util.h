@@ -15,6 +15,11 @@ extern "C" {
 	 (F_ISSET(P, POL_POINTS) && P->NbRays == 0))
 #define POL_HAS(P,f)		(F_ISSET(P, f))
 #define POL_SET(P,f)		(F_SET(P, f))
+
+#define POL_UNSET(flags,f)	do {						\
+				    if (POL_ISSET(flags, POL_HIGH_BIT))		\
+					flags = (flags & ~(f)) | POL_HIGH_BIT;	\
+				} while(0)
 #else
 #define POL_NO_DUAL		0
 #define emptyQ2(P)		emptyQ(P)
@@ -27,6 +32,8 @@ extern "C" {
 #define	POL_VALID		0
 #define POL_HAS(P,f)		(1)
 #define POL_SET(P,f)		/* nothing */
+
+#define POL_UNSET(P,f)		/* nothing */
 #endif
 
 #ifndef POL_INTEGER
