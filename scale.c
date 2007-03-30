@@ -372,6 +372,10 @@ Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
 		  struct barvinok_options *options)
 {
     Polyhedron *T = P;
+    unsigned MaxRays;
+
+    MaxRays = options->MaxRays;
+    POL_UNSET(options->MaxRays, POL_INTEGER);
 
     if (options->scale_flags & BV_APPROX_SCALE_FAST)
 	Param_Polyhedron_Scale_Integer_Fast(PP, &T, &scaling->det, options->MaxRays);
@@ -379,6 +383,9 @@ Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
 	Param_Polyhedron_Scale_Integer_Slow(PP, &T, &scaling->det, options->MaxRays);
     if (free_P)
 	Polyhedron_Free(P);
+
+    options->MaxRays = MaxRays;
+
     return T;
 }
 
