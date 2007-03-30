@@ -1,9 +1,21 @@
 #include <barvinok/util.h>
 #include "scale.h"
 
+/* If a vertex is described by A x + B p + c = 0, then
+ * M = [A B] and we want to compute a linear transformation L such
+ * that H L = A and H \Z contains both A \Z and B \Z.
+ * We compute
+ *             [ A B ] = [ H 0 ] [ U_11  U_12 ]
+ *                               [ U_21  U_22 ]
+ *
+ * U_11 is the required linear transformation.
+ * Note that this also works if M has more rows than there are variables,
+ * i.e., if some rows in M are linear combinations of other rows.
+ * These extra rows only affect and H and not U.
+ */
 static Lattice *extract_lattice(Matrix *M, unsigned nvar)
 {
-    int row, col;
+    int row;
     Matrix *H, *Q, *U, *Li;
     Lattice *L;
     int ok;
@@ -15,11 +27,8 @@ static Lattice *extract_lattice(Matrix *M, unsigned nvar)
     L = Matrix_Alloc(nvar+1, nvar+1);
     value_set_si(Li->p[nvar][nvar], 1);
 
-    for (row = 0, col = 0; col < nvar; ++col) {
-	while (value_zero_p(H->p[row][col]))
-	    ++row;
-	Vector_Copy(Q->p[row], Li->p[col], nvar);
-    }
+    for (row = 0; row < nvar; ++row)
+	Vector_Copy(Q->p[row], Li->p[row], nvar);
     Matrix_Free(H);
     Matrix_Free(Q);
 
