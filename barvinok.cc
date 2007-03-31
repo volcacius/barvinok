@@ -25,11 +25,6 @@ extern "C" {
 #include "remove_equalities.h"
 #include "scale.h"
 
-#ifndef HAVE_PARAM_POLYHEDRON_SCALE_INTEGER
-extern "C" void Param_Polyhedron_Scale_Integer(Param_Polyhedron *PP, Polyhedron **P,
-					       Value *det, unsigned MaxRays);
-#endif
-
 #ifdef NTL_STD_CXX
 using namespace NTL;
 #endif
@@ -1806,62 +1801,14 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     return E;
 }
 
-/* adapted from mpolyhedron_inflate in PolyLib */
-static Polyhedron *Polyhedron_Inflate(Polyhedron *P, unsigned nparam,
-				      unsigned MaxRays)
-{
-    Value sum;
-    int nvar = P->Dimension - nparam;
-    Matrix *C = Polyhedron2Constraints(P);
-    Polyhedron *P2;
-
-    value_init(sum);
-    /* subtract the sum of the negative coefficients of each inequality */
-    for (int i = 0; i < C->NbRows; ++i) {
-	value_set_si(sum, 0);
-	for (int j = 0; j < nvar; ++j)
-	    if (value_neg_p(C->p[i][1+j]))
-		value_addto(sum, sum, C->p[i][1+j]);
-	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
-    }
-    value_clear(sum);
-    P2 = Constraints2Polyhedron(C, MaxRays);
-    Matrix_Free(C);
-    return P2;
-}
-
-/* adapted from mpolyhedron_deflate in PolyLib */
-static Polyhedron *Polyhedron_Deflate(Polyhedron *P, unsigned nparam,
-				      unsigned MaxRays)
-{
-    Value sum;
-    int nvar = P->Dimension - nparam;
-    Matrix *C = Polyhedron2Constraints(P);
-    Polyhedron *P2;
-
-    value_init(sum);
-    /* subtract the sum of the positive coefficients of each inequality */
-    for (int i = 0; i < C->NbRows; ++i) {
-	value_set_si(sum, 0);
-	for (int j = 0; j < nvar; ++j)
-	    if (value_pos_p(C->p[i][1+j]))
-		value_addto(sum, sum, C->p[i][1+j]);
-	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
-    }
-    value_clear(sum);
-    P2 = Constraints2Polyhedron(C, MaxRays);
-    Matrix_Free(C);
-    return P2;
-}
-
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
 				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
     bool scale_fast = options->approximation_method == BV_APPROX_SCALE_FAST;
-    bool scale = options->approximation_method == BV_APPROX_SCALE;
+    bool do_scale = options->approximation_method == BV_APPROX_SCALE;
 
-    if (P->Dimension - nparam == 1 && !scale_fast && !scale)
+    if (P->Dimension - nparam == 1 && !scale_fast && !do_scale)
 	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
@@ -1871,20 +1818,16 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     Param_Vertices *V;
     evalue *eres;
     Polyhedron *Porig = P;
-    Value det;
+    scale_data scaling;
     Polyhedron *T;
 
-    if (scale || scale_fast) {
-	if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
-	    P = Polyhedron_Inflate(P, nparam, options->MaxRays);
-	if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER) {
-	    P = Polyhedron_Deflate(P, nparam, options->MaxRays);
-	    POL_ENSURE_VERTICES(P);
-	    if (emptyQ(P)) {
-		eres = barvinok_enumerate_cst(P, Polyhedron_Copy(C), options);
-		Polyhedron_Free(P);
-		return eres;
-	    }
+    if (do_scale || scale_fast) {
+	P = scale_init(P, C, &scaling, options);
+	if (P != Porig) {
+	    eres = barvinok_enumerate_with_options(P, C, options);
+	    Polyhedron_Free(P);
+	    scale_finish(eres, &scaling, options);
+	    return eres;
 	}
     }
 
@@ -1914,17 +1857,8 @@ out:
 	nparam = CT->NbRows - 1;
     }
 
-    if (scale || scale_fast) {
-	value_init(det);
-	Polyhedron *T = P;
-	if (scale_fast)
-	    Param_Polyhedron_Scale_Integer(PP, &T, &det, options->MaxRays);
-	else
-	    Param_Polyhedron_Scale_Integer_Slow(PP, &T, &det, options->MaxRays);
-	if (P != Porig)
-	    Polyhedron_Free(P);
-	P = T;
-    }
+    if (do_scale || scale_fast)
+	P = scale(PP, P, &scaling, P != Porig, options);
 
     unsigned dim = P->Dimension - nparam;
 
@@ -1998,10 +1932,8 @@ try_again:
     delete [] s;
     delete [] fVD;
 
-    if (scale || scale_fast) {
-	evalue_div(eres, det);
-	value_clear(det);
-    }
+    if (do_scale || scale_fast)
+	scale_finish(eres, &scaling, options);
 
     if (CEq)
 	Polyhedron_Free(CEq);

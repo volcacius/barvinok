@@ -1,5 +1,11 @@
 #include <barvinok/util.h>
+#include <barvinok/options.h>
 #include "scale.h"
+
+#ifndef HAVE_PARAM_POLYHEDRON_SCALE_INTEGER
+void Param_Polyhedron_Scale_Integer(Param_Polyhedron *PP, Polyhedron **P,
+					       Value *det, unsigned MaxRays);
+#endif
 
 /* If a vertex is described by A x + B p + c = 0, then
  * M = [A B] and we want to compute a linear transformation L such
@@ -208,4 +214,104 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
     for (V = PP->V; V; V = V->next)
 	Param_Vertex_Image(V, T);
     Matrix_Free(T);
+}
+
+/* adapted from mpolyhedron_inflate in PolyLib */
+static Polyhedron *Polyhedron_Inflate(Polyhedron *P, unsigned nparam,
+				      unsigned MaxRays)
+{
+    Value sum;
+    int nvar = P->Dimension - nparam;
+    Matrix *C = Polyhedron2Constraints(P);
+    Polyhedron *P2;
+    int i, j;
+
+    value_init(sum);
+    /* subtract the sum of the negative coefficients of each inequality */
+    for (i = 0; i < C->NbRows; ++i) {
+	value_set_si(sum, 0);
+	for (j = 0; j < nvar; ++j)
+	    if (value_neg_p(C->p[i][1+j]))
+		value_addto(sum, sum, C->p[i][1+j]);
+	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
+    }
+    value_clear(sum);
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+    return P2;
+}
+
+/* adapted from mpolyhedron_deflate in PolyLib */
+static Polyhedron *Polyhedron_Deflate(Polyhedron *P, unsigned nparam,
+				      unsigned MaxRays)
+{
+    Value sum;
+    int nvar = P->Dimension - nparam;
+    Matrix *C = Polyhedron2Constraints(P);
+    Polyhedron *P2;
+    int i, j;
+
+    value_init(sum);
+    /* subtract the sum of the positive coefficients of each inequality */
+    for (i = 0; i < C->NbRows; ++i) {
+	value_set_si(sum, 0);
+	for (j = 0; j < nvar; ++j)
+	    if (value_pos_p(C->p[i][1+j]))
+		value_addto(sum, sum, C->p[i][1+j]);
+	value_subtract(C->p[i][1+P->Dimension], C->p[i][1+P->Dimension], sum);
+    }
+    value_clear(sum);
+    P2 = Constraints2Polyhedron(C, MaxRays);
+    Matrix_Free(C);
+    return P2;
+}
+
+Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
+		       struct barvinok_options *options)
+{
+    unsigned nparam = C->Dimension;
+
+    value_init(scaling->det);
+    value_set_si(scaling->det, 1);
+    scaling->save_approximation = options->polynomial_approximation;
+
+    if (options->polynomial_approximation == BV_APPROX_SIGN_NONE ||
+        options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
+	return P;
+
+    if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
+	P = Polyhedron_Inflate(P, nparam, options->MaxRays);
+    if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
+	P = Polyhedron_Deflate(P, nparam, options->MaxRays);
+
+    /* Don't deflate/inflate again (on this polytope) */
+    options->polynomial_approximation = BV_APPROX_SIGN_NONE;
+
+    return P;
+}
+
+Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
+		  struct scale_data *scaling, int free_P,
+		  struct barvinok_options *options)
+{
+    Polyhedron *T = P;
+    int scale_fast = options->approximation_method == BV_APPROX_SCALE_FAST;
+
+    if (scale_fast)
+	Param_Polyhedron_Scale_Integer(PP, &T, &scaling->det, options->MaxRays);
+    else
+	Param_Polyhedron_Scale_Integer_Slow(PP, &T, &scaling->det, options->MaxRays);
+    if (free_P)
+	Polyhedron_Free(P);
+    return T;
+}
+
+void scale_finish(evalue *e, struct scale_data *scaling,
+		  struct barvinok_options *options)
+{
+    if (value_notone_p(scaling->det))
+	evalue_div(e, scaling->det);
+    value_clear(scaling->det);
+    /* reset options that may have been changed */
+    options->polynomial_approximation = scaling->save_approximation;
 }
