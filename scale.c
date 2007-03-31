@@ -295,9 +295,8 @@ Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
 		  struct barvinok_options *options)
 {
     Polyhedron *T = P;
-    int scale_fast = options->approximation_method == BV_APPROX_SCALE_FAST;
 
-    if (scale_fast)
+    if (options->scale_flags & BV_APPROX_SCALE_FAST)
 	Param_Polyhedron_Scale_Integer(PP, &T, &scaling->det, options->MaxRays);
     else
 	Param_Polyhedron_Scale_Integer_Slow(PP, &T, &scaling->det, options->MaxRays);
