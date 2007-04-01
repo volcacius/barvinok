@@ -47,6 +47,7 @@ struct barvinok_options {
     #define	BV_APPROX_NONE		0
     #define	BV_APPROX_DROP		1
     #define	BV_APPROX_SCALE		2
+    #define	BV_APPROX_VOLUME	3
     int			    approximation_method;
     #define	BV_APPROX_SCALE_FAST	(1 << 0)
     #define	BV_APPROX_SCALE_NARROW	(1 << 1)

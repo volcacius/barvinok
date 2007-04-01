@@ -24,6 +24,7 @@ extern "C" {
 #include "genfun_constructor.h"
 #include "remove_equalities.h"
 #include "scale.h"
+#include "volume.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -1808,6 +1809,9 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 {
     unsigned nparam = C->Dimension;
     bool do_scale = options->approximation_method == BV_APPROX_SCALE;
+
+    if (options->approximation_method == BV_APPROX_VOLUME)
+	return Param_Polyhedron_Volume(P, C, options);
 
     if (P->Dimension - nparam == 1 && !do_scale)
 	return ParamLine_Length(P, C, options);

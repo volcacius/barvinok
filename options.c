@@ -114,7 +114,7 @@ struct argp_option barvinok_argp_options[] = {
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
     { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
-    { "approximation-method", BV_OPT_APPROX,        "scale|drop",	0,
+    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume",	0,
 	"method to use in polynomial approximation [default: drop]" },
     { "scale-options",	    BV_OPT_SCALE,	    "fast|slow,narrow|narrow2",	0 },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
@@ -172,6 +172,8 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->approximation_method = BV_APPROX_SCALE;
 	else if (!strcmp(arg, "drop"))
 	    options->approximation_method = BV_APPROX_DROP;
+	else if (!strcmp(arg, "volume"))
+	    options->approximation_method = BV_APPROX_VOLUME;
 	else
 	    argp_error(state, "unknown value for --approximation-method option");
 	break;
