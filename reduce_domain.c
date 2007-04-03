@@ -59,6 +59,7 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
     value_init(c);
     barvinok_count_with_options(rVD, &c, options);
     if (value_zero_p(c)) {
+	Domain_Free(fVD[nd]);
 	Domain_Free(rVD);
 	rVD = 0;
     }
