@@ -1,7 +1,9 @@
 #include <barvinok/polylib.h>
+#include <barvinok/barvinok.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "reduce_domain.h"
+#include "scale.h"
 #include "volume.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
@@ -488,6 +490,22 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     Polyhedron **fVD;
     Param_Domain *D, *next;
     Polyhedron *CA, *F;
+
+    if (options->polynomial_approximation != BV_APPROX_SIGN_APPROX) {
+	int pa = options->polynomial_approximation;
+	assert(pa == BV_APPROX_SIGN_UPPER || pa == BV_APPROX_SIGN_LOWER);
+
+	P = Polyhedron_Flate(P, nparam, pa == BV_APPROX_SIGN_UPPER,
+			     options->MaxRays);
+
+	/* Don't deflate/inflate again (on this polytope) */
+	options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
+	vol = barvinok_enumerate_with_options(P, C, options);
+	options->polynomial_approximation = pa;
+
+	Polyhedron_Free(P);
+	return vol;
+    }
 
     if (PP_MaxRays & POL_NO_DUAL)
 	PP_MaxRays = 0;
