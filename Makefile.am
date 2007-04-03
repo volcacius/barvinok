@@ -11,7 +11,7 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart
 noinst_PROGRAMS = test randomtest \
 		  remove_redundant_equalities \
-		  barvinok_union barvinok_maximize \
+		  barvinok_union barvinok_maximize polytope_volume \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan
@@ -69,6 +69,8 @@ libbarvinok_la_SOURCES = \
     scale.c \
     scale.h \
     scarf.cc \
+    volume.c \
+    volume.h \
     mat_util.cc \
     mat_util.h \
     barvinok.cc \
