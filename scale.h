@@ -11,6 +11,9 @@ struct scale_data {
     int	    	save_approximation;
 };
 
+Polyhedron *Polyhedron_Flate(Polyhedron *P, unsigned nparam, int inflate,
+			     unsigned MaxRays);
+
 Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
 		       struct barvinok_options *options);
 Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,

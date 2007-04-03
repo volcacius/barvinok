@@ -322,8 +322,8 @@ static void negated_sum(Value *v, int len, int negative, Value *sum)
 }
 
 /* adapted from mpolyhedron_inflate in PolyLib */
-static Polyhedron *flate(Polyhedron *P, unsigned nparam, int inflate,
-			 unsigned MaxRays)
+Polyhedron *Polyhedron_Flate(Polyhedron *P, unsigned nparam, int inflate,
+			     unsigned MaxRays)
 {
     Value sum;
     int nvar = P->Dimension - nparam;
@@ -472,16 +472,16 @@ static Polyhedron *flate_narrow(Polyhedron *P, Lattice *L,
     return P2;
 }
 
-static Polyhedron *Polyhedron_Flate(Polyhedron *P, Lattice *L,
-				    unsigned nparam, int inflate,
-				    struct barvinok_options *options)
+static Polyhedron *flate(Polyhedron *P, Lattice *L,
+			 unsigned nparam, int inflate,
+			 struct barvinok_options *options)
 {
     if (options->scale_flags & BV_APPROX_SCALE_NARROW2)
 	return flate_narrow2(P, L, nparam, inflate, options->MaxRays);
     else if (options->scale_flags & BV_APPROX_SCALE_NARROW)
 	return flate_narrow(P, L, nparam, inflate, options->MaxRays);
     else
-	return flate(P, nparam, inflate, options->MaxRays);
+	return Polyhedron_Flate(P, nparam, inflate, options->MaxRays);
 }
 
 static void Param_Polyhedron_Scale(Param_Polyhedron *PP, Polyhedron **P,
@@ -529,9 +529,9 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
     }
     T = P;
     if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
-	P = Polyhedron_Flate(P, L, nparam, 1, options);
+	P = flate(P, L, nparam, 1, options);
     if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
-	P = Polyhedron_Flate(P, L, nparam, 0, options);
+	P = flate(P, L, nparam, 0, options);
 
     /* Don't deflate/inflate again (on this polytope) */
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
