@@ -1,5 +1,7 @@
+#include <sstream>
 #include "conversion.h"
 #include "evalue_convert.h"
+#include "fdstream.h"
 #include "lattice_point.h"
 #include "fdstream.h"
 
@@ -7,11 +9,14 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+using std::string;
+
 static struct argp_option argp_options[] = {
     { "convert",   	    'c', 0, 0, "convert fractionals to periodics" },
     { "combine",   	    'C', 0, 0 },
     { "floor",     	    'f', 0, 0, "convert fractionals to floorings" },
     { "list",   	    'l', 0, 0 },
+    { "latex",   	    'L', 0, 0 },
     { "range-reduction",    'R',    0,	    0 },
     0
 };
@@ -27,6 +32,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->combine = 0;
 	options->range = 0;
 	options->list = 0;
+	options->latex = 0;
 	break;
     case ARGP_KEY_FINI:
 	break;
@@ -41,6 +47,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case 'l':
 	options->list = 1;
+	break;
+    case 'L':
+	options->latex = 1;
 	break;
     case 'R':
 	options->range = 1;
@@ -206,6 +215,164 @@ static void evalue_print_list(FILE *out, evalue *e, int nparam, char **params)
     }
 }
 
+static void print_domain_latex(std::ostream& o, Polyhedron *D, int nparam,
+			       char **params)
+{
+    int fr = 1;
+    for (int i = 0; i < D->NbConstraints; ++i) {
+	if (First_Non_Zero(D->Constraint[i]+1, D->Dimension) == -1)
+	    continue;
+	int fc = 1;
+	if (!fr)
+	    o << " \\wedge\n";
+	for (int j = 0; j < D->Dimension; ++j) {
+	    if (value_zero_p(D->Constraint[i][1+j]))
+		continue;
+	    o << " ";
+	    if (!fc && value_pos_p(D->Constraint[i][1+j]))
+		o << "+";
+	    if (value_mone_p(D->Constraint[i][1+j]))
+		o << "-";
+	    else if (!value_one_p(D->Constraint[i][1+j]))
+		o << VALUE_TO_INT(D->Constraint[i][1+j]);
+	    o << " " << params[j];
+	    fc = 0;
+	}
+	if (!fc && value_pos_p(D->Constraint[i][1+D->Dimension]))
+	    o << "+";
+	if (value_notzero_p(D->Constraint[i][1+D->Dimension]))
+	    o << VALUE_TO_INT(D->Constraint[i][1+D->Dimension]);
+	if (value_zero_p(D->Constraint[i][0]))
+	    o << " = 0";
+	else
+	    o << " \\ge 0";
+	fr = 0;
+    }
+}
+
+static void evalue_print_latex(std::ostream& o, const evalue *e,
+			       int first, int nested,
+			       const string& suffix1, const string& suffix2,
+			       int nparam, char **params);
+
+static void evalue_print_poly_latex1(std::ostream& o, const evalue *e,
+				     int first, int nested, const string& base,
+				     const string& suffix1, const string& suffix2,
+				     int nparam, char **params)
+{
+    int offset = type_offset(e->x.p);
+    for (int i = e->x.p->size-1; i >= offset; --i) {
+	std::ostringstream strm;
+	strm << suffix1;
+	if (i-offset)
+	    strm << " " << base;
+	if (i-offset > 1)
+	    strm << "^" << (i-offset);
+	evalue_print_latex(o, &e->x.p->arr[i], first, nested,
+			   strm.str(), suffix2, nparam, params);
+	first = 0;
+    }
+}
+
+static void evalue_print_poly_latex2(std::ostream& o, const evalue *e,
+				     int first, int nested, const string& base,
+				     const string& suffix1, const string& suffix2,
+				     int nparam, char **params)
+{
+    int offset = type_offset(e->x.p);
+    for (int i = e->x.p->size-1; i >= offset; --i) {
+	std::ostringstream strm;
+	strm << suffix2;
+	if (i-offset)
+	    strm << " " << base;
+	if (i-offset > 1)
+	    strm << "^" << (i-offset);
+	evalue_print_latex(o, &e->x.p->arr[i], first, nested,
+			   suffix1, strm.str(), nparam, params);
+	first = 0;
+    }
+}
+
+static void evalue_print_latex(std::ostream& o, const evalue *e,
+			       int first, int nested,
+			       const string& suffix1, const string &suffix2,
+			       int nparam, char **params)
+{
+    if (value_notzero_p(e->d)) {
+	if (value_zero_p(e->x.n)) {
+	    if (first)
+		o << "0";
+	    return;
+	}
+	Value tmp;
+	value_init(tmp);
+	value_absolute(tmp, e->x.n);
+	if (!first && value_pos_p(e->x.n))
+	    o << " + ";
+	if (value_neg_p(e->x.n))
+	    o << " - ";
+	if (value_one_p(e->d)) {
+	    if (!value_one_p(tmp) ||
+		    (suffix1.length() == 0 && suffix2.length() == 0))
+		o << VALUE_TO_INT(tmp);
+	} else {
+	    o << "\\frac{";
+	    if (value_one_p(tmp) && suffix1.length() != 0)
+		o << suffix1;
+	    else
+		o << VALUE_TO_INT(tmp);
+	    o << "}{"
+	      << VALUE_TO_INT(e->d) << "}";
+	}
+	if (!value_one_p(tmp)) {
+	    o << suffix1;
+	    o << " ";
+	}
+	value_clear(tmp);
+	o << suffix2;
+	if (!nested)
+	    o << endl;
+	return;
+    }
+    switch (e->x.p->type) {
+    case partition:
+	o << "\\begin{cases}\n";
+	for (int i = 0; i < e->x.p->size/2; ++i) {
+	    if (i)
+		o << "\\\\\n";
+	    evalue_print_latex(o, &e->x.p->arr[2*i+1], 1, 0,
+				suffix1, suffix2, nparam, params);
+	    o << "& \\text{if $";
+	    print_domain_latex(o, EVALUE_DOMAIN(e->x.p->arr[2*i]), nparam, params);
+	    o << "$}\n";
+	}
+	o << "\\end{cases}\n";
+	break;
+    case polynomial:
+	evalue_print_poly_latex1(o, e, first, nested, params[e->x.p->pos-1],
+				suffix1, suffix2, nparam, params);
+	break;
+    case fractional: {
+	std::ostringstream strm;
+	strm << "\\fractional{";
+	evalue_print_latex(strm, &e->x.p->arr[0], 1, 1, "", "", nparam, params);
+	strm << "}";
+	evalue_print_poly_latex2(o, e, first, nested,
+				strm.str(), suffix1, suffix2, nparam, params);
+	break;
+    }
+    default:
+	assert(0);
+    }
+}
+
+static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
+			       char **params)
+{
+    fdostream os(dup(fileno(out)));
+    evalue_print_latex(os, e, 1, 0, "", "", nparam, params);
+}
+
 int evalue_convert(evalue *EP, struct convert_options *options,
 		   int verbose, unsigned nparam, char **params)
 {
@@ -225,6 +392,9 @@ int evalue_convert(evalue *EP, struct convert_options *options,
 	    print_evalue(stdout, EP, params);
     } else if (options->list && params) {
 	evalue_print_list(stdout, EP, nparam, params);
+	printed = 1;
+    } else if (options->latex && params) {
+	evalue_print_latex(stdout, EP, nparam, params);
 	printed = 1;
     } else if (options->convert) {
 	evalue_mod2table(EP, nparam);

@@ -14,6 +14,7 @@ struct convert_options {
     int combine;
     int floor;
     int list;
+    int latex;
 };
 
 int evalue_convert(evalue *EP, struct convert_options *options,
