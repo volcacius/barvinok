@@ -340,6 +340,18 @@ Polyhedron *Polyhedron_Flate(Polyhedron *P, unsigned nparam, int inflate,
     value_clear(sum);
     P2 = Constraints2Polyhedron(C, MaxRays);
     Matrix_Free(C);
+
+    if (inflate) {
+	Polyhedron *C, *CA;
+	C = Polyhedron_Project(P, nparam);
+	CA = align_context(C, P->Dimension, MaxRays);
+	P = P2;
+	P2 = DomainIntersection(P, CA, MaxRays);
+	Polyhedron_Free(C);
+	Polyhedron_Free(CA);
+	Polyhedron_Free(P);
+    }
+
     return P2;
 }
 
@@ -385,6 +397,18 @@ static Polyhedron *flate_narrow2(Polyhedron *P, Lattice *L,
     Matrix_Free(C);
 
     Matrix_Free(expansion);
+
+    if (inflate) {
+	Polyhedron *C, *CA;
+	C = Polyhedron_Project(P, nparam);
+	CA = align_context(C, P->Dimension, MaxRays);
+	P = P2;
+	P2 = DomainIntersection(P, CA, MaxRays);
+	Polyhedron_Free(C);
+	Polyhedron_Free(CA);
+	Polyhedron_Free(P);
+    }
+
     return P2;
 }
 
@@ -469,6 +493,18 @@ static Polyhedron *flate_narrow(Polyhedron *P, Lattice *L,
     Matrix_Free(C);
     Vector_Free(obj);
     value_clear(min);
+
+    if (inflate) {
+	Polyhedron *C, *CA;
+	C = Polyhedron_Project(P, nparam);
+	CA = align_context(C, P->Dimension, MaxRays);
+	P = P2;
+	P2 = DomainIntersection(P, CA, MaxRays);
+	Polyhedron_Free(C);
+	Polyhedron_Free(CA);
+	Polyhedron_Free(P);
+    }
+
     return P2;
 }
 
