@@ -71,6 +71,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
     options->approximation_method = BV_APPROX_NONE;
+    options->scale_flags = 0;
 
 #ifdef HAVE_LIBGLPK
     options->gbr_lp_solver = BV_GBR_GLPK;
