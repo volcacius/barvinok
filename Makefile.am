@@ -112,6 +112,8 @@ barvinok_enumerate_e_SOURCES = \
 	barvinok_enumerate_e.cc \
 	evalue_convert.cc \
 	evalue_convert.h \
+	fdstream.cc \
+	fdstream.h \
 	verify.h \
 	verify.c \
 	verif_ehrhart.h \
@@ -123,6 +125,8 @@ barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
+	fdstream.cc \
+	fdstream.h \
 	maximize.cc \
 	verify.h \
 	verify.c

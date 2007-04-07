@@ -1,6 +1,7 @@
 #include "conversion.h"
 #include "evalue_convert.h"
 #include "lattice_point.h"
+#include "fdstream.h"
 
 using std::cout;
 using std::cerr;
@@ -168,22 +169,25 @@ static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
     if (!L)
 	print_evalue(out, e, params);
     else {
+	fdostream os(dup(fileno(out)));
 	Vector *coset = Vector_Alloc(nparam+1);
 	value_set_si(coset->p[nparam], 1);
 	mat_ZZ RT;
 	mat_ZZ R;
 	matrix2zz(L, RT, nparam, nparam);
 	R = transpose(RT);
+	fprintf(out, "Lattice:\n");
+	os << R << endl;
 	mat_ZZ vertices;
 	lattice_point(coset->p, R, vertices, to_ulong(abs(determinant(R))), NULL);
 	Matrix_Free(L);
 	for (int i = 0; i < vertices.NumRows(); ++i) {
 	    evalue t;
-	    cout << vertices[i] << endl;
+	    os << vertices[i] << endl;
 	    zz2values(vertices[i], coset->p);
 	    value_init(t.d);
 	    evalue_coset(e, coset, &t);
-	    print_evalue(stdout, &t, params);
+	    print_evalue(out, &t, params);
 	    free_evalue_refs(&t);
 	}
 	Vector_Free(coset);
