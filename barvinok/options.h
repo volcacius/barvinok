@@ -39,6 +39,8 @@ struct barvinok_options {
     int		    	    lookup_table;
     int		    	    count_sample_infinite;
 
+    int			    try_Delaunay_triangulation;
+
     #define	BV_APPROX_SIGN_NONE	0
     #define	BV_APPROX_SIGN_APPROX	1
     #define	BV_APPROX_SIGN_LOWER	2

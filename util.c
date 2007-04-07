@@ -249,6 +249,16 @@ Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
 
 Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons)
 {
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
+    options->MaxRays = NbMaxCons;
+    P = triangulate_cone_with_options(P, options);
+    barvinok_options_free(options);
+    return P;
+}
+
+Polyhedron* triangulate_cone_with_options(Polyhedron *P,
+					  struct barvinok_options *options)
+{
     const static int MAX_TRY=10;
     int i, j, r, n, t;
     Value tmp;
@@ -258,6 +268,7 @@ Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons)
     Polyhedron *L, *R, *T;
     assert(P->NbEq == 0);
 
+    L = NULL;
     R = NULL;
     value_init(tmp);
 
@@ -268,25 +279,28 @@ Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons)
     value_set_si(M->p[P->NbRays][0], 1);
     value_set_si(M->p[P->NbRays][dim+1], 1);
 
-    /* Delaunay triangulation */
     for (i = 0, r = 1; i < P->NbRays; ++i) {
 	if (value_notzero_p(P->Ray[i][dim+1]))
 	    continue;
 	Vector_Copy(P->Ray[i], M->p[r], dim+1);
-	Inner_Product(M->p[r]+1, M->p[r]+1, dim, &tmp);
-	value_assign(M->p[r][dim+1], tmp);
 	value_set_si(M->p[r][dim+2], 0);
 	++r;
     }
 
-    M3 = Matrix_Copy(M);
-    L = Rays2Polyhedron(M3, NbMaxCons);
-    Matrix_Free(M3);
-
     M2 = Matrix_Alloc(dim+1, dim+2);
 
-    t = 1;
-    if (0) {
+    t = 0;
+    if (options->try_Delaunay_triangulation) {
+	/* Delaunay triangulation */
+	for (r = 1; r < P->NbRays; ++r) {
+	    Inner_Product(M->p[r]+1, M->p[r]+1, dim, &tmp);
+	    value_assign(M->p[r][dim+1], tmp);
+	}
+	M3 = Matrix_Copy(M);
+	L = Rays2Polyhedron(M3, options->MaxRays);
+	Matrix_Free(M3);
+	++t;
+    } else {
 try_again:
 	/* Usually R should still be 0 */
 	Domain_Free(R);
@@ -295,7 +309,7 @@ try_again:
 	    value_set_si(M->p[r][dim+1], random_int((t+1)*dim*P->NbRays)+1);
 	}
 	M3 = Matrix_Copy(M);
-	L = Rays2Polyhedron(M3, NbMaxCons);
+	L = Rays2Polyhedron(M3, options->MaxRays);
 	Matrix_Free(M3);
 	++t;
     }
@@ -304,6 +318,7 @@ try_again:
     R = NULL;
     n = 0;
 
+    POL_ENSURE_FACETS(L);
     for (i = 0; i < L->NbConstraints; ++i) {
 	/* Ignore perpendicular facets, i.e., facets with 0 z-coordinate */
 	if (value_negz_p(L->Constraint[i][dim+1]))

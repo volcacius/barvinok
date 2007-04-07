@@ -67,6 +67,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 #else
     options->count_sample_infinite = 0;
 #endif
+    options->try_Delaunay_triangulation = 0;
 
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
     options->approximation_method = BV_APPROX_NONE;

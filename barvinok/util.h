@@ -40,6 +40,8 @@ extern "C" {
 #define POL_INTEGER		0
 #endif
 
+struct barvinok_options;
+
 void value_lcm(const Value i, const Value j, Value* lcm);
 int random_int(int max);
 Polyhedron *Polyhedron_Read(unsigned MaxRays);
@@ -49,6 +51,8 @@ Polyhedron* supporting_cone(Polyhedron *P, int v);
 unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n);
 Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v);
 Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons);
+Polyhedron* triangulate_cone_with_options(Polyhedron *P,
+					  struct barvinok_options *options);
 void check_triangulization(Polyhedron *P, Polyhedron *T);
 Polyhedron *remove_equalities(Polyhedron *P);
 Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor);
