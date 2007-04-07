@@ -509,12 +509,13 @@ int main(int argc, char **argv)
 	}
     } else {
 	EP = barvinok_enumerate_with_options(A, C, bv_options);
-	evalue_convert(EP, &options.convert, C->Dimension,
-		       options.verbose ? param_name : NULL);
+	if (evalue_convert(EP, &options.convert, options.verbose, C->Dimension,
+			   param_name))
+	    print_solution = 0;
 	if (options.size)
 	    printf("\nSize: %d\n", evalue_size(EP));
     }
-    if (print_solution && !options.verbose)
+    if (print_solution)
 	print_evalue(stdout, EP, param_name);
 
     if (options.verify.verify) {

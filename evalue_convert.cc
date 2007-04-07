@@ -202,15 +202,18 @@ static void evalue_print_list(FILE *out, evalue *e, int nparam, char **params)
     }
 }
 
-void evalue_convert(evalue *EP, struct convert_options *options, unsigned nparam,
-		    char **params)
+int evalue_convert(evalue *EP, struct convert_options *options,
+		   int verbose, unsigned nparam, char **params)
 {
+    int printed = 0;
     if (options->combine)
 	evalue_combine(EP);
     if (options->range)
 	evalue_range_reduction(EP);
-    if (params)
+    if (verbose) {
 	print_evalue(stdout, EP, params);
+	printed = 1;
+    }
     if (options->floor) {
 	fprintf(stderr, "WARNING: floor conversion not supported\n");
 	evalue_frac2floor2(EP, 0);
@@ -218,9 +221,11 @@ void evalue_convert(evalue *EP, struct convert_options *options, unsigned nparam
 	    print_evalue(stdout, EP, params);
     } else if (options->list && params) {
 	evalue_print_list(stdout, EP, nparam, params);
+	printed = 1;
     } else if (options->convert) {
 	evalue_mod2table(EP, nparam);
-	if (params)
+	if (verbose)
 	    print_evalue(stdout, EP, params);
     }
+    return printed;
 }

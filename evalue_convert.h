@@ -16,8 +16,8 @@ struct convert_options {
     int list;
 };
 
-void evalue_convert(evalue *EP, struct convert_options *options, unsigned nparam,
-		    char **params);
+int evalue_convert(evalue *EP, struct convert_options *options,
+		   int verbose, unsigned nparam, char **params);
 
 extern struct argp convert_argp;
 

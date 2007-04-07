@@ -1160,7 +1160,7 @@ int main(int argc, char **argv)
     if (options.split)
 	evalue_split_periods(EP, options.split, bv_options->MaxRays);
 
-    evalue_convert(EP, &options.convert, nparam, options.verbose ? all_vars : NULL);
+    evalue_convert(EP, &options.convert, options.verbose, nparam, all_vars);
 
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);

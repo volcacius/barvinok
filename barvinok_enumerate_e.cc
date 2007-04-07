@@ -184,9 +184,10 @@ int main(int argc, char **argv)
 	else
 	    EP = barvinok_enumerate_e_with_options(A, exist, nparam, options);
 	reduce_evalue(EP);
-	evalue_convert(EP, &arguments.convert, nparam,
-		       arguments.verbose ? param_name : NULL);
-	if (print_solution && !arguments.verbose)
+	if (evalue_convert(EP, &arguments.convert, arguments.verbose, nparam,
+			   param_name))
+	    print_solution = 0;
+	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
 	if (arguments.verify.verify) {
 	    arguments.verify.params = param_name;
