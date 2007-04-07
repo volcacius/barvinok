@@ -455,8 +455,8 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 
 static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
-				evalue **point, Polyhedron *C,
-				int row, Polyhedron *F, unsigned MaxRays)
+				evalue **point,
+				int row, unsigned MaxRays)
 {
     evalue mone;
     Param_Vertices *V;
@@ -532,7 +532,7 @@ static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
 				 row, F, MaxRays);
     else {
 	assert(nbV == (dim-row) + 1);
-	vol = volume_simplex(PP, D, dim, matrix, point, C, row, F, MaxRays);
+	vol = volume_simplex(PP, D, dim, matrix, point, row, MaxRays);
     }
 
     if (point_computed) {
