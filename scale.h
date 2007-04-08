@@ -13,6 +13,7 @@ struct scale_data {
 
 Polyhedron *Polyhedron_Flate(Polyhedron *P, unsigned nparam, int inflate,
 			     unsigned MaxRays);
+void Param_Vertex_Common_Denominator(Param_Vertices *V);
 
 Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
 		       struct barvinok_options *options);

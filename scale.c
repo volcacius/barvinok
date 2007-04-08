@@ -83,7 +83,7 @@ static Lattice *LatticeJoin(Lattice *X, Lattice *Y)
     return L;
 }
 
-static void Param_Vertex_Common_Denominator(Param_Vertices *V)
+void Param_Vertex_Common_Denominator(Param_Vertices *V)
 {
     unsigned dim;
     Value lcm;
