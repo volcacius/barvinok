@@ -55,6 +55,7 @@ struct barvinok_options {
     #define	BV_APPROX_SCALE_NARROW	(1 << 1)
     #define	BV_APPROX_SCALE_NARROW2	(1 << 2)
     int			    scale_flags;
+    int			    volume_triangulate_lift;
 
     /* basis reduction options */
     #define	BV_GBR_NONE	0
@@ -86,7 +87,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_POLAPPROX	261
 #define BV_OPT_APPROX		262
 #define BV_OPT_SCALE		263
-#define BV_OPT_LAST		263
+#define BV_OPT_NO_LIFT  	264
+#define BV_OPT_LAST		264
 
 #define BV_GRP_APPROX		1
 #define BV_GRP_LAST		1
