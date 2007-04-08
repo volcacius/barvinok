@@ -226,13 +226,61 @@ static void Param_Inner_Product(Value *constraint, Matrix *Vertex,
     value_clear(tmp2);
 }
 
+struct parameter_point {
+    Vector *coord;
+    evalue **e;
+};
+
+struct parameter_point *parameter_point_new(unsigned nparam)
+{
+    struct parameter_point *point = ALLOC(struct parameter_point);
+    point->coord = Vector_Alloc(nparam+1);
+    point->e = NULL;
+    return point;
+}
+
+evalue **parameter_point_evalue(struct parameter_point *point)
+{
+    int j;
+    unsigned nparam = point->coord->Size-1;
+
+    if (point->e)
+	return point->e;
+
+    point->e = ALLOCN(evalue *, nparam);
+    for (j = 0; j < nparam; ++j) {
+	point->e[j] = ALLOC(evalue);
+	value_init(point->e[j]->d);
+	evalue_set(point->e[j], point->coord->p[j], point->coord->p[nparam]);
+    }
+
+    return point->e;
+}
+
+void parameter_point_free(struct parameter_point *point)
+{
+    int i;
+    unsigned nparam = point->coord->Size-1;
+
+    Vector_Free(point->coord);
+
+    if (point->e) {
+	for (i = 0; i < nparam; ++i) {
+	    free_evalue_refs(point->e[i]);
+	    free(point->e[i]);
+	}
+	free(point->e);
+    }
+    free(point);
+}
+
 /* Computes point in pameter space where polyhedron is non-empty.
  * For each of the parametric vertices, and each of the facets
  * not (always) containing the vertex, we remove the parameter
  * values for which the facet does contain the vertex.
  */
-static evalue **non_empty_point(Param_Polyhedron *PP, Param_Domain *D,
-				Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+static struct parameter_point *non_empty_point(Param_Polyhedron *PP,
+	Param_Domain *D, Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 {
     Param_Vertices *V;
     unsigned dim = P->Dimension;
@@ -240,7 +288,7 @@ static evalue **non_empty_point(Param_Polyhedron *PP, Param_Domain *D,
     unsigned nvar = dim - nparam;
     Polyhedron *RD, *cut, *tmp;
     Matrix *M;
-    evalue **point;
+    struct parameter_point *point;
     int i, j;
     unsigned cut_MaxRays = MaxRays;
     int nv;
@@ -278,16 +326,12 @@ static evalue **non_empty_point(Param_Polyhedron *PP, Param_Domain *D,
     if (emptyQ(RD))
 	point = NULL;
     else {
-	point = ALLOCN(evalue *, nvar);
+	point = parameter_point_new(nparam);
 	for (i = 0; i < RD->NbRays; ++i)
 	    if (value_notzero_p(RD->Ray[i][1+nparam]))
 		break;
 	assert(i < RD->NbRays);
-	for (j = 0; j < nparam; ++j) {
-	    point[j] = ALLOC(evalue);
-	    value_init(point[j]->d);
-	    evalue_set(point[j], RD->Ray[i][1+j], RD->Ray[i][1+nparam]);
-	}
+	Vector_Copy(RD->Ray[i]+1, point->coord->p, nparam+1);
     }
 
     if (RD != C)
@@ -353,12 +397,12 @@ static Matrix *barycenter(Param_Polyhedron *PP, Param_Domain *D)
  */
 static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
-				evalue **point, Polyhedron *C,
+				struct parameter_point *point, Polyhedron *C,
 				int row, Polyhedron *F, unsigned MaxRays);
 
 static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 				  unsigned dim, evalue ***matrix,
-				  evalue **point, Polyhedron *C,
+				  struct parameter_point *point, Polyhedron *C,
 				  int row, Polyhedron *F, unsigned MaxRays)
 {
     int j;
@@ -455,7 +499,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 
 static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
-				evalue **point,
+				struct parameter_point *point,
 				int row, unsigned MaxRays)
 {
     evalue mone;
@@ -484,7 +528,7 @@ static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 
     vol = determinant(matrix+1, dim);
 
-    val = evalue_substitute(vol, point);
+    val = evalue_substitute(vol, parameter_point_evalue(point));
 
     assert(value_notzero_p(val->d));
     assert(value_notzero_p(val->x.n));
@@ -508,7 +552,7 @@ static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 
 static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
-				evalue **point, Polyhedron *C,
+				struct parameter_point *point, Polyhedron *C,
 				int row, Polyhedron *F, unsigned MaxRays)
 {
     int nbV;
@@ -535,14 +579,8 @@ static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
 	vol = volume_simplex(PP, D, dim, matrix, point, row, MaxRays);
     }
 
-    if (point_computed) {
-	int i;
-	for (i = 0; i < C->Dimension; ++i) {
-	    free_evalue_refs(point[i]);
-	    free(point[i]);
-	}
-	free(point);
-    }
+    if (point_computed)
+	parameter_point_free(point);
 
     return vol;
 }
