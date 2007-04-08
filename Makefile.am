@@ -207,7 +207,13 @@ else
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
 endif
 
-check: check-enumerate check-enumerate_e check-test check-lexmin
+check: check-enumerate check-enumerate_e check-test check-lexmin check-approx
+check-approx: test_approx
+	@for i in $(top_srcdir)/tests/ehrhart/*; do \
+	    if test -f $$i; then \
+		echo $$i | ./test_approx -q -r 10 ; \
+	    fi \
+	done
 check-enumerate: barvinok_enumerate
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
