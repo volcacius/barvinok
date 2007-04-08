@@ -1906,17 +1906,12 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     Matrix *CT = NULL;
     evalue *eres;
     Polyhedron *Porig = P;
-    scale_data scaling;
     Polyhedron *T;
 
     if (do_scale) {
-	P = scale_init(P, C, &scaling, options);
-	if (P != Porig) {
-	    eres = barvinok_enumerate_with_options(P, C, options);
-	    Polyhedron_Free(P);
-	    scale_finish(eres, &scaling, options);
+	eres = scale_bound(P, C, options);
+	if (eres)
 	    return eres;
-	}
     }
 
     T = P;
@@ -1934,12 +1929,9 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 	eres = barvinok_enumerate_cst(P, CEq, options);
     else {
 	if (do_scale)
-	    P = scale(PP, P, &scaling, P != Porig, options);
-
-	eres = Param_Polyhedron_Enumerate(PP, P, C, CEq, CT, options);
-
-	if (do_scale)
-	    scale_finish(eres, &scaling, options);
+	    eres = scale(PP, P, C, CEq, CT, options);
+	else
+	    eres = Param_Polyhedron_Enumerate(PP, P, C, CEq, CT, options);
 	if (CEq)
 	    Polyhedron_Free(CEq);
     }

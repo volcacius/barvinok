@@ -6,22 +6,15 @@ struct barvinok_options;
 extern "C" {
 #endif
 
-struct scale_data {
-    Value   	det;
-    int	    	save_approximation;
-};
-
 Polyhedron *Polyhedron_Flate(Polyhedron *P, unsigned nparam, int inflate,
 			     unsigned MaxRays);
 void Param_Vertex_Common_Denominator(Param_Vertices *V);
 
-Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
-		       struct barvinok_options *options);
-Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
-		  struct scale_data *scaling, int free_P,
-		  struct barvinok_options *options);
-void scale_finish(evalue *e, struct scale_data *scaling,
-		  struct barvinok_options *options);
+evalue *scale_bound(Polyhedron *P, Polyhedron *C,
+		    struct barvinok_options *options);
+evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
+	      Polyhedron *CEq, Matrix *CT,
+	      struct barvinok_options *options);
 
 #if defined(__cplusplus)
 }

@@ -1,3 +1,4 @@
+#include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include "scale.h"
@@ -530,8 +531,12 @@ static void Param_Polyhedron_Scale(Param_Polyhedron *PP, Polyhedron **P,
 	Param_Polyhedron_Scale_Integer_Slow(PP, P, L, det, options->MaxRays);
 }
 
-Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
-		       struct barvinok_options *options)
+/* If scaling is to be performed in combination with deflation/inflation,
+ * do both and return the result.
+ * Otherwise return NULL.
+ */
+evalue *scale_bound(Polyhedron *P, Polyhedron *C,
+		    struct barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
     Polyhedron *Porig = P;
@@ -539,14 +544,17 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
     int scale_narrow = options->scale_flags & BV_APPROX_SCALE_NARROW;
     int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
     Lattice *L = NULL;
-
-    value_init(scaling->det);
-    value_set_si(scaling->det, 1);
-    scaling->save_approximation = options->polynomial_approximation;
+    Value det;
+    int save_approximation;
+    evalue *eres;
 
     if (options->polynomial_approximation == BV_APPROX_SIGN_NONE ||
         options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
-	return P;
+	return NULL;
+
+    value_init(det);
+    value_set_si(det, 1);
+    save_approximation = options->polynomial_approximation;
 
     if (scale_narrow || scale_narrow2) {
 	Param_Polyhedron *PP;
@@ -554,7 +562,7 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
 	if (PP_MaxRays & POL_NO_DUAL)
 	    PP_MaxRays = 0;
 	PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
-	Param_Polyhedron_Scale(PP, &P, &L, &scaling->det, options);
+	Param_Polyhedron_Scale(PP, &P, &L, &det, options);
 	Param_Polyhedron_Free(PP);
 	if (scale_narrow2) {
 	    Polyhedron_Free(P);
@@ -576,35 +584,43 @@ Polyhedron *scale_init(Polyhedron *P, Polyhedron *C, struct scale_data *scaling,
 	Polyhedron_Free(T);
     if (L)
 	Matrix_Free(L);
-    return P;
+
+    eres = barvinok_enumerate_with_options(P, C, options);
+    Polyhedron_Free(P);
+
+    if (value_notone_p(det))
+	evalue_div(eres, det);
+    value_clear(det);
+    options->approximation_method = BV_APPROX_SCALE;
+    options->polynomial_approximation = save_approximation;
+
+    return eres;
 }
 
-Polyhedron *scale(Param_Polyhedron *PP, Polyhedron *P,
-		  struct scale_data *scaling, int free_P,
-		  struct barvinok_options *options)
+evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
+	      Polyhedron *CEq, Matrix *CT,
+	      struct barvinok_options *options)
 {
     Polyhedron *T = P;
     unsigned MaxRays;
+    evalue *eres;
+    Value det;
+
+    value_init(det);
+    value_set_si(det, 1);
 
     MaxRays = options->MaxRays;
     POL_UNSET(options->MaxRays, POL_INTEGER);
-
-    Param_Polyhedron_Scale(PP, &T, NULL, &scaling->det, options);
-    if (free_P)
-	Polyhedron_Free(P);
-
+    Param_Polyhedron_Scale(PP, &T, NULL, &det, options);
     options->MaxRays = MaxRays;
 
-    return T;
-}
+    eres = Param_Polyhedron_Enumerate(PP, T, C, CEq, CT, options);
+    if (P != T)
+	Polyhedron_Free(T);
 
-void scale_finish(evalue *e, struct scale_data *scaling,
-		  struct barvinok_options *options)
-{
-    if (value_notone_p(scaling->det))
-	evalue_div(e, scaling->det);
-    value_clear(scaling->det);
-    /* reset options that may have been changed */
-    options->approximation_method = BV_APPROX_SCALE;
-    options->polynomial_approximation = scaling->save_approximation;
+    if (value_notone_p(det))
+	evalue_div(eres, det);
+    value_clear(det);
+
+    return eres;
 }
