@@ -109,52 +109,32 @@ const char *scale_opts[] = {
     NULL
 };
 
-struct argp_option barvinok_argp_options[] = {
+static struct argp_option approx_argp_options[] = {
+    { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
+    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume",	0,
+	"method to use in polynomial approximation [default: drop]" },
+    { "scale-options",	    BV_OPT_SCALE,	    "fast|slow,narrow|narrow2",	0 },
+    { 0 }
+};
+
+static struct argp_option barvinok_argp_options[] = {
     { "index",		    BV_OPT_MAXINDEX,	    "int",		0,
        "maximal index of simple cones in decomposition" },
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
-    { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
-    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume",	0,
-	"method to use in polynomial approximation [default: drop]" },
-    { "scale-options",	    BV_OPT_SCALE,	    "fast|slow,narrow|narrow2",	0 },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
     { "version",	    'V',		    0,			0 },
     { 0 }
 };
 
-error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
+static error_t approx_parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct barvinok_options *options = state->input;
     char *subopt;
 
     switch (key) {
-    case 'V':
-	printf(barvinok_version());
-	exit(0);
-    case BV_OPT_SPECIALIZATION:
-	if (!strcmp(arg, "bf"))
-	    options->incremental_specialization = BV_SPECIALIZATION_BF;
-	else if (!strcmp(arg, "df"))
-	    options->incremental_specialization = BV_SPECIALIZATION_DF;
-	else if (!strcmp(arg, "random"))
-	    options->incremental_specialization = BV_SPECIALIZATION_RANDOM;
-	break;
-    case BV_OPT_PRIMAL:
-	options->primal = 1;
-	break;
-    case BV_OPT_TABLE:
-	options->lookup_table = 1;
-	break;
-    case BV_OPT_GBR:
-	if (!strcmp(arg, "cdd"))
-	    options->gbr_lp_solver = BV_GBR_CDD;
-	break;
-    case BV_OPT_MAXINDEX:
-	options->max_index = strtoul(arg, NULL, 0);
-	break;
     case BV_OPT_POLAPPROX:
 	if (!arg) {
 	    options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
@@ -215,6 +195,54 @@ error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct barvinok_options *options = state->input;
+    char *subopt;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = options;
+	break;
+    case 'V':
+	printf(barvinok_version());
+	exit(0);
+    case BV_OPT_SPECIALIZATION:
+	if (!strcmp(arg, "bf"))
+	    options->incremental_specialization = BV_SPECIALIZATION_BF;
+	else if (!strcmp(arg, "df"))
+	    options->incremental_specialization = BV_SPECIALIZATION_DF;
+	else if (!strcmp(arg, "random"))
+	    options->incremental_specialization = BV_SPECIALIZATION_RANDOM;
+	break;
+    case BV_OPT_PRIMAL:
+	options->primal = 1;
+	break;
+    case BV_OPT_TABLE:
+	options->lookup_table = 1;
+	break;
+    case BV_OPT_GBR:
+	if (!strcmp(arg, "cdd"))
+	    options->gbr_lp_solver = BV_GBR_CDD;
+	break;
+    case BV_OPT_MAXINDEX:
+	options->max_index = strtoul(arg, NULL, 0);
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+static struct argp approx_argp = {
+    approx_argp_options, approx_parse_opt, 0, 0
+};
+
+static struct argp_child barvinok_children[] = {
+    { &approx_argp,    	0,	"polynomial approximation",	BV_GRP_APPROX },
+    { 0 }
+};
+
 struct argp barvinok_argp = {
-    barvinok_argp_options, barvinok_parse_opt, 0, 0
+    barvinok_argp_options, barvinok_parse_opt, 0, 0, barvinok_children
 };

@@ -467,8 +467,8 @@ int main(int argc, char **argv)
     struct arguments options;
     static struct argp_child argp_children[] = {
 	{ &barvinok_argp,    	0,	0,  		0 },
-	{ &verify_argp,    	0,	"verification",	1 },
-	{ &convert_argp,    	0,	"output conversion",	2 },
+	{ &verify_argp,    	0,	"verification",		BV_GRP_LAST+1 },
+	{ &convert_argp,    	0,	"output conversion",    BV_GRP_LAST+2 },
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };

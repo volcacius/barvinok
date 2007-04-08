@@ -88,6 +88,9 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_SCALE		263
 #define BV_OPT_LAST		263
 
+#define BV_GRP_APPROX		1
+#define BV_GRP_LAST		1
+
 struct argp;
 extern struct argp barvinok_argp;
 
