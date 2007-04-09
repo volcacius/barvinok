@@ -26,12 +26,10 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 	return 0;		/* empty validity domain */
     }
 
-    if (D->next)
-	Polyhedron_Free(C);
     if (CT)
 	Domain_Free(Dt);
 
-    fVD[nd] = Domain_Copy(rVD);
+    fVD[nd] = Domain_Copy(C);
     for (i = 0 ; i < nd; ++i) {
 	Polyhedron *F;
 	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], options->MaxRays);
@@ -42,12 +40,18 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 	F = DomainSimplify(I, fVD[nd], options->MaxRays);
 	if (F->NbEq == 1) {
 	    Polyhedron *T = rVD;
-	    rVD = DomainDifference(rVD, F, options->MaxRays);
+	    Polyhedron *FE = CT ? DomainPreimage(F, CT, options->MaxRays) : F;
+	    rVD = DomainDifference(rVD, FE, options->MaxRays);
+	    if (CT)
+		Domain_Free(FE);
 	    Domain_Free(T);
 	}
 	Domain_Free(F);
 	Domain_Free(I);
     }
+
+    if (D->next)
+	Polyhedron_Free(C);
 
     rVD = DomainConstraintSimplify(rVD, options->MaxRays);
     if (emptyQ(rVD)) {
