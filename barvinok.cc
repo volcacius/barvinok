@@ -1804,67 +1804,15 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
     return E;
 }
 
-static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
-				       barvinok_options *options)
+evalue *Param_Polyhedron_Enumerate(Param_Polyhedron *PP, Polyhedron *P,
+				   Polyhedron *C,
+				   Polyhedron *CEq, Matrix *CT,
+				   struct barvinok_options *options)
 {
-    unsigned nparam = C->Dimension;
-    bool do_scale = options->approximation_method == BV_APPROX_SCALE;
-
-    if (options->approximation_method == BV_APPROX_VOLUME)
-	return Param_Polyhedron_Volume(P, C, options);
-
-    if (P->Dimension - nparam == 1 && !do_scale)
-	return ParamLine_Length(P, C, options);
-
-    Param_Polyhedron *PP = NULL;
-    Polyhedron *CEq = NULL, *pVD;
-    Matrix *CT = NULL;
+    evalue *eres;
     Param_Domain *D, *next;
     Param_Vertices *V;
-    evalue *eres;
-    Polyhedron *Porig = P;
-    scale_data scaling;
-    Polyhedron *T;
-
-    if (do_scale) {
-	P = scale_init(P, C, &scaling, options);
-	if (P != Porig) {
-	    eres = barvinok_enumerate_with_options(P, C, options);
-	    Polyhedron_Free(P);
-	    scale_finish(eres, &scaling, options);
-	    return eres;
-	}
-    }
-
-    T = P;
-    PP = Polyhedron2Param_SD(&T, C, options->MaxRays, &CEq, &CT);
-    if (T != P && P != Porig)
-	Polyhedron_Free(P);
-    P = T;
-
-    if (isIdentity(CT)) {
-	Matrix_Free(CT);
-	CT = NULL;
-    } else {
-	assert(CT->NbRows != CT->NbColumns);
-	if (CT->NbRows == 1) {		// no more parameters
-	    eres = barvinok_enumerate_cst(P, CEq, options);
-out:
-	    if (CT)
-		Matrix_Free(CT);
-	    if (PP)
-		Param_Polyhedron_Free(PP);
-	    if (P != Porig)
-		Polyhedron_Free(P);
-
-	    return eres;
-	}
-	nparam = CT->NbRows - 1;
-    }
-
-    if (do_scale)
-	P = scale(PP, P, &scaling, P != Porig, options);
-
+    unsigned nparam = CT ? CT->NbRows - 1 : C->Dimension;
     unsigned dim = P->Dimension - nparam;
 
     ALLOC(evalue, eres);
@@ -1884,10 +1832,11 @@ try_again:
 
     et = enumerator_base::create(P, dim, PP->nbV, options);
 
-    for(nd = 0, D=PP->D; D; D=next) {
+    for (nd = 0, D=PP->D; D; D=next) {
+	Polyhedron *rVD, *pVD;
 	next = D->next;
 
-	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq, fVD, nd, options);
+	rVD = reduce_domain(D->Domain, CT, CEq, fVD, nd, options);
 	if (!rVD)
 	    continue;
 
@@ -1937,12 +1886,72 @@ try_again:
     delete [] s;
     delete [] fVD;
 
-    if (do_scale)
-	scale_finish(eres, &scaling, options);
+    return eres;
+}
 
-    if (CEq)
-	Polyhedron_Free(CEq);
-    goto out;
+static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
+				       barvinok_options *options)
+{
+    unsigned nparam = C->Dimension;
+    bool do_scale = options->approximation_method == BV_APPROX_SCALE;
+
+    if (options->approximation_method == BV_APPROX_VOLUME)
+	return Param_Polyhedron_Volume(P, C, options);
+
+    if (P->Dimension - nparam == 1 && !do_scale)
+	return ParamLine_Length(P, C, options);
+
+    Param_Polyhedron *PP = NULL;
+    Polyhedron *CEq = NULL;
+    Matrix *CT = NULL;
+    evalue *eres;
+    Polyhedron *Porig = P;
+    scale_data scaling;
+    Polyhedron *T;
+
+    if (do_scale) {
+	P = scale_init(P, C, &scaling, options);
+	if (P != Porig) {
+	    eres = barvinok_enumerate_with_options(P, C, options);
+	    Polyhedron_Free(P);
+	    scale_finish(eres, &scaling, options);
+	    return eres;
+	}
+    }
+
+    T = P;
+    PP = Polyhedron2Param_SD(&T, C, options->MaxRays, &CEq, &CT);
+    if (T != P && P != Porig)
+	Polyhedron_Free(P);
+    P = T;
+
+    if (isIdentity(CT)) {
+	Matrix_Free(CT);
+	CT = NULL;
+    }
+
+    if (CT && CT->NbRows == 1)
+	eres = barvinok_enumerate_cst(P, CEq, options);
+    else {
+	if (do_scale)
+	    P = scale(PP, P, &scaling, P != Porig, options);
+
+	eres = Param_Polyhedron_Enumerate(PP, P, C, CEq, CT, options);
+
+	if (do_scale)
+	    scale_finish(eres, &scaling, options);
+	if (CEq)
+	    Polyhedron_Free(CEq);
+    }
+
+    if (CT)
+	Matrix_Free(CT);
+    if (PP)
+	Param_Polyhedron_Free(PP);
+    if (P != Porig)
+	Polyhedron_Free(P);
+
+    return eres;
 }
 
 Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays)

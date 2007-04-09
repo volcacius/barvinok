@@ -17,6 +17,10 @@ Enumeration* barvinok_enumerate(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options);
+evalue *Param_Polyhedron_Enumerate(Param_Polyhedron *PP, Polyhedron *P,
+				   Polyhedron *C,
+				   Polyhedron *CEq, Matrix *CT,
+				   struct barvinok_options *options);
 evalue* barvinok_enumerate_e(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, unsigned MaxRays);
 evalue* barvinok_enumerate_e_with_options(Polyhedron *P, 
