@@ -2,6 +2,10 @@
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include "scale.h"
+#include "reduce_domain.h"
+
+#define ALLOC(type) (type*)malloc(sizeof(type))
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 /* If a vertex is described by A x + B p + c = 0, then
  * M = [A B] and we want to compute a linear transformation L such
@@ -531,47 +535,13 @@ static void Param_Polyhedron_Scale(Param_Polyhedron *PP, Polyhedron **P,
 	Param_Polyhedron_Scale_Integer_Slow(PP, P, L, det, options->MaxRays);
 }
 
-/* If scaling is to be performed in combination with deflation/inflation,
- * do both and return the result.
- * Otherwise return NULL.
- */
-evalue *scale_bound(Polyhedron *P, Polyhedron *C,
-		    struct barvinok_options *options)
+static evalue *enumerate_flated(Polyhedron *P, Polyhedron *C, Lattice *L,
+				struct barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
-    Polyhedron *Porig = P;
-    Polyhedron *T;
-    int scale_narrow = options->scale_flags & BV_APPROX_SCALE_NARROW;
-    int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
-    Lattice *L = NULL;
-    Value det;
-    int save_approximation;
     evalue *eres;
+    int save_approximation = options->polynomial_approximation;
 
-    if (options->polynomial_approximation == BV_APPROX_SIGN_NONE ||
-        options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
-	return NULL;
-
-    value_init(det);
-    value_set_si(det, 1);
-    save_approximation = options->polynomial_approximation;
-
-    if (scale_narrow || scale_narrow2) {
-	Param_Polyhedron *PP;
-	unsigned PP_MaxRays = options->MaxRays;
-	if (PP_MaxRays & POL_NO_DUAL)
-	    PP_MaxRays = 0;
-	PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
-	Param_Polyhedron_Scale(PP, &P, &L, &det, options);
-	Param_Polyhedron_Free(PP);
-	if (scale_narrow2) {
-	    Polyhedron_Free(P);
-	    P = Porig;
-	}
-	/* Don't scale again (on this polytope) */
-	options->approximation_method = BV_APPROX_NONE;
-    }
-    T = P;
     if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
 	P = flate(P, L, nparam, 1, options);
     if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
@@ -579,22 +549,150 @@ evalue *scale_bound(Polyhedron *P, Polyhedron *C,
 
     /* Don't deflate/inflate again (on this polytope) */
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
-
-    if (T != Porig)
-	Polyhedron_Free(T);
-    if (L)
-	Matrix_Free(L);
-
     eres = barvinok_enumerate_with_options(P, C, options);
+    options->polynomial_approximation = save_approximation;
     Polyhedron_Free(P);
 
+    return eres;
+}
+
+static evalue *PP_enumerate_narrow_flated(Param_Polyhedron *PP,
+				       	  Polyhedron *P, Polyhedron *C,
+				       	  struct barvinok_options *options)
+{
+    Polyhedron *Porig = P;
+    int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
+    Lattice *L = NULL;
+    Value det;
+    evalue *eres;
+
+    value_init(det);
+    value_set_si(det, 1);
+
+    Param_Polyhedron_Scale(PP, &P, &L, &det, options);
+    Param_Polyhedron_Free(PP);
+    if (scale_narrow2) {
+	Polyhedron_Free(P);
+	P = Porig;
+    }
+    /* Don't scale again (on this polytope) */
+    options->approximation_method = BV_APPROX_NONE;
+    eres = enumerate_flated(P, C, L, options);
+    options->approximation_method = BV_APPROX_SCALE;
+    Matrix_Free(L);
+    if (P != Porig)
+	Polyhedron_Free(P);
     if (value_notone_p(det))
 	evalue_div(eres, det);
     value_clear(det);
-    options->approximation_method = BV_APPROX_SCALE;
-    options->polynomial_approximation = save_approximation;
-
     return eres;
+}
+
+static Param_Polyhedron *Param_Polyhedron_Domain(Param_Polyhedron *PP,
+						 Param_Domain *D,
+						 Polyhedron *rVD)
+{
+    int nv;
+    Param_Polyhedron *PP_D;
+    int i, ix;
+    unsigned bx;
+    Param_Vertices **next, *V;
+
+    PP_D = ALLOC(Param_Polyhedron);
+    PP_D->D = ALLOC(Param_Domain);
+    PP_D->D->next = NULL;
+    PP_D->D->Domain = Domain_Copy(rVD);
+    PP_D->V = NULL;
+
+    nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
+    PP_D->D->F = ALLOCN(unsigned, nv);
+    memset(PP_D->D->F, 0, nv * sizeof(unsigned));
+
+    next = &PP_D->V;
+    i = 0;
+    ix = 0;
+    bx = MSB;
+    FORALL_PVertex_in_ParamPolyhedron(V, D, PP)
+	Param_Vertices *V2 = ALLOC(Param_Vertices);
+	V2->Vertex = Matrix_Copy(V->Vertex);
+	V2->Domain = NULL;
+	V2->next = NULL;
+	*next = V2;
+	next = &V2->next;
+	PP_D->D->F[ix] |= bx;
+	NEXT(ix, bx);
+	++i;
+    END_FORALL_PVertex_in_ParamPolyhedron;
+    PP_D->nbV = i;
+
+    return PP_D;
+}
+
+static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
+				        struct barvinok_options *options)
+{
+    unsigned PP_MaxRays = options->MaxRays;
+    Param_Polyhedron *PP;
+    if (PP_MaxRays & POL_NO_DUAL)
+	PP_MaxRays = 0;
+    PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
+
+    if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
+	int nd = -1;
+	evalue *tmp, *eres = NULL;
+	Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
+
+	FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
+	    Polyhedron *P2, *CA;
+	    /* Intersect with D->Domain, so we only have the relevant constraints
+	     * left.  Don't use rVD, though, since we still want to recognize
+	     * the defining constraints of the parametric vertices.
+	     */
+	    CA = align_context(D->Domain, P->Dimension, options->MaxRays);
+	    P2 = DomainIntersection(P, CA, options->MaxRays);
+	    Polyhedron_Free(CA);
+	    /* Use rVD for context, to avoid overlapping domains in
+	     * results of computations in different chambers.
+	     */
+	    Param_Polyhedron *PP_D = Param_Polyhedron_Domain(PP, D, rVD);
+	    tmp = PP_enumerate_narrow_flated(PP_D, P2, rVD, options);
+	    Polyhedron_Free(P2);
+	    if (!eres)
+		eres = tmp;
+	    else {
+		eadd(tmp, eres);
+		free_evalue_refs(tmp);
+		free(tmp);
+	    }
+	    Polyhedron_Free(rVD);
+	END_FORALL_REDUCED_DOMAIN
+	Param_Polyhedron_Free(PP);
+	if (!eres)
+	    eres = evalue_zero();
+	Polyhedron_Free(TC);
+	return eres;
+    } else
+	return PP_enumerate_narrow_flated(PP, P, C, options);
+}
+
+/* If scaling is to be performed in combination with deflation/inflation,
+ * do both and return the result.
+ * Otherwise return NULL.
+ */
+evalue *scale_bound(Polyhedron *P, Polyhedron *C,
+		    struct barvinok_options *options)
+{
+    int scale_narrow = options->scale_flags & BV_APPROX_SCALE_NARROW;
+    int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
+
+    if (options->polynomial_approximation == BV_APPROX_SIGN_NONE ||
+        options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
+	return NULL;
+
+    if (scale_narrow || scale_narrow2)
+	return enumerate_narrow_flated(P, C, options);
+    else
+	return enumerate_flated(P, C, NULL, options);
 }
 
 evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
@@ -603,8 +701,36 @@ evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
 {
     Polyhedron *T = P;
     unsigned MaxRays;
-    evalue *eres;
+    evalue *eres = NULL;
     Value det;
+
+    if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
+	int nd = -1;
+	evalue *tmp;
+	Polyhedron *TC = true_context(P, CT, CEq, options->MaxRays);
+
+	FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options, i, D, rVD)
+	    Polyhedron *pVD;
+	    pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
+	    Param_Polyhedron *PP_D = Param_Polyhedron_Domain(PP, D, pVD);
+	    tmp = scale(PP_D, P, rVD, rVD, CT, options);
+	    if (!eres)
+		eres = tmp;
+	    else {
+		eadd(tmp, eres);
+		free_evalue_refs(tmp);
+		free(tmp);
+	    }
+	    Param_Polyhedron_Free(PP_D);
+	    if (rVD != pVD)
+		Domain_Free(pVD);
+	    Polyhedron_Free(rVD);
+	END_FORALL_REDUCED_DOMAIN
+	if (!eres)
+	    eres = evalue_zero();
+	Polyhedron_Free(TC);
+	return eres;
+    }
 
     value_init(det);
     value_set_si(det, 1);

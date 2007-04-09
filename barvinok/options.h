@@ -54,6 +54,7 @@ struct barvinok_options {
     #define	BV_APPROX_SCALE_FAST	(1 << 0)
     #define	BV_APPROX_SCALE_NARROW	(1 << 1)
     #define	BV_APPROX_SCALE_NARROW2	(1 << 2)
+    #define	BV_APPROX_SCALE_CHAMBER	(1 << 3)
     int			    scale_flags;
     int			    volume_triangulate_lift;
 

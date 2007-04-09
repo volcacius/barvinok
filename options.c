@@ -99,7 +99,8 @@ enum {
     SCALE_FAST,
     SCALE_SLOW,
     SCALE_NARROW,
-    SCALE_NARROW2
+    SCALE_NARROW2,
+    SCALE_CHAMBER,
 };
 
 const char *scale_opts[] = {
@@ -107,6 +108,7 @@ const char *scale_opts[] = {
     "slow",
     "narrow",
     "narrow2",
+    "chamber",
     NULL
 };
 
@@ -114,7 +116,8 @@ static struct argp_option approx_argp_options[] = {
     { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
     { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume",	0,
 	"method to use in polynomial approximation [default: drop]" },
-    { "scale-options",	    BV_OPT_SCALE,	    "fast|slow,narrow|narrow2",	0 },
+    { "scale-options",	    BV_OPT_SCALE,
+	"fast|slow,narrow|narrow2,chamber",	0 },
     { "no-lift",	    BV_OPT_NO_LIFT,	    NULL,	    0,
 	"don't perform lifting triangulation in volume computation" },
     { 0 }
@@ -179,6 +182,9 @@ static error_t approx_parse_opt(int key, char *arg, struct argp_state *state)
 	    case SCALE_NARROW2:
 		options->scale_flags |= BV_APPROX_SCALE_NARROW2;
 		options->scale_flags &= ~BV_APPROX_SCALE_NARROW;
+		break;
+	    case SCALE_CHAMBER:
+		options->scale_flags |= BV_APPROX_SCALE_CHAMBER;
 		break;
 	    default:
 		argp_error(state, "unknown suboption '%s'\n", subopt);
