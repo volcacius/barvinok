@@ -1810,8 +1810,7 @@ evalue *Param_Polyhedron_Enumerate(Param_Polyhedron *PP, Polyhedron *P,
 				   struct barvinok_options *options)
 {
     evalue *eres;
-    Param_Domain *D, *next;
-    Param_Vertices *V;
+    Param_Domain *D;
     unsigned nparam = CT ? CT->NbRows - 1 : C->Dimension;
     unsigned dim = P->Dimension - nparam;
 
@@ -1823,7 +1822,6 @@ evalue *Param_Polyhedron_Enumerate(Param_Polyhedron *PP, Polyhedron *P,
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
     struct section { Polyhedron *D; evalue E; };
     section *s = new section[nd];
-    Polyhedron **fVD = new Polyhedron_p[nd];
 
     enumerator_base *et = NULL;
 try_again:
@@ -1832,19 +1830,15 @@ try_again:
 
     et = enumerator_base::create(P, dim, PP->nbV, options);
 
-    for (nd = 0, D=PP->D; D; D=next) {
-	Polyhedron *rVD, *pVD;
-	next = D->next;
-
-	rVD = reduce_domain(D->Domain, CT, CEq, fVD, nd, options);
-	if (!rVD)
-	    continue;
+    FORALL_REDUCED_DOMAIN(PP, CT, CEq, nd, options, i, D, rVD)
+	Param_Vertices *V;
+	Polyhedron *pVD;
 
 	pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
 
-	value_init(s[nd].E.d);
-	evalue_set_si(&s[nd].E, 0, 1);
-	s[nd].D = rVD;
+	value_init(s[i].E.d);
+	evalue_set_si(&s[i].E, 0, 1);
+	s[i].D = rVD;
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
 	    if (!et->vE[_i])
@@ -1853,23 +1847,22 @@ try_again:
 		} catch (OrthogonalException &e) {
 		    if (rVD != pVD)
 			Domain_Free(pVD);
-		    for (; nd >= 0; --nd) {
-			free_evalue_refs(&s[nd].E);
-			Domain_Free(s[nd].D);
-			Domain_Free(fVD[nd]);
+		    FORALL_REDUCED_DOMAIN_RESET(i+1);
+		    for (; i >= 0; --i) {
+			free_evalue_refs(&s[i].E);
+			Domain_Free(s[i].D);
 		    }
 		    goto try_again;
 		}
-	    eadd(et->vE[_i] , &s[nd].E);
+	    eadd(et->vE[_i] , &s[i].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	evalue_range_reduction_in_domain(&s[nd].E, pVD);
+	evalue_range_reduction_in_domain(&s[i].E, pVD);
 
 	if (CT)
-	    addeliminatedparams_evalue(&s[nd].E, CT);
-	++nd;
+	    addeliminatedparams_evalue(&s[i].E, CT);
 	if (rVD != pVD)
 	    Domain_Free(pVD);
-    }
+    END_FORALL_REDUCED_DOMAIN
 
     delete et;
     if (nd == 0)
@@ -1880,11 +1873,9 @@ try_again:
 	    EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
 	    value_clear(eres->x.p->arr[2*j+1].d);
 	    eres->x.p->arr[2*j+1] = s[j].E;
-	    Domain_Free(fVD[j]);
 	}
     }
     delete [] s;
-    delete [] fVD;
 
     return eres;
 }
@@ -2783,15 +2774,10 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	;
 
     Polyhedron **VD = new Polyhedron_p[nd];
-    Polyhedron **fVD = new Polyhedron_p[nd];
-    for(nd = 0, D=PP->D; D; D=D->next) {
-	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq, fVD, nd,  options);
-	if (!rVD)
-	    continue;
-
+    FORALL_REDUCED_DOMAIN(PP, CT, CEq, nd, options, i, D, rVD)
 	VD[nd++] = rVD;
 	last = D;
-    }
+    END_FORALL_REDUCED_DOMAIN
 
     evalue *EP = 0;
 
@@ -2851,12 +2837,9 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	}
     }
 
-    for (int i = 0; i < nd; ++i) {
+    for (int i = 0; i < nd; ++i)
 	Polyhedron_Free(VD[i]);
-	Polyhedron_Free(fVD[i]);
-    }
     delete [] VD;
-    delete [] fVD;
     value_clear(c);
 
     if (!EP && nvar == 0) {

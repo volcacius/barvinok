@@ -2638,8 +2638,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     Polyhedron *CEq = NULL, *pVD;
     Matrix *CT = NULL;
     Matrix *T = NULL, *CP = NULL;
-    Param_Domain *D, *next;
-    Param_Vertices *V;
     Polyhedron *Porig = P;
     Polyhedron *Corig = C;
     vector<max_term*> all_max;
@@ -2689,9 +2687,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 
     unsigned dim = P->Dimension - nparam;
 
-    int nd;
-    for (nd = 0, D=PP->D; D; ++nd, D=D->next);
-    Polyhedron **fVD = new Polyhedron*[nd];
+    int nd = -1;
 
     indicator_constructor ic(P, dim, PP, T);
 
@@ -2699,13 +2695,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     construct_rational_vertices(PP, T, T ? T->NbRows-nparam-1 : dim,
 				nparam, all_vertices);
 
-    for (nd = 0, D=PP->D; D; D=next) {
-	next = D->next;
-
-	Polyhedron *rVD = reduce_domain(D->Domain, CT, CEq,
-					fVD, nd, options->verify.barvinok);
-	if (!rVD)
-	    continue;
+    FORALL_REDUCED_DOMAIN(PP, CT, CEq, nd, options->verify.barvinok, i, D, rVD)
+	Param_Vertices *V;
 
 	pVD = CT ? DomainImage(rVD, CT, options->verify.barvinok->MaxRays) : rVD;
 
@@ -2725,11 +2716,10 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 		maxima[j]->substitute(CP, options->verify.barvinok);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
-	++nd;
 	if (rVD != pVD)
 	    Domain_Free(pVD);
 	Domain_Free(rVD);
-    }
+    END_FORALL_REDUCED_DOMAIN
     for (int i = 0; i < all_vertices.size(); ++i)
 	delete all_vertices[i];
     if (CP)
@@ -2739,10 +2729,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     Param_Polyhedron_Free(PP);
     if (CEq)
 	Polyhedron_Free(CEq);
-    for (--nd; nd >= 0; --nd) {
-	Domain_Free(fVD[nd]);
-    }
-    delete [] fVD;
     if (C != Corig)
 	Polyhedron_Free(C);
     if (P != Porig)

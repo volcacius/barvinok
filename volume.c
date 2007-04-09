@@ -709,9 +709,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     evalue *vol;
     int nd;
     struct section { Polyhedron *D; evalue *E; } *s;
-    Polyhedron **fVD;
-    Param_Domain *D, *next;
-    Polyhedron *CA, *F;
+    Param_Domain *D;
 
     if (options->polynomial_approximation == BV_APPROX_SIGN_NONE)
 	options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
@@ -745,32 +743,24 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 
     for (nd = 0, D = PP->D; D; ++nd, D = D->next);
     s = ALLOCN(struct section, nd);
-    fVD = ALLOCN(Polyhedron *, nd);
 
     matrix = ALLOCN(evalue **, nvar+1);
     for (i = 0; i < nvar+1; ++i)
 	matrix[i] = ALLOCN(evalue *, nvar);
 
-    for (nd = 0, D = PP->D; D; D = next) {
-	Polyhedron *rVD = reduce_domain(D->Domain, NULL, NULL, fVD, nd, options);
-
-	next = D->next;
-
-	if (!rVD)
-	    continue;
+    FORALL_REDUCED_DOMAIN(PP, NULL, NULL, nd, options, i, D, rVD)
+	Polyhedron *CA, *F;
 
 	CA = align_context(D->Domain, P->Dimension, MaxRays);
 	F = DomainIntersection(P, CA, options->MaxRays);
 	Domain_Free(CA);
 
-	s[nd].D = rVD;
-	s[nd].E = volume_in_domain(PP, D, nvar, matrix, NULL, rVD,
+	s[i].D = rVD;
+	s[i].E = volume_in_domain(PP, D, nvar, matrix, NULL, rVD,
 				   0, F, options);
 	Domain_Free(F);
-	evalue_div(s[nd].E, fact);
-
-	++nd;
-    }
+	evalue_div(s[i].E, fact);
+    END_FORALL_REDUCED_DOMAIN
     options->MaxRays = MaxRays;
 
     vol = ALLOC(evalue);
@@ -786,11 +776,9 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 	    value_clear(vol->x.p->arr[2*i+1].d);
 	    vol->x.p->arr[2*i+1] = *s[i].E;
 	    free(s[i].E);
-	    Domain_Free(fVD[i]);
 	}
     }
     free(s);
-    free(fVD);
 
     for (i = 0; i < nvar+1; ++i)
 	free(matrix[i]);
