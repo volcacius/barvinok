@@ -406,48 +406,6 @@ static Matrix *InsertColumns(Matrix *M, int pos, int n)
     return R;
 }
 
-void evalue_substitute(evalue *e, evalue **subs)
-{
-    evalue *v;
-
-    if (value_notzero_p(e->d))
-	return;
-
-    enode *p = e->x.p;
-    for (int i = 0; i < p->size; ++i)
-	evalue_substitute(&p->arr[i], subs);
-
-    if (p->type == polynomial)
-	v = subs[p->pos-1];
-    else {
-	v = new evalue;
-	value_init(v->d);
-	value_set_si(v->d, 0);
-	v->x.p = new_enode(p->type, 3, -1);
-	value_clear(v->x.p->arr[0].d);
-	v->x.p->arr[0] = p->arr[0];
-	evalue_set_si(&v->x.p->arr[1], 0, 1);
-	evalue_set_si(&v->x.p->arr[2], 1, 1);
-    }
-
-    int offset = type_offset(p);
-
-    for (int i = p->size-1; i >= offset+1; i--) {
-	emul(v, &p->arr[i]);
-	eadd(&p->arr[i], &p->arr[i-1]);
-	free_evalue_refs(&(p->arr[i]));
-    }
-
-    if (p->type != polynomial) {
-	free_evalue_refs(v);
-	delete v;
-    }
-
-    value_clear(e->d);
-    *e = p->arr[offset];
-    free(p);
-}
-
 void EDomain_floor::substitute(evalue **subs, Matrix *T)
 {
     /* This is a hack.  The EDomain_floor elements are possibly shared

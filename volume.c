@@ -133,7 +133,7 @@ static Param_Domain *face_vertices(Param_Polyhedron *PP, Param_Domain *D,
 
 /* Substitute parameters by the corresponding element in subs
  */
-static evalue *evalue_substitute(evalue *e, evalue **subs)
+static evalue *evalue_substitute_new(evalue *e, evalue **subs)
 {
     evalue *res = NULL;
     evalue *c;
@@ -149,13 +149,13 @@ static evalue *evalue_substitute(evalue *e, evalue **subs)
 
     res = evalue_zero();
     for (i = e->x.p->size-1; i > 0; --i) {
-	c = evalue_substitute(&e->x.p->arr[i], subs);
+	c = evalue_substitute_new(&e->x.p->arr[i], subs);
 	eadd(c, res);
 	free_evalue_refs(c);
 	free(c);
 	emul(subs[e->x.p->pos-1], res);
     }
-    c = evalue_substitute(&e->x.p->arr[0], subs);
+    c = evalue_substitute_new(&e->x.p->arr[0], subs);
     eadd(c, res);
     free_evalue_refs(c);
     free(c);
@@ -503,7 +503,7 @@ static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 
     vol = determinant(matrix+1, dim);
 
-    val = evalue_substitute(vol, parameter_point_evalue(point));
+    val = evalue_substitute_new(vol, parameter_point_evalue(point));
 
     assert(value_notzero_p(val->d));
     assert(value_notzero_p(val->x.n));

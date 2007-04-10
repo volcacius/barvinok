@@ -107,4 +107,3 @@ struct EDomain {
 };
 
 int evalue2constraint(EDomain *D, evalue *E, Value *cons, int len);
-void evalue_substitute(evalue *e, evalue **subs);
