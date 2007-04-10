@@ -116,6 +116,7 @@ void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays);
 void evalue_extract_affine(const evalue *e, Value *coeff, Value *cst, Value *d);
 evalue *affine2evalue(Value *coeff, Value denom, int nvar);
 void evalue_substitute(evalue *e, evalue **subs);
+void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays);
 
 #if defined(__cplusplus)
 }

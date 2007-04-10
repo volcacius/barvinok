@@ -1653,7 +1653,7 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
 		      DomainConstraintSimplify(C, options->MaxRays));
     value_set_si(eres->x.p->arr[1].d, 1);
     value_init(eres->x.p->arr[1].x.n);
-    if (emptyQ(P))
+    if (emptyQ2(P))
 	value_set_si(eres->x.p->arr[1].x.n, 0);
     else
 	barvinok_count_with_options(P, &eres->x.p->arr[1].x.n, options);
@@ -1672,6 +1672,7 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
     int r = 0;
     unsigned nparam = C->Dimension;
     evalue *eres;
+    Matrix *CP = NULL;
 
     if (P->next)
 	fprintf(stderr,
@@ -1704,6 +1705,11 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 constant:
 	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), options);
 out:
+	if (CP) {
+	    evalue_backsubstitute(eres, CP, options->MaxRays);
+	    Matrix_Free(CP);
+	}
+
 	emul(&factor, eres);
 	if (options->approximation_method == BV_APPROX_DROP) {
 	    if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
@@ -1735,6 +1741,20 @@ out:
 	CEq = P;
 	P = Universe_Polyhedron(0);
 	goto constant;
+    }
+    if (P->NbEq != 0) {
+	Polyhedron *Q = P;
+	Polyhedron *D = C;
+	remove_all_equalities(&P, &C, &CP, NULL, nparam, options->MaxRays);
+	if (P != Q && Q != Porig)
+	    Polyhedron_Free(Q);
+	if (C != D && D != Corig)
+	    Polyhedron_Free(D);
+    }
+    if (CP) {
+	nparam = C->Dimension;
+	if (!nparam)
+	    goto constant;
     }
 
     Polyhedron *T = Polyhedron_Factor(P, nparam, NULL, options->MaxRays);

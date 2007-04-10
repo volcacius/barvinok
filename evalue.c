@@ -21,6 +21,7 @@
 #endif
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 #ifdef __GNUC__
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
@@ -99,6 +100,26 @@ void addeliminatedparams_evalue(evalue *e,Matrix *CT) {
     return;
 } /* addeliminatedparams_evalue */
 
+static void addeliminatedparams_partition(enode *p, Matrix *CT, Polyhedron *CEq,
+					  unsigned nparam, unsigned MaxRays)
+{
+    int i;
+    assert(p->type == partition);
+    p->pos = nparam;
+
+    for (i = 0; i < p->size/2; i++) {
+	Polyhedron *D = EVALUE_DOMAIN(p->arr[2*i]);
+	Polyhedron *T = DomainPreimage(D, CT, MaxRays);
+	Domain_Free(D);
+	if (CEq) {
+	    D = T;
+	    T = DomainIntersection(D, CEq, MaxRays);
+	    Domain_Free(D);
+	}
+	EVALUE_SET_DOMAIN(p->arr[2*i], T);
+    }
+}
+
 void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
 			      unsigned MaxRays, unsigned nparam)
 {
@@ -126,19 +147,10 @@ void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
 
     p = e->x.p;
     assert(p);
-    assert(p->type == partition);
-    p->pos = nparam;
 
-    for (i=0; i<p->size/2; i++) {
-	Polyhedron *D = EVALUE_DOMAIN(p->arr[2*i]);
-	Polyhedron *T = DomainPreimage(D, CT, MaxRays);
-	Domain_Free(D);
-	D = T;
-	T = DomainIntersection(D, CEq, MaxRays);
-	Domain_Free(D);
-	EVALUE_SET_DOMAIN(p->arr[2*i], T);
+    addeliminatedparams_partition(p, CT, CEq, nparam, MaxRays);
+    for (i = 0; i < p->size/2; i++)
 	addeliminatedparams_evalue(&p->arr[2*i+1], CT);
-    }
 }
 
 static int mod_rational_smaller(evalue *e1, evalue *e2)
@@ -3894,6 +3906,8 @@ void evalue_substitute(evalue *e, evalue **subs)
 	return;
 
     p = e->x.p;
+    assert(p->type != partition);
+
     for (i = 0; i < p->size; ++i)
 	evalue_substitute(&p->arr[i], subs);
 
@@ -3926,4 +3940,47 @@ void evalue_substitute(evalue *e, evalue **subs)
     value_clear(e->d);
     *e = p->arr[offset];
     free(p);
+}
+
+/* evalue e is given in terms of "new" parameter; CP maps the new
+ * parameters back to the old parameters.
+ * Transforms e such that it refers back to the old parameters.
+ */
+void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
+{
+    Matrix *eq;
+    Matrix *inv;
+    evalue **subs;
+    enode *p;
+    int i;
+    unsigned nparam = CP->NbColumns-1;
+    Polyhedron *CEq;
+
+    if (EVALUE_IS_ZERO(*e))
+	return;
+
+    assert(value_zero_p(e->d));
+    p = e->x.p;
+    assert(p->type == partition);
+
+    inv = left_inverse(CP, &eq);
+    subs = ALLOCN(evalue *, nparam);
+    for (i = 0; i < nparam; ++i)
+	subs[i] = affine2evalue(inv->p[i], inv->p[nparam][inv->NbColumns-1],
+				inv->NbColumns-1);
+
+    CEq = Constraints2Polyhedron(eq, MaxRays);
+    addeliminatedparams_partition(p, inv, CEq, inv->NbColumns-1, MaxRays);
+    Polyhedron_Free(CEq);
+
+    for (i = 0; i < p->size/2; ++i)
+	evalue_substitute(&p->arr[2*i+1], subs);
+
+    for (i = 0; i < nparam; ++i) {
+	free_evalue_refs(subs[i]);
+	free(subs[i]);
+    }
+    free(subs);
+    Matrix_Free(eq);
+    Matrix_Free(inv);
 }
