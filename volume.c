@@ -9,39 +9,12 @@
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
-/* returns an evalue that corresponds to
- *
- * c/den x_param
- */
-static evalue *term(int param, Value c, Value den)
-{
-    evalue *EP = ALLOC(evalue);
-    value_init(EP->d);
-    value_set_si(EP->d,0);
-    EP->x.p = new_enode(polynomial, 2, param + 1);
-    evalue_set_si(&EP->x.p->arr[0], 0, 1);
-    value_init(EP->x.p->arr[1].x.n);
-    value_assign(EP->x.p->arr[1].d, den);
-    value_assign(EP->x.p->arr[1].x.n, c);
-    return EP;
-}
-
 /* Computes an evalue representation of a coordinate
  * in a ParamVertices.
  */
 static evalue *vertex2evalue(Value *vertex, int nparam)
 {
-    int i;
-    evalue *E = ALLOC(evalue);
-    value_init(E->d);
-    evalue_set(E, vertex[nparam], vertex[nparam+1]);
-    for (i = 0; i < nparam; ++i) {
-	evalue *t = term(i, vertex[i], vertex[nparam+1]);
-	eadd(t, E);
-	free_evalue_refs(t);
-	free(t);
-    }
-    return E;
+    return affine2evalue(vertex, vertex[nparam+1], nparam);
 }
 
 static void matrix_print(evalue ***matrix, int dim, int *cols,

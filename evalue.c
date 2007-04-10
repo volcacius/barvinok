@@ -3851,3 +3851,35 @@ void evalue_extract_affine(const evalue *e, Value *coeff, Value *cst, Value *d)
     value_multiply(*cst, *d, e->x.n);
     value_division(*cst, *cst, e->d);
 }
+
+/* returns an evalue that corresponds to
+ *
+ * c/den x_param
+ */
+static evalue *term(int param, Value c, Value den)
+{
+    evalue *EP = ALLOC(evalue);
+    value_init(EP->d);
+    value_set_si(EP->d,0);
+    EP->x.p = new_enode(polynomial, 2, param + 1);
+    evalue_set_si(&EP->x.p->arr[0], 0, 1);
+    value_init(EP->x.p->arr[1].x.n);
+    value_assign(EP->x.p->arr[1].d, den);
+    value_assign(EP->x.p->arr[1].x.n, c);
+    return EP;
+}
+
+evalue *affine2evalue(Value *coeff, Value denom, int nvar)
+{
+    int i;
+    evalue *E = ALLOC(evalue);
+    value_init(E->d);
+    evalue_set(E, coeff[nvar], denom);
+    for (i = 0; i < nvar; ++i) {
+	evalue *t = term(i, coeff[i], denom);
+	eadd(t, E);
+	free_evalue_refs(t);
+	free(t);
+    }
+    return E;
+}
