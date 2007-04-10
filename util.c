@@ -1562,6 +1562,18 @@ Matrix *left_inverse(Matrix *M, Matrix **Eq)
     Matrix *L, *H, *Q, *U, *ratH, *invH, *Ut, *inv;
     Vector *t;
 
+    if (M->NbColumns == 1) {
+	inv = Matrix_Alloc(1, M->NbRows);
+	value_set_si(inv->p[0][M->NbRows-1], 1);
+	if (Eq) {
+	    *Eq = Matrix_Alloc(M->NbRows-1, 1+(M->NbRows-1)+1);
+	    for (i = 0; i < M->NbRows-1; ++i) {
+		value_oppose((*Eq)->p[i][1+i], M->p[M->NbRows-1][0]);
+		value_assign((*Eq)->p[i][1+(M->NbRows-1)], M->p[i][0]);
+	    }
+	}
+	return inv;
+    }
     if (Eq)
 	*Eq = NULL;
     L = Matrix_Alloc(M->NbRows-1, M->NbColumns-1);
