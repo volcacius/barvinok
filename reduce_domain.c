@@ -1,5 +1,19 @@
 #include <barvinok/options.h>
+#include <barvinok/util.h>
 #include "reduce_domain.h"
+
+Polyhedron *true_context(Polyhedron *P, Matrix *CT,
+			 Polyhedron *C, unsigned MaxRays)
+{
+    unsigned nparam = CT ? CT->NbRows - 1 : C->Dimension;
+    Polyhedron *tmp = Polyhedron_Project(P, nparam);
+    Polyhedron *D = CT ? DomainPreimage(tmp, CT, MaxRays) : tmp;
+    C = DomainIntersection(D, C, MaxRays);
+    if (CT)
+	Polyhedron_Free(D);
+    Polyhedron_Free(tmp);
+    return C;
+}
 
 Vector *inner_point(Polyhedron *P)
 {
@@ -58,61 +72,68 @@ int is_internal(Vector *point, Value *constraint)
     return value_pos_p(constraint[1+p]);
 }
 
-Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
-			  Polyhedron **fVD, int nd,
-			  struct barvinok_options *options)
+Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq, int nd,
+			  Vector *inner, struct barvinok_options *options)
 {
     Polyhedron *Dt, *rVD;
     Polyhedron *C;
     Value c;
     int i;
+    Matrix *constraints;
+    int changed;
 
     C = D->next ? DomainConvex(D, options->MaxRays) : D;
     Dt = CT ? DomainPreimage(C, CT, options->MaxRays) : C;
     rVD = CEq ? DomainIntersection(Dt, CEq, options->MaxRays) : Domain_Copy(Dt);
 
+    /* If there is only one chamber, then we don't need to take care
+     * of possible overlaps.
+     * Plus, this decomposition may be the result of a recursive call
+     * and then some of the assumptions used in determining whether
+     * the domain is too small in geometric dimension no longer apply.
+     */
+    if (nd == 1)
+	goto done;
+
     /* if rVD is empty or too small in geometric dimension */
     if(!rVD || emptyQ(rVD) ||
 	    (CEq && rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
-	if(rVD)
+	if (rVD)
 	    Domain_Free(rVD);
+	rVD = NULL;		/* empty validity domain */
+done:
 	if (D->next)
 	    Polyhedron_Free(C);
 	if (CT)
 	    Domain_Free(Dt);
-	return 0;		/* empty validity domain */
+	return rVD;
     }
 
     if (CT)
 	Domain_Free(Dt);
 
-    fVD[nd] = Domain_Copy(C);
-    for (i = 0 ; i < nd; ++i) {
-	Polyhedron *F;
-	Polyhedron *I = DomainIntersection(fVD[nd], fVD[i], options->MaxRays);
-	if (emptyQ(I)) {
-	    Domain_Free(I);
-	    continue;
+    assert(rVD->Dimension == inner->Size-2);
+    constraints = Polyhedron2Constraints(rVD);
+    changed = 0;
+    for (i = 0; i < constraints->NbRows; ++i) {
+	if (!is_internal(inner, constraints->p[i])) {
+	    value_decrement(constraints->p[i][1+rVD->Dimension],
+			    constraints->p[i][1+rVD->Dimension]);
+	    changed = 1;
 	}
-	F = DomainSimplify(I, fVD[nd], options->MaxRays);
-	if (F->NbEq == 1) {
-	    Polyhedron *T = rVD;
-	    Polyhedron *FE = CT ? DomainPreimage(F, CT, options->MaxRays) : F;
-	    rVD = DomainDifference(rVD, FE, options->MaxRays);
-	    if (CT)
-		Domain_Free(FE);
-	    Domain_Free(T);
-	}
-	Domain_Free(F);
-	Domain_Free(I);
     }
+    if (changed) {
+	Polyhedron_Free(rVD);
+	rVD = Constraints2Polyhedron(constraints, options->MaxRays);
+    }
+    Matrix_Free(constraints);
 
     if (D->next)
 	Polyhedron_Free(C);
 
     rVD = DomainConstraintSimplify(rVD, options->MaxRays);
+    POL_ENSURE_FACETS(rVD);
     if (emptyQ(rVD)) {
-	Domain_Free(fVD[nd]);
 	Domain_Free(rVD);
 	return 0;
     }
@@ -120,7 +141,6 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
     value_init(c);
     barvinok_count_with_options(rVD, &c, options);
     if (value_zero_p(c)) {
-	Domain_Free(fVD[nd]);
 	Domain_Free(rVD);
 	rVD = 0;
     }

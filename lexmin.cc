@@ -2695,7 +2695,10 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     construct_rational_vertices(PP, T, T ? T->NbRows-nparam-1 : dim,
 				nparam, all_vertices);
 
-    FORALL_REDUCED_DOMAIN(PP, CT, CEq, nd, options->verify.barvinok, i, D, rVD)
+    Polyhedron *TC = true_context(P, CT, CEq ? CEq : C,
+				  options->verify.barvinok->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options->verify.barvinok,
+			  i, D, rVD)
 	Param_Vertices *V;
 
 	pVD = CT ? DomainImage(rVD, CT, options->verify.barvinok->MaxRays) : rVD;
@@ -2720,6 +2723,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	    Domain_Free(pVD);
 	Domain_Free(rVD);
     END_FORALL_REDUCED_DOMAIN
+    Polyhedron_Free(TC);
     for (int i = 0; i < all_vertices.size(); ++i)
 	delete all_vertices[i];
     if (CP)

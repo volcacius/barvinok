@@ -710,6 +710,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     int nd;
     struct section { Polyhedron *D; evalue *E; } *s;
     Param_Domain *D;
+    Polyhedron *TC;
 
     if (options->polynomial_approximation == BV_APPROX_SIGN_NONE)
 	options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
@@ -730,6 +731,8 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 	return vol;
     }
 
+    TC = true_context(P, NULL, C, options->MaxRays);
+
     if (PP_MaxRays & POL_NO_DUAL)
 	PP_MaxRays = 0;
 
@@ -748,7 +751,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     for (i = 0; i < nvar+1; ++i)
 	matrix[i] = ALLOCN(evalue *, nvar);
 
-    FORALL_REDUCED_DOMAIN(PP, NULL, NULL, nd, options, i, D, rVD)
+    FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
 	Polyhedron *CA, *F;
 
 	CA = align_context(D->Domain, P->Dimension, MaxRays);
@@ -762,6 +765,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 	evalue_div(s[i].E, fact);
     END_FORALL_REDUCED_DOMAIN
     options->MaxRays = MaxRays;
+    Polyhedron_Free(TC);
 
     vol = ALLOC(evalue);
     value_init(vol->d);

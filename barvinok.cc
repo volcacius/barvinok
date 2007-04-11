@@ -1830,7 +1830,8 @@ try_again:
 
     et = enumerator_base::create(P, dim, PP->nbV, options);
 
-    FORALL_REDUCED_DOMAIN(PP, CT, CEq, nd, options, i, D, rVD)
+    Polyhedron *TC = true_context(P, CT, CEq ? CEq : C, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options, i, D, rVD)
 	Param_Vertices *V;
 	Polyhedron *pVD;
 
@@ -1847,7 +1848,7 @@ try_again:
 		} catch (OrthogonalException &e) {
 		    if (rVD != pVD)
 			Domain_Free(pVD);
-		    FORALL_REDUCED_DOMAIN_RESET(i+1);
+		    FORALL_REDUCED_DOMAIN_RESET;
 		    for (; i >= 0; --i) {
 			free_evalue_refs(&s[i].E);
 			Domain_Free(s[i].D);
@@ -1863,6 +1864,7 @@ try_again:
 	if (rVD != pVD)
 	    Domain_Free(pVD);
     END_FORALL_REDUCED_DOMAIN
+    Polyhedron_Free(TC);
 
     delete et;
     if (nd == 0)
@@ -2774,10 +2776,12 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	;
 
     Polyhedron **VD = new Polyhedron_p[nd];
-    FORALL_REDUCED_DOMAIN(PP, CT, CEq, nd, options, i, D, rVD)
+    Polyhedron *TC = true_context(P, CT, CEq ? CEq : C, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options, i, D, rVD)
 	VD[nd++] = rVD;
 	last = D;
     END_FORALL_REDUCED_DOMAIN
+    Polyhedron_Free(TC);
 
     evalue *EP = 0;
 
