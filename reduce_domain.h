@@ -6,6 +6,8 @@ extern "C" {
 
 struct barvinok_options;
 
+Vector *inner_point(Polyhedron *P);
+int is_internal(Vector *point, Value *constraint);
 Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq,
 			  Polyhedron **fVD, int nd,
 			  struct barvinok_options *options);

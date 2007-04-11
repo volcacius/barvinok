@@ -7,6 +7,7 @@
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "decomposer.h"
+#include "reduce_domain.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -291,12 +292,7 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     Value tmp;
     if (parts != cone) {
 	value_init(tmp);
-	average = Vector_Alloc(cone->Dimension);
-	for (int i = 0; i < cone->NbRays; ++i) {
-	    if (value_notzero_p(cone->Ray[i][1+cone->Dimension]))
-		continue;
-	    Vector_Add(average->p, cone->Ray[i]+1, average->p, cone->Dimension);
-	}
+	average = inner_point(cone);
     }
     mat_ZZ ray;
     try {
@@ -315,15 +311,7 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 			    break;
 		    }
 		    assert(f < simple->NbConstraints);
-		    Inner_Product(simple->Constraint[f]+1, average->p,
-				  simple->Dimension, &tmp);
-		    if (value_notzero_p(tmp))
-			closed[i] = value_pos_p(tmp);
-		    else {
-			int p = First_Non_Zero(simple->Constraint[f]+1,
-					       simple->Dimension);
-			closed[i] = value_pos_p(simple->Constraint[f][1+p]);
-		    }
+		    closed[i] = is_internal(average, simple->Constraint[f]);
 		}
 		++i;
 	    }
