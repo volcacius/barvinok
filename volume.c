@@ -311,6 +311,19 @@ static Matrix *barycenter(Param_Polyhedron *PP, Param_Domain *D)
     return center;
 }
 
+static Matrix *triangulation_vertex(Param_Polyhedron *PP, Param_Domain *D,
+				    Polyhedron *F)
+{
+    Param_Vertices *V;
+
+    FORALL_PVertex_in_ParamPolyhedron(V, D, PP)
+	return V->Vertex;
+    END_FORALL_PVertex_in_ParamPolyhedron;
+
+    assert(0);
+    return NULL;
+}
+
 /* Compute dim! times the volume of polyhedron F in Param_Domain D.
  * If F is a simplex, then the volume is computed of a recursive pyramid
  * over F with the points already in matrix.
@@ -339,16 +352,24 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
     evalue mone;
     Matrix *center;
     unsigned cut_MaxRays = options->MaxRays;
-    unsigned nparam = D->Domain->Dimension;
+    unsigned nparam = PP->V->Vertex->NbColumns-2;
+    Vector *v = NULL;
 
     POL_UNSET(cut_MaxRays, POL_INTEGER);
 
     value_init(mone.d);
     evalue_set_si(&mone, -1, 1);
 
-    center = barycenter(PP, D);
+    if (options->volume_triangulate == BV_VOL_BARYCENTER)
+	center = barycenter(PP, D);
+    else
+	center = triangulation_vertex(PP, D, F);
     for (j = 0; j < dim; ++j)
 	matrix[row][j] = vertex2evalue(center->p[j], center->NbColumns - 2);
+    if (options->volume_triangulate == BV_VOL_BARYCENTER)
+	Matrix_Free(center);
+    else
+	v = Vector_Alloc(1+nparam+1);
 
     if (row == 0) {
 	for (j = 0; j < dim; ++j)
@@ -365,6 +386,11 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 	Param_Domain *FD;
 	if (First_Non_Zero(F->Constraint[j]+1, dim) == -1)
 	    continue;
+	if (options->volume_triangulate != BV_VOL_BARYCENTER) {
+	    Param_Inner_Product(F->Constraint[j], center, v->p);
+	    if (First_Non_Zero(v->p+1, nparam+1) == -1)
+		continue;
+	}
 	FF = facet(F, j, options->MaxRays);
 	FD = face_vertices(PP, D, F, j);
 	tmp = volume_in_domain(PP, FD, dim, matrix, point,
@@ -380,7 +406,8 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 	Param_Domain_Free(FD);
     }
 
-    Matrix_Free(center);
+    if (options->volume_triangulate != BV_VOL_BARYCENTER)
+	Vector_Free(v);
 
     for (j = 0; j < dim; ++j) {
 	free_evalue_refs(matrix[row][j]);
@@ -562,7 +589,7 @@ static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
     END_FORALL_PVertex_in_ParamPolyhedron;
 
     if (nbV > (dim-row) + 1) {
-	if (options->volume_triangulate_lift)
+	if (options->volume_triangulate == BV_VOL_LIFT)
 	    vol = volume_triangulate_lift(PP, D, dim, matrix, point,
 					  row, options->MaxRays);
 	else

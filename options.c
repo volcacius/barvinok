@@ -72,7 +72,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
     options->approximation_method = BV_APPROX_NONE;
     options->scale_flags = 0;
-    options->volume_triangulate_lift = 1;
+    options->volume_triangulate = BV_VOL_VERTEX;
 
 #ifdef HAVE_LIBGLPK
     options->gbr_lp_solver = BV_GBR_GLPK;
@@ -118,8 +118,8 @@ static struct argp_option approx_argp_options[] = {
 	"method to use in polynomial approximation [default: drop]" },
     { "scale-options",	    BV_OPT_SCALE,
 	"fast|slow,narrow|narrow2,chamber",	0 },
-    { "no-lift",	    BV_OPT_NO_LIFT,	    NULL,	    0,
-	"don't perform lifting triangulation in volume computation" },
+    { "volume-triangulation",	    BV_OPT_VOL,	    "lift|vertex|barycenter",    0,
+	"type of triangulation to perform in volume computation [default: vertex]" },
     { 0 }
 };
 
@@ -190,8 +190,13 @@ static error_t approx_parse_opt(int key, char *arg, struct argp_state *state)
 		argp_error(state, "unknown suboption '%s'\n", subopt);
 	    }
 	break;
-    case BV_OPT_NO_LIFT:
-	options->volume_triangulate_lift = 0;
+    case BV_OPT_VOL:
+	if (!strcmp(arg, "lift"))
+	    options->volume_triangulate = BV_VOL_LIFT;
+	else if (!strcmp(arg, "vertex"))
+	    options->volume_triangulate = BV_VOL_VERTEX;
+	else if (!strcmp(arg, "barycenter"))
+	    options->volume_triangulate = BV_VOL_BARYCENTER;
 	break;
     case ARGP_KEY_END:
 	if (options->polynomial_approximation == BV_APPROX_SIGN_NONE &&
