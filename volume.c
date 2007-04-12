@@ -421,12 +421,14 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
 				struct parameter_point *point,
-				int row, unsigned MaxRays)
+				int row, struct barvinok_options *options)
 {
     evalue mone;
     Param_Vertices *V;
     evalue *vol, *val;
     int i, j;
+
+    options->stats->volume_simplices++;
 
     value_init(mone.d);
     evalue_set_si(&mone, -1, 1);
@@ -471,7 +473,7 @@ static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
 static evalue *volume_triangulate_lift(Param_Polyhedron *PP, Param_Domain *D,
 					unsigned dim, evalue ***matrix,
 					struct parameter_point *point,
-					int row, unsigned MaxRays)
+					int row, struct barvinok_options *options)
 {
     const static int MAX_TRY=10;
     Param_Vertices *V;
@@ -529,7 +531,7 @@ try_again:
 	value_set_si(FixedRays->p[i][1+dim], random_int((t+1)*dim*nbV)+1);
 
     M = Matrix_Copy(FixedRays);
-    L = Rays2Polyhedron(M, MaxRays);
+    L = Rays2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
 
     POL_ENSURE_FACETS(L);
@@ -554,7 +556,7 @@ try_again:
 	END_FORALL_PVertex_in_ParamPolyhedron;
 	assert(r == (dim-row)+1);
 
-	s = volume_simplex(PP, &SD, dim, matrix, point, row, MaxRays);
+	s = volume_simplex(PP, &SD, dim, matrix, point, row, options);
 	if (!vol)
 	    vol = s;
 	else {
@@ -591,13 +593,13 @@ static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
     if (nbV > (dim-row) + 1) {
 	if (options->volume_triangulate == BV_VOL_LIFT)
 	    vol = volume_triangulate_lift(PP, D, dim, matrix, point,
-					  row, options->MaxRays);
+					  row, options);
 	else
 	    vol = volume_triangulate(PP, D, dim, matrix, point,
 				     row, F, options);
     } else {
 	assert(nbV == (dim-row) + 1);
-	vol = volume_simplex(PP, D, dim, matrix, point, row, options->MaxRays);
+	vol = volume_simplex(PP, D, dim, matrix, point, row, options);
     }
 
     return vol;

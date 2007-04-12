@@ -9,6 +9,7 @@ extern "C" {
 
 struct barvinok_stats {
     long	base_cones;
+    long	volume_simplices;
 };
 
 void barvinok_stats_clear(struct barvinok_stats *stats);

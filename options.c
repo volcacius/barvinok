@@ -22,11 +22,14 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 void barvinok_stats_clear(struct barvinok_stats *stats)
 {
     stats->base_cones = 0;
+    stats->volume_simplices = 0;
 }
 
 void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
 {
     fprintf(out, "Base cones: %d\n", stats->base_cones);
+    if (stats->volume_simplices)
+	fprintf(out, "Volume simplices: %d\n", stats->volume_simplices);
 }
 
 struct barvinok_options *barvinok_options_new_with_defaults()
