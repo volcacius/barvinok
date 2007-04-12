@@ -11,10 +11,10 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart
 noinst_PROGRAMS = test randomtest \
 		  remove_redundant_equalities \
-		  barvinok_union barvinok_maximize polytope_volume test_approx \
+		  barvinok_union polytope_volume test_approx \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
-		 polytope_scan
+		 polytope_scan barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
