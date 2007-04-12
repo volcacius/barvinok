@@ -103,66 +103,6 @@ static Polyhedron *facet(Polyhedron *P, int c, unsigned MaxRays)
     return F;
 }
 
-/* Compute a dummy Param_Domain that contains all vertices of Param_Domain D
- * (which contains the vertices of P) that lie on the facet obtain by
- * saturating constraint c of P
- */
-static Param_Domain *face_vertices(Param_Polyhedron *PP, Param_Domain *D,
-				   Polyhedron *P, int c)
-{
-    int nv;
-    Param_Vertices *V;
-    Param_Domain *FD = ALLOC(Param_Domain);
-    FD->Domain = 0;
-    FD->next = 0;
-
-    nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
-    FD->F = ALLOCN(unsigned, nv);
-    memset(FD->F, 0, nv * sizeof(unsigned));
-
-    FORALL_PVertex_in_ParamPolyhedron(V, D, PP) /* _i, _ix, _bx internal counters */
-	int n;
-	unsigned char *supporting = supporting_constraints(P, V, &n);
-	if (supporting[c])
-	    FD->F[_ix] |= _bx;
-	free(supporting);
-    END_FORALL_PVertex_in_ParamPolyhedron;
-
-    return FD;
-}
-
-/* Substitute parameters by the corresponding element in subs
- */
-static evalue *evalue_substitute_new(evalue *e, evalue **subs)
-{
-    evalue *res = NULL;
-    evalue *c;
-    int i;
-
-    if (value_notzero_p(e->d)) {
-	res = ALLOC(evalue);
-	value_init(res->d);
-	evalue_copy(res, e);
-	return res;
-    }
-    assert(e->x.p->type == polynomial);
-
-    res = evalue_zero();
-    for (i = e->x.p->size-1; i > 0; --i) {
-	c = evalue_substitute_new(&e->x.p->arr[i], subs);
-	eadd(c, res);
-	free_evalue_refs(c);
-	free(c);
-	emul(subs[e->x.p->pos-1], res);
-    }
-    c = evalue_substitute_new(&e->x.p->arr[0], subs);
-    eadd(c, res);
-    free_evalue_refs(c);
-    free(c);
-
-    return res;
-}
-
 /* Plug in the parametric vertex V in the constraint constraint.
  * The result is stored in row, with the denominator in position 0.
  */
@@ -197,6 +137,69 @@ static void Param_Inner_Product(Value *constraint, Matrix *Vertex,
 
     value_clear(tmp);
     value_clear(tmp2);
+}
+
+/* Compute a dummy Param_Domain that contains all vertices of Param_Domain D
+ * (which contains the vertices of P) that lie on the facet obtain by
+ * saturating constraint c of P
+ */
+static Param_Domain *face_vertices(Param_Polyhedron *PP, Param_Domain *D,
+				   Polyhedron *P, int c)
+{
+    int nv;
+    Param_Vertices *V;
+    Param_Domain *FD = ALLOC(Param_Domain);
+    FD->Domain = 0;
+    FD->next = 0;
+    unsigned nparam = PP->V->Vertex->NbColumns-2;
+    Vector *row = Vector_Alloc(1+nparam+1);
+
+    nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
+    FD->F = ALLOCN(unsigned, nv);
+    memset(FD->F, 0, nv * sizeof(unsigned));
+
+    FORALL_PVertex_in_ParamPolyhedron(V, D, PP) /* _i, _ix, _bx internal counters */
+	int n;
+	Param_Inner_Product(P->Constraint[c], V->Vertex, row->p);
+	if (First_Non_Zero(row->p+1, nparam+1) == -1)
+	    FD->F[_ix] |= _bx;
+    END_FORALL_PVertex_in_ParamPolyhedron;
+
+    Vector_Free(row);
+
+    return FD;
+}
+
+/* Substitute parameters by the corresponding element in subs
+ */
+static evalue *evalue_substitute_new(evalue *e, evalue **subs)
+{
+    evalue *res = NULL;
+    evalue *c;
+    int i;
+
+    if (value_notzero_p(e->d)) {
+	res = ALLOC(evalue);
+	value_init(res->d);
+	evalue_copy(res, e);
+	return res;
+    }
+    assert(e->x.p->type == polynomial);
+
+    res = evalue_zero();
+    for (i = e->x.p->size-1; i > 0; --i) {
+	c = evalue_substitute_new(&e->x.p->arr[i], subs);
+	eadd(c, res);
+	free_evalue_refs(c);
+	free(c);
+	emul(subs[e->x.p->pos-1], res);
+    }
+    c = evalue_substitute_new(&e->x.p->arr[0], subs);
+    eadd(c, res);
+    free_evalue_refs(c);
+    free(c);
+
+    return res;
 }
 
 struct parameter_point {
