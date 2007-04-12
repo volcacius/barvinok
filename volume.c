@@ -248,67 +248,17 @@ void parameter_point_free(struct parameter_point *point)
 }
 
 /* Computes point in pameter space where polyhedron is non-empty.
- * For each of the parametric vertices, and each of the facets
- * not (always) containing the vertex, we remove the parameter
- * values for which the facet does contain the vertex.
  */
-static struct parameter_point *non_empty_point(Param_Polyhedron *PP,
-	Param_Domain *D, Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+static struct parameter_point *non_empty_point(Param_Domain *D)
 {
-    Param_Vertices *V;
-    unsigned dim = P->Dimension;
-    unsigned nparam = C->Dimension;
-    unsigned nvar = dim - nparam;
-    Polyhedron *RD, *cut, *tmp;
-    Matrix *M;
+    unsigned nparam = D->Domain->Dimension;
     struct parameter_point *point;
-    int i, j;
-    unsigned cut_MaxRays = MaxRays;
-    int nv;
+    Vector *v;
 
-    nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
-
-    POL_UNSET(cut_MaxRays, POL_INTEGER);
-
-    M = Matrix_Alloc(1, nparam+2);
-    RD = C;
-    FORALL_PVertex_in_ParamPolyhedron(V, D, PP) /* _ix, _bx internal counters */
-	for (i = P->NbEq; i < P->NbConstraints; ++i) {
-	    if (First_Non_Zero(P->Constraint[i]+1, nvar) == -1)
-		continue;
-	    Param_Inner_Product(P->Constraint[i], V->Vertex, M->p[0]);
-	    if (First_Non_Zero(M->p[0]+1, nparam) == -1)
-		/* supporting facet,
-		 * or non-supporting facet independent of params
-		 */
-		continue;
-	    value_set_si(M->p[0][0], 0);
-	    cut = Constraints2Polyhedron(M, cut_MaxRays);
-	    tmp = DomainDifference(RD, cut, MaxRays);
-	    if (RD != C)
-		Domain_Free(RD);
-	    RD = tmp;
-	    Polyhedron_Free(cut);
-	}
-	if (emptyQ2(RD))
-	    break;
-    END_FORALL_PVertex_in_ParamPolyhedron;
-    Matrix_Free(M);
-
-    POL_ENSURE_VERTICES(RD);
-    if (emptyQ(RD))
-	point = NULL;
-    else {
-	point = parameter_point_new(nparam);
-	for (i = 0; i < RD->NbRays; ++i)
-	    if (value_notzero_p(RD->Ray[i][1+nparam]))
-		break;
-	assert(i < RD->NbRays);
-	Vector_Copy(RD->Ray[i]+1, point->coord->p, nparam+1);
-    }
-
-    if (RD != C)
-	Domain_Free(RD);
+    v = inner_point(D->Domain);
+    point = parameter_point_new(nparam);
+    Vector_Copy(v->p+1, point->coord->p, nparam+1);
+    Vector_Free(v);
 
     return point;
 }
@@ -370,13 +320,13 @@ static Matrix *barycenter(Param_Polyhedron *PP, Param_Domain *D)
  */
 static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
-				struct parameter_point *point, Polyhedron *C,
+				struct parameter_point *point,
 				int row, Polyhedron *F,
 				struct barvinok_options *options);
 
 static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 				  unsigned dim, evalue ***matrix,
-				  struct parameter_point *point, Polyhedron *C,
+				  struct parameter_point *point,
 				  int row, Polyhedron *F,
 				  struct barvinok_options *options)
 {
@@ -386,8 +336,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
     evalue mone;
     Matrix *center;
     unsigned cut_MaxRays = options->MaxRays;
-    unsigned nparam = C->Dimension;
-    Matrix *M = NULL;
+    unsigned nparam = D->Domain->Dimension;
 
     POL_UNSET(cut_MaxRays, POL_INTEGER);
 
@@ -406,48 +355,17 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 	    eadd(matrix[0][j], matrix[row][j]);
     }
 
-    if (!point)
-	M = Matrix_Alloc(1, nparam+2);
-
     vol = NULL;
     POL_ENSURE_FACETS(F);
     for (j = F->NbEq; j < F->NbConstraints; ++j) {
-	Polyhedron *FC;
 	Polyhedron *FF;
 	Param_Domain *FD;
 	if (First_Non_Zero(F->Constraint[j]+1, dim) == -1)
 	    continue;
-	if (point)
-	    FC = C;
-	else {
-	    Polyhedron *cut;
-	    int pos;
-	    Param_Inner_Product(F->Constraint[j], center, M->p[0]);
-	    pos = First_Non_Zero(M->p[0]+1, nparam+1);
-	    if (pos == -1)
-		/* barycenter always lies on facet */
-		continue;
-	    if (pos == nparam)
-		FC = C;
-	    else {
-		value_set_si(M->p[0][0], 0);
-		cut = Constraints2Polyhedron(M, cut_MaxRays);
-		FC = DomainDifference(C, cut, options->MaxRays);
-		Polyhedron_Free(cut);
-		POL_ENSURE_VERTICES(FC);
-		if (emptyQ(FC)) {
-		    /* barycenter lies on facet for all parameters in C */
-		    Polyhedron_Free(FC);
-		    continue;
-		}
-	    }
-	}
 	FF = facet(F, j, options->MaxRays);
 	FD = face_vertices(PP, D, F, j);
-	tmp = volume_in_domain(PP, FD, dim, matrix, point, FC,
+	tmp = volume_in_domain(PP, FD, dim, matrix, point,
 			       row+1, FF, options);
-	if (FC != C)
-	    Domain_Free(FC);
 	if (!vol)
 	    vol = tmp;
 	else {
@@ -460,8 +378,6 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
     }
 
     Matrix_Free(center);
-    if (!point)
-	Matrix_Free(M);
 
     for (j = 0; j < dim; ++j) {
 	free_evalue_refs(matrix[row][j]);
@@ -481,9 +397,6 @@ static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
     Param_Vertices *V;
     evalue *vol, *val;
     int i, j;
-
-    if (!point)
-	return evalue_zero();
 
     value_init(mone.d);
     evalue_set_si(&mone, -1, 1);
@@ -630,20 +543,15 @@ try_again:
 
 static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
 				unsigned dim, evalue ***matrix,
-				struct parameter_point *point, Polyhedron *C,
+				struct parameter_point *point,
 				int row, Polyhedron *F,
 				struct barvinok_options *options)
 {
     int nbV;
     Param_Vertices *V;
     evalue *vol;
-    int point_computed = 0;
 
-    if (!point) {
-	point = non_empty_point(PP, D, F, C, options->MaxRays);
-	if (point)
-	    point_computed = 1;
-    }
+    assert(point);
 
     nbV = 0;
     FORALL_PVertex_in_ParamPolyhedron(V, D, PP)
@@ -651,19 +559,16 @@ static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
     END_FORALL_PVertex_in_ParamPolyhedron;
 
     if (nbV > (dim-row) + 1) {
-	if (point && options->volume_triangulate_lift)
+	if (options->volume_triangulate_lift)
 	    vol = volume_triangulate_lift(PP, D, dim, matrix, point,
 					  row, options->MaxRays);
 	else
-	    vol = volume_triangulate(PP, D, dim, matrix, point, C,
+	    vol = volume_triangulate(PP, D, dim, matrix, point,
 				     row, F, options);
     } else {
 	assert(nbV == (dim-row) + 1);
 	vol = volume_simplex(PP, D, dim, matrix, point, row, options->MaxRays);
     }
-
-    if (point_computed)
-	parameter_point_free(point);
 
     return vol;
 }
@@ -726,15 +631,17 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 
     FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
 	Polyhedron *CA, *F;
+	struct parameter_point *point;
 
 	CA = align_context(D->Domain, P->Dimension, MaxRays);
 	F = DomainIntersection(P, CA, options->MaxRays);
 	Domain_Free(CA);
 
+	point = non_empty_point(D);
 	s[i].D = rVD;
-	s[i].E = volume_in_domain(PP, D, nvar, matrix, NULL, rVD,
-				   0, F, options);
+	s[i].E = volume_in_domain(PP, D, nvar, matrix, point, 0, F, options);
 	Domain_Free(F);
+	parameter_point_free(point);
 	evalue_div(s[i].E, fact);
     END_FORALL_REDUCED_DOMAIN
     options->MaxRays = MaxRays;
