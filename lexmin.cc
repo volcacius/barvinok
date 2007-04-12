@@ -2635,8 +2635,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 {
     unsigned nparam = C->Dimension;
     Param_Polyhedron *PP = NULL;
-    Polyhedron *CEq = NULL, *pVD;
-    Matrix *CT = NULL;
     Matrix *T = NULL, *CP = NULL;
     Polyhedron *Porig = P;
     Polyhedron *Corig = C;
@@ -2671,19 +2669,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     else
 	P2PSD_MaxRays = options->verify.barvinok->MaxRays;
 
-    Q = P;
-    PP = Polyhedron2Param_SimplifiedDomain(&P, C, P2PSD_MaxRays, &CEq, &CT);
-    if (P != Q && Q != Porig)
-	Polyhedron_Free(Q);
-
-    if (CT) {
-	if (isIdentity(CT)) {
-	    Matrix_Free(CT);
-	    CT = NULL;
-	} else
-	    nparam = CT->NbRows - 1;
-    }
-    assert(!CT);
+    PP = Polyhedron2Param_Domain(P, C, P2PSD_MaxRays);
 
     unsigned dim = P->Dimension - nparam;
 
@@ -2695,15 +2681,12 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     construct_rational_vertices(PP, T, T ? T->NbRows-nparam-1 : dim,
 				nparam, all_vertices);
 
-    Polyhedron *TC = true_context(P, CT, CEq ? CEq : C,
-				  options->verify.barvinok->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options->verify.barvinok,
+    Polyhedron *TC = true_context(P, NULL, C, options->verify.barvinok->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options->verify.barvinok,
 			  i, D, rVD)
 	Param_Vertices *V;
 
-	pVD = CT ? DomainImage(rVD, CT, options->verify.barvinok->MaxRays) : rVD;
-
-	EDomain *epVD = new EDomain(pVD);
+	EDomain *epVD = new EDomain(rVD);
 	indicator ind(ic, D, epVD, options);
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
@@ -2719,8 +2702,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 		maxima[j]->substitute(CP, options->verify.barvinok);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
-	if (rVD != pVD)
-	    Domain_Free(pVD);
 	Domain_Free(rVD);
     END_FORALL_REDUCED_DOMAIN
     Polyhedron_Free(TC);
@@ -2731,8 +2712,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     if (T)
 	Matrix_Free(T);
     Param_Polyhedron_Free(PP);
-    if (CEq)
-	Polyhedron_Free(CEq);
     if (C != Corig)
 	Polyhedron_Free(C);
     if (P != Porig)
