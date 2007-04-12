@@ -696,7 +696,6 @@ evalue *scale_bound(Polyhedron *P, Polyhedron *C,
 }
 
 evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
-	      Polyhedron *CEq, Matrix *CT,
 	      struct barvinok_options *options)
 {
     Polyhedron *T = P;
@@ -707,13 +706,11 @@ evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
     if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
 	int nd = -1;
 	evalue *tmp;
-	Polyhedron *TC = true_context(P, CT, CEq, options->MaxRays);
+	Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
 
-	FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options, i, D, rVD)
-	    Polyhedron *pVD;
-	    pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
-	    Param_Polyhedron *PP_D = Param_Polyhedron_Domain(PP, D, pVD);
-	    tmp = scale(PP_D, P, rVD, rVD, CT, options);
+	FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
+	    Param_Polyhedron *PP_D = Param_Polyhedron_Domain(PP, D, rVD);
+	    tmp = scale(PP_D, P, rVD, options);
 	    if (!eres)
 		eres = tmp;
 	    else {
@@ -722,8 +719,6 @@ evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
 		free(tmp);
 	    }
 	    Param_Polyhedron_Free(PP_D);
-	    if (rVD != pVD)
-		Domain_Free(pVD);
 	    Polyhedron_Free(rVD);
 	END_FORALL_REDUCED_DOMAIN
 	if (!eres)
@@ -740,7 +735,7 @@ evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
     Param_Polyhedron_Scale(PP, &T, NULL, &det, options);
     options->MaxRays = MaxRays;
 
-    eres = Param_Polyhedron_Enumerate(PP, T, C, CEq, CT, options);
+    eres = Param_Polyhedron_Enumerate(PP, T, C, options);
     if (P != T)
 	Polyhedron_Free(T);
 

@@ -1581,12 +1581,12 @@ void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 	}
 }
 
-static inline Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
-    Polyhedron *Cin,int WS,Polyhedron **CEq,Matrix **CT)
+static inline Param_Polyhedron *Polyhedron2Param_MR(Polyhedron *Din,
+    Polyhedron *Cin, int WS)
 {
     if (WS & POL_NO_DUAL)
 	WS = 0;
-    return Polyhedron2Param_SimplifiedDomain(Din, Cin, WS, CEq, CT);
+    return Polyhedron2Param_Domain(Din, Cin, WS);
 }
 
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
@@ -1779,12 +1779,11 @@ evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
 
 evalue *Param_Polyhedron_Enumerate(Param_Polyhedron *PP, Polyhedron *P,
 				   Polyhedron *C,
-				   Polyhedron *CEq, Matrix *CT,
 				   struct barvinok_options *options)
 {
     evalue *eres;
     Param_Domain *D;
-    unsigned nparam = CT ? CT->NbRows - 1 : C->Dimension;
+    unsigned nparam = C->Dimension;
     unsigned dim = P->Dimension - nparam;
 
     ALLOC(evalue, eres);
@@ -1803,12 +1802,9 @@ try_again:
 
     et = enumerator_base::create(P, dim, PP->nbV, options);
 
-    Polyhedron *TC = true_context(P, CT, CEq ? CEq : C, options->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options, i, D, rVD)
+    Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
 	Param_Vertices *V;
-	Polyhedron *pVD;
-
-	pVD = CT ? DomainImage(rVD,CT,options->MaxRays) : rVD;
 
 	value_init(s[i].E.d);
 	evalue_set_si(&s[i].E, 0, 1);
@@ -1819,8 +1815,6 @@ try_again:
 		try {
 		    et->decompose_at(V, _i, options);
 		} catch (OrthogonalException &e) {
-		    if (rVD != pVD)
-			Domain_Free(pVD);
 		    FORALL_REDUCED_DOMAIN_RESET;
 		    for (; i >= 0; --i) {
 			free_evalue_refs(&s[i].E);
@@ -1830,12 +1824,7 @@ try_again:
 		}
 	    eadd(et->vE[_i] , &s[i].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	evalue_range_reduction_in_domain(&s[i].E, pVD);
-
-	if (CT)
-	    addeliminatedparams_evalue(&s[i].E, CT);
-	if (rVD != pVD)
-	    Domain_Free(pVD);
+	evalue_range_reduction_in_domain(&s[i].E, rVD);
     END_FORALL_REDUCED_DOMAIN
     Polyhedron_Free(TC);
 
@@ -1868,11 +1857,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 	return ParamLine_Length(P, C, options);
 
     Param_Polyhedron *PP = NULL;
-    Polyhedron *CEq = NULL;
-    Matrix *CT = NULL;
     evalue *eres;
-    Polyhedron *Porig = P;
-    Polyhedron *T;
 
     if (do_scale) {
 	eres = scale_bound(P, C, options);
@@ -1880,34 +1865,15 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 	    return eres;
     }
 
-    T = P;
-    PP = Polyhedron2Param_SD(&T, C, options->MaxRays, &CEq, &CT);
-    if (T != P && P != Porig)
-	Polyhedron_Free(P);
-    P = T;
+    PP = Polyhedron2Param_MR(P, C, options->MaxRays);
 
-    if (isIdentity(CT)) {
-	Matrix_Free(CT);
-	CT = NULL;
-    }
+    if (do_scale)
+	eres = scale(PP, P, C, options);
+    else
+	eres = Param_Polyhedron_Enumerate(PP, P, C, options);
 
-    if (CT && CT->NbRows == 1)
-	eres = barvinok_enumerate_cst(P, CEq, options);
-    else {
-	if (do_scale)
-	    eres = scale(PP, P, C, CEq, CT, options);
-	else
-	    eres = Param_Polyhedron_Enumerate(PP, P, C, CEq, CT, options);
-	if (CEq)
-	    Polyhedron_Free(CEq);
-    }
-
-    if (CT)
-	Matrix_Free(CT);
     if (PP)
 	Param_Polyhedron_Free(PP);
-    if (P != Porig)
-	Polyhedron_Free(P);
 
     return eres;
 }
@@ -2738,7 +2704,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     Polyhedron *CEq;
     Matrix *CT;
     Polyhedron *PR = P;
-    PP = Polyhedron2Param_SimplifiedDomain(&PR,C, options->MaxRays,&CEq,&CT);
+    PP = Polyhedron2Param_Domain(PR,C, options->MaxRays);
     Polyhedron_Free(C);
 
     int nd;
@@ -2749,8 +2715,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	;
 
     Polyhedron **VD = new Polyhedron_p[nd];
-    Polyhedron *TC = true_context(P, CT, CEq ? CEq : C, options->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, CT, CEq, nd, options, i, D, rVD)
+    Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, NULL, C, nd, options, i, D, rVD)
 	VD[nd++] = rVD;
 	last = D;
     END_FORALL_REDUCED_DOMAIN
@@ -2773,21 +2739,6 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	    EP = evalue_zero();
     }
 
-    if (!EP && CT->NbColumns != CT->NbRows) {
-	Polyhedron *CEqr = DomainImage(CEq, CT, options->MaxRays);
-	Polyhedron *CA = align_context(CEqr, PR->Dimension, options->MaxRays);
-	Polyhedron *I = DomainIntersection(PR, CA, options->MaxRays);
-	Polyhedron_Free(CEqr);
-	Polyhedron_Free(CA);
-#ifdef DEBUG_ER
-	fprintf(stderr, "\nER: Eliminate\n");
-#endif /* DEBUG_ER */
-	nparam -= CT->NbColumns - CT->NbRows;
-	EP = barvinok_enumerate_e_with_options(I, exist, nparam, options);
-	nparam += CT->NbColumns - CT->NbRows;
-	addeliminatedparams_enum(EP, CT, CEq, options->MaxRays, nparam);
-	Polyhedron_Free(I);
-    }
     if (PR != *PA)
 	Polyhedron_Free(PR);
     PR = 0;
