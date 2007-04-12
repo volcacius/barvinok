@@ -609,7 +609,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 	return vol;
     }
 
-    TC = true_context(P, NULL, C, options->MaxRays);
+    TC = true_context(P, C, options->MaxRays);
 
     if (PP_MaxRays & POL_NO_DUAL)
 	PP_MaxRays = 0;
@@ -629,7 +629,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     for (i = 0; i < nvar+1; ++i)
 	matrix[i] = ALLOCN(evalue *, nvar);
 
-    FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
+    FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	Polyhedron *CA, *F;
 	struct parameter_point *point;
 

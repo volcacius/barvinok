@@ -6,17 +6,16 @@ extern "C" {
 
 struct barvinok_options;
 
-Polyhedron *true_context(Polyhedron *P, Matrix *CT,
-			 Polyhedron *C, unsigned MaxRays);
+Polyhedron *true_context(Polyhedron *P, Polyhedron *C, unsigned MaxRays);
 Vector *inner_point(Polyhedron *P);
 int is_internal(Vector *point, Value *constraint);
 
-Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq, int nd,
+Polyhedron *reduce_domain(Polyhedron *D, int nd,
 			  Vector *inner, struct barvinok_options *options);
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
-#define FORALL_REDUCED_DOMAIN(PP,C,CT,CEq,nd,options,i,D,rVD)		    \
+#define FORALL_REDUCED_DOMAIN(PP,C,nd,options,i,D,rVD)		    \
 	do {								    \
 	    Param_Domain *D;						    \
 	    Polyhedron *rVD;						    \
@@ -26,8 +25,7 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq, int nd,
 	    if (nd < 0)							    \
 		for (nd = 0, D = PP->D; D; ++nd, D = D->next);		    \
 	    for (i = 0, D = PP->D; D; D = _frd_next) {			    \
-		rVD = reduce_domain(D->Domain, CT, CEq,	nd,		    \
-				    _frd_inner, options);		    \
+		rVD = reduce_domain(D->Domain, nd, _frd_inner, options);    \
 		_frd_next = D->next;					    \
 		if (!rVD)						    \
 		    continue;						    \

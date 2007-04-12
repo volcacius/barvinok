@@ -640,9 +640,9 @@ static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
     if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
 	int nd = -1;
 	evalue *tmp, *eres = NULL;
-	Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
+	Polyhedron *TC = true_context(P, C, options->MaxRays);
 
-	FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
+	FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	    Polyhedron *P2, *CA;
 	    /* Intersect with D->Domain, so we only have the relevant constraints
 	     * left.  Don't use rVD, though, since we still want to recognize
@@ -706,9 +706,9 @@ evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
     if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
 	int nd = -1;
 	evalue *tmp;
-	Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
+	Polyhedron *TC = true_context(P, C, options->MaxRays);
 
-	FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
+	FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	    Param_Polyhedron *PP_D = Param_Polyhedron_Domain(PP, D, rVD);
 	    tmp = scale(PP_D, P, rVD, options);
 	    if (!eres)

@@ -2,15 +2,11 @@
 #include <barvinok/util.h>
 #include "reduce_domain.h"
 
-Polyhedron *true_context(Polyhedron *P, Matrix *CT,
-			 Polyhedron *C, unsigned MaxRays)
+Polyhedron *true_context(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
 {
-    unsigned nparam = CT ? CT->NbRows - 1 : C->Dimension;
+    unsigned nparam = C->Dimension;
     Polyhedron *tmp = Polyhedron_Project(P, nparam);
-    Polyhedron *D = CT ? DomainPreimage(tmp, CT, MaxRays) : tmp;
-    C = DomainIntersection(D, C, MaxRays);
-    if (CT)
-	Polyhedron_Free(D);
+    C = DomainIntersection(tmp, C, MaxRays);
     Polyhedron_Free(tmp);
     return C;
 }
@@ -72,19 +68,16 @@ int is_internal(Vector *point, Value *constraint)
     return value_pos_p(constraint[1+p]);
 }
 
-Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq, int nd,
+Polyhedron *reduce_domain(Polyhedron *D, int nd,
 			  Vector *inner, struct barvinok_options *options)
 {
-    Polyhedron *Dt, *rVD;
-    Polyhedron *C;
+    Polyhedron *rVD;
     Value c;
     int i;
     Matrix *constraints;
     int changed;
 
-    C = D->next ? DomainConvex(D, options->MaxRays) : D;
-    Dt = CT ? DomainPreimage(C, CT, options->MaxRays) : C;
-    rVD = CEq ? DomainIntersection(Dt, CEq, options->MaxRays) : Domain_Copy(Dt);
+    rVD = D->next ? DomainConvex(D, options->MaxRays) : Polyhedron_Copy(D);
 
     /* If there is only one chamber, then we don't need to take care
      * of possible overlaps.
@@ -92,25 +85,9 @@ Polyhedron *reduce_domain(Polyhedron *D, Matrix *CT, Polyhedron *CEq, int nd,
      * and then some of the assumptions used in determining whether
      * the domain is too small in geometric dimension no longer apply.
      */
-    if (nd == 1)
-	goto done;
-
-    /* if rVD is empty or too small in geometric dimension */
-    if(!rVD || emptyQ(rVD) ||
-	    (CEq && rVD->Dimension-rVD->NbEq < Dt->Dimension-Dt->NbEq-CEq->NbEq)) {
-	if (rVD)
-	    Domain_Free(rVD);
-	rVD = NULL;		/* empty validity domain */
-done:
-	if (D->next)
-	    Polyhedron_Free(C);
-	if (CT)
-	    Domain_Free(Dt);
+    if (nd == 1) {
 	return rVD;
     }
-
-    if (CT)
-	Domain_Free(Dt);
 
     assert(rVD->Dimension == inner->Size-2);
     constraints = Polyhedron2Constraints(rVD);
@@ -127,9 +104,6 @@ done:
 	rVD = Constraints2Polyhedron(constraints, options->MaxRays);
     }
     Matrix_Free(constraints);
-
-    if (D->next)
-	Polyhedron_Free(C);
 
     rVD = DomainConstraintSimplify(rVD, options->MaxRays);
     POL_ENSURE_FACETS(rVD);

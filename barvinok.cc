@@ -1802,8 +1802,8 @@ try_again:
 
     et = enumerator_base::create(P, dim, PP->nbV, options);
 
-    Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options, i, D, rVD)
+    Polyhedron *TC = true_context(P, C, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	Param_Vertices *V;
 
 	value_init(s[i].E.d);
@@ -2715,8 +2715,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	;
 
     Polyhedron **VD = new Polyhedron_p[nd];
-    Polyhedron *TC = true_context(P, NULL, C, options->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, NULL, C, nd, options, i, D, rVD)
+    Polyhedron *TC = true_context(P, C, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	VD[nd++] = rVD;
 	last = D;
     END_FORALL_REDUCED_DOMAIN

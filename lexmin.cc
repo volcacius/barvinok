@@ -2681,9 +2681,8 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     construct_rational_vertices(PP, T, T ? T->NbRows-nparam-1 : dim,
 				nparam, all_vertices);
 
-    Polyhedron *TC = true_context(P, NULL, C, options->verify.barvinok->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, NULL, NULL, nd, options->verify.barvinok,
-			  i, D, rVD)
+    Polyhedron *TC = true_context(P, C, options->verify.barvinok->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, nd, options->verify.barvinok, i, D, rVD)
 	Param_Vertices *V;
 
 	EDomain *epVD = new EDomain(rVD);
