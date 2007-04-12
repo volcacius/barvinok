@@ -144,9 +144,8 @@ int main()
     return !(i == 10);
 }
 ],
-[AC_DEFINE(HAVE_CORRECT_VERTICES,[],
-	  [PolyLib computes correct vertices])],
-AC_MSG_WARN([This version of polylib produces incorrect vertices.]),
+[],
+AC_MSG_ERROR([This version of polylib produces incorrect vertices.]),
 AC_MSG_WARN([Unable to determine whether PolyLib computes correct vertices]))
 
 AC_MSG_CHECKING([number of arguments of Polyhedron_Enumerate])

@@ -19,11 +19,6 @@ const char *barvinok_version(void)
 	" -INCREMENTAL"
 #endif
     "\n"
-#ifdef HAVE_CORRECT_VERTICES
-	" +CORRECT_VERTICES"
-#else
-	" -CORRECT_VERTICES"
-#endif
 #ifdef HAVE_PIPLIB
 	" +PIPLIB"
 #else

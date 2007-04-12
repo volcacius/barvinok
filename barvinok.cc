@@ -1581,7 +1581,6 @@ void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 	}
 }
 
-#ifdef HAVE_CORRECT_VERTICES
 static inline Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
     Polyhedron *Cin,int WS,Polyhedron **CEq,Matrix **CT)
 {
@@ -1589,52 +1588,6 @@ static inline Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
 	WS = 0;
     return Polyhedron2Param_SimplifiedDomain(Din, Cin, WS, CEq, CT);
 }
-#else
-static Param_Polyhedron *Polyhedron2Param_SD(Polyhedron **Din,
-    Polyhedron *Cin,int WS,Polyhedron **CEq,Matrix **CT)
-{
-    static char data[] =    "    1   0   0   0   0   1 -18 "
-			    "    1   0   0 -20   0  19   1 "
-			    "    1   0   1  20   0 -20  16 "
-			    "    1   0   0   0   0  -1  19 "
-			    "    1   0  -1   0   0   0   4 "
-			    "    1   4 -20   0   0  -1  23 "
-			    "    1  -4  20   0   0   1 -22 "
-			    "    1   0   1   0  20 -20  16 "
-			    "    1   0   0   0 -20  19   1 ";
-    static int checked = 0;
-    if (!checked) {
-	checked = 1;
-	char *p = data;
-	int n, v, i;
-	Matrix *M = Matrix_Alloc(9, 7);
-	for (i = 0; i < 9; ++i)
-	    for (int j = 0; j < 7; ++j) {
-		sscanf(p, "%d%n", &v, &n);
-		p += n;
-		value_set_si(M->p[i][j], v);
-	    }
-	Polyhedron *P = Constraints2Polyhedron(M, 1024);
-	Matrix_Free(M);
-	Polyhedron *U = Universe_Polyhedron(1);
-	Param_Polyhedron *PP = Polyhedron2Param_Domain(P, U, 1024);
-	Polyhedron_Free(P);
-	Polyhedron_Free(U);
-	Param_Vertices *V;
-	for (i = 0, V = PP->V; V; ++i, V = V->next)
-	    ;
-	if (PP)
-	    Param_Polyhedron_Free(PP);
-	if (i != 10) {
-	    fprintf(stderr, "WARNING: results may be incorrect\n");
-	    fprintf(stderr, 
-	"WARNING: use latest version of PolyLib to remove this warning\n");
-	}
-    }
-
-    return Polyhedron2Param_SimplifiedDomain(Din, Cin, WS, CEq, CT);
-}
-#endif
 
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
 				       barvinok_options *options);
