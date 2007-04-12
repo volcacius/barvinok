@@ -5,6 +5,7 @@
 #include <barvinok/barvinok.h>
 #include "fdstream.h"
 #include "argp.h"
+#include "progname.h"
 #include "verify.h"
 #include "verif_ehrhart.h"
 #include "remove_equalities.h"
@@ -475,6 +476,7 @@ int main(int argc, char **argv)
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
     options.verify.barvinok = bv_options;
+    set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     M = Matrix_Read();

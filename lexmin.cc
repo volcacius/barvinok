@@ -10,6 +10,7 @@
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "argp.h"
+#include "progname.h"
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
@@ -2743,6 +2744,7 @@ int main(int argc, char **argv)
     bv_options->lookup_table = 0;
 
     options.verify.barvinok = bv_options;
+    set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     MA = Matrix_Read();

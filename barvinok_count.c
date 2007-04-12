@@ -4,6 +4,7 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "argp.h"
+#include "progname.h"
 
 #define PRINT_STATS  	    (BV_OPT_LAST+1)
 
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
     arguments.print_stats = 0;
     arguments.options = options;
 
+    set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     A = Polyhedron_Read(options->MaxRays);

@@ -5,6 +5,7 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "argp.h"
+#include "progname.h"
 #include "config.h"
 
 #ifdef HAVE_SYS_TIMES_H
@@ -38,6 +39,7 @@ int main(int argc, char **argv)
     char s[128];
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
+    set_program_name(argv[0]);
     argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
 
     nbPol = nbVec = nbMat = 0;

@@ -2,6 +2,8 @@
 #include <sys/times.h>
 #include <barvinok/barvinok.h>
 #include "verify.h"
+#include "argp.h"
+#include "progname.h"
 
 struct {
     int	    sign;
@@ -339,6 +341,7 @@ int main(int argc, char **argv)
     struct options options;
 
     options.verify.barvinok = bv_options;
+    set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     if (options.verify.M == INT_MIN)

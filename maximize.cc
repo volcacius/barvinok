@@ -5,6 +5,7 @@
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
 #include "argp.h"
+#include "progname.h"
 #include "evalue_convert.h"
 #include "verify.h"
 
@@ -1151,6 +1152,7 @@ int main(int argc, char **argv)
     int result = 0;
 
     options.verify.barvinok = bv_options;
+    set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     EP = evalue_read(stdin, options.var_list, &all_vars, &nvar, &nparam,

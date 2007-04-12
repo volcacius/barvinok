@@ -4,6 +4,7 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "argp.h"
+#include "progname.h"
 #include "error.h"
 #include "config.h"
 #ifdef HAVE_OMEGA
@@ -128,6 +129,7 @@ int main(int argc, char **argv)
     arguments.series = 0;
     arguments.verbose = 0;
 
+    set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     if (arguments.series && !arguments.scarf) {
