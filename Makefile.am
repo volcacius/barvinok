@@ -69,6 +69,8 @@ libbarvinok_la_SOURCES = \
     lattice_point.cc \
     lattice_point.h \
     options.c \
+    param_util.c \
+    param_util.h \
     reduce_domain.c \
     reduce_domain.h \
     reducer.cc \

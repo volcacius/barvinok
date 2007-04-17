@@ -3,7 +3,7 @@
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "reduce_domain.h"
-#include "scale.h"
+#include "param_util.h"
 #include "volume.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
