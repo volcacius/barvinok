@@ -7,6 +7,7 @@
 #include "config.h"
 #include "conversion.h"
 #include "lattice_point.h"
+#include "param_util.h"
 
 using std::cerr;
 using std::endl;
@@ -435,9 +436,9 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
  * resulting expression.
  */
 static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
-					Matrix *W, Value lcm, Polyhedron *PD)
+					Matrix *V, Polyhedron *PD)
 {
-    unsigned nparam = W->NbColumns - 1;
+    unsigned nparam = V->NbColumns-2;
 
     Matrix* Rays = rays2matrix2(rays);
     Matrix *T = Transpose(Rays);
@@ -448,23 +449,17 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     Matrix_Free(Rays);
     Matrix_Free(T2);
     mat_ZZ vertex;
-    matrix2zz(W, vertex, W->NbRows, W->NbColumns);
+    matrix2zz(V, vertex, V->NbRows, V->NbColumns-1);
 
     vec_ZZ num;
     num = lambda * vertex;
 
     evalue *EP = multi_monom(num);
 
-    evalue tmp;
-    value_init(tmp.d);
-    value_init(tmp.x.n);
-    value_set_si(tmp.x.n, 1);
-    value_assign(tmp.d, lcm);
+    evalue_div(EP, V->p[0][nparam+1]);
 
-    emul(&tmp, EP);
-
-    Matrix *L = Matrix_Alloc(inv->NbRows, W->NbColumns);
-    Matrix_Product(inv, W, L);
+    Matrix *L = Matrix_Alloc(inv->NbRows, V->NbColumns);
+    Matrix_Product(inv, V, L);
 
     mat_ZZ RT;
     matrix2zz(T, RT, T->NbRows, T->NbColumns);
@@ -473,22 +468,22 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     vec_ZZ p = lambda * RT;
 
     for (int i = 0; i < L->NbRows; ++i) {
-	ceil_mod(L->p[i], nparam+1, lcm, p[i], EP, PD);
+	ceil_mod(L->p[i], nparam+1, V->p[0][nparam+1], p[i], EP, PD);
     }
 
     Matrix_Free(L);
 
     Matrix_Free(inv);
-    free_evalue_refs(&tmp); 
     return EP;
 }
 
-evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda, Matrix *W,
-		      Value lcm, Polyhedron *PD, barvinok_options *options)
+static evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda,
+			     Param_Vertices *V,
+			     Polyhedron *PD, barvinok_options *options)
 {
-    evalue *lp = lattice_point_fractional(rays, lambda, W, lcm, PD);
+    evalue *lp = lattice_point_fractional(rays, lambda, V->Vertex, PD);
     if (options->lookup_table)
-	evalue_mod2table(lp, W->NbColumns-1);
+	evalue_mod2table(lp, V->Vertex->NbColumns-2);
     return lp;
 }
 
@@ -622,26 +617,11 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
     unsigned dim = rays.NumCols();
     mat_ZZ vertex;
     vertex.SetDims(V->Vertex->NbRows, nparam+1);
-    Value lcm, tmp;
-    value_init(lcm);
-    value_init(tmp);
-    value_set_si(lcm, 1);
-    for (int j = 0; j < V->Vertex->NbRows; ++j) {
-	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
-    }
-    if (value_notone_p(lcm)) {
-	Matrix * mv = Matrix_Alloc(dim, nparam+1);
-	for (int j = 0 ; j < dim; ++j) {
-	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
-	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
-	}
 
-	term->E = lattice_point(rays, lambda, mv, lcm, PD, options);
+    Param_Vertex_Common_Denominator(V);
+    if (value_notone_p(V->Vertex->p[0][nparam+1])) {
+	term->E = lattice_point(rays, lambda, V, PD, options);
 	term->constant = 0;
-
-	Matrix_Free(mv);
-	value_clear(lcm);
-	value_clear(tmp);
 	return;
     }
     for (int i = 0; i < V->Vertex->NbRows; ++i) {
@@ -652,13 +632,10 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
     vec_ZZ num;
     num = lambda * vertex;
 
-    int p = -1;
     int nn = 0;
     for (int j = 0; j < nparam; ++j)
-	if (num[j] != 0) {
+	if (num[j] != 0)
 	    ++nn;
-	    p = j;
-	}
     if (nn >= 1) {
 	term->E = multi_monom(num);
 	term->constant = 0;
@@ -666,7 +643,4 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
 	term->E = NULL;
 	term->constant = num[nparam];
     }
-
-    value_clear(lcm);
-    value_clear(tmp);
 }
