@@ -421,71 +421,6 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
     Matrix_Free(T2);
 }
 
-static void vertex_period(
-		    const mat_ZZ& rays, vec_ZZ& lambda, Matrix *T, 
-		    Value lcm, int p, Vector *val, 
-		    evalue *E, evalue* ev,
-		    ZZ& offset)
-{
-    unsigned nparam = T->NbRows - 1;
-    unsigned dim = rays.NumRows();
-    Value tmp;
-    ZZ nump;
-
-    if (p == nparam) {
-	vec_ZZ vertex;
-	ZZ num, l;
-	Vector * values = Vector_Alloc(dim + 1);
-	Vector_Matrix_Product(val->p, T, values->p);
-	value_assign(values->p[dim], lcm);
-	lattice_point(values->p, rays, vertex, NULL);
-	num = vertex * lambda;
-	value2zz(lcm, l);
-	num *= l;
-	num += offset;
-	value_init(ev->x.n);
-	zz2value(num, ev->x.n);
-	value_assign(ev->d, lcm);
-	Vector_Free(values);
-	return;
-    }
-
-    value_init(tmp);
-    vec_ZZ vertex;
-    values2zz(T->p[p], vertex, dim);
-    nump = vertex * lambda;
-    if (First_Non_Zero(val->p, p) == -1) {
-	value_assign(tmp, lcm);
-	evalue *ET = term(p, nump, &tmp);
-	eadd(ET, E);   
-	free_evalue_refs(ET); 
-	delete ET;
-    }
-
-    value_assign(tmp, lcm);
-    if (First_Non_Zero(T->p[p], dim) != -1)
-	Vector_Gcd(T->p[p], dim, &tmp);
-    Gcd(tmp, lcm, &tmp);
-    if (value_lt(tmp, lcm)) {
-	ZZ count;
-
-	value_division(tmp, lcm, tmp);
-	value_set_si(ev->d, 0);
-	ev->x.p = new_enode(periodic, VALUE_TO_INT(tmp), p+1);
-	value2zz(tmp, count);
-	do {
-	    value_decrement(tmp, tmp);
-	    --count;
-	    ZZ new_offset = offset - count * nump;
-	    value_assign(val->p[p], tmp);
-	    vertex_period(rays, lambda, T, lcm, p+1, val, E, 
-			  &ev->x.p->arr[VALUE_TO_INT(tmp)], new_offset);
-	} while (value_pos_p(tmp));
-    } else
-	vertex_period(rays, lambda, T, lcm, p+1, val, E, ev, offset);
-    value_clear(tmp);
-}
-
 /* Returns the power of (t+1) in the term of a rational generating function,
  * i.e., the scalar product of the actual lattice point and lambda.
  * The lattice point is the unique lattice point in the fundamental parallelepiped
@@ -548,40 +483,13 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     return EP;
 }
 
-static evalue* lattice_point_table(const mat_ZZ& rays, vec_ZZ& lambda, Matrix *W,
-				   Value lcm, Polyhedron *PD)
-{
-    Matrix *T = Transpose(W);
-    unsigned nparam = T->NbRows - 1;
-
-    evalue *EP = new evalue();
-    value_init(EP->d);
-    evalue_set_si(EP, 0, 1);
-
-    evalue ev;
-    Vector *val = Vector_Alloc(nparam+1);
-    value_set_si(val->p[nparam], 1);
-    ZZ offset(INIT_VAL, 0);
-    value_init(ev.d);
-    vertex_period(rays, lambda, T, lcm, 0, val, EP, &ev, offset);
-    Vector_Free(val);
-    eadd(&ev, EP);
-    free_evalue_refs(&ev);   
-
-    Matrix_Free(T);
-
-    reduce_evalue(EP);
-
-    return EP;
-}
-
 evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda, Matrix *W,
 		      Value lcm, Polyhedron *PD, barvinok_options *options)
 {
+    evalue *lp = lattice_point_fractional(rays, lambda, W, lcm, PD);
     if (options->lookup_table)
-	return lattice_point_table(rays, lambda, W, lcm, PD);
-    else
-	return lattice_point_fractional(rays, lambda, W, lcm, PD);
+	evalue_mod2table(lp, W->NbColumns-1);
+    return lp;
 }
 
 /* returns the unique lattice point in the fundamental parallelepiped
