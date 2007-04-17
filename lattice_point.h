@@ -21,4 +21,18 @@ evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda, Matrix *W,
 void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num, 
 		   evalue **E_vertex, barvinok_options *options);
 
+/* This structure encodes the power of the term in a rational generating function.
+ * 
+ * Either E == NULL or constant = 0
+ * If E != NULL, then the power is 	    E
+ * If E == NULL, then the power is 	    constant
+ */
+struct term_info {
+    evalue	   *E;
+    ZZ		    constant;
+};
+
+void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
+    term_info* term, Polyhedron *PD, barvinok_options *options);
+
 #endif

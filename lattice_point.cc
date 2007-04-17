@@ -697,3 +697,68 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
     }
 }
 
+/* Returns the power of (t+1) in the term of a rational generating function,
+ * i.e., the scalar product of the actual lattice point and lambda.
+ * The lattice point is the unique lattice point in the fundamental parallelepiped
+ * of the unimodual cone i shifted to the parametric vertex V.
+ *
+ * PD is the parameter domain, which, if != NULL, may be used to simply the
+ * resulting expression.
+ *
+ * The result is returned in term.
+ */
+void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
+    term_info* term, Polyhedron *PD, barvinok_options *options)
+{
+    unsigned nparam = V->Vertex->NbColumns - 2;
+    unsigned dim = rays.NumCols();
+    mat_ZZ vertex;
+    vertex.SetDims(V->Vertex->NbRows, nparam+1);
+    Value lcm, tmp;
+    value_init(lcm);
+    value_init(tmp);
+    value_set_si(lcm, 1);
+    for (int j = 0; j < V->Vertex->NbRows; ++j) {
+	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
+    }
+    if (value_notone_p(lcm)) {
+	Matrix * mv = Matrix_Alloc(dim, nparam+1);
+	for (int j = 0 ; j < dim; ++j) {
+	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
+	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
+	}
+
+	term->E = lattice_point(rays, lambda, mv, lcm, PD, options);
+	term->constant = 0;
+
+	Matrix_Free(mv);
+	value_clear(lcm);
+	value_clear(tmp);
+	return;
+    }
+    for (int i = 0; i < V->Vertex->NbRows; ++i) {
+	assert(value_one_p(V->Vertex->p[i][nparam+1]));  // for now
+	values2zz(V->Vertex->p[i], vertex[i], nparam+1);
+    }
+
+    vec_ZZ num;
+    num = lambda * vertex;
+
+    int p = -1;
+    int nn = 0;
+    for (int j = 0; j < nparam; ++j)
+	if (num[j] != 0) {
+	    ++nn;
+	    p = j;
+	}
+    if (nn >= 1) {
+	term->E = multi_monom(num);
+	term->constant = 0;
+    } else {
+	term->E = NULL;
+	term->constant = num[nparam];
+    }
+
+    value_clear(lcm);
+    value_clear(tmp);
+}
