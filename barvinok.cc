@@ -304,13 +304,11 @@ static void mask(Matrix *f, evalue *factor, barvinok_options *options)
  * 
  * Either E == NULL or constant = 0
  * If E != NULL, then the power is 	    E
- * If E == NULL, then the power is 	    coeff * param[pos] + constant
+ * If E == NULL, then the power is 	    constant
  */
 struct term_info {
     evalue	   *E;
     ZZ		    constant;
-    ZZ		    coeff;
-    int		    pos;
 };
 
 /* Returns the power of (t+1) in the term of a rational generating function,
@@ -367,15 +365,12 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
 	    ++nn;
 	    p = j;
 	}
-    if (nn >= 2) {
+    if (nn >= 1) {
 	term->E = multi_monom(num);
 	term->constant = 0;
     } else {
 	term->E = NULL;
 	term->constant = num[nparam];
-	term->pos = p;
-	if (p != -1)
-	    term->coeff = num[p];
     }
 
     value_clear(lcm);
@@ -1012,13 +1007,6 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	free_evalue_refs(&EV);
 	free_evalue_refs(num.E);
 	delete num.E; 
-    } else if (num.pos != -1) {
-	dpoly_n d(dim, num.constant, num.coeff);
-	d.div(n, c, sign);
-	evalue EV;
-	uni_polynom(num.pos, c, &EV);
-	eadd(&EV , vE[vert]);
-	free_evalue_refs(&EV);
     } else {
 	mpq_set_si(count, 0, 1);
 	dpoly d(dim, num.constant);
