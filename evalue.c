@@ -1471,29 +1471,56 @@ static void emul_rev (evalue *e1, evalue *res)
     *res = ev;
 }
 
-static void emul_poly (evalue *e1, evalue *res)
+static void emul_poly(evalue *e1, evalue *res)
 {
-    int i, j, o = type_offset(res->x.p);
+    int i, j, offset = type_offset(res->x.p);
     evalue tmp;
-    int size=(e1->x.p->size + res->x.p->size - o - 1); 
+    enode *p;
+    int size = (e1->x.p->size + res->x.p->size - offset - 1);
+
+    p = new_enode(res->x.p->type, size, res->x.p->pos);
+
+    for (i = offset; i < e1->x.p->size-1; ++i)
+	if (!EVALUE_IS_ZERO(e1->x.p->arr[i]))
+	    break;
+
+    /* special case pure power */
+    if (i == e1->x.p->size-1) {
+	if (offset) {
+	    value_clear(p->arr[0].d);
+	    p->arr[0] = res->x.p->arr[0];
+	}
+	for (i = offset; i < e1->x.p->size-1; ++i)
+	    evalue_set_si(&p->arr[i], 0, 1);
+	for (i = offset; i < res->x.p->size; ++i) {
+	    value_clear(p->arr[i+e1->x.p->size-offset-1].d);
+	    p->arr[i+e1->x.p->size-offset-1] = res->x.p->arr[i];
+	    emul(&e1->x.p->arr[e1->x.p->size-1],
+		 &p->arr[i+e1->x.p->size-offset-1]);
+	}
+	free(res->x.p);
+	res->x.p = p;
+	return;
+    }
+
     value_init(tmp.d);
     value_set_si(tmp.d,0);
-    tmp.x.p=new_enode(res->x.p->type, size, res->x.p->pos);
-    if (o)
-	evalue_copy(&tmp.x.p->arr[0], &e1->x.p->arr[0]);
-    for (i=o; i < e1->x.p->size; i++) {
+    tmp.x.p = p;
+    if (offset)
+	evalue_copy(&p->arr[0], &e1->x.p->arr[0]);
+    for (i = offset; i < e1->x.p->size; i++) {
 	evalue_copy(&tmp.x.p->arr[i], &e1->x.p->arr[i]);
-	emul(&res->x.p->arr[o], &tmp.x.p->arr[i]);
+	emul(&res->x.p->arr[offset], &tmp.x.p->arr[i]);
     }
     for (; i<size; i++)
 	evalue_set_si(&tmp.x.p->arr[i], 0, 1);
-    for (i=o+1; i<res->x.p->size; i++)
-	for (j=o; j<e1->x.p->size; j++) {
+    for (i = offset+1; i<res->x.p->size; i++)
+	for (j = offset; j<e1->x.p->size; j++) {
 	    evalue ev;
 	    value_init(ev.d);
 	    evalue_copy(&ev, &e1->x.p->arr[j]);
 	    emul(&res->x.p->arr[i], &ev);
-	    eadd(&ev, &tmp.x.p->arr[i+j-o]);
+	    eadd(&ev, &tmp.x.p->arr[i+j-offset]);
 	    free_evalue_refs(&ev);
 	}
     free_evalue_refs(res);
@@ -1584,6 +1611,9 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 }
      
     if (EVALUE_IS_ZERO(*res))
+	return;
+
+    if (EVALUE_IS_ONE(*e1))
 	return;
 
     if (value_zero_p(e1->d) && e1->x.p->type == partition) {
