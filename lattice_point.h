@@ -31,6 +31,6 @@ struct term_info {
 };
 
 void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
-    term_info* term, Polyhedron *PD, barvinok_options *options);
+    term_info* term, barvinok_options *options);
 
 #endif

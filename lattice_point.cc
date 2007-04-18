@@ -240,10 +240,10 @@ out:
 }
 
 static void ceil(Value *coef, int len, Value d, ZZ& f,
-                 evalue *EP, Polyhedron *PD, barvinok_options *options)
+                 evalue *EP, barvinok_options *options)
 {
     Vector_Oppose(coef, coef, len);
-    fractional_part(coef, len, d, f, EP, PD);
+    fractional_part(coef, len, d, f, EP, NULL);
     if (options->lookup_table)
 	evalue_mod2table(EP, len-1);
 }
@@ -438,12 +438,9 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
  * The first nparam columns are the coefficients of the parameters
  * and the final column is the constant term.
  * lcm is the common denominator of all coefficients.
- *
- * PD is the parameter domain, which, if != NULL, may be used to simply the
- * resulting expression.
  */
 static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
-					Matrix *V, Polyhedron *PD)
+					Matrix *V)
 {
     unsigned nparam = V->NbColumns-2;
 
@@ -476,7 +473,7 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 
     for (int i = 0; i < L->NbRows; ++i) {
 	Vector_Oppose(L->p[i], L->p[i], nparam+1);
-	fractional_part(L->p[i], nparam+1, V->p[0][nparam+1], p[i], EP, PD);
+	fractional_part(L->p[i], nparam+1, V->p[0][nparam+1], p[i], EP, NULL);
     }
 
     Matrix_Free(L);
@@ -486,10 +483,9 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 }
 
 static evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda,
-			     Param_Vertices *V,
-			     Polyhedron *PD, barvinok_options *options)
+			     Param_Vertices *V, barvinok_options *options)
 {
-    evalue *lp = lattice_point_fractional(rays, lambda, V->Vertex, PD);
+    evalue *lp = lattice_point_fractional(rays, lambda, V->Vertex);
     if (options->lookup_table)
 	evalue_mod2table(lp, V->Vertex->NbColumns-2);
     return lp;
@@ -549,7 +545,7 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	for (int i = 0; i < dim; ++i) {
 	    remainders[i] = evalue_zero();
 	    one = 1;
-	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], 0, options);
+	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], options);
 	}
 	Matrix_Free(L);
 
@@ -613,13 +609,10 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
  * The lattice point is the unique lattice point in the fundamental parallelepiped
  * of the unimodual cone i shifted to the parametric vertex V.
  *
- * PD is the parameter domain, which, if != NULL, may be used to simply the
- * resulting expression.
- *
  * The result is returned in term.
  */
 void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
-    term_info* term, Polyhedron *PD, barvinok_options *options)
+    term_info* term, barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = rays.NumCols();
@@ -628,7 +621,7 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
 
     Param_Vertex_Common_Denominator(V);
     if (value_notone_p(V->Vertex->p[0][nparam+1])) {
-	term->E = lattice_point(rays, lambda, V, PD, options);
+	term->E = lattice_point(rays, lambda, V, options);
 	term->constant = 0;
 	return;
     }

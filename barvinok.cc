@@ -910,7 +910,7 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 
     sign = sc.sign;
 
-    lattice_point(V, sc.rays, lambda, &num, 0, options);
+    lattice_point(V, sc.rays, lambda, &num, options);
     den = sc.rays * lambda;
     normalize(sign, num.constant, den);
 
