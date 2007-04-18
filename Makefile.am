@@ -3,6 +3,11 @@ if HAVE_GINAC
 endif
 SUBDIRS = $(MAYBE_BERNSTEIN) lib . omega doc
 
+lib/libgnu.la:
+	$(MAKE) $(AM_MAKEFLAGS) -C lib libgnu.la
+bernstein/libbernstein.la:
+	$(MAKE) $(AM_MAKEFLAGS) -C bernstein libbernstein.la
+
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib @GINACLIB_CPPFLAGS@
 AM_LDFLAGS = -Llib
 
