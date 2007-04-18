@@ -3926,6 +3926,8 @@ evalue *affine2evalue(Value *coeff, Value denom, int nvar)
     value_init(E->d);
     evalue_set(E, coeff[nvar], denom);
     for (i = 0; i < nvar; ++i) {
+	if (value_zero_p(coeff[i]))
+	    continue;
 	evalue *t = term(i, coeff[i], denom);
 	eadd(t, E);
 	free_evalue_refs(t);
