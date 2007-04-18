@@ -1614,39 +1614,22 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
     return eres;
 }
 
-evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
+/* frees P */
+static evalue* enumerate(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options)
 {
     //P = unfringe(P, MaxRays);
-    Polyhedron *next, *Cnext;
+    Polyhedron *next;
     Polyhedron *Corig = C;
-    Polyhedron *Porig = P;
-    Polyhedron *CEq = NULL, *rVD, *CA;
+    Polyhedron *CEq = NULL, *rVD;
     int r = 0;
     unsigned nparam = C->Dimension;
     evalue *eres;
     Matrix *CP = NULL;
 
-    if (P->next)
-	fprintf(stderr,
-    "barvinok_enumerate: input is a union; only first polyhedron is enumerated\n");
-
-    if (C->next)
-	fprintf(stderr,
-    "barvinok_enumerate: context is a union; only first polyhedron is considered\n");
-
     evalue factor;
     value_init(factor.d);
     evalue_set_si(&factor, 1, 1);
-
-    Cnext = C->next;
-    C->next = NULL;
-    CA = align_context(C, P->Dimension, options->MaxRays);
-    next = P->next;
-    P->next = NULL;
-    P = DomainIntersection(P, CA, options->MaxRays);
-    Porig->next = next;
-    Polyhedron_Free(CA);
 
     /* for now */
     POL_ENSURE_FACETS(P);
@@ -1678,7 +1661,6 @@ out:
 	if (C != Corig)
 	    Polyhedron_Free(C);
 	   
-	Corig->next = Cnext;
 	return eres;
     }
     if (Polyhedron_is_unbounded(P, nparam, options->MaxRays))
@@ -1698,16 +1680,11 @@ out:
     if (P->NbEq != 0) {
 	Polyhedron *Q = P;
 	Polyhedron *D = C;
-	remove_all_equalities(&P, &C, &CP, NULL, nparam, options->MaxRays);
-	if (P != Q && Q != Porig)
-	    Polyhedron_Free(Q);
+	remove_all_equalities(&Q, &C, &CP, NULL, nparam, options->MaxRays);
 	if (C != D && D != Corig)
 	    Polyhedron_Free(D);
-    }
-    if (CP) {
-	nparam = C->Dimension;
-	if (!nparam)
-	    goto constant;
+	eres = enumerate(Q, C, options);
+	goto out;
     }
 
     Polyhedron *T = Polyhedron_Factor(P, nparam, NULL, options->MaxRays);
@@ -1765,6 +1742,37 @@ out:
     }
 
     goto out;
+}
+
+evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
+					struct barvinok_options *options)
+{
+    Polyhedron *next, *Cnext, *CA;
+    Polyhedron *Porig = P;
+    evalue *eres;
+
+    if (P->next)
+	fprintf(stderr,
+    "barvinok_enumerate: input is a union; only first polyhedron is enumerated\n");
+
+    if (C->next)
+	fprintf(stderr,
+    "barvinok_enumerate: context is a union; only first polyhedron is considered\n");
+
+    Cnext = C->next;
+    C->next = NULL;
+    CA = align_context(C, P->Dimension, options->MaxRays);
+    next = P->next;
+    P->next = NULL;
+    P = DomainIntersection(P, CA, options->MaxRays);
+    Porig->next = next;
+    Polyhedron_Free(CA);
+
+    eres = enumerate(P, C, options);
+
+    C->next = Cnext;
+
+    return eres;
 }
 
 evalue* barvinok_enumerate_ev(Polyhedron *P, Polyhedron* C, unsigned MaxRays)
