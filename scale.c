@@ -406,14 +406,6 @@ static void linear_min(Polyhedron *D, Value *obj, Value *min)
     value_clear(tmp);
 }
 
-static void Vector_Oppose(Value *p1, Value *p2, unsigned len)
-{
-    unsigned i;
-
-    for (i = 0; i < len; ++i)
-	value_oppose(p2[i], p1[i]);
-}
-
 static Polyhedron *inflate_deflate_domain(Lattice *L, unsigned MaxRays)
 {
     unsigned nvar = L->NbRows-1;

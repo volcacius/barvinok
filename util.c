@@ -1673,3 +1673,11 @@ int Polyhedron_is_unbounded(Polyhedron *P, unsigned nparam, unsigned MaxRays)
     Polyhedron_Free(R);
     return is_unbounded;
 }
+
+void Vector_Oppose(Value *p1, Value *p2, unsigned len)
+{
+    unsigned i;
+
+    for (i = 0; i < len; ++i)
+	value_oppose(p2[i], p1[i]);
+}
