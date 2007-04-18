@@ -154,14 +154,12 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
     return false;
 }
 
-/* modifies f argument ! */
-static void ceil_mod(Value *coef, int len, Value d, ZZ& f, evalue *EP, Polyhedron *PD)
+/* modifies coef argument ! */
+static void fractional_part(Value *coef, int len, Value d, ZZ& f, evalue *EP,
+			    Polyhedron *PD)
 {
     Value m;
     value_init(m);
-    value_set_si(m, -1);
-
-    Vector_Scale(coef, coef, m, len);
 
     value_assign(m, d);
     int j = normal_mod(coef, len, &m);
@@ -244,7 +242,8 @@ out:
 static void ceil(Value *coef, int len, Value d, ZZ& f,
                  evalue *EP, Polyhedron *PD, barvinok_options *options)
 {
-    ceil_mod(coef, len, d, f, EP, PD);
+    Vector_Oppose(coef, coef, len);
+    fractional_part(coef, len, d, f, EP, PD);
     if (options->lookup_table)
 	evalue_mod2table(EP, len-1);
 }
@@ -273,7 +272,8 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 
     ZZ one;
     one = 1;
-    ceil_mod(val->p, len, t, one, EP, P);
+    Vector_Oppose(val->p, val->p, len);
+    fractional_part(val->p, len, t, one, EP, P);
     value_clear(t);
 
     /* copy EP to malloc'ed evalue */
@@ -468,7 +468,8 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     vec_ZZ p = lambda * RT;
 
     for (int i = 0; i < L->NbRows; ++i) {
-	ceil_mod(L->p[i], nparam+1, V->p[0][nparam+1], p[i], EP, PD);
+	Vector_Oppose(L->p[i], L->p[i], nparam+1);
+	fractional_part(L->p[i], nparam+1, V->p[0][nparam+1], p[i], EP, PD);
     }
 
     Matrix_Free(L);
