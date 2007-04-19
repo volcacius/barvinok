@@ -398,6 +398,17 @@ fi
 echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 
 AC_LANG_PUSH(C++)
+AC_TRY_COMPILE([
+		#include <set>
+		void negate();
+	], [negate()],
+	suffix="normal", suffix="broken")
+AC_CONFIG_COMMANDS([barvinok/set.h],
+		   [cp $srcdir/barvinok/set.h.$suffix barvinok/set.h],
+		   [suffix="$suffix"])
+AC_CONFIG_COMMANDS([barvinok/NTL.h],
+		   [cp $srcdir/barvinok/NTL.h.$suffix barvinok/NTL.h],
+		   [suffix="$suffix"])
 use_fdstream=false
 SAVE_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="-I$srcdir $CPPFLAGS"

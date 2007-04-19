@@ -2,7 +2,7 @@
 #define DPOLY_H
 
 #include <assert.h>
-#include <set>
+#include <barvinok/set.h>
 #include <vector>
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>

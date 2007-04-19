@@ -1,7 +1,7 @@
 #ifndef GENFUN_H
 #define GENFUN_H
 
-#include <set>
+#include <barvinok/set.h>
 #include <iostream>
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>

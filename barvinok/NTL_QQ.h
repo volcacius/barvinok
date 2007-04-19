@@ -1,8 +1,7 @@
 #ifndef NTL_QQ_H
 #define NTL_QQ_H
 
-#include <NTL/ZZ.h>
-#include <NTL/vector.h>
+#include <barvinok/NTL.h>
 
 #ifdef NTL_STD_CXX
 using namespace NTL;

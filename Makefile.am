@@ -21,6 +21,7 @@ noinst_PROGRAMS = test randomtest \
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan barvinok_maximize
 pkginclude_HEADERS = \
+    barvinok/NTL.h \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
     barvinok/util.h \
@@ -29,6 +30,7 @@ pkginclude_HEADERS = \
     barvinok/options.h \
     barvinok/polylib.h \
     barvinok/sample.h \
+    barvinok/set.h \
     barvinok/basis_reduction.h \
     barvinok/bernstein.h
 LINK = $(CXXLINK)
@@ -170,6 +172,10 @@ EXTRA_DIST = \
     $(TESTFILES) \
     latte2polylib.pl \
     NTL_5_3_2.patch \
+    barvinok/NTL.h.broken \
+    barvinok/NTL.h.normal \
+    barvinok/set.h.broken \
+    barvinok/set.h.normal \
     doc/Internal.tex \
     doc/applications.tex \
     doc/barvinok.tex \
