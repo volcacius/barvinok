@@ -3854,9 +3854,10 @@ void evalue_extract_affine(const evalue *e, Value *coeff, Value *cst, Value *d)
     value_set_si(*d, 1);
     evalue_denom(e, d);
     for ( ; value_zero_p(e->d); e = &e->x.p->arr[0]) {
+	evalue *c;
 	assert(e->x.p->type == polynomial);
 	assert(e->x.p->size == 2);
-	evalue *c = &e->x.p->arr[1];
+	c = &e->x.p->arr[1];
 	value_multiply(coeff[e->x.p->pos-1], *d, c->x.n);
 	value_division(coeff[e->x.p->pos-1], coeff[e->x.p->pos-1], c->d);
     }

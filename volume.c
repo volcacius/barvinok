@@ -39,6 +39,8 @@ static evalue *determinant_cols(evalue ***matrix, int dim, int *cols)
 {
     evalue *det, *tmp;
     evalue mone;
+    int j;
+    int *newcols;
 
     if (dim == 1) {
 	det = ALLOC(evalue);
@@ -49,9 +51,8 @@ static evalue *determinant_cols(evalue ***matrix, int dim, int *cols)
 
     value_init(mone.d);
     evalue_set_si(&mone, -1, 1);
-    int j;
     det = NULL;
-    int *newcols = ALLOCN(int, dim-1);
+    newcols = ALLOCN(int, dim-1);
     for (j = 1; j < dim; ++j)
 	newcols[j-1] = cols[j];
     for (j = 0; j < dim; ++j) {
@@ -148,11 +149,11 @@ static Param_Domain *face_vertices(Param_Polyhedron *PP, Param_Domain *D,
 {
     int nv;
     Param_Vertices *V;
+    unsigned nparam = PP->V->Vertex->NbColumns-2;
+    Vector *row = Vector_Alloc(1+nparam+1);
     Param_Domain *FD = ALLOC(Param_Domain);
     FD->Domain = 0;
     FD->next = 0;
-    unsigned nparam = PP->V->Vertex->NbColumns-2;
-    Vector *row = Vector_Alloc(1+nparam+1);
 
     nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
     FD->F = ALLOCN(unsigned, nv);

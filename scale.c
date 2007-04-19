@@ -644,6 +644,7 @@ static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
 
 	FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	    Polyhedron *P2, *CA;
+	    Param_Polyhedron *PP_D;
 	    /* Intersect with D->Domain, so we only have the relevant constraints
 	     * left.  Don't use rVD, though, since we still want to recognize
 	     * the defining constraints of the parametric vertices.
@@ -654,7 +655,7 @@ static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
 	    /* Use rVD for context, to avoid overlapping domains in
 	     * results of computations in different chambers.
 	     */
-	    Param_Polyhedron *PP_D = Param_Polyhedron_Domain(PP, D, rVD);
+	    PP_D = Param_Polyhedron_Domain(PP, D, rVD);
 	    tmp = PP_enumerate_narrow_flated(PP_D, P2, rVD, options);
 	    Polyhedron_Free(P2);
 	    if (!eres)

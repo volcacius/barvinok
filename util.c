@@ -1623,9 +1623,9 @@ int Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam)
 {
     int r;
     for (r = 0; r < P->NbRays; ++r) {
+	int i;
 	if (value_notzero_p(P->Ray[r][P->Dimension+1]))
 	    continue;
-	int i;
 	for (i = P->Dimension-1; i >= P->Dimension-nparam; --i) {
 	    if (value_neg_p(P->Ray[r][i+1]))
 		return 0;
@@ -1644,9 +1644,10 @@ static Polyhedron *Recession_Cone(Polyhedron *P, unsigned nparam, unsigned MaxRa
     int i;
     unsigned nvar = P->Dimension - nparam;
     Matrix *M = Matrix_Alloc(P->NbConstraints, 1 + nvar + 1);
+    Polyhedron *R;
     for (i = 0; i < P->NbConstraints; ++i)
 	Vector_Copy(P->Constraint[i], M->p[i], 1+nvar);
-    Polyhedron *R = Constraints2Polyhedron(M, MaxRays);
+    R = Constraints2Polyhedron(M, MaxRays);
     Matrix_Free(M);
     return R;
 }
