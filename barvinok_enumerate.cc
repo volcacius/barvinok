@@ -516,9 +516,9 @@ int main(int argc, char **argv)
 	    print_solution = 0;
 	if (options.size)
 	    printf("\nSize: %d\n", evalue_size(EP));
+	if (print_solution)
+	    print_evalue(stdout, EP, param_name);
     }
-    if (print_solution)
-	print_evalue(stdout, EP, param_name);
 
     if (options.verify.verify) {
 	options.verify.params = param_name;
