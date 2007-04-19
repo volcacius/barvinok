@@ -397,6 +397,17 @@ else
 fi
 echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 
+AC_LANG_PUSH(C++)
+use_fdstream=false
+SAVE_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="-I$srcdir $CPPFLAGS"
+AC_TRY_COMPILE([#include "fdstream.h"],[],
+	[AC_DEFINE(USE_FDSTREAM,[],[use fdstream])
+	use_fdstream=true])
+CPPFLAGS="$SAVE_CPPFLAGS"
+AC_LANG_POP
+AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
+
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)

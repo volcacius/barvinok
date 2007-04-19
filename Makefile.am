@@ -103,38 +103,41 @@ BEEO_SOURCES = omega/Exit.cc omega/convert.cc
 else
 BEEO_SOURCES = 
 endif
+if USE_FDSTREAM
+FDSTREAM = fdstream.cc fdstream.h
+endif
 barvinok_enumerate_SOURCES = \
 	barvinok_enumerate.cc \
 	evalue_convert.cc \
 	evalue_convert.h \
-	fdstream.cc \
-	fdstream.h \
+	$(FDSTREAM) \
 	verify.h \
 	verify.c \
 	verif_ehrhart.h \
 	verif_ehrhart.c
+EXTRA_barvinok_enumerate_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_SOURCES = \
 	barvinok_enumerate_e.cc \
 	evalue_convert.cc \
 	evalue_convert.h \
-	fdstream.cc \
-	fdstream.h \
+	$(FDSTREAM) \
 	verify.h \
 	verify.c \
 	verif_ehrhart.h \
 	verif_ehrhart.c \
 	$(BEEO_SOURCES)
+EXTRA_barvinok_enumerate_e_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
-	fdstream.cc \
-	fdstream.h \
+	$(FDSTREAM) \
 	maximize.cc \
 	verify.h \
 	verify.c
+EXTRA_barvinok_maximize_SOURCES = fdstream.cc fdstream.h
 4coins_SOURCES = 4coins.cc
 if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc

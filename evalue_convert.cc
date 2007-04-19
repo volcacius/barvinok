@@ -1,9 +1,10 @@
 #include <sstream>
 #include "conversion.h"
 #include "evalue_convert.h"
-#include "fdstream.h"
 #include "lattice_point.h"
+#ifdef USE_FDSTREAM
 #include "fdstream.h"
+#endif
 
 using std::cout;
 using std::cerr;
@@ -170,6 +171,13 @@ static void evalue_coset(const evalue *src, const Vector *coset, evalue *dst)
 	evalue_coset(&src->x.p->arr[i], coset, &dst->x.p->arr[i]);
 }
 
+#ifndef USE_FDSTREAM
+static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
+				     char **params)
+{
+	cerr << "not supported" << endl;
+}
+#else
 static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
 				     char **params)
 {
@@ -202,6 +210,7 @@ static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
 	Vector_Free(coset);
     }
 }
+#endif
 
 static void evalue_print_list(FILE *out, evalue *e, int nparam, char **params)
 {
@@ -366,12 +375,20 @@ static void evalue_print_latex(std::ostream& o, const evalue *e,
     }
 }
 
+#ifndef USE_FDSTREAM
+static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
+			       char **params)
+{
+	cerr << "not supported" << endl;
+}
+#else
 static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
 			       char **params)
 {
     fdostream os(dup(fileno(out)));
     evalue_print_latex(os, e, 1, 0, "", "", nparam, params);
 }
+#endif
 
 int evalue_convert(evalue *EP, struct convert_options *options,
 		   int verbose, unsigned nparam, char **params)
