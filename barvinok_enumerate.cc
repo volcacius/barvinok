@@ -3,15 +3,18 @@
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "fdstream.h"
 #include "argp.h"
 #include "progname.h"
 #include "verify.h"
 #include "verif_ehrhart.h"
 #include "remove_equalities.h"
 #include "evalue_convert.h"
+#include "conversion.h"
 
 #undef CS   /* for Solaris 10 */
+
+using std::cout;
+using std::endl;
 
 /* The input of this example program is the same as that of testehrhart
  * in the PolyLib distribution, i.e., a polytope in combined
@@ -102,7 +105,7 @@ struct skewed_gen_fun {
 	delete gf;
     }
 
-    void print(FILE *out, unsigned int nparam, char **param_name) const;
+    void print(std::ostream& os, unsigned int nparam, char **param_name) const;
     operator evalue *() const {
 	assert(T == NULL && eq == NULL); /* other cases not supported for now */
 	return *gf;
@@ -110,21 +113,24 @@ struct skewed_gen_fun {
     void coefficient(Value* params, Value* c, barvinok_options *options) const;
 };
 
-void skewed_gen_fun::print(FILE *out, unsigned int nparam,
+void skewed_gen_fun::print(std::ostream& os, unsigned int nparam,
 			    char **param_name) const
 {
-    fdostream os(dup(fileno(out)));
+    mat_ZZ m;
     if (T) {
-	fprintf(out, "T:\n");
-	Matrix_Print(out, P_VALUE_FMT, T);
+	os << "T:" << endl;
+	matrix2zz(T, m, T->NbRows, T->NbColumns);
+	os << m << endl;
     }
     if (eq) {
-	fprintf(out, "eq:\n");
-	Matrix_Print(out, P_VALUE_FMT, eq);
+	os << "eq:" << endl;
+	matrix2zz(eq, m, eq->NbRows, eq->NbColumns);
+	os << m << endl;
     }
     if (div) {
-	fprintf(out, "div:\n");
-	Matrix_Print(out, P_VALUE_FMT, div);
+	os << "div:" << endl;
+	matrix2zz(div, m, div->NbRows, div->NbColumns);
+	os << m << endl;
     }
     gf->print(os, nparam, param_name);
 }
@@ -501,7 +507,7 @@ int main(int argc, char **argv)
     if (options.series) {
 	gf = series(A, C, bv_options);
 	if (print_solution) {
-	    gf->print(stdout, C->Dimension, param_name);
+	    gf->print(cout, C->Dimension, param_name);
 	    puts("");
 	}
 	if (options.function) {
