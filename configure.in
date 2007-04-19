@@ -75,6 +75,9 @@ if test "$polylib_package" != "yes"; then
     export LD_LIBRARY_PATH
 fi
 
+AC_CHECK_HEADERS([polylib/polylibgmp.h], [], [
+    AC_MSG_ERROR(Need polylib)
+])
 AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
     AC_MSG_ERROR(Need polylib)
 ])
