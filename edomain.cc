@@ -1,5 +1,5 @@
 #include <sstream>
-#include "fdstream.h"
+//#include "fdstream.h"
 #include <barvinok/util.h>
 #include <barvinok/sample.h>
 #include <barvinok/barvinok.h>
@@ -160,6 +160,7 @@ void EDomain::print_constraints(ostream& os, char **p,
     }
 }
 
+/*
 void EDomain::print(FILE *out, char **p)
 {
     fdostream os(dup(fileno(out)));
@@ -170,6 +171,7 @@ void EDomain::print(FILE *out, char **p)
     }
     Polyhedron_Print(out, P_VALUE_FMT, D);
 }
+*/
 
 static int type_offset(enode *p)
 {

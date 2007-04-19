@@ -85,7 +85,7 @@ struct EDomain {
 		return i;
 	return -1;
     }
-    void print(FILE *out, char **p);
+    //void print(FILE *out, char **p);
     void print_constraints(std::ostream& os, char **p,
 			   barvinok_options *options) const;
     ~EDomain() {

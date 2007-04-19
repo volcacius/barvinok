@@ -148,8 +148,6 @@ lexmin_SOURCES = \
 	edomain.h \
 	evalue_util.cc \
 	evalue_util.h \
-	fdstream.cc \
-	fdstream.h \
 	$(POLYSIGN) \
 	polysign.c \
 	polysign_polylib.c \
