@@ -21,7 +21,6 @@ noinst_PROGRAMS = test randomtest \
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan barvinok_maximize
 pkginclude_HEADERS = \
-    barvinok/NTL.h \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
     barvinok/util.h \
@@ -30,9 +29,11 @@ pkginclude_HEADERS = \
     barvinok/options.h \
     barvinok/polylib.h \
     barvinok/sample.h \
-    barvinok/set.h \
     barvinok/basis_reduction.h \
     barvinok/bernstein.h
+nodist_pkginclude_HEADERS = \
+    barvinok/NTL.h \
+    barvinok/set.h
 LINK = $(CXXLINK)
 
 if HAVE_GINAC
@@ -85,6 +86,8 @@ libbarvinok_la_SOURCES = \
     $(BR_CDD) \
     $(BR_GLPK)
 EXTRA_libbarvinok_la_SOURCES = \
+    basis_reduction_cdd.cc \
+    basis_reduction_glpk.c \
     bernstein.cc \
     piputil.h \
     initcdd.cc \
@@ -159,7 +162,7 @@ lexmin_SOURCES = \
 	polysign.h \
 	verify.h \
 	verify.c
-EXTRA_lexmin_SOURCE = polysign_cddf.cc polysign_cdd.cc polysign.c
+EXTRA_lexmin_SOURCES = polysign_cddf.cc polysign_cdd.cc polysign.c
 test_approx_SOURCES = \
 	test_approx.c \
 	verify.h \
@@ -172,6 +175,8 @@ EXTRA_DIST = \
     $(TESTFILES) \
     latte2polylib.pl \
     NTL_5_3_2.patch \
+    basis_reduction_templ.c \
+    polysign_cdd_template.cc \
     barvinok/NTL.h.broken \
     barvinok/NTL.h.normal \
     barvinok/set.h.broken \
