@@ -85,7 +85,7 @@ AC_CHECK_FUNCS(Enumeration_Free)
 AC_CHECK_FUNCS(compress_parms, [AC_LIBOBJ(remove_equalities)])
 AC_SUBST(bv_extra_programs)
 AC_CHECK_FUNCS(LexSmaller,[
-	bv_extra_programs="verify_lexsmaller $bv_extra_programs"
+	bv_extra_programs="verify_lexsmaller\$(EXEEXT) $bv_extra_programs"
     ])
 AC_REPLACE_FUNCS(DomainConstraintSimplify)
 AC_TRY_RUN([
@@ -196,7 +196,7 @@ if test "$piplib_package" != "no"; then
 	AC_DEFINE(HAVE_PIPLIB,[],[use piplib])
 	LIBS="-lpiplibMP $LIBS"
 	AC_LIBOBJ(piputil)
-	bv_extra_programs="piptest $bv_extra_programs"
+	bv_extra_programs="piptest\$(EXEEXT) $bv_extra_programs"
 	have_piplib=true
     else
 	CPPFLAGS="$SAVE_CPPFLAGS"
@@ -272,7 +272,7 @@ if test "$with_bernstein" != "no"; then
 		have_ginac=true
 		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
 		PACKAGE_LIBS="-lbarvinok -lbernstein"
-		bv_extra_programs="barvinok_maximize $bv_extra_programs"
+		bv_extra_programs="barvinok_maximize\$(EXEEXT) $bv_extra_programs"
 	])
 	AC_LANG_POP
 fi
@@ -363,8 +363,8 @@ AM_CONDITIONAL(HAVE_GLPK, test x$have_glpk = xtrue)
 
 if test "$have_glpk" = "true" -o "$have_cddlib" = "true"; then
     AC_LIBOBJ(sample)
-    bv_extra_programs="polyhedron_sample 4coins lexmin $bv_extra_programs"
-    bv_extra_programs="polytope_scan $bv_extra_programs"
+    bv_extra_programs="polyhedron_sample\$(EXEEXT) 4coins\$(EXEEXT) lexmin\$(EXEEXT) $bv_extra_programs"
+    bv_extra_programs="polytope_scan\$(EXEEXT) $bv_extra_programs"
 fi
 
 AC_SUBST(GIT_HEAD_ID)
