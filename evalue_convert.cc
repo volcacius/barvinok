@@ -165,6 +165,19 @@ static void evalue_coset(const evalue *src, const Vector *coset, evalue *dst)
 	return;
     }
 
+    if (src->x.p->type == relation) {
+	evalue *arg = evalue_eval(&src->x.p->arr[0], coset->p);
+	if (value_zero_p(arg->x.n))
+	    evalue_coset(&src->x.p->arr[1], coset, dst);
+	else if (src->x.p->size > 2)
+	    evalue_coset(&src->x.p->arr[2], coset, dst);
+	else
+	    evalue_set_si(dst, 0, 1);
+	free_evalue_refs(arg);
+	free(arg);
+	return;
+    }
+
     assert(src->x.p->type == polynomial);
     value_set_si(dst->d, 0);
     dst->x.p = new_enode(src->x.p->type, src->x.p->size, src->x.p->pos);
