@@ -532,3 +532,63 @@ MRREVIEWER = {Daniel Barlet},
     year = 2006,
     month = jun,
 }
+
+@Techreport{Pop06,
+  Author = "S. Pop and G.-A. Silber and A. Cohen and C. Bastoul
+            and S. Girbal and N. Vasilache",
+  Title = "{GRAPHITE}: Polyhedral Analyses and Optimizations for {GCC}",
+  Number = "A/378/CRI",
+  Institution = "Centre de Recherche en Informatique,
+                 \'Ecole des Mines de Paris",
+  Address = "Fontainebleau, France",
+  Year = 2006,
+  Note = "Contribution to the GNU Compilers Collection Developers Summit 2006
+          (GCC Summit 06), Ottawa, Canada, June 28--30, 2006",
+  Abstract = "We present a plan to add loop nest optimizations in GCC
+              based on polyhedral representations of loop nests. We
+              advocate a static analysis approach based on a hierarchy
+              of interchangeable abstractions with solvers that range
+              from the exact solvers such as OMEGA, to faster but less
+              precise solvers based on more coarse abstractions. The
+              intermediate representation GRAPHITE (GIMPLE Represented
+              as Polyhedra with Interchangeable Envelopes), built on
+              GIMPLE and the natural loops, hosts the high level loop
+              transformations. We base this presentation on the
+              WRaP-IT project developed in the Alchemy group at INRIA
+              Futurs and Paris-Sud University, on the PIPS compiler
+              developed at \'Ecole des mines de Paris, and on a joint
+              work with several members of the static analysis and
+              polyhedral compilation community in France.
+
+              The main goal of this project is to bring more high
+              level loop optimizations to GCC: loop fusion, tiling,
+              strip mining, etc. Thanks to the WRaP-IT experience, we
+              know that the polyhedral analyzes and transformations
+              are affordable in a production compiler. A second goal
+              of this project is to experiment with compile time
+              reduction versus attainable precision when replacing
+              operations on polyhedra with faster operations on more
+              abstract domains. However, the use of a too coarse
+              representation for computing might also result in an
+              over approximated solution that cannot be used in
+              subsequent computations. There exists a trade off
+              between speed of the computation and the attainable
+              precision that has not yet been analyzed for real world
+              programs."
+}
+
+@article{Baldoni2006,
+  author    = {Baldoni-Silva, M. Welleda and
+               Matthias Beck and
+               Charles Cochet and
+               Mich{\`e}le Vergne},
+  title     = {Volume Computation for Polytopes and Partition Functions
+               for Classical Root Systems.},
+  journal   = {Discrete {\&} Computational Geometry},
+  volume    = {35},
+  number    = {4},
+  year      = {2006},
+  pages     = {551-595},
+  ee        = {http://dx.doi.org/10.1007/s00454-006-1234-2},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
