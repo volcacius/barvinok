@@ -1,6 +1,7 @@
 \section{Implementation details}
 
 \subsection{An interior point of a polyhedron}
+\label{s:interior}
 
 We often need a point that lies in the interior of a polyhedron.
 The function \ai[\tt]{inner\_point} implements the following algorithm.
@@ -165,6 +166,7 @@ and
 
 
 \subsection{Barvinok's decomposition of simple cones in primal space}
+\label{s:decomposition}
 
 As described by \shortciteN{DeLoera2003effective}, the first
 implementation of Barvinok's counting algorithm applied
@@ -344,6 +346,7 @@ of a $3$-dimensional cone.  The figure shows a section of the cones.}
 As explained above there are several ways of avoiding the lower-dimensional
 faces in (\ref{eq:decomposition}).  Here we will apply the following proposition.
 \begin{proposition}[\shortciteN{Koeppe2007parametric}]
+\label{p:inclusion-exclusion}
   Let 
   \begin{equation}
     \label{eq:full-source-identity}
@@ -385,7 +388,8 @@ When applying this proposition to (\ref{eq:decomposition}), we obtain
 \end{equation}
 where we start out
 from a given $\tilde K$, which may be $K$ itself, i.e., a fully closed cone,
-or the result of a previous application of the proposition.
+or the result of a previous application of the proposition, either through
+a triangulation (Section~\ref{s:triangulation}) or a previous decomposition.
 In either case, a suitable $\vec y$ is available, either as an interior
 point of the cone or as the vector used in the previous application
 (which may require a slight perturbation if it happens to lie on one of
@@ -676,7 +680,7 @@ To see that there is a $\vec y$ satisfying the above constraints,
 we need to show that $R \cap S$ is non-empty, with
 $S = \{ \vec y \mid \sp{{\tilde n}_{i_kj_k}}y > 0 \text{ for all $k$}\}$.
 It will be easier to show this set is non-empty when the $\vec u_i$ form
-an ortogonal basis.  Applying a non-singular linear transformation $T$
+an orthogonal basis.  Applying a non-singular linear transformation $T$
 does not change the decomposition of $\vec w$ in terms of the $\vec u_i$ (i.e., the
 $\alpha_i$ remain unchanged), nor does this change
 any of the scalar products in the constraints that define $R \cap S$
@@ -715,13 +719,13 @@ $\lambda_k, \mu_i \ge 0$ not all zero
 such that
 $\sum_k \lambda_k \vec {\tilde n}_{i_kj_k} + \sum_l \mu_i \vec N_i = \vec 0$.
 Assume $\lambda_k > 0$ for some facet of the first type.
-If $\vec N_{j_k} = -\vec u_{j_k}$, then $-b_k$ can only be cancelled
+If $\vec N_{j_k} = -\vec u_{j_k}$, then $-b_k$ can only be canceled
 by another facet $k'$ of the first type with $j_k = i_{k'}$, but then
 also $\vec N_{j_{k'}} = -\vec u_{j_{k'}}$.  Since the $j_k$ are strictly
 increasing, this sequence has to stop with a strictly positive coefficient
 for the largest $\vec u_{j_k}$ in this sequence.
 If, on the other hand, $\vec N_{i_k} = \vec u_{i_k}$, then $a_k$ can only
-be cancelled by the normal of a facet $k'$ of the second kind
+be canceled by the normal of a facet $k'$ of the second kind
 with $i_k = j_{k'}$, but then
 $\vec N_{i_{k'}} = -\vec u_{i_{k'}}$ and we return to the first case.
 Finally, if $\lambda_k > 0$ only for normals of facets of the second type,
@@ -903,3 +907,14 @@ closed[$\tilde K$][$\vec u_j$]
 \caption{Determine whether the facet opposite $\vec u_j$ is closed in $K_i$.}
 \label{alg:closed}
 \end{algorithm}
+
+\subsection{Triangulation in primal space}
+\label{s:triangulation}
+
+As in the case for Barvinok's decomposition (Section~\ref{s:decomposition}),
+we can transform a triangulation of a (closed) cone into closed simple cones
+into a triangulation of half-open simple cones that fully partitions the
+original cone, i.e., such that the half-open simple cones do not intersect at their
+facets.
+Again, we apply Proposition~\ref{p:inclusion-exclusion} with $\vec y$
+an interior point of the cone (Section~\ref{s:interior}).
