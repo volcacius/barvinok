@@ -51,6 +51,7 @@ the corresponding coefficient $\alpha_i$ are such that $0 < \alpha_i \le 1$.
 \end{definition}
 
 \begin{lemma}[Integer points in the fundamental parallelepiped of a simple cone]
+\label{l:fundamental}
 Let $K = \vec v + \poshull \lb\, \vec u_i \,\rb$ be a closed simple cone
 and let $A$ be the matrix with the generators $\vec u_i$ of $K$
 as rows.
@@ -918,3 +919,163 @@ original cone, i.e., such that the half-open simple cones do not intersect at th
 facets.
 Again, we apply Proposition~\ref{p:inclusion-exclusion} with $\vec y$
 an interior point of the cone (Section~\ref{s:interior}).
+
+\subsection{Multivariate quasi-polynomials as lists of polynomials}
+
+There are many definitions for a (univariate) \ai{quasi-polynomial}.
+\shortciteN{Ehrhart1977} uses a definition based on {\em periodic number}s.
+
+\begin{definition}
+\label{d:periodic:1}
+A rational \defindex{periodic number} $U(p)$
+is a function $\ZZ \to \QQ$,
+such that there exists a \defindex{period} $q$
+such that $U(p) = U(p')$ whenever $p \equiv p' \mod q$.
+\end{definition}
+
+\begin{definition}
+\label{d:qp:1}
+A (univariate)
+\defindex{quasi-polynomial}\/ $f$ of degree $d$ is
+a function
+$$
+f(n) = c_d(n) \, n^d + \cdots + c_1(n) \, n + c_0
+,
+$$
+where $c_i(n)$ are rational periodic numbers.
+I.e., it is a polynomial expression of degree $d$ 
+with rational periodic numbers for coefficients.
+The \defindex{period} of a quasi-polynomial is the \ac{lcm}
+of the periods of its coefficients.
+\end{definition}
+
+Other authors (e.g., \shortciteNP{Stanley1986})
+use the following definition of a quasi-polynomial.
+\begin{definition}
+\label{d:qp:1:list}
+A function $f : \ZZ \to \QQ$ is
+a (univariate) \defindex{quasi-polynomial} of period $q$ if there
+exists a list of $q$ polynomials $g_i \in \QQ[T]$ for $0 \le i < q$ such
+that
+\[
+f (s) = g_i(s) \qquad \hbox{if $s \equiv i \mod {q}$}
+.
+\]
+The functions $g_i$ are called the {\em constituents}.
+\index{constituent}
+\end{definition}
+
+In our implementation, we use Definition~\ref{d:qp:1},
+but whereas
+\shortciteN{Ehrhart1977} uses a list of $q$ rational
+numbers enclosed in square brackets to represent periodic
+numbers, our periodic numbers are polynomial expressions
+in fractional parts (Section~\ref{a:data}).
+These fractional parts naturally extend to multivariate
+quasi-polynomials.
+The bracketed (``explicit'') periodic numbers can
+be extended to multiple variables by nesting them
+(e.g., \shortciteNP{Loechner1999}).
+
+Definition~\ref{d:qp:1:list} could be extended in a similar way
+by having a constituent for each residue modulo a vector period $\vec q$.
+However, as pointed out by \citeN{Woods2006personal}, this may not result
+in the minimum number of constituents.
+A vector period can be considered as a lattice with orthogonal generators and
+the number of constituents is equal to the index or determinant of that lattice.
+By considering more general lattices, we can potentially reduce the number
+of constituents.
+\begin{definition}
+\label{d:qp}
+A function $f : \ZZ^n \to \QQ$ is
+a (multivariate) \defindex{quasi-polynomial} of period $L$ if there
+exists a list of $\det L$ polynomials $g_{\vec i} \in \QQ[T_1,\ldots,T_n]$
+for $\vec i$ in the fundamental parallelepiped of $L$ such
+that
+\[
+f (\vec s) = g_{\vec i}(\vec s) \qquad \hbox{if $\vec s \equiv \vec i \mod L$}
+.
+\]
+\end{definition}
+
+To compute the period lattice from a fractional representation, we compute
+the appropriate lattice for each fractional part and then take their intersection.
+Recall that the argument of each fractional part is an affine expression
+in the parameters $(\sp a p + c)/m$,
+with $\vec a \in \ZZ^n$ and $c, m \in \ZZ$.
+Such a fractional part is translation invariant over
+any (integer) value of $\vec p$
+such that $\sp a p + m t = 0$, for some $\vec t \in \ZZ$.
+Solving this homogeneous equation over the integers (in our implementation,
+we use \PolyLib/'s \ai[\tt]{SolveDiophantine}) gives the general solution
+$$
+\begin{bmatrix}
+\vec p \\ t
+\end{bmatrix}
+=
+\begin{bmatrix}
+U_1 \\ U_2
+\end{bmatrix}
+\vec x
+\qquad\text{for $\vec x \in \ZZ^n$}
+.
+$$
+The matrix $U_1 \in \ZZ^{n \times n}$ then has the generators of
+the required lattice as columns.
+The constituents are computed by plugging in each integer point
+in the fundamental parallelepiped of the lattice.
+These points themselves are computed as explained in Section~\ref{s:fundamental}.
+Note that for computing the constituents, it is sufficient to take any
+representative of the residue class.  For example, we could take
+$\vec w^\T = \vec k^\T W$ in the notations of Lemma~\ref{l:fundamental}.
+
+\begin{example}[\shortciteN{Woods2006personal}]
+Consider the parametric polytope
+$$
+P_{s,t}=\{\, x \mid 0 \le x \le (s+t)/2 \,\}
+.
+$$
+The enumerator of $P_{s,t}$ is
+$$
+\begin{cases}
+\frac s 2 + \frac t 2 + 1 &
+\text{if $\begin{bmatrix}s \\ t \end{bmatrix} \in
+\begin{bmatrix}
+-1 & -2 \\ 1 & 0
+\end{bmatrix}
+\ZZ^2 +
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix}
+$}
+\\
+\frac s 2 + \frac t 2 + \frac 1 2 &
+\text{if $\begin{bmatrix}s \\ t \end{bmatrix} \in
+\begin{bmatrix}
+-1 & -2 \\ 1 & 0
+\end{bmatrix}
+\ZZ^2 +
+\begin{bmatrix}
+-1 \\ 0
+\end{bmatrix}
+$}
+.
+\end{cases}
+$$
+The corresponding output of \ai[\tt]{barvinok\_enumerate} is
+\begin{verbatim}
+         s + t  >= 0
+          1 >= 0
+
+Lattice:
+[[-1 1]
+[-2 0]
+]
+[0 0]
+( 1/2 * s + ( 1/2 * t + 1 )
+ )
+[-1 0]
+( 1/2 * s + ( 1/2 * t + 1/2 )
+ )
+\end{verbatim}
+\end{example}
