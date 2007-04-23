@@ -2,6 +2,7 @@
 #include "conversion.h"
 #include "evalue_convert.h"
 #include "lattice_point.h"
+#include "config.h"
 #ifdef USE_FDSTREAM
 #include "fdstream.h"
 #endif
