@@ -1,5 +1,19 @@
 \section{Implementation details}
 
+\subsection{An interior point of a polyhedron}
+
+We often need a point that lies in the interior of a polyhedron.
+The function \ai[\tt]{inner\_point} implements the following algorithm.
+Each polyhedron $P$ can be written as the sum of a polytope $P'$ and a cone $C$
+(the \ai{recession cone} or \ai{characteristic cone} of $P$).
+Adding a positive multiple of the sum of the extremal rays of $C$ to
+the \ai{barycenter}
+$$
+\frac 1 N \sum_i \vec v_i(\vec p)
+$$
+of $P'$, where $N$ is the number of vertices, results in a point
+in the interior of $P$.
+
 \subsection{The integer points in the fundamental parallelepiped of a simple cone}
 
 \label{s:fundamental}
