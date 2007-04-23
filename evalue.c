@@ -961,7 +961,7 @@ void reduce_evalue (evalue *e) {
 	free(s.fixed);
 }
 
-void print_evalue(FILE *DST, const evalue *e, char **pname)
+static void print_evalue_r(FILE *DST, const evalue *e, char **pname)
 {
   if(value_notzero_p(e->d)) {    
     if(value_notone_p(e->d)) {
@@ -978,6 +978,13 @@ void print_evalue(FILE *DST, const evalue *e, char **pname)
   return;
 } /* print_evalue */
 
+void print_evalue(FILE *DST, const evalue *e, char **pname)
+{
+    print_evalue_r(DST, e, pname);
+    if (value_notzero_p(e->d))
+	fprintf(DST, "\n");
+}
+
 void print_enode(FILE *DST,enode *p,char **pname) {
   
   int i;
@@ -990,7 +997,7 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   case evector:
     fprintf(DST, "{ ");
     for (i=0; i<p->size; i++) {
-      print_evalue(DST, &p->arr[i], pname);
+      print_evalue_r(DST, &p->arr[i], pname);
       if (i!=(p->size-1))
 	fprintf(DST, ", ");
     }
@@ -999,7 +1006,7 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   case polynomial:
     fprintf(DST, "( ");
     for (i=p->size-1; i>=0; i--) {
-      print_evalue(DST, &p->arr[i], pname);
+      print_evalue_r(DST, &p->arr[i], pname);
       if (i==1) fprintf(DST, " * %s + ", pname[p->pos-1]);
       else if (i>1) 
 	fprintf(DST, " * %s^%d + ", pname[p->pos-1], i);
@@ -1009,7 +1016,7 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   case periodic:
     fprintf(DST, "[ ");
     for (i=0; i<p->size; i++) {
-      print_evalue(DST, &p->arr[i], pname);
+      print_evalue_r(DST, &p->arr[i], pname);
       if (i!=(p->size-1)) fprintf(DST, ", ");
     }
     fprintf(DST," ]_%s", pname[p->pos-1]);
@@ -1018,11 +1025,11 @@ void print_enode(FILE *DST,enode *p,char **pname) {
   case fractional:
     fprintf(DST, "( ");
     for (i=p->size-1; i>=1; i--) {
-      print_evalue(DST, &p->arr[i], pname);
+      print_evalue_r(DST, &p->arr[i], pname);
       if (i >= 2) {
         fprintf(DST, " * ");
 	fprintf(DST, p->type == flooring ? "[" : "{");
-        print_evalue(DST, &p->arr[0], pname);
+        print_evalue_r(DST, &p->arr[0], pname);
 	fprintf(DST, p->type == flooring ? "]" : "}");
 	if (i>2) 
 	  fprintf(DST, "^%d + ", i-1);
@@ -1034,14 +1041,14 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     break;
   case relation:
     fprintf(DST, "[ ");
-    print_evalue(DST, &p->arr[0], pname);
+    print_evalue_r(DST, &p->arr[0], pname);
     fprintf(DST, "= 0 ] * \n");
-    print_evalue(DST, &p->arr[1], pname);
+    print_evalue_r(DST, &p->arr[1], pname);
     if (p->size > 2) {
 	fprintf(DST, " +\n [ ");
-	print_evalue(DST, &p->arr[0], pname);
+	print_evalue_r(DST, &p->arr[0], pname);
 	fprintf(DST, "!= 0 ] * \n");
-	print_evalue(DST, &p->arr[2], pname);
+	print_evalue_r(DST, &p->arr[2], pname);
     }
     break;
   case partition: {
@@ -1065,7 +1072,7 @@ void print_enode(FILE *DST,enode *p,char **pname) {
 
     for (i=0; i<p->size/2; i++) {
 	Print_Domain(DST, EVALUE_DOMAIN(p->arr[2*i]), names);
-	print_evalue(DST, &p->arr[2*i+1], names);
+	print_evalue_r(DST, &p->arr[2*i+1], names);
     }
 
     if (!pname || p->pos < maxdim) {
