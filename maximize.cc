@@ -91,7 +91,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 enum token_type { TOKEN_UNKNOWN = 256, TOKEN_VALUE, TOKEN_IDENT, TOKEN_GE,
-		  TOKEN_UNION };
+		  TOKEN_UNION, TOKEN_VARS };
 
 struct token {
     enum token_type  type;
@@ -257,7 +257,7 @@ static struct token *stream_next_token(struct stream *s)
 	}
 	return tok;
     }
-    if (isalpha(c)) {
+    if (c == '#' || isalpha(c)) {
 	tok = token_new(line, col);
 	stream_push_char(s, c);
 	while ((c = stream_getc(s)) != -1 && isalpha(c))
@@ -265,7 +265,11 @@ static struct token *stream_next_token(struct stream *s)
 	if (c != -1)
 	    stream_ungetc(s, c);
 	stream_push_char(s, '\0');
-	if (!strcmp(s->buffer, "UNION")) {
+	if (!strcmp(s->buffer, "#variables")) {
+	    tok->type = TOKEN_VARS;
+	} else if (s->buffer[0] == '#') {
+	    tok->type = TOKEN_UNKNOWN;
+	} else if (!strcmp(s->buffer, "UNION")) {
 	    tok->type = TOKEN_UNION;
 	} else {
 	    tok->type = TOKEN_IDENT;
@@ -861,6 +865,28 @@ static evalue *evalue_read(FILE *in, char *var_list, char ***ppp, unsigned *nvar
 
     if (!(tok = stream_next_token(s)))
 	return NULL;
+
+    if (tok->type == TOKEN_VARS) {
+	token_free(tok);
+	for (;;) {
+	    tok = stream_next_token(s);
+	    if (!tok || tok->type != TOKEN_IDENT) {
+		stream_error(s, tok, "expecting identifier");
+		break;
+	    }
+	    if (nv == -1)
+		parameter_pos(&p, tok->u.s);
+	    token_free(tok);
+	    tok = stream_next_token(s);
+	    if (!tok || tok->type != ',')
+		break;
+	    token_free(tok);
+	}
+	if (!tok)
+	    return NULL;
+	if (nv = -1)
+	    nv = p ? p->pos+1 : 0;
+    }
 
     if (tok->type == TOKEN_VALUE) {
 	struct token *tok2 = stream_next_token(s);
