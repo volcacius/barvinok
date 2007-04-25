@@ -77,7 +77,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 enum token_type { TOKEN_UNKNOWN = 256, TOKEN_VALUE, TOKEN_IDENT, TOKEN_GE,
-		  TOKEN_UNION, TOKEN_VARS };
+		  TOKEN_NE, TOKEN_UNION, TOKEN_VARS };
 
 struct token {
     enum token_type  type;
@@ -272,6 +272,15 @@ static struct token *stream_next_token(struct stream *s)
 	if (c != -1)
 	    stream_ungetc(s, c);
     }
+    if (c == '!') {
+	if ((c = stream_getc(s)) == '=') {
+	    tok = token_new(line, col);
+	    tok->type = TOKEN_NE;
+	    return tok;
+	}
+	if (c != -1)
+	    stream_ungetc(s, c);
+    }
 
     tok = token_new(line, col);
     tok->type = TOKEN_UNKNOWN;
@@ -367,6 +376,23 @@ static evalue *create_fract_like(struct stream *s, evalue *arg, enode_type type,
     return e;
 }
 
+static evalue *create_relation(evalue *arg, int ne)
+{
+    evalue *e;
+
+    e = ALLOC(evalue);
+    value_init(e->d);
+    e->x.p = new_enode(relation, 2+ne, 0);
+    value_clear(e->x.p->arr[0].d);
+    e->x.p->arr[0] = *arg;
+    free(arg);
+    if (ne)
+	evalue_set_si(&e->x.p->arr[1], 0, 1);
+    evalue_set_si(&e->x.p->arr[1+ne], 1, 1);
+
+    return e;
+}
+
 static evalue *read_fract(struct stream *s, struct token *tok, struct parameter **p)
 {
     evalue *arg;
@@ -424,6 +450,30 @@ static evalue *read_periodic(struct stream *s, struct parameter **p)
 	if (tok->type != ',')
 	    break;
 	token_free(tok);
+    }
+
+    if (n == 1 && (tok->type == '=' || tok->type == TOKEN_NE)) {
+	int ne = tok->type == TOKEN_NE;
+	token_free(tok);
+	tok = stream_next_token(s);
+	if (!tok || tok->type != TOKEN_VALUE) {
+	    stream_error(s, tok, "expecting \"0\"");
+	    if (tok)
+		stream_push_token(s, tok);
+	    goto out;
+	}
+	token_free(tok);
+	tok = stream_next_token(s);
+	if (!tok || tok->type != ']') {
+	    stream_error(s, tok, "expecting \"]\"");
+	    if (tok)
+		stream_push_token(s, tok);
+	    goto out;
+	}
+	token_free(tok);
+	e = create_relation(list[0], ne);
+	n = 0;
+	goto out;
     }
 
     if (tok->type != ']') {
