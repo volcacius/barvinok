@@ -876,6 +876,10 @@ static evalue *evalue_read(FILE *in, char *var_list, char ***ppp, unsigned *nvar
     } else if (tok->type == TOKEN_IDENT) {
 	stream_push_token(s, tok);
 	e = evalue_read_partition(s, p, ppp, nparam, MaxRays);
+    } else {
+	stream_error(s, tok, "unexpected token");
+	*nparam = nv == -1 ? 0 : nv;
+	e = NULL;
     }
     stream_free(s);
     if (nv == -1)
