@@ -234,44 +234,34 @@ ex evalue2ex(const evalue *e, const exvector& vars, exvector& floorvar,
 /* if the evalue is a relation, we use the relation to cut off the 
  * the edges of the domain
  */
-static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly,
-				unsigned MaxRays)
+static Polyhedron *relation_domain(Polyhedron *D, evalue *fr, unsigned MaxRays)
 {
-    *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
-    *poly = e = &e->x.p->arr[2*i+1];
-    if (value_notzero_p(e->d))
-	return;
-    if (e->x.p->type != relation)
-	return;
-    if (e->x.p->size > 2)
-	return;
-    evalue *fr = &e->x.p->arr[0];
     assert(value_zero_p(fr->d));
     assert(fr->x.p->type == fractional);
     assert(fr->x.p->size == 3);
-    Matrix *T = Matrix_Alloc(2, (*D)->Dimension+1);
-    value_set_si(T->p[1][(*D)->Dimension], 1);
+    Matrix *T = Matrix_Alloc(2, D->Dimension+1);
+    value_set_si(T->p[1][D->Dimension], 1);
 
     /* convert argument of fractional to polylib */
     /* the argument is assumed to be linear */
     evalue *p = &fr->x.p->arr[0];
-    evalue_denom(p, &T->p[1][(*D)->Dimension]);
+    evalue_denom(p, &T->p[1][D->Dimension]);
     for (;value_zero_p(p->d); p = &p->x.p->arr[0]) {
 	assert(p->x.p->type == polynomial);
 	assert(p->x.p->size == 2);
 	assert(value_notzero_p(p->x.p->arr[1].d));
 	int pos = p->x.p->pos - 1;
 	value_assign(T->p[0][pos], p->x.p->arr[1].x.n);
-	value_multiply(T->p[0][pos], T->p[0][pos], T->p[1][(*D)->Dimension]);
+	value_multiply(T->p[0][pos], T->p[0][pos], T->p[1][D->Dimension]);
 	value_division(T->p[0][pos], T->p[0][pos], p->x.p->arr[1].d);
     }
-    int pos = (*D)->Dimension;
+    int pos = D->Dimension;
     value_assign(T->p[0][pos], p->x.n);
-    value_multiply(T->p[0][pos], T->p[0][pos], T->p[1][(*D)->Dimension]);
+    value_multiply(T->p[0][pos], T->p[0][pos], T->p[1][D->Dimension]);
     value_division(T->p[0][pos], T->p[0][pos], p->d);
 
     Polyhedron *E = NULL;
-    for (Polyhedron *P = *D; P; P = P->next) {
+    for (Polyhedron *P = D; P; P = P->next) {
 	Polyhedron *I = Polyhedron_Image(P, T, MaxRays);
 	I = DomainConstraintSimplify(I, MaxRays);
 	Polyhedron *R = Polyhedron_Preimage(I, T, MaxRays);
@@ -288,8 +278,7 @@ static void evalue_extract_poly(evalue *e, int i, Polyhedron **D, evalue **poly,
     }
     Matrix_Free(T);
 
-    *D = E;
-    *poly = &e->x.p->arr[1];
+    return E;
 }
 
 piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e, 
@@ -614,6 +603,55 @@ static piecewise_lst *bernstein_coefficients_periodic(piecewise_lst *pl_all,
     return pl_all;
 }
 
+piecewise_lst *bernstein_coefficients_relation(piecewise_lst *pl_all,
+		    Polyhedron *D, evalue *EP, Polyhedron *ctx,
+		    const exvector& allvars, const exvector& vars,
+		    const exvector& params, barvinok_options *options)
+{
+    if (value_zero_p(EP->d) && EP->x.p->type == relation) {
+	Polyhedron *E = relation_domain(D, &EP->x.p->arr[0], options->MaxRays);
+	pl_all = bernstein_coefficients_relation(pl_all, E, &EP->x.p->arr[1],
+						 ctx, allvars, vars, params,
+						 options);
+	Domain_Free(E);
+	/* In principle, we could cut off the edges of this domain too */
+	if (EP->x.p->size > 2)
+	    pl_all = bernstein_coefficients_relation(pl_all, D, &EP->x.p->arr[2],
+						     ctx, allvars, vars, params,
+						     options);
+	return pl_all;
+    }
+
+    Matrix *M;
+    exvector floorvar;
+    Vector *periods;
+    ex poly = evalue2ex(EP, allvars, floorvar, &M, &periods);
+    floorvar.insert(floorvar.end(), vars.begin(), vars.end());
+    Polyhedron *E = D;
+    if (M) {
+	Polyhedron *AE = align_context(D, M->NbColumns-2, options->MaxRays);
+	E = DomainAddConstraints(AE, M, options->MaxRays);
+	Matrix_Free(M);
+	Domain_Free(AE);
+    }
+    if (is_exactly_a<fail>(poly)) {
+	delete pl_all;
+	return NULL;
+    }
+    if (periods)
+	pl_all = bernstein_coefficients_periodic(pl_all, E, EP, ctx, vars,
+						 params, periods, options);
+    else
+	pl_all = bernstein_coefficients(pl_all, E, poly, ctx, params,
+					floorvar, options);
+    if (periods)
+	Vector_Free(periods);
+    if (D != E)
+	Domain_Free(E);
+
+    return pl_all;
+}
+
 piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e, 
 				      Polyhedron *ctx, const exvector& params,
 				      barvinok_options *options)
@@ -631,39 +669,9 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
     allvars.insert(allvars.end(), params.begin(), params.end());
 
     for (int i = 0; i < e->x.p->size/2; ++i) {
-	Polyhedron *E;
-	evalue *EP;
-	Matrix *M;
-	Vector *periods;
-	exvector floorvar;
-
-	evalue_extract_poly(e, i, &E, &EP, options->MaxRays);
-	ex poly = evalue2ex(EP, allvars, floorvar, &M, &periods);
-	floorvar.insert(floorvar.end(), vars.begin(), vars.end());
-	if (M) {
-	    Polyhedron *AE = align_context(E, M->NbColumns-2, options->MaxRays);
-	    if (E != EVALUE_DOMAIN(e->x.p->arr[2*i]))
-		Domain_Free(E);
-	    E = DomainAddConstraints(AE, M, options->MaxRays);
-	    Matrix_Free(M);
-	    Domain_Free(AE);
-	}
-	if (is_exactly_a<fail>(poly)) {
-	    if (E != EVALUE_DOMAIN(e->x.p->arr[2*i]))
-		Domain_Free(E);
-	    delete pl_all;
-	    return NULL;
-	}
-	if (periods)
-	    pl_all = bernstein_coefficients_periodic(pl_all, E, EP, ctx, vars,
-						     params, periods, options);
-	else
-	    pl_all = bernstein_coefficients(pl_all, E, poly, ctx, params,
-					    floorvar, options);
-	if (periods)
-	    Vector_Free(periods);
-	if (E != EVALUE_DOMAIN(e->x.p->arr[2*i]))
-	    Domain_Free(E);
+	pl_all = bernstein_coefficients_relation(pl_all,
+			EVALUE_DOMAIN(e->x.p->arr[2*i]), &e->x.p->arr[2*i+1],
+			ctx, allvars, vars, params, options);
     }
     return pl_all;
 }
