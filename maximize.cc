@@ -246,7 +246,7 @@ static struct token *stream_next_token(struct stream *s)
     if (c == '#' || isalpha(c)) {
 	tok = token_new(line, col);
 	stream_push_char(s, c);
-	while ((c = stream_getc(s)) != -1 && isalpha(c))
+	while ((c = stream_getc(s)) != -1 && isalnum(c))
 	    stream_push_char(s, c);
 	if (c != -1)
 	    stream_ungetc(s, c);
