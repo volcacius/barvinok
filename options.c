@@ -134,6 +134,10 @@ static struct argp_option barvinok_argp_options[] = {
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
+    { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
+	"[default: factors]" },
+    { "recurse",	    BV_OPT_RECURSE,    	    "",
+	OPTION_ALIAS | OPTION_HIDDEN },
     { "version",	    'V',		    0,			0 },
     { 0 }
 };
@@ -247,6 +251,17 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case BV_OPT_MAXINDEX:
 	options->max_index = strtoul(arg, NULL, 0);
+	break;
+    case BV_OPT_RECURSE:
+	if (!strcmp(arg, "none"))
+	    options->bernstein_recurse = 0;
+	else if (!strcmp(arg, "factors"))
+	    options->bernstein_recurse = BV_BERNSTEIN_FACTORS;
+	else if (!strcmp(arg, "intervals"))
+	    options->bernstein_recurse = BV_BERNSTEIN_INTERVALS;
+	else if (!strcmp(arg, "full"))
+	    options->bernstein_recurse =
+		    BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
