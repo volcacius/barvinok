@@ -1110,6 +1110,10 @@ namespace barvinok {
 bernstein::piecewise_lst *evalue_bernstein_coefficients(
 	    bernstein::piecewise_lst *pl_all, evalue *e, 
 	    Polyhedron *ctx, const GiNaC::exvector& params);
+bernstein::piecewise_lst *evalue_bernstein_coefficients(
+	    bernstein::piecewise_lst *pl_all, evalue *e, 
+	    Polyhedron *ctx, const GiNaC::exvector& params,
+	    barvinok_options *options);
 }
 \end{verbatim}
 The \ai[\tt]{evalue\_bernstein\_coefficients} function will compute the
@@ -1128,3 +1132,9 @@ The resulting \ai[\tt]{bernstein::piecewise\_lst} collects the
 Bernstein coefficients over all parametric polytopes in \verb+e+.
 If \verb+pl_all+ is not \verb+NULL+ then this list will be combined
 with the list computed by calling \ai[\tt]{piecewise\_lst::combine}.
+If \ai[\tt]{bernstein\_optimize} is set to \ai[\tt]{BV\_BERNSTEIN\_MAX}
+in \verb+options+, then this combination will remove obviously
+redundant Bernstein coefficients with respect to upper bound computation
+and similarly for \ai[\tt]{BV\_BERNSTEIN\_MIN}.
+The default (\ai[\tt]{BV\_BERNSTEIN\_NONE}) is to only remove duplicate
+Bernstein coefficients.
