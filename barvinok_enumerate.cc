@@ -442,6 +442,7 @@ static skewed_gen_fun *series(Polyhedron *P, Polyhedron* C,
 	for (int i = 0; i < C2->NbConstraints; ++i)
 	    Vector_Copy(C2->Constraint[i]+1, Constraints->p[i], C2->Dimension);
 	left_hermite(Constraints, &H, &Q, &U);
+	Matrix_Free(Constraints);
 	/* flip rows of Q */
 	for (int i = 0; i < C2->Dimension/2; ++i)
 	    Vector_Exchange(Q->p[i], Q->p[C2->Dimension-1-i], C2->Dimension);
