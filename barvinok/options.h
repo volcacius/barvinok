@@ -16,6 +16,8 @@ void barvinok_stats_clear(struct barvinok_stats *stats);
 void barvinok_stats_print(struct barvinok_stats *stats, FILE *out);
 
 struct barvinok_options {
+    struct barvinok_stats   *stats;
+
     /* PolyLib options */
     unsigned	MaxRays;
 
@@ -25,11 +27,6 @@ struct barvinok_options {
     long	LLL_b;
 
     /* barvinok options */
-		/*
-		 * 0: no
-		 * 1: depth first
-		 * 2: breadth first
-		 */
     #define	BV_SPECIALIZATION_BF		2
     #define	BV_SPECIALIZATION_DF		1
     #define	BV_SPECIALIZATION_RANDOM	0
@@ -77,8 +74,6 @@ struct barvinok_options {
     #define	BV_BERNSTEIN_FACTORS	1
     #define	BV_BERNSTEIN_INTERVALS	2
     int		bernstein_recurse;
-
-    struct barvinok_stats   *stats;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
