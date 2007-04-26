@@ -1079,3 +1079,77 @@ Lattice:
  )
 \end{verbatim}
 \end{example}
+
+\subsection{Left inverse of an affine embedding}
+
+We often map a polytope onto a lower dimensional space to remove possible
+equalities in the polytope.  These maps are typically represented
+by the inverse, mapping the coordinates $\vec x'$ of the lower-dimensional
+space to the coordinates $\vec x$ of (an affine subspace of) the original space,
+i.e.,
+$$
+\begin{bmatrix}
+\vec x \\ 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+T & \vec v \\ \vec 0^\T & 1
+\end{bmatrix}
+\begin{bmatrix}
+\vec x' \\ 1
+\end{bmatrix}
+,
+$$
+where, as usual in \PolyLib/, we work with homogeneous coordinates.
+To obtain the transformation that maps the coordinates of the original
+space to the coordinates of the lower dimensional space,
+we need to compute the \ai{left inverse} of the above \ai{affine embedding},
+i.e., an $A$, $\vec b$ and $d$ such that
+$$
+d
+\begin{bmatrix}
+\vec x' \\ 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+A & \vec b \\ \vec 0^\T & d
+\end{bmatrix}
+\begin{bmatrix}
+\vec x \\ 1
+\end{bmatrix}
+$$
+
+To compute this left inverse, we first compute the
+(right) \indac{HNF} of T,
+$$
+\begin{bmatrix}
+U_1 \\ U_2
+\end{bmatrix}
+T
+=
+\begin{bmatrix}
+H \\ 0
+\end{bmatrix}
+.
+$$
+The left inverse is then simply
+$$
+\begin{bmatrix}
+d H^{-1}U_1 & -d H^{-1} \vec v \\ \vec 0^\T & d
+\end{bmatrix}
+.
+$$
+We often also want a decription of the affine subspace that is the range
+of the affine embedding and this is given by
+$$
+\begin{bmatrix}
+U_2 & - U_2 \vec v \\ \vec 0^T & 1
+\end{bmatrix}
+\begin{bmatrix}
+\vec x \\ 1
+\end{bmatrix}
+=
+\vec 0
+.
+$$
+This computation is implemented in \ai[\tt]{left\_inverse}.

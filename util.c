@@ -1556,6 +1556,10 @@ Matrix *compress_variables(Matrix *Equalities, unsigned nparam)
     return T;
 }
 
+/* Computes the left inverse of an affine embedding M and, if Eq is not NULL,
+ * the equalities that define the affine subspace onto which M maps
+ * its argument.
+ */
 Matrix *left_inverse(Matrix *M, Matrix **Eq)
 {
     int i, ok;
