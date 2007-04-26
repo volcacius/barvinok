@@ -354,6 +354,47 @@ static void apply_transformation(Polyhedron **P, Polyhedron **C,
 	*inv = Minv;
 }
 
+static void Matrix_Transposition(Matrix *M)
+{
+    assert(M->NbRows == M->NbColumns);
+    for (int i = 0; i < M->NbRows; ++i)
+	for (int j = i+1; j < M->NbColumns; ++j)
+	    value_swap(M->p[i][j], M->p[j][i]);
+}
+
+/* Since we have "compressed" the parameters (in case there were
+ * any equalities), the result is independent of the coordinates in the
+ * coordinate subspace spanned by the lines.  We can therefore assume
+ * these coordinates are zero and compute the inverse image of the map
+ * from a lower dimensional space that adds zeros in the appropriate
+ * places.
+ */
+static void remove_lines(Polyhedron *C, Matrix **M, Matrix **Minv)
+{
+    Matrix *L = Matrix_Alloc(C->Dimension+1, C->Dimension+1);
+    for (int r = 0; r < C->NbBid; ++r)
+	Vector_Copy(C->Ray[r]+1, L->p[r], C->Dimension);
+    unimodular_complete(L, C->NbBid);
+    assert(value_one_p(L->p[C->Dimension][C->Dimension]));
+    assert(First_Non_Zero(L->p[C->Dimension], C->Dimension) == -1);
+    Matrix_Transposition(L);
+    assert(First_Non_Zero(L->p[C->Dimension], C->Dimension) == -1);
+
+    *M = Matrix_Alloc(C->Dimension+1, C->Dimension-C->NbBid+1);
+    for (int i = 0; i < C->Dimension+1; ++i)
+	Vector_Copy(L->p[i]+C->NbBid, (*M)->p[i], C->Dimension-C->NbBid+1);
+
+    Matrix *Linv = Matrix_Alloc(C->Dimension+1, C->Dimension+1);
+    int ok = Matrix_Inverse(L, Linv);
+    assert(ok);
+    Matrix_Free(L);
+
+    *Minv = Matrix_Alloc(C->Dimension-C->NbBid+1, C->Dimension+1);
+    for (int i = C->NbBid; i < C->Dimension+1; ++i)
+	Vector_Copy(Linv->p[i], (*Minv)->p[i-C->NbBid], C->Dimension+1);
+    Matrix_Free(Linv);
+}
+
 static skewed_gen_fun *series(Polyhedron *P, Polyhedron* C,
 				barvinok_options *options)
 {
@@ -412,26 +453,12 @@ static skewed_gen_fun *series(Polyhedron *P, Polyhedron* C,
 	}
 	POL_ENSURE_VERTICES(C2);
 
-	/* Since we have "compressed" the parameters (in case there were
-	 * any equalities), the result is independent of the coordinates in the
-	 * coordinate subspace spanned by the lines.  We can therefore assume
-	 * these coordinates are zero and compute the inverse image of the map
-	 * from a lower dimensional space that adds zeros in the appropriate
-	 * places.
-	 */
-	M = Matrix_Alloc(C2->Dimension+1, C2->Dimension-C2->NbBid+1);
-	int k = 0;
-	for (int i = 0; i < C2->NbBid; ++i) {
-	    int j = First_Non_Zero(C2->Ray[i]+1, C2->Dimension);
-	    assert(First_Non_Zero(C2->Ray[i]+1+j+1, C2->Dimension-j-1) == -1);
-	    for ( ; k < j; k++)
-		value_set_si(M->p[k+i][k], 1);
+	if (C2->NbBid) {
+	    Matrix *M, *Minv;
+	    remove_lines(C2, &M, &Minv);
+	    apply_transformation(&PT, &C2, PT != P, C2 != C, M, Minv, &inv,
+				 options);
 	}
-	for ( ; k < C2->Dimension-C2->NbBid+1; k++)
-	    value_set_si(M->p[k+C2->NbBid][k], 1);
-	Minv = Transpose(M);
-
-	apply_transformation(&PT, &C2, PT != P, C2 != C, M, Minv, &inv, options);
     }
     POL_ENSURE_VERTICES(C2);
     if (!Polyhedron_has_revlex_positive_rays(C2, C2->Dimension)) {
