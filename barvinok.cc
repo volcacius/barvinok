@@ -792,8 +792,13 @@ static void barvinok_count_f(Polyhedron *P, Value* result,
 
     int c = P->NbConstraints;
     POL_ENSURE_FACETS(P);
-    if (c != P->NbConstraints || P->NbEq != 0)
-	return barvinok_count_with_options(P, result, options);
+    if (c != P->NbConstraints || P->NbEq != 0) {
+	Polyhedron *next = P->next;
+	P->next = NULL;
+	barvinok_count_with_options(P, result, options);
+	P->next = next;
+	return;
+    }
 
     POL_ENSURE_VERTICES(P);
 
