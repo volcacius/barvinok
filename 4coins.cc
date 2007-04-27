@@ -92,7 +92,7 @@ int main(int argc, char **argv)
     }
     C = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
-    C = remove_equalities_p(C, 4, NULL);
+    C = remove_equalities_p(C, 4, NULL, options->MaxRays);
     assert(C->NbEq == 0);
     Polyhedron_Print(stderr, P_VALUE_FMT, C);
 
@@ -104,7 +104,10 @@ int main(int argc, char **argv)
     Matrix_Free(basis);
     Polyhedron_Free(B);
 
-    T = unimodular_complete(small);
+    T = Matrix_Alloc(small->Size, small->Size);
+    Vector_Copy(small->p, T->p[0], small->Size);
+    ok = unimodular_complete(T, 1);
+    assert(ok);
     Vector_Free(small);
     Vector_Exchange(T->p[0], T->p[2], T->NbColumns);
     Matrix_Print(stderr, P_VALUE_FMT, T);

@@ -54,8 +54,9 @@ Polyhedron* triangulate_cone(Polyhedron *P, unsigned NbMaxCons);
 Polyhedron* triangulate_cone_with_options(Polyhedron *P,
 					  struct barvinok_options *options);
 void check_triangulization(Polyhedron *P, Polyhedron *T);
-Polyhedron *remove_equalities(Polyhedron *P);
-Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor);
+Polyhedron *remove_equalities(Polyhedron *P, unsigned MaxRays);
+Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor,
+				unsigned MaxRays);
 void manual_count(Polyhedron *P, Value* result);
 Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 			      unsigned NbMaxRays);
@@ -64,7 +65,7 @@ struct barvinok_options;
 evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C,
 			 struct barvinok_options *options);
 void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g);
-Matrix * unimodular_complete(Vector *row);
+int unimodular_complete(Matrix *M, int row);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
 void Enumeration_Print(FILE *Dst, Enumeration *en, char **params);

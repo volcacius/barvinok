@@ -1,12 +1,7 @@
+#include <barvinok/options.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include "config.h"
-
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    0
-#else
-#define MAXRAYS  600
-#endif
 
 void dump_polytope(Polyhedron *P)
 {
@@ -29,15 +24,16 @@ int main(int argc, char **argv)
     Enumeration *en;
     char **param_name;
     int i;
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     M = Matrix_Read();
-    A = Constraints2Polyhedron(M, MAXRAYS);
+    A = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
     M = Matrix_Read();
-    C = Constraints2Polyhedron(M, MAXRAYS);
+    C = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
     param_name = Read_ParamNames(stdin, C->Dimension);
-    A = remove_equalities_p(A, A->Dimension-C->Dimension, 0);
+    A = remove_equalities_p(A, A->Dimension-C->Dimension, 0, options->MaxRays);
     dump_polytope(A);
     puts("");
     dump_polytope(C);
@@ -48,5 +44,6 @@ int main(int argc, char **argv)
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);
     Polyhedron_Free(C);
+    barvinok_options_free(options);
     return 0;
 }

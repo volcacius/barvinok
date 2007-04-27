@@ -310,17 +310,6 @@ static int verify(Polyhedron *P, Polyhedron *C, evalue *EP, skewed_gen_fun *gf,
     return result;
 }
 
-static void unimodular_complete(Matrix *M, int row)
-{
-    Matrix *H, *Q, *U;
-    left_hermite(M, &H, &Q, &U);
-    Matrix_Free(H);
-    Matrix_Free(U);
-    for (int r = row; r < M->NbRows; ++r)
-	Vector_Copy(Q->p[r], M->p[r], M->NbColumns);
-    Matrix_Free(Q);
-}
-
 /* frees M and Minv */
 static void apply_transformation(Polyhedron **P, Polyhedron **C,
 				 bool free_P, bool free_C,

@@ -1153,3 +1153,47 @@ U_2 & - U_2 \vec v \\ \vec 0^T & 1
 .
 $$
 This computation is implemented in \ai[\tt]{left\_inverse}.
+
+\subsection{Integral basis of the orthogonal complement of a linear subspace}
+\label{s:completion}
+
+Let $M_1 \in \ZZ^{m \times n}$ be a basis of a linear subspace.
+We first extend $M_1$ with zero rows to obtain a square matrix $M'$
+and then compute the (left) \indac{HNF} of $M'$,
+$$
+\begin{bmatrix}
+M_1 \\ 0
+\end{bmatrix}
+=
+\begin{bmatrix}
+H & 0 \\ 0 & 0
+\end{bmatrix}
+\begin{bmatrix}
+Q_1 \\ Q_2
+\end{bmatrix}
+.
+$$
+The rows of $Q_2$ span the orthogonal complement of the given subspace.
+Since $Q_2$ can be extended to a unimodular matrix, these rows form
+an integral basis.
+
+If the entries on the diagonal of $H$ are all $1$ then $M_1$
+can be extended to a unimodular matrix, by concatenating $M_1$ and $Q_2$.
+The resulting matrix is unimodular, since
+$$
+\begin{bmatrix}
+M_1 \\ Q_2
+\end{bmatrix}
+=
+\begin{bmatrix}
+H & 0 \\ 0 & I_{n-m,n-m}
+\end{bmatrix}
+\begin{bmatrix}
+Q_1 \\ Q_2
+\end{bmatrix}
+.
+$$
+This method for extending a matrix of which
+only a few lines are known to a \ai{unimodular matrix}
+is more general than the method described by \shortciteN{Bik1996PhD},
+which only considers extending a matrix given by a single row.

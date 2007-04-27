@@ -935,11 +935,14 @@ polarizes its argument and is explained
 in \citeN[Section~4.4.2]{Verdoolaege2005PhD}.
 
 \begin{verbatim}
-Matrix * unimodular_complete(Vector *row);
+int unimodular_complete(Matrix *M, int row);
 \end{verbatim}
 The function \ai[\tt]{unimodular\_complete} extends
-\verb+row+ to a \ai{unimodular matrix} using the
-algorithm of \shortciteN{Bik1996PhD}.
+the first \verb+row+ rows of
+\verb+M+ with an integral basis of the orthogonal complement
+as explained in Section~\ref{s:completion}.
+Returns non-zero
+if the resulting matrix is unimodular\index{unimodular matrix}.
 
 \begin{verbatim}
 int DomainIncludes(Polyhedron *D1, Polyhedron *D2);

@@ -364,7 +364,7 @@ struct parallel_polytopes {
 	    return false;
 
 	Polyhedron *Q = remove_equalities_p(Polyhedron_Copy(P), P->Dimension-nparam,
-					    NULL);
+					    NULL, options->MaxRays);
 	POL_ENSURE_VERTICES(Q);
 	if (emptyQ(Q)) {
 	    Polyhedron_Free(Q);
@@ -383,7 +383,8 @@ struct parallel_polytopes {
 	    }
 	    R = Polyhedron_Preimage(Q, T, options->MaxRays);
 	    Polyhedron_Free(Q);
-	    Q = remove_equalities_p(R, R->Dimension-nparam, NULL);
+	    Q = remove_equalities_p(R, R->Dimension-nparam, NULL,
+				    options->MaxRays);
 	}
 	assert(Q->NbEq == 0);
 

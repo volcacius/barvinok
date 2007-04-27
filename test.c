@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 	    break;
 	case 6:
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	    B = remove_equalities(A);
+	    B = remove_equalities(A, options->MaxRays);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, B);
 	    Polyhedron_Free(B);
 	    break;
@@ -177,8 +177,12 @@ int main(int argc, char **argv)
 	Polyhedron_Free(A);
     }
     for (i = 0; i < nbVec; ++i) {
+	int ok;
 	Vector *V = Vector_Read();
-	Matrix *M = unimodular_complete(V);
+	Matrix *M = Matrix_Alloc(V->Size, V->Size);
+	Vector_Copy(V->p, M->p[0], V->Size);
+	ok = unimodular_complete(M, 1);
+	assert(ok);
 	Matrix_Print(stdout, P_VALUE_FMT, M);
 	Matrix_Free(M);
 	Vector_Free(V);

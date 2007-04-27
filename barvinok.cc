@@ -623,17 +623,17 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result,
 	}
 
     value_init(g);
-    v = Vector_Alloc(P->Dimension+1);
+    M = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
     Vector_Gcd(P->Ray[r]+1, P->Dimension, &g);
-    Vector_AntiScale(P->Ray[r]+1, v->p, g, P->Dimension+1);
-    M = unimodular_complete(v);
+    Vector_AntiScale(P->Ray[r]+1, M->p[0], g, P->Dimension+1);
+    int ok = unimodular_complete(M, 1);
+    assert(ok);
     value_set_si(M->p[P->Dimension][P->Dimension], 1);
     M2 = Transpose(M);
     Matrix_Free(M);
     P = Polyhedron_Preimage(P, M2, 0);
     Matrix_Free(M2);
     value_clear(g);
-    Vector_Free(v);
 
     first = true;
     value_init(offset);
@@ -709,7 +709,7 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
     if (P->NbEq != 0) {
 	Q = NULL;
 	do {
-	    P = remove_equalities(P);
+	    P = remove_equalities(P, options->MaxRays);
 	    P = DomainConstraintSimplify(P, options->MaxRays);
 	    if (Q)
 		Polyhedron_Free(Q);
@@ -1668,7 +1668,7 @@ out:
 
     if (P->NbEq != 0) {
 	Matrix *f;
-	P = remove_equalities_p(P, P->Dimension-nparam, &f);
+	P = remove_equalities_p(P, P->Dimension-nparam, &f, options->MaxRays);
 	mask(f, &factor, options);
 	Matrix_Free(f);
     }
@@ -2036,14 +2036,15 @@ static Polyhedron *rotate_along(Polyhedron *P, int r, int nvar, int exist,
     Value g;
     value_init(g);
 
-    Vector *row = Vector_Alloc(exist);
-    Vector_Copy(P->Constraint[r]+1+nvar, row->p, exist);
-    Vector_Gcd(row->p, exist, &g);
+    Matrix *M = Matrix_Alloc(exist, exist);
+    Vector_Copy(P->Constraint[r]+1+nvar, M->p[0], exist);
+    Vector_Gcd(M->p[0], exist, &g);
     if (value_notone_p(g))
-	Vector_AntiScale(row->p, row->p, g, exist);
+	Vector_AntiScale(M->p[0], M->p[0], g, exist);
     value_clear(g);
 
-    Matrix *M = unimodular_complete(row);
+    int ok = unimodular_complete(M, 1);
+    assert(ok);
     Matrix *M2 = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
     for (r = 0; r < nvar; ++r)
 	value_set_si(M2->p[r][r], 1);
@@ -2055,7 +2056,6 @@ static Polyhedron *rotate_along(Polyhedron *P, int r, int nvar, int exist,
 
     Matrix_Free(M2);
     Matrix_Free(M);
-    Vector_Free(row);
 
     return T;
 }
