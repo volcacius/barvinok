@@ -214,6 +214,8 @@ options that influence the behavior of the library.
 
 \begin{verbatim}
 struct barvinok_options {
+    struct barvinok_stats   *stats;
+
     /* PolyLib options */
     unsigned    MaxRays;
 
@@ -223,12 +225,53 @@ struct barvinok_options {
     long        LLL_b;
 
     /* barvinok options */
-                /*
-                 * 0: no
-                 * 1: depth first
-                 * 2: breadth first
-                 */
+    #define	BV_SPECIALIZATION_BF		2
+    #define	BV_SPECIALIZATION_DF		1
+    #define	BV_SPECIALIZATION_RANDOM	0
     int         incremental_specialization;
+
+    unsigned long           max_index;
+    int                     primal;
+    int                     lookup_table;
+    int                     count_sample_infinite;
+
+    int                     try_Delaunay_triangulation;
+
+    #define     BV_APPROX_SIGN_NONE     0
+    #define     BV_APPROX_SIGN_APPROX   1
+    #define     BV_APPROX_SIGN_LOWER    2
+    #define     BV_APPROX_SIGN_UPPER    3
+    int                     polynomial_approximation;
+    #define     BV_APPROX_NONE          0
+    #define     BV_APPROX_DROP          1
+    #define     BV_APPROX_SCALE         2
+    #define     BV_APPROX_VOLUME        3
+    int                     approximation_method;
+    #define     BV_APPROX_SCALE_FAST    (1 << 0)
+    #define     BV_APPROX_SCALE_NARROW  (1 << 1)
+    #define     BV_APPROX_SCALE_NARROW2 (1 << 2)
+    #define     BV_APPROX_SCALE_CHAMBER (1 << 3)
+    int                     scale_flags;
+    #define     BV_VOL_LIFT             0
+    #define     BV_VOL_VERTEX           1
+    #define     BV_VOL_BARYCENTER       2
+    int                     volume_triangulate;
+
+    /* basis reduction options */
+    #define     BV_GBR_NONE     0
+    #define     BV_GBR_GLPK     1
+    #define     BV_GBR_CDD      2
+    int         gbr_lp_solver;
+
+    /* bernstein options */
+    #define     BV_BERNSTEIN_NONE   0
+    #define     BV_BERNSTEIN_MAX    1
+    #define     BV_BERNSTEIN_MIN   -1
+    int         bernstein_optimize;
+
+    #define     BV_BERNSTEIN_FACTORS    1
+    #define     BV_BERNSTEIN_INTERVALS  2
+    int         bernstein_recurse;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -568,11 +611,14 @@ It currently assumes that the argument of each
 has a minimum in the corresponding chamber.
 
 \begin{verbatim}
-double compute_evalue(evalue *e,Value *list_args);
+double compute_evalue(const evalue *e, Value *list_args);
 Value *compute_poly(Enumeration *en,Value *list_args);
+evalue *evalue_eval(const evalue *e, Value *values);
 \end{verbatim}
-The functions \ai[\tt]{compute\_evalue} and
-\ai[\tt]{compute\_poly} evaluate a (piecewise) quasi-polynomial
+The functions \ai[\tt]{compute\_evalue},
+\ai[\tt]{compute\_poly} and
+\ai[\tt]{evalue\_eval}
+evaluate a (piecewise) quasi-polynomial
 at a certain point.  The argument \verb+list_args+
 points to an array of \ai[\tt]{Value}s that is assumed
 to be long enough.
@@ -580,7 +626,7 @@ The \verb+double+ return value of \ai[\tt]{compute\_evalue}
 is inherited from \PolyLib/.
 
 \begin{verbatim}
-void print_evalue(FILE *DST,evalue *e,char **pname);
+void print_evalue(FILE *DST, const evalue *e, char **pname);
 \end{verbatim}
 The function \ai[\tt]{print\_evalue} dumps a human-readable
 representation to the stream pointed to by \verb+DST+.
@@ -589,7 +635,7 @@ to an array of character strings representing the parameter names.
 The array is assumed to be long enough.
 
 \begin{verbatim}
-int eequal(evalue *e1,evalue *e2);
+int eequal(const evalue *e1, const evalue *e2);
 \end{verbatim}
 The function \ai[\tt]{eequal} return true (\verb+1+) if its
 two arguments are structurally identical.
@@ -715,11 +761,15 @@ $.}
 The whole \rgf/ is represented by a \ai[\tt]{gen\_fun}
 structure.
 \begin{verbatim}
+typedef std::set<short_rat *,
+                 short_rat_lex_smaller_denominator > short_rat_list;
+
 struct gen_fun {
-    std::vector< short_rat * > term;
+    short_rat_list term;
     Polyhedron *context;
 
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
+    void add(short_rat *r);
     void add(const QQ& c, const gen_fun *gf);
     void substitute(Matrix *CP);
     gen_fun *Hadamard_product(const gen_fun *gf,
@@ -727,6 +777,7 @@ struct gen_fun {
     void print(std::ostream& os,
                unsigned int nparam, char **param_name) const;
     operator evalue *() const;
+    ZZ coefficient(Value* params, barvinok_options *options) const;
     void coefficient(Value* params, Value* c) const;
 
     gen_fun(Polyhedron *C = NULL);
@@ -975,10 +1026,17 @@ Polyhedron* Polyhedron_Project(Polyhedron *P, int dim);
 The function \ai[\tt]{Polyhedron\_Project} projects
 \verb+P+ onto its last \verb+dim+ dimensions.
 
+\begin{verbatim}
+Matrix *left_inverse(Matrix *M, Matrix **Eq);
+\end{verbatim}
+The \ai[\tt]{left\_inverse} function computes the left inverse
+of \verb+M+ as explained in Section~\ref{s:inverse}.
+
 \sindex{reduced}{basis}
 \sindex{generalized}{reduced basis}
 \begin{verbatim}
-Matrix *Polyhedron_Reduced_Basis(Polyhedron *P);
+Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
+                                 struct barvinok_options *options);
 \end{verbatim}
 \ai[\tt]{Polyhedron\_Reduced\_Basis} computes
 a \ai{generalized reduced basis} of {\tt P}, which
@@ -990,7 +1048,8 @@ to perform the linear optimizations and so is only available
 if you have \ai[\tt]{GLPK}.
 
 \begin{verbatim}
-Vector *Polyhedron_Sample(Polyhedron *P, unsigned MaxRays);
+Vector *Polyhedron_Sample(Polyhedron *P,
+                          struct barvinok_options *options);
 \end{verbatim}
 \ai[\tt]{Polyhedron\_Sample} returns an \ai{integer point} of {\tt P}
 or {\tt NULL} if {\tt P} contains no integer points.
@@ -1062,8 +1121,13 @@ typedef std::pair< Polyhedron *, GiNaC::lst > guarded_lst;
 struct piecewise_lst {
     const GiNaC::exvector vars;
     std::vector<guarded_lst> list;
+    /*  0: just collect terms
+     *  1: remove obviously smaller terms (maximize)
+     * -1: remove obviously bigger terms (minimize)
+     */
+    int sign;
 
-    piecewise_lst::piecewise_lst(const GiNaC::exvector& vars);
+    piecewise_lst(const GiNaC::exvector& vars);
     piecewise_lst& combine(const piecewise_lst& other);
     void maximize();
     void simplify_domains(Polyhedron *ctx, unsigned MaxRays);
@@ -1084,6 +1148,9 @@ of the polyhedral domains in \verb+this+ and \verb+other+ and associates
 to each of the resulting subdomains the union of the sets of polynomials
 associated to the domains from \verb+this+ and \verb+other+ that contain
 the subdomain.
+If the \verb+sign+s of the \ai[\tt]{piecewise\_list}s are not zero,
+then the (obviously) redundant elements of these sets are removed
+from the union.
 The result is stored in \verb+this+.
 \\
 \ai[\tt]{piecewise\_lst::maximize} removes polynomials from domains that evaluate
