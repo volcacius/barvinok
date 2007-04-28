@@ -1328,3 +1328,112 @@ $$
 \vec p' = \hat Q L^{-\perp} C^{-L} \vec p
 .
 $$
+
+\subsection{Parametric Volume Computation}
+
+The \ai{volume} of a (parametric) polytope can serve as an approximation
+for the number of integer points in the polytope.
+We basically follow the description of~\shortciteN{Rabl2006} here, except that we
+focus on volume computation for {\em linearly}
+parametrized polytopes, which we exploit to determine the sign
+of the determinants we compute, as explained below.
+
+Note first that
+the vertices of a linearly parametrized polytope are affine expressions
+in the parameters that may be valid only in parts (chambers)
+of the parameter domain.
+Since the volume computation is based on the (active) vertices, we perform
+the computation in each chamber separately.
+Also note that since the vertices are affine expressions, it is
+easy to check whether they belong to a facet.
+
+The volume of a $d$-simplex, i.e., a $d$-dimensional polytope with
+$d+1$ vertices, is relatively easy to compute.
+In particular, if $\vec v_i(\vec p)$, for $0 \le i \le d$,
+are the (parametric) vertices
+of the simplex $P$ then
+\begin{equation}
+\label{eq:volume}
+\vol P = 
+\frac 1 {d!}
+\left|
+\det
+\begin{bmatrix}
+v_{11}(\vec p) - v_{01}(\vec p) &
+v_{12}(\vec p) - v_{02}(\vec p) &
+\ldots &
+v_{1d}(\vec p) - v_{0d}(\vec p)
+\\
+v_{21}(\vec p) - v_{01}(\vec p) &
+v_{22}(\vec p) - v_{02}(\vec p) &
+\ldots &
+v_{2d}(\vec p) - v_{0d}(\vec p)
+\\
+\vdots & \vdots & \ddots & \vdots
+\\
+v_{d1}(\vec p) - v_{01}(\vec p) &
+v_{d2}(\vec p) - v_{02}(\vec p) &
+\ldots &
+v_{dd}(\vec p) - v_{0d}(\vec p)
+\end{bmatrix}
+\right|.
+\end{equation}
+
+If $P$ is not a simplex, i.e., $N > d+1$, with $N$ the number of
+vertices of $P$, then the standard way of computing the volume of $P$
+is to first {\em triangulate} $P$, i.e., subdivide $P$ into simplices,
+and then to compute and sum the volumes of the resulting simplices.
+One way of computing a triangulation is to
+compute the \ai{barycenter}
+$$
+\frac 1 N \sum_i \vec v_i(\vec p)
+$$
+of $P$
+and to perform a subdivision by computing the convex hulls
+of the barycenter with each of the facets of $P$.
+If a given facet of $P$ is itself a simplex, then this convex hull
+is also a simplex.  Otherwise the facet is further subdivided.
+This recursive process terminates as every $1$-dimensional polytope
+is a simplex.
+
+The triangulation described above is known as
+the boundary triangulation~\shortcite{Bueler2000exact} and is used
+by \shortciteN{Rabl2006} in his implementation.
+The Cohen-Hickey triangulation~\shortcite{Cohen1979volumes,Bueler2000exact}
+is a much more efficient variation and uses one of the vertices
+instead of the barycenter.  The facets incident on the vertex
+do not have to be considered in this case because the resulting subpolytopes
+would have zero volume.
+Another possibility is to use a
+``lifting'' triangulation~\shortcite{Lee1991,DeLoera1995}.
+In this triangulation, each vertex is assigned a (random) ``height'' in
+an extra dimension.
+The projection of the ``lower envelope'' of the resulting polytope onto
+the original space results in a subdivision, which is a triangulation
+with very high probability.
+
+A complication with the lifting triangulation is that the constraint system
+of the lifted polytope will in general not be linearly parameterized,
+even if the original polytope is.
+It is, however, sufficient to perform the triangulation for a particular
+value of the parameters inside the chamber since the parametric polytope
+has the same combinatorial structure throughout the chamber.
+The triangulation obtained for the instantiated vertices can then
+be carried over to the corresponding parametric vertices.
+We only need to be careful to select a value for the parameters that
+does not lie on any facet of the chambers.  On these chambers, some
+of the vertices may coincide.
+For linearly parametrized polytopes, it is easy to find a parameter
+point in the interior of a chamber, as explained in Section~\ref{s:interior}.
+Note that this point need not be integer.
+
+A direct application of the above algorithm, using any of the triangulations,
+would yield for each chamber
+a volume expressed as the sum of the absolute values of polynomials in
+the parameters.  To remove the absolute value, we plug in a particular
+value of the parameters (not necessarily integer)
+belonging to the given chamber for which we know that the volume is non-zero.
+Again, it is sufficient to take any point in the interior of the chamber.
+The sign of the resulting value then determines the sign of the whole
+polynomial since polynomials are continuous functions and will not change
+sign without passing through zero.
