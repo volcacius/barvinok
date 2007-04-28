@@ -1081,6 +1081,7 @@ Lattice:
 \end{example}
 
 \subsection{Left inverse of an affine embedding}
+\label{s:inverse}
 
 We often map a polytope onto a lower dimensional space to remove possible
 equalities in the polytope.  These maps are typically represented
@@ -1197,3 +1198,133 @@ This method for extending a matrix of which
 only a few lines are known to a \ai{unimodular matrix}
 is more general than the method described by \shortciteN{Bik1996PhD},
 which only considers extending a matrix given by a single row.
+
+\subsection{Ensuring a polyhedron has only revlex-positive rays}
+\label{s:revlexpos}
+
+The \ai[\tt]{barvinok\_series\_with\_options} function and all
+further \ai[\tt]{gen\_fun} manipulations assume that the effective
+parameter domain has only \ai{revlex-positive} rays.
+When used to computer \rgf/s, the \ai[\tt]{barvinok\_enumerate}
+application will therefore transform the effective parameter domain
+of a problem if it has revlex-negative rays.
+It will then not compute the generating function
+$$
+f(\vec x) = \sum_{\vec p \in \ZZ^m} \#(P_{\vec p} \cap \ZZ^d) \, x^{\vec p}
+,
+$$
+but
+$$
+g(\vec z) = \sum_{\vec p' \in \ZZ^n}
+		\#(P_{T \vec p' + \vec t} \cap \ZZ^d) \, x^{\vec p'}
+$$
+instead, where $\vec p = T \vec p' + \vec t$,
+with $T \in \ZZ^{m \times n}$ and $\vec t \in \ZZ^m$, is an affine transformation
+that maps the transformed parameter space back to the original parameter space.
+
+First assume that the parameter domain does not contain any lines and
+that there are no equalities in the description of $P_{\vec p}$ that force
+the values of $\vec p$ for which $P_{\vec p}$ contains integer points
+to lie on a non-standard lattice.
+Let the effective parameter domain be given as
+$
+\{\, \vec p \mid A \vec p + \vec c \ge \vec 0 \,\}
+$,
+where $A \in \ZZ^{s \times d}$ of row rank $d$;
+otherwise the effective parameter domain would contain a line.
+Let $H$ be the (left) \indac{HNF} of $A$, i.e.,
+$$
+A = H Q
+,
+$$
+with $H$ lower-triangular with positive diagonal elements and
+$Q$ unimodular.
+Let $\tilde Q$ be the matrix obtained from $Q$ by reversing its rows,
+and, similarly, $\tilde H$ from $H$ by reversing the columns.
+After performing the transformation
+$\vec p' = \tilde Q \vec p$, i.e.,
+$\vec p = \tilde Q^{-1} \vec p'$, the transformed parameter domain
+is given by
+$$
+\{\, \vec p' \mid A \tilde Q^{-1} \vec p' + \vec c \ge \vec 0 \,\}
+$$
+or
+$$
+\{\, \vec p' \mid \tilde H \vec p' + \vec c \ge \vec 0 \,\}
+.
+$$
+The first constraint of this domain is
+$h_{11} p'_m + c_1 \ge 0$.  A ray with non-zero final coordinate
+therefore has a positive final coordinate.
+Similarly, the second constraint is
+$h_{22} p'_{m-1} h_{21} p'_m + c_2 \ge 0$.
+A ray with zero $n$th coordinate, but non-zero $n-1$st coordinate,
+will therefore have a positive $n-1$st coordinate.
+Continuing this reasoning, we see that all rays in the transformed
+domain are revlex-positive.
+
+If the parameter domain does contains lines, but is not restricted
+to a non-standard lattice, then the number of points in the parametric
+polytope is invariant over a translation along the lines.
+It is therefore sufficient to compute the number of points in the
+orthogonal complement of the linear subspace spanned by the lines.
+That is, we apply a prior transformation that maps a reduced parameter
+domain to this subspace,
+$$
+\vec p = L^\perp \vec p' =
+\begin{bmatrix}
+L & L^\perp
+\end{bmatrix}
+\begin{bmatrix}
+0 \\ I
+\end{bmatrix}
+\vec p'
+,
+$$
+where $L$ has the lines as columns, and $L^\perp$ an integral basis
+for the orthogonal complement (Section~\ref{s:completion}).
+Note that the inverse transformation
+$$
+\vec p' =
+L^{-\perp}
+\vec p =
+\begin{bmatrix}
+0 & I
+\end{bmatrix}
+\begin{bmatrix}
+L & L^\perp
+\end{bmatrix}^{-1}
+\vec p
+$$
+has integral coefficients since $L^\perp$ can be extended to a unimodular matrix.
+
+If the parameter values $\vec p$ for which $P_{\vec p}$ contains integer points
+are restricted to a non-standard lattice, we first replace the parameters
+by a different set of parameters that lie on the standard lattice
+through ``\ai{parameter compression}''\shortcite{Meister2004PhD},
+$$
+\vec p = C \vec p'
+.
+$$
+The (left) inverse of $C$ can be computes as explained in
+Section~\ref{s:inverse}, giving
+$$
+\vec p' = C^{-L} \vec p
+.
+$$
+We have to be careful to only apply this transformation when
+both the equalities computed in Section~\ref{s:inverse} are satisfied
+and some additional divisibility constraints.
+In particular if $\vec a^\T/d$ is a row of $C^{-L}$, with $\vec a \in \ZZ^{n'}$
+and $d \in \ZZ$, the transformation can only be applied to parameter values
+$\vec p$ such that $d$ divides $\sp a p$.
+
+The complete transformation is given by
+$$
+\vec p = C L^\perp \hat Q^{-1} \vec p'
+$$
+or
+$$
+\vec p' = \hat Q L^{-\perp} C^{-L} \vec p
+.
+$$

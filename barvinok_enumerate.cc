@@ -380,7 +380,8 @@ static void remove_lines(Polyhedron *C, Matrix **M, Matrix **Minv)
 
     *Minv = Matrix_Alloc(C->Dimension-C->NbBid+1, C->Dimension+1);
     for (int i = C->NbBid; i < C->Dimension+1; ++i)
-	Vector_Copy(Linv->p[i], (*Minv)->p[i-C->NbBid], C->Dimension+1);
+	Vector_AntiScale(Linv->p[i], (*Minv)->p[i-C->NbBid],
+			 Linv->p[C->Dimension][C->Dimension], C->Dimension+1);
     Matrix_Free(Linv);
 }
 
