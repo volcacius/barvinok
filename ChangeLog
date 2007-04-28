@@ -1,3 +1,26 @@
+version: 0.23
+date: Sat Apr 28 20:10:35 CEST 2007
+changes:
+    - use arpg for argument parsing in most commands
+    - |-
+      support polynomial approximations of quasi-polynomials, including
+      volume computation, Meister's method and replacing fractional parts
+      by constants
+    - add barvinok_maximize for computing upper (and lower) bounds
+    - support non-parametric primal and stopped Barvinok decomposition
+    - periodic number representation now run-time configurable
+    - drop support for ancient PolyLib versions
+    - simplified partitioning of chamber complex
+    - add evalue_eval, an exact version of copmute_evalue
+    - improved handling of large generating functions
+    - integrate barvinok_series functionality into barvinok_enumerate
+    - support use of cdd for solving LPs in basis reduction
+    - initial support for computing bounds over quasi-polynomials
+    - recursive Bernstein expansion
+    - corrections and improvements of lexmin
+    - optionally print quasi-polynomial as list of polynomials
+    - add some documentation
+---
 version: 0.22
 date: Tue Oct 31 23:15:15 CET 2006
 changes:
