@@ -26,11 +26,12 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
  * If E == NULL, then the power is 	    constant
  */
 struct term_info {
-    evalue	   *E;
-    ZZ		    constant;
+    evalue	  **E;
+    vec_ZZ	    constant;
 };
 
 void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
-    term_info* term, barvinok_options *options);
+    term_info* term, unsigned long det, int *closed,
+    barvinok_options *options);
 
 #endif

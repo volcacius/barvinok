@@ -155,7 +155,7 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
 }
 
 /* modifies coef argument ! */
-static void fractional_part(Value *coef, int len, Value d, ZZ& f, evalue *EP,
+static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
 			    Polyhedron *PD)
 {
     Value m;
@@ -439,10 +439,13 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
  * and the final column is the constant term.
  * lcm is the common denominator of all coefficients.
  */
-static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
-					Matrix *V)
+static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
+					 Matrix *V,
+					 unsigned long det, int *closed)
 {
+    assert(!closed);
     unsigned nparam = V->NbColumns-2;
+    evalue **E = new evalue *[det];
 
     Matrix* Rays = rays2matrix2(rays);
     Matrix *T = Transpose(Rays);
@@ -450,7 +453,6 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
     int ok = Matrix_Inverse(T2, inv);
     assert(ok);
-    Matrix_Free(Rays);
     Matrix_Free(T2);
     mat_ZZ vertex;
     matrix2zz(V, vertex, V->NbRows, V->NbColumns-1);
@@ -471,23 +473,79 @@ static evalue* lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 
     vec_ZZ p = lambda * RT;
 
-    for (int i = 0; i < L->NbRows; ++i) {
-	Vector_Oppose(L->p[i], L->p[i], nparam+1);
-	fractional_part(L->p[i], nparam+1, V->p[0][nparam+1], p[i], EP, NULL);
+    if (det == 1) {
+	for (int i = 0; i < L->NbRows; ++i) {
+	    Vector_Oppose(L->p[i], L->p[i], nparam+1);
+	    fractional_part(L->p[i], nparam+1, V->p[i][nparam+1], p[i], EP, NULL);
+	}
+	E[0] = EP;
+    } else {
+	for (int i = 0; i < L->NbRows; ++i)
+	    value_assign(L->p[i][nparam+1], V->p[i][nparam+1]);
+
+	Value denom;
+	value_init(denom);
+	mpz_set_ui(denom, det);
+	value_multiply(denom, L->p[0][nparam+1], denom);
+
+	Matrix *U, *W, *D;
+	Smith(Rays, &U, &W, &D);
+	Matrix_Free(U);
+
+	/* Sanity check */
+	unsigned long det2 = 1;
+	for (int i = 0 ; i < D->NbRows; ++i)
+	    det2 *= mpz_get_ui(D->p[i][i]);
+	assert(det == det2);
+
+	Matrix_Transposition(inv);
+	Matrix *T2 = Matrix_Alloc(W->NbRows, inv->NbColumns);
+	Matrix_Product(W, inv, T2);
+	Matrix_Free(W);
+
+	unsigned dim = D->NbRows;
+	Vector *lambda = Vector_Alloc(dim);
+
+	Vector *row = Vector_Alloc(nparam+1);
+	FORALL_COSETS(det, D, i, k)
+	    Vector_Matrix_Product(k->p, T2, lambda->p);
+	    E[i] = new evalue();
+	    value_init(E[i]->d);
+	    evalue_copy(E[i], EP);
+	    for (int j = 0; j < L->NbRows; ++j) {
+		Vector_Oppose(L->p[j], row->p, nparam+1);
+		value_addmul(row->p[nparam], L->p[j][nparam+1], lambda->p[j]);
+		fractional_part(row->p, nparam+1, denom, p[j], E[i], NULL);
+	    }
+	END_FORALL_COSETS
+	Vector_Free(row);
+
+	Vector_Free(lambda);
+	Matrix_Free(T2);
+	Matrix_Free(D);
+
+	value_clear(denom);
+	free_evalue_refs(EP);
+	delete EP;
     }
 
+    Matrix_Free(Rays);
     Matrix_Free(L);
-
     Matrix_Free(inv);
-    return EP;
+
+    return E;
 }
 
-static evalue* lattice_point(const mat_ZZ& rays, vec_ZZ& lambda,
-			     Param_Vertices *V, barvinok_options *options)
+static evalue **lattice_point(const mat_ZZ& rays, vec_ZZ& lambda,
+			      Param_Vertices *V,
+			      unsigned long det, int *closed,
+			      barvinok_options *options)
 {
-    evalue *lp = lattice_point_fractional(rays, lambda, V->Vertex);
-    if (options->lookup_table)
-	evalue_mod2table(lp, V->Vertex->NbColumns-2);
+    evalue **lp = lattice_point_fractional(rays, lambda, V->Vertex, det, closed);
+    if (options->lookup_table) {
+	for (int i = 0; i < det; ++i)
+	    evalue_mod2table(lp[i], V->Vertex->NbColumns-2);
+    }
     return lp;
 }
 
@@ -604,6 +662,30 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
     }
 }
 
+static int lattice_point_fixed(Param_Vertices* V, const mat_ZZ& rays,
+    vec_ZZ& lambda, term_info* term, unsigned long det, int *closed)
+{
+    unsigned nparam = V->Vertex->NbColumns - 2;
+    unsigned dim = rays.NumCols();
+
+    for (int i = 0; i < dim; ++i)
+	if (First_Non_Zero(V->Vertex->p[i], nparam) != -1)
+	    return 0;
+
+    Vector *fixed = Vector_Alloc(dim+1);
+    for (int i = 0; i < dim; ++i)
+	value_assign(fixed->p[i], V->Vertex->p[i][nparam]);
+    value_assign(fixed->p[dim], V->Vertex->p[0][nparam+1]);
+
+    mat_ZZ vertex;
+    lattice_point(fixed->p, rays, vertex, det, closed);
+    term->E = NULL;
+    term->constant = vertex * lambda;
+    Vector_Free(fixed);
+
+    return 1;
+}
+
 /* Returns the power of (t+1) in the term of a rational generating function,
  * i.e., the scalar product of the actual lattice point and lambda.
  * The lattice point is the unique lattice point in the fundamental parallelepiped
@@ -612,7 +694,8 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
  * The result is returned in term.
  */
 void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
-    term_info* term, barvinok_options *options)
+    term_info* term, unsigned long det, int *closed,
+    barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = rays.NumCols();
@@ -620,9 +703,12 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
     vertex.SetDims(V->Vertex->NbRows, nparam+1);
 
     Param_Vertex_Common_Denominator(V);
-    if (value_notone_p(V->Vertex->p[0][nparam+1])) {
-	term->E = lattice_point(rays, lambda, V, options);
-	term->constant = 0;
+
+    if (lattice_point_fixed(V, rays, lambda, term, det, closed))
+	return;
+
+    if (det != 1 || closed || value_notone_p(V->Vertex->p[0][nparam+1])) {
+	term->E = lattice_point(rays, lambda, V, det, closed, options);
 	return;
     }
     for (int i = 0; i < V->Vertex->NbRows; ++i) {
@@ -638,10 +724,11 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
 	if (num[j] != 0)
 	    ++nn;
     if (nn >= 1) {
-	term->E = multi_monom(num);
-	term->constant = 0;
+	term->E = new evalue *[1];
+	term->E[0] = multi_monom(num);
     } else {
 	term->E = NULL;
-	term->constant = num[nparam];
+	term->constant.SetLength(1);
+	term->constant[0] = num[nparam];
     }
 }

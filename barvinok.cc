@@ -899,8 +899,6 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 
 void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
-    assert(sc.det == 1);
-    assert(!sc.closed);
     int r = 0;
     assert(sc.rays.NumRows() == dim);
     for (int k = 0; k < dim; ++k) {
@@ -910,9 +908,10 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 
     sign = sc.sign;
 
-    lattice_point(V, sc.rays, lambda, &num, options);
+    lattice_point(V, sc.rays, lambda, &num, sc.det, sc.closed, options);
     den = sc.rays * lambda;
-    normalize(sign, num.constant, den);
+    ZZ offset;
+    normalize(sign, offset, den);
 
     dpoly n(dim, den[0], 1);
     for (int k = 1; k < dim; ++k) {
@@ -921,22 +920,47 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
     }
     if (num.E != NULL) {
 	ZZ one(INIT_VAL, 1);
-	dpoly_n d(dim, num.constant, one);
+	dpoly_n d(dim, offset, one);
 	d.div(n, c, sign);
-	evalue EV; 
-	multi_polynom(c, num.E, &EV);
-	eadd(&EV , vE[vert]);
-	free_evalue_refs(&EV);
-	free_evalue_refs(num.E);
-	delete num.E; 
+	for (unsigned long i = 0; i < sc.det; ++i) {
+	    evalue EV;
+	    multi_polynom(c, num.E[i], &EV);
+	    eadd(&EV , vE[vert]);
+	    free_evalue_refs(&EV);
+	    free_evalue_refs(num.E[i]);
+	    delete num.E[i];
+	}
+	delete [] num.E; 
     } else {
 	mpq_set_si(count, 0, 1);
-	dpoly d(dim, num.constant);
-	d.div(n, count, sign);
+	if (num.constant.length() == 1) {
+	    num.constant[0] += offset;
+	    dpoly d(dim, num.constant[0]);
+	    d.div(n, count, sign);
+	} else {
+	    ZZ one(INIT_VAL, 1);
+	    dpoly_n d(dim, offset, one);
+	    d.div(n, c, sign);
+	    Value x, sum, acc;
+	    value_init(x);
+	    value_init(acc);
+	    for (unsigned long i = 0; i < sc.det; ++i) {
+		value_assign(acc, c->p[dim]);
+		zz2value(num.constant[i], x);
+		for (int j = dim-1; j >= 0; --j) {
+		    value_multiply(acc, acc, x);
+		    value_addto(acc, acc, c->p[j]);
+		}
+		value_addto(mpq_numref(count), mpq_numref(count), acc);
+	    }
+	    mpz_set(mpq_denref(count), c->p[dim+1]);
+	    value_clear(acc);
+	    value_clear(x);
+	}
 	evalue EV;
 	value_init(EV.d);
 	evalue_set(&EV, &count[0]._mp_num, &count[0]._mp_den);
-	eadd(&EV , vE[vert]);
+	eadd(&EV, vE[vert]);
 	free_evalue_refs(&EV);
     } 
 }
