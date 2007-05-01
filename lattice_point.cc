@@ -319,6 +319,21 @@ void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *close
     }
 }
 
+#define FORALL_COSETS(det,D,i,k)					\
+    do {								\
+	Vector *k = Vector_Alloc(D->NbRows+1);				\
+	value_set_si(k->p[D->NbRows], 1);				\
+	for (unsigned long i = 0; i < det; ++i) {			\
+	    unsigned long _fc_val = i;					\
+	    for (int j = 0; j < D->NbRows; ++j) {			\
+		value_set_si(k->p[j], _fc_val % mpz_get_ui(D->p[j][j]));\
+		_fc_val /= mpz_get_ui(D->p[j][j]);			\
+	    }
+#define END_FORALL_COSETS						\
+	    }						    		\
+	Vector_Free(k);						    	\
+    } while(0);
+
 /* Compute the lattice points in the vertex cone at "values" with rays "rays".
  * The lattice points are returned in "vertex".
  *
@@ -384,16 +399,9 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
 
     Rays = rays2matrix(rays);
 
-    Vector *k = Vector_Alloc(dim+1);
-    value_set_si(k->p[dim], 1);
     Vector *lambda = Vector_Alloc(dim+1);
     Vector *lambda2 = Vector_Alloc(dim+1);
-    for (unsigned long i = 0; i < det; ++i) {
-	unsigned long val = i;
-	for (int j = 0; j < dim; ++j) {
-	    value_set_si(k->p[j], val % mpz_get_ui(D->p[j][j]));
-	    val /= mpz_get_ui(D->p[j][j]);
-	}
+    FORALL_COSETS(det, D, i, k)
 	Vector_Matrix_Product(k->p, T2, lambda->p);
 	for (int j = 0; j < dim; ++j)
 	    if (!closed || closed[j])
@@ -411,8 +419,7 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
 	    assert(mpz_divisible_p(lambda2->p[j], values[dim]));
 	Vector_AntiScale(lambda2->p, lambda2->p, values[dim], dim+1);
 	values2zz(lambda2->p, vertex[i], dim);
-    }
-    Vector_Free(k);
+    END_FORALL_COSETS
     Vector_Free(lambda);
     Vector_Free(lambda2);
     Matrix_Free(D);
