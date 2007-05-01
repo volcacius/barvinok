@@ -1681,3 +1681,14 @@ void Vector_Oppose(Value *p1, Value *p2, unsigned len)
     for (i = 0; i < len; ++i)
 	value_oppose(p2[i], p1[i]);
 }
+
+/* perform transposition inline; assumes M is a square matrix */
+void Matrix_Transposition(Matrix *M)
+{
+    int i, j;
+
+    assert(M->NbRows == M->NbColumns);
+    for (i = 0; i < M->NbRows; ++i)
+	for (j = i+1; j < M->NbColumns; ++j)
+	    value_swap(M->p[i][j], M->p[j][i]);
+}

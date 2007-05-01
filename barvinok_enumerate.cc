@@ -343,14 +343,6 @@ static void apply_transformation(Polyhedron **P, Polyhedron **C,
 	*inv = Minv;
 }
 
-static void Matrix_Transposition(Matrix *M)
-{
-    assert(M->NbRows == M->NbColumns);
-    for (int i = 0; i < M->NbRows; ++i)
-	for (int j = i+1; j < M->NbColumns; ++j)
-	    value_swap(M->p[i][j], M->p[j][i]);
-}
-
 /* Since we have "compressed" the parameters (in case there were
  * any equalities), the result is independent of the coordinates in the
  * coordinate subspace spanned by the lines.  We can therefore assume
