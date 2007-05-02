@@ -156,10 +156,18 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
 
 /* modifies coef argument ! */
 static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
-			    Polyhedron *PD)
+			    Polyhedron *PD, bool up)
 {
     Value m;
     value_init(m);
+
+    if (up) {
+	/* f {{ x }} = f - f { -x } */
+	zz2value(f, m);
+	evalue_add_constant(EP, m);
+	Vector_Oppose(coef, coef, len);
+	f = -f;
+    }
 
     value_assign(m, d);
     int j = normal_mod(coef, len, &m);
@@ -243,7 +251,7 @@ static void ceil(Value *coef, int len, Value d, ZZ& f,
                  evalue *EP, barvinok_options *options)
 {
     Vector_Oppose(coef, coef, len);
-    fractional_part(coef, len, d, f, EP, NULL);
+    fractional_part(coef, len, d, f, EP, NULL, false);
     if (options->lookup_table)
 	evalue_mod2table(EP, len-1);
 }
@@ -273,7 +281,7 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     ZZ one;
     one = 1;
     Vector_Oppose(val->p, val->p, len);
-    fractional_part(val->p, len, t, one, EP, P);
+    fractional_part(val->p, len, t, one, EP, P, false);
     value_clear(t);
 
     /* copy EP to malloc'ed evalue */
@@ -443,7 +451,6 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 					 Matrix *V,
 					 unsigned long det, int *closed)
 {
-    assert(!closed);
     unsigned nparam = V->NbColumns-2;
     evalue **E = new evalue *[det];
 
@@ -476,7 +483,8 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     if (det == 1) {
 	for (int i = 0; i < L->NbRows; ++i) {
 	    Vector_Oppose(L->p[i], L->p[i], nparam+1);
-	    fractional_part(L->p[i], nparam+1, V->p[i][nparam+1], p[i], EP, NULL);
+	    fractional_part(L->p[i], nparam+1, V->p[i][nparam+1], p[i],
+			    EP, NULL, closed && !closed[i]);
 	}
 	E[0] = EP;
     } else {
@@ -515,7 +523,8 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	    for (int j = 0; j < L->NbRows; ++j) {
 		Vector_Oppose(L->p[j], row->p, nparam+1);
 		value_addmul(row->p[nparam], L->p[j][nparam+1], lambda->p[j]);
-		fractional_part(row->p, nparam+1, denom, p[j], E[i], NULL);
+		fractional_part(row->p, nparam+1, denom, p[j],
+				E[i], NULL, closed && !closed[j]);
 	    }
 	END_FORALL_COSETS
 	Vector_Free(row);
