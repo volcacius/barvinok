@@ -3615,6 +3615,28 @@ void evalue_div(evalue * e, Value n)
 	evalue_div(&e->x.p->arr[i], n);
 }
 
+void evalue_add_constant(evalue *e, const Value cst)
+{
+    int i;
+
+    if (value_zero_p(e->d)) {
+	if (e->x.p->type == partition) {
+	    for (i = 0; i < e->x.p->size/2; ++i)
+		evalue_add_constant(&e->x.p->arr[2*i+1], cst);
+	    return;
+	}
+	if (e->x.p->type == relation) {
+	    for (i = 1; i < e->x.p->size; ++i)
+		evalue_add_constant(&e->x.p->arr[i], cst);
+	    return;
+	}
+	do {
+	    e = &e->x.p->arr[type_offset(e->x.p)];
+	} while (value_zero_p(e->d));
+    }
+    value_addmul(e->x.n, cst, e->d);
+}
+
 static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_frac)
 {
     int i, offset;
