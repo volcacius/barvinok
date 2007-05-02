@@ -140,6 +140,8 @@ barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
+	evalue_read.c \
+	evalue_read.h \
 	$(FDSTREAM) \
 	maximize.cc \
 	verify.h \
