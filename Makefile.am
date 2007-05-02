@@ -14,7 +14,7 @@ AM_LDFLAGS = -Llib
 lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart
-noinst_PROGRAMS = test randomtest \
+noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  @bv_extra_programs@
@@ -102,6 +102,10 @@ libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 LDADD = libbarvinok.la
 
 test_SOURCES = test.c
+testlib_SOURCES = \
+	evalue_read.c \
+	evalue_read.h \
+	testlib.cc
 barvinok_count_SOURCES = barvinok_count.c
 barvinok_ehrhart_SOURCES = barvinok_ehrhart.cc
 barvinok_union_SOURCES = barvinok_union.cc
@@ -228,7 +232,10 @@ else
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
 endif
 
-check: check-enumerate check-enumerate_e check-test check-lexmin check-approx
+check: check-testlib check-enumerate check-enumerate_e check-test \
+	check-lexmin check-approx
+check-testlib: testlib
+	./testlib
 check-approx: test_approx
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
