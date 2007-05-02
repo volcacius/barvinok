@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-evalue *evalue_read_from_file(FILE *in, char *var_list, char ***ppp,
+evalue *evalue_read_from_file(FILE *in, const char *var_list, char ***ppp,
 			      unsigned *nvar, unsigned *nparam, unsigned MaxRays);
 
 #if defined(__cplusplus)

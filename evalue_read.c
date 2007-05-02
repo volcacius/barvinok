@@ -241,13 +241,15 @@ struct parameter *parameter_new(char *name, int pos, struct parameter *next)
     return p;
 }
 
-static int parameter_pos(struct parameter **p, char *s)
+static int parameter_pos(struct parameter **p, const char *s, int len)
 {
     int pos = *p ? (*p)->pos+1 : 0;
     struct parameter *q;
 
+    if (len == -1)
+	len = strlen(s);
     for (q = *p; q; q = q->next) {
-	if (strcmp(q->name, s) == 0)
+	if (strncmp(q->name, s, len) == 0)
 	    break;
     }
     if (q)
@@ -425,7 +427,7 @@ static evalue *read_periodic(struct stream *s, struct parameter **p)
 	}
 	e = ALLOC(evalue);
 	value_init(e->d);
-	pos = parameter_pos(p, tok->u.s);
+	pos = parameter_pos(p, tok->u.s, -1);
 	token_free(tok);
 	e->x.p = new_enode(periodic, n, pos+1);
 	while (--n >= 0) {
@@ -492,7 +494,7 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 	} else if (tok)
 	    stream_push_token(s, tok);
     } else if (tok->type == TOKEN_IDENT) {
-	int pos = parameter_pos(p, tok->u.s);
+	int pos = parameter_pos(p, tok->u.s, -1);
 	int pow = optional_power(s);
 	token_free(tok);
 	e = ALLOC(evalue);
@@ -611,7 +613,7 @@ static int evalue_read_constraint(struct stream *s, struct parameter **p,
 	else if (tok->type == TOKEN_IDENT) {
 	    if (!c)
 		c = constraint_new();
-	    pos = parameter_pos(p, tok->u.s);
+	    pos = parameter_pos(p, tok->u.s, -1);
 	    constraint_extend(c, 1+pos);
 	    value_set_si(c->v->p[1+pos], 1);
 	    token_free(tok);
@@ -620,7 +622,7 @@ static int evalue_read_constraint(struct stream *s, struct parameter **p,
 		c = constraint_new();
 	    tok2 = stream_next_token(s);
 	    if (tok2 && tok2->type == TOKEN_IDENT) {
-		pos = parameter_pos(p, tok2->u.s);
+		pos = parameter_pos(p, tok2->u.s, -1);
 		constraint_extend(c, 1+pos);
 		value_assign(c->v->p[1+pos], tok->u.v);
 		token_free(tok);
@@ -803,7 +805,7 @@ static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
     return e;
 }
 
-static evalue *evalue_read(struct stream *s, char *var_list, char ***ppp,
+static evalue *evalue_read(struct stream *s, const char *var_list, char ***ppp,
 			   unsigned *nvar, unsigned *nparam, unsigned MaxRays)
 {
     struct token *tok;
@@ -814,14 +816,12 @@ static evalue *evalue_read(struct stream *s, char *var_list, char ***ppp,
 
     if (var_list) {
 	while ((next = strchr(var_list, ','))) {
-	    *next = '\0';
 	    if (next > var_list)
-		parameter_pos(&p, var_list);
-	    *next = ',';
+		parameter_pos(&p, var_list, next-var_list);
 	    var_list = next+1;
 	}
 	if (strlen(var_list) > 0)
-	    parameter_pos(&p, var_list);
+	    parameter_pos(&p, var_list, -1);
 	nv = p ? p->pos+1 : 0;
     } else
 	nv = -1;
@@ -838,7 +838,7 @@ static evalue *evalue_read(struct stream *s, char *var_list, char ***ppp,
 		break;
 	    }
 	    if (nv == -1)
-		parameter_pos(&p, tok->u.s);
+		parameter_pos(&p, tok->u.s, -1);
 	    token_free(tok);
 	    tok = stream_next_token(s);
 	    if (!tok || tok->type != ',')
@@ -882,7 +882,7 @@ static evalue *evalue_read(struct stream *s, char *var_list, char ***ppp,
     return e;
 }
 
-evalue *evalue_read_from_file(FILE *in, char *var_list, char ***ppp,
+evalue *evalue_read_from_file(FILE *in, const char *var_list, char ***ppp,
 			      unsigned *nvar, unsigned *nparam, unsigned MaxRays)
 {
     evalue *e;
