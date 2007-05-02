@@ -83,15 +83,13 @@ Matrix *rays2matrix(const mat_ZZ& rays)
     return M;
 }
 
-Matrix *rays2matrix2(const mat_ZZ& rays)
+Matrix *zz2matrix(const mat_ZZ& mat)
 {
-    unsigned dim = rays.NumRows();
-
-    Matrix *M = Matrix_Alloc(dim, dim);
+    Matrix *M = Matrix_Alloc(mat.NumRows(), mat.NumCols());
     assert(M);
 
-    for (int i = 0; i < dim; ++i)
-	zz2values(rays[i], M->p[i]);
+    for (int i = 0; i < mat.NumRows(); ++i)
+	zz2values(mat[i], M->p[i]);
     return M;
 }
 

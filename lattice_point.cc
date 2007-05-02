@@ -372,7 +372,7 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
 	lattice_point(values, rays, vertex[0], closed);
 	return;
     }
-    Matrix* Rays = rays2matrix2(rays);
+    Matrix* Rays = zz2matrix(rays);
     Matrix *U, *W, *D;
     Smith(Rays, &U, &W, &D);
     Matrix_Free(Rays);
@@ -454,7 +454,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
     unsigned nparam = V->NbColumns-2;
     evalue **E = new evalue *[det];
 
-    Matrix* Rays = rays2matrix2(rays);
+    Matrix* Rays = zz2matrix(rays);
     Matrix *T = Transpose(Rays);
     Matrix *T2 = Matrix_Copy(T);
     Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
@@ -590,7 +590,7 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
 	}
 
-	Matrix* Rays = rays2matrix2(rays);
+	Matrix* Rays = zz2matrix(rays);
 	Matrix *T = Transpose(Rays);
 	Matrix *T2 = Matrix_Copy(T);
 	Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
