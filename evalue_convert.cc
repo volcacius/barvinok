@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <sstream>
 #include "conversion.h"
 #include "evalue_convert.h"
