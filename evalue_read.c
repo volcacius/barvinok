@@ -851,7 +851,11 @@ static evalue *evalue_read(struct stream *s, char *var_list, char ***ppp,
 	    nv = p ? p->pos+1 : 0;
     }
 
-    if (tok->type == TOKEN_VALUE) {
+    if (tok->type == '(') {
+	stream_push_token(s, tok);
+	e = evalue_read_term(s, &p);
+	*ppp = extract_parameters(p, nparam);
+    } else if (tok->type == TOKEN_VALUE) {
 	struct token *tok2 = stream_next_token(s);
 	if (tok2)
 	    stream_push_token(s, tok2);
