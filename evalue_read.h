@@ -9,6 +9,8 @@ extern "C" {
 
 evalue *evalue_read_from_file(FILE *in, const char *var_list, char ***ppp,
 			      unsigned *nvar, unsigned *nparam, unsigned MaxRays);
+evalue *evalue_read_from_str(const char *str, const char *var_list, char ***ppp,
+			     unsigned *nvar, unsigned *nparam, unsigned MaxRays);
 
 #if defined(__cplusplus)
 }

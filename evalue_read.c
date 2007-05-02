@@ -38,6 +38,7 @@ void token_free(struct token *tok)
 
 struct stream {
     FILE    	    *file;
+    const char	    *str;
     int		    line;
     int		    col;
     int		    eof;
@@ -51,12 +52,13 @@ struct stream {
     int		    n_token;
 };
 
-static struct stream* stream_new(FILE *file)
+static struct stream* stream_new()
 {
     int i;
     struct stream *s = ALLOC(struct stream);
-    s->file = file;
     s->size = 256;
+    s->file = NULL;
+    s->str = NULL;
     s->buffer = (char*)malloc(s->size);
     s->len = 0;
     s->line = 1;
@@ -69,11 +71,18 @@ static struct stream* stream_new(FILE *file)
     return s;
 }
 
-static void stream_free(struct stream *s)
+static struct stream* stream_new_file(FILE *file)
 {
-    free(s->buffer);
-    assert(s->n_token == 0);
-    free(s);
+    struct stream *s = stream_new();
+    s->file = file;
+    return s;
+}
+
+static struct stream* stream_new_str(const char *str)
+{
+    struct stream *s = stream_new();
+    s->str = str;
+    return s;
 }
 
 static int stream_getc(struct stream *s)
@@ -81,10 +90,16 @@ static int stream_getc(struct stream *s)
     int c;
     if (s->eof)
 	return -1;
-    c = fgetc(s->file);
+    if (s->file)
+	c = fgetc(s->file);
+    else {
+	c = *s->str++;
+	if (c == '\0')
+	    c = -1;
+    }
     if (c == -1)
 	s->eof = 1;
-    if (s->c != -1) {
+    if (!s->eof) {
 	if (s->c == '\n') {
 	    s->line++;
 	    s->col = 0;
@@ -97,7 +112,10 @@ static int stream_getc(struct stream *s)
 
 static void stream_ungetc(struct stream *s, int c)
 {
-    ungetc(c, s->file);
+    if (s->file)
+	ungetc(c, s->file);
+    else
+	--s->str;
     s->c = -1;
 }
 
@@ -223,7 +241,19 @@ void stream_error(struct stream *s, struct token *tok, char *msg)
     if (tok) {
 	if (tok->type < 256)
 	    fprintf(stderr, "got '%c'\n", tok->type);
+	else
+	    fprintf(stderr, "got token type %d\n", tok->type);
     }
+}
+
+static void stream_free(struct stream *s)
+{
+    free(s->buffer);
+    if (s->n_token != 0) {
+	struct token *tok = stream_next_token(s);
+	stream_error(s, tok, "unexpected token");
+    }
+    free(s);
 }
 
 struct parameter {
@@ -886,7 +916,17 @@ evalue *evalue_read_from_file(FILE *in, const char *var_list, char ***ppp,
 			      unsigned *nvar, unsigned *nparam, unsigned MaxRays)
 {
     evalue *e;
-    struct stream *s = stream_new(in);
+    struct stream *s = stream_new_file(in);
+    e = evalue_read(s, var_list, ppp, nvar, nparam, MaxRays);
+    stream_free(s);
+    return e;
+}
+
+evalue *evalue_read_from_str(const char *str, const char *var_list, char ***ppp,
+			     unsigned *nvar, unsigned *nparam, unsigned MaxRays)
+{
+    evalue *e;
+    struct stream *s = stream_new_str(str);
     e = evalue_read(s, var_list, ppp, nvar, nparam, MaxRays);
     stream_free(s);
     return e;
