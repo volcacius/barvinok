@@ -3,6 +3,7 @@
 
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>
+#include <NTL/mat_ZZ.h>
 #include <barvinok/polylib.h>
 
 #ifdef NTL_STD_CXX
