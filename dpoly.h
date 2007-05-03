@@ -23,11 +23,10 @@ public:
     void operator += (const dpoly& t);
     void operator *= (const Value f);
     void operator *= (const dpoly& f);
-    void div(dpoly& d, mpq_t count, ZZ& sign);
-    void div(dpoly& d, mpq_t *count, const mpq_t& factor);
+    void div(const dpoly& d, mpq_t count, ZZ& sign);
+    void div(const dpoly& d, mpq_t *count, const mpq_t& factor);
 private:
-    mpq_t *div(dpoly &d) const;
-    void   clear_div(mpq_t *c) const;
+    Vector *div(const dpoly &d);
 };
 
 /* Each element in powers corresponds to a factor of the form (1 - z^b)

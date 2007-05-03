@@ -60,63 +60,62 @@ void dpoly::operator *= (const dpoly& f)
     Vector_Free(old);
 }
 
-mpq_t *dpoly::div(dpoly& d) const
+Vector *dpoly::div(const dpoly& d)
 {
     int len = coeff->Size;
-    mpq_t* c = new mpq_t[coeff->Size];
-    mpq_t qtmp;
-    mpq_init(qtmp);
-    for (int i = 0; i < len; ++i) {
-	mpq_init(c[i]);
-	mpq_set_z(c[i], coeff->p[i]);
+    Vector *denom = Vector_Alloc(len);
+    Value tmp;
+    value_init(tmp);
+    value_assign(denom->p[0], d.coeff->p[0]);
+    for (int i = 1; i < len; ++i) {
+	value_multiply(denom->p[i], denom->p[i-1], denom->p[0]);
+	value_multiply(coeff->p[i], coeff->p[i], denom->p[i-1]);
 
-	for (int j = 1; j <= i; ++j) {
-	    mpq_set_z(qtmp, d.coeff->p[j]);
-	    mpq_mul(qtmp, qtmp, c[i-j]);
-	    mpq_sub(c[i], c[i], qtmp);
+	mpz_submul(coeff->p[i], d.coeff->p[1], coeff->p[i-1]);
+	for (int j = 2; j <= i; ++j) {
+	    value_multiply(tmp, denom->p[j-2], coeff->p[i-j]);
+	    mpz_submul(coeff->p[i], d.coeff->p[j], tmp);
 	}
-
-	mpq_set_z(qtmp, d.coeff->p[0]);
-	mpq_div(c[i], c[i], qtmp);
     }
-    mpq_clear(qtmp);
+    value_clear(tmp);
 
-    return c;
+    return denom;
 }
 
-void dpoly::clear_div(mpq_t *c) const
+void dpoly::div(const dpoly& d, mpq_t count, ZZ& sign)
 {
     int len = coeff->Size;
-
-    for (int i = 0; i < len; ++i)
-	mpq_clear(c[i]);
-    delete [] c;
-}
-
-void dpoly::div(dpoly& d, mpq_t count, ZZ& sign)
-{
-    int len = coeff->Size;
-    mpq_t *c = div(d);
+    Vector *denom = div(d);
+    mpq_t tmp;
+    mpq_init(tmp);
+    value_assign(mpq_numref(tmp), coeff->p[len-1]);
+    value_assign(mpq_denref(tmp), denom->p[len-1]);
+    mpq_canonicalize(tmp);
 
     if (sign == -1)
-	mpq_sub(count, count, c[len-1]);
+	mpq_sub(count, count, tmp);
     else
-	mpq_add(count, count, c[len-1]);
+	mpq_add(count, count, tmp);
 
-    clear_div(c);
+    mpq_clear(tmp);
+    Vector_Free(denom);
 }
 
-void dpoly::div(dpoly& d, mpq_t *count, const mpq_t& factor)
+void dpoly::div(const dpoly& d, mpq_t *count, const mpq_t& factor)
 {
     int len = coeff->Size;
-    mpq_t *c = div(d);
+    Vector *denom = div(d);
+    mpq_t tmp;
+    mpq_init(tmp);
 
     for (int i = 0; i < len; ++i) {
-	mpq_mul(c[len-1 - i], c[len-1 - i], factor);
-	mpq_add(count[i], count[i], c[len-1 - i]);
+	value_multiply(mpq_numref(tmp), coeff->p[len-1 - i], mpq_numref(factor));
+	value_multiply(mpq_denref(tmp), denom->p[len-1 - i], mpq_denref(factor));
+	mpq_add(count[i], count[i], tmp);
     }
 
-    clear_div(c);
+    mpq_clear(tmp);
+    Vector_Free(denom);
 }
 
 void dpoly_r::add_term(int i, const vector<int>& powers, const ZZ& coeff)

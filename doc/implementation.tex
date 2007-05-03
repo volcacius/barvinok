@@ -1437,3 +1437,33 @@ Again, it is sufficient to take any point in the interior of the chamber.
 The sign of the resulting value then determines the sign of the whole
 polynomial since polynomials are continuous functions and will not change
 sign without passing through zero.
+
+\subsection{Maclaurin series division}
+
+If $P(t)$ and $Q(t)$ are two Maclaurin series
+\begin{align*}
+P(t) & =  a_0 + a_1 t + a_2 t^2 + \cdots \\
+Q(t) & =  b_0 + b_1 t + b_2 t^2 + \cdots
+,
+\end{align*}
+then, as outlined by \shortciteN[241--247]{Henrici1974},
+we can compute the coefficients $c_l$ in
+$$
+\frac{P(t)}{Q(t)} =: c_0 + c_1 t + c_2 t^2 + \cdots
+$$
+by applying the recurrence relation
+$$
+c_l = \frac 1 {b_0} \left( a_l - \sum_{i=1}^l b_i c_{l-i} \right)
+.
+$$
+To avoid dealing with denominators, we can also compute
+$d_l = b_0^{l+1} c_l$ instead as
+$$
+d_l = b_0^l a_l - \sum_{i=1}^l b_0^{i-1} b_i c_{l-i}
+.
+$$
+The coefficients $c_l$ can then be directly read off as
+$$
+c_l = \frac{d_l}{b_0^{l+1}}
+.
+$$
