@@ -18,6 +18,7 @@ extern "C" {
 #include <barvinok/options.h>
 #include <barvinok/sample.h>
 #include "conversion.h"
+#include "counter.h"
 #include "decomposer.h"
 #include "lattice_point.h"
 #include "reduce_domain.h"
@@ -296,81 +297,6 @@ static void mask(Matrix *f, evalue *factor, barvinok_options *options)
 	mask_table(f, factor);
     else
 	mask_fractional(f, factor);
-}
-
-struct counter : public np_base {
-    vec_ZZ lambda;
-    mat_ZZ vertex;
-    vec_ZZ den;
-    ZZ sign;
-    vec_ZZ num;
-    ZZ offset;
-    int j;
-    mpq_t count;
-    Value tz;
-
-    counter(unsigned dim) : np_base(dim) {
-	den.SetLength(dim);
-	mpq_init(count);
-	value_init(tz);
-    }
-
-    virtual void init(Polyhedron *P) {
-	randomvector(P, lambda, dim);
-    }
-
-    virtual void reset() {
-	mpq_set_si(count, 0, 0);
-    }
-
-    ~counter() {
-	mpq_clear(count);
-	value_clear(tz);
-    }
-
-    virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
-			unsigned long det, int *closed, barvinok_options *options);
-    virtual void get_count(Value *result) {
-	assert(value_one_p(&count[0]._mp_den));
-	value_assign(*result, &count[0]._mp_num);
-    }
-};
-
-void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long det,
-		     int *closed, barvinok_options *options)
-{
-    for (int k = 0; k < dim; ++k) {
-	if (lambda * rays[k] == 0)
-	    throw Orthogonal;
-    }
-
-    assert(c.d == 1);
-    assert(c.n == 1 || c.n == -1);
-    sign = c.n;
-
-    lattice_point(V, rays, vertex, det, closed);
-    num = vertex * lambda;
-    den = rays * lambda;
-    offset = 0;
-    normalize(sign, offset, den);
-
-    num[0] += offset;
-    zz2value(num[0], tz);
-    dpoly d(dim, tz);
-    for (int k = 1; k < num.length(); ++k) {
-	num[k] += offset;
-	zz2value(num[k], tz);
-	dpoly term(dim, tz);
-	d += term;
-    }
-    zz2value(den[0], tz);
-    dpoly n(dim, tz, 1);
-    for (int k = 1; k < dim; ++k) {
-	zz2value(den[k], tz);
-	dpoly fact(dim, tz, 1);
-	n *= fact;
-    }
-    d.div(n, count, sign);
 }
 
 struct bfe_term : public bfc_term_base {

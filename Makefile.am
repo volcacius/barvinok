@@ -60,6 +60,8 @@ libbarvinok_la_SOURCES = \
     bfcounter.h \
     conversion.cc \
     conversion.h \
+    counter.cc \
+    counter.h \
     decomposer.cc \
     decomposer.h \
     dpoly.cc \
