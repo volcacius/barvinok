@@ -288,6 +288,8 @@ void bf_reducer::reduce(barvinok_options *options)
 {
     compute_reduced_factors();
 
+    Value tmp;
+    value_init(tmp);
     for (int i = 0; i < v.size(); ++i) {
 	compute_extra_num(i);
 
@@ -332,17 +334,20 @@ void bf_reducer::reduce(barvinok_options *options)
 		if (old2new[j] == -1 && v[i]->powers[j] > 0)
 		    break;
 
-	    dpoly D(no_param, factors[j][0], 1);
+	    zz2value(factors[j][0], tmp);
+	    dpoly D(no_param, tmp, 1);
 	    for (int k = 1; k < v[i]->powers[j]; ++k) {
-		dpoly fact(no_param, factors[j][0], 1);
+		dpoly fact(no_param, tmp, 1);
 		D *= fact;
 	    }
 	    for ( ; ++j < nf; )
-		if (old2new[j] == -1) 
+		if (old2new[j] == -1)  {
+		    zz2value(factors[j][0], tmp);
 		    for (int k = 0; k < v[i]->powers[j]; ++k) {
-			dpoly fact(no_param, factors[j][0], 1);
+			dpoly fact(no_param, tmp, 1);
 			D *= fact;
 		    }
+		}
 
 	    if (no_param + only_param == total_power &&
 		    bf->constant_vertex(d)) {
@@ -352,7 +357,8 @@ void bf_reducer::reduce(barvinok_options *options)
 		ZZ cn;
 		ZZ cd;
 		for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
-		    dpoly n(no_param, v[i]->terms[k][0]);
+		    zz2value(v[i]->terms[k][0], tmp);
+		    dpoly n(no_param, tmp);
 		    mpq_set_si(bf->tcount, 0, 1);
 		    n.div(D, bf->tcount, bf->one);
 
@@ -366,7 +372,8 @@ void bf_reducer::reduce(barvinok_options *options)
 		}
 	    } else {
 		for (int j = 0; j < v[i]->terms.NumRows(); ++j) {
-		    dpoly n(no_param, v[i]->terms[j][0]);
+		    zz2value(v[i]->terms[j][0], tmp);
+		    dpoly n(no_param, tmp);
 
 		    dpoly_r * r = 0;
 		    if (no_param + only_param == total_power)
@@ -378,7 +385,8 @@ void bf_reducer::reduce(barvinok_options *options)
 			    if (factors[k][0] == 0 || old2new[k] == -1)
 				continue;
 
-			    dpoly pd(no_param-1, factors[k][0], 1);
+			    zz2value(factors[k][0], tmp);
+			    dpoly pd(no_param-1, tmp, 1);
 
 			    for (int l = 0; l < v[i]->powers[k]; ++l) {
 				int q;
@@ -426,5 +434,5 @@ void bf_reducer::reduce(barvinok_options *options)
 	}
 	delete v[i];
     }
-
+    value_clear(tmp);
 }

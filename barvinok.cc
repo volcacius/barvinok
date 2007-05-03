@@ -73,15 +73,13 @@ public:
 	for (int i = 0; i < len; ++i) {
 	    Vector_Copy(coeff->p[i], c->p[i], len+1);
 	    for (int j = 1; j <= i; ++j) {
-		zz2value(d.coeff[j], tmp);
-		value_multiply(tmp, tmp, c->p[i][len]);
+		value_multiply(tmp, d.coeff->p[j], c->p[i][len]);
 		value_oppose(tmp, tmp);
 		Vector_Combine(c->p[i], c->p[i-j], c->p[i],
 			       c->p[i-j][len], tmp, len);
 		value_multiply(c->p[i][len], c->p[i][len], c->p[i-j][len]);
 	    }
-	    zz2value(d.coeff[0], tmp);
-	    value_multiply(c->p[i][len], c->p[i][len], tmp);
+	    value_multiply(c->p[i][len], c->p[i][len], d.coeff->p[0]);
 	}
 	if (sign == -1) {
 	    value_set_si(tmp, -1);
@@ -309,10 +307,12 @@ struct counter : public np_base {
     ZZ offset;
     int j;
     mpq_t count;
+    Value tz;
 
     counter(unsigned dim) : np_base(dim) {
 	den.SetLength(dim);
 	mpq_init(count);
+	value_init(tz);
     }
 
     virtual void init(Polyhedron *P) {
@@ -325,6 +325,7 @@ struct counter : public np_base {
 
     ~counter() {
 	mpq_clear(count);
+	value_clear(tz);
     }
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
@@ -354,15 +355,19 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
     normalize(sign, offset, den);
 
     num[0] += offset;
-    dpoly d(dim, num[0]);
+    zz2value(num[0], tz);
+    dpoly d(dim, tz);
     for (int k = 1; k < num.length(); ++k) {
 	num[k] += offset;
-	dpoly term(dim, num[k]);
+	zz2value(num[k], tz);
+	dpoly term(dim, tz);
 	d += term;
     }
-    dpoly n(dim, den[0], 1);
+    zz2value(den[0], tz);
+    dpoly n(dim, tz, 1);
     for (int k = 1; k < dim; ++k) {
-	dpoly fact(dim, den[k], 1);
+	zz2value(den[k], tz);
+	dpoly fact(dim, tz, 1);
 	n *= fact;
     }
     d.div(n, count, sign);
@@ -429,13 +434,16 @@ static void print_bfe_terms(mat_ZZ& factors, bfc_vec& v)
 
 struct bfcounter : public bfcounter_base {
     mpq_t count;
+    Value tz;
 
     bfcounter(unsigned dim) : bfcounter_base(dim) {
 	mpq_init(count);
 	lower = 1;
+	value_init(tz);
     }
     ~bfcounter() {
 	mpq_clear(count);
+	value_clear(tz);
     }
     virtual void base(mat_ZZ& factors, bfc_vec& v);
     virtual void get_count(Value *result) {
@@ -461,19 +469,23 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 	    if (v[i]->powers[j] > 0)
 		break;
 
-	dpoly D(total_power, factors[j][0], 1);
+	zz2value(factors[j][0], tz);
+	dpoly D(total_power, tz, 1);
 	for (int k = 1; k < v[i]->powers[j]; ++k) {
-	    dpoly fact(total_power, factors[j][0], 1);
+	    zz2value(factors[j][0], tz);
+	    dpoly fact(total_power, tz, 1);
 	    D *= fact;
 	}
 	for ( ; ++j < nf; )
 	    for (int k = 0; k < v[i]->powers[j]; ++k) {
-		dpoly fact(total_power, factors[j][0], 1);
+		zz2value(factors[j][0], tz);
+		dpoly fact(total_power, tz, 1);
 		D *= fact;
 	    }
 
 	for (int k = 0; k < v[i]->terms.NumRows(); ++k) {
-	    dpoly n(total_power, v[i]->terms[k][0]);
+	    zz2value(v[i]->terms[k][0], tz);
+	    dpoly n(total_power, tz);
 	    mpq_set_si(tcount, 0, 1);
 	    n.div(D, tcount, one);
 	    if (total_power % 2)
@@ -877,6 +889,7 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
     term_info num;
     Vector *c;
     mpq_t count;
+    Value tz;
 
     enumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
 		vertex_decomposer(P, nbV, *this), enumerator_base(dim, this) {
@@ -887,11 +900,13 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 	c = Vector_Alloc(dim+2);
 
 	mpq_init(count);
+	value_init(tz);
     }
 
     ~enumerator() {
 	mpq_clear(count);
 	Vector_Free(c);
+	value_clear(tz);
     }
 
     virtual void handle(const signed_cone& sc, barvinok_options *options);
@@ -913,9 +928,11 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
     ZZ offset;
     normalize(sign, offset, den);
 
-    dpoly n(dim, den[0], 1);
+    zz2value(den[0], tz);
+    dpoly n(dim, tz, 1);
     for (int k = 1; k < dim; ++k) {
-	dpoly fact(dim, den[k], 1);
+	zz2value(den[k], tz);
+	dpoly fact(dim, tz, 1);
 	n *= fact;
     }
     if (num.E != NULL) {
@@ -935,7 +952,8 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	mpq_set_si(count, 0, 1);
 	if (num.constant.length() == 1) {
 	    num.constant[0] += offset;
-	    dpoly d(dim, num.constant[0]);
+	    zz2value(num.constant[0], tz);
+	    dpoly d(dim, tz);
 	    d.div(n, count, sign);
 	} else {
 	    ZZ one(INIT_VAL, 1);
@@ -1099,6 +1117,7 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
     mat_ZZ den;
     mat_ZZ vertex;
     mpq_t tcount;
+    Value tz;
 
     ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
 		vertex_decomposer(P, nbV, *this), ienumerator_base(dim, this) {
@@ -1106,10 +1125,12 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
 
 	den.SetDims(dim, dim);
 	mpq_init(tcount);
+	value_init(tz);
     }
 
     ~ienumerator() {
 	mpq_clear(tcount);
+	value_clear(tz);
     }
 
     virtual void handle(const signed_cone& sc, barvinok_options *options);
@@ -1168,11 +1189,14 @@ void ienumerator::reduce(evalue *factor, const mat_ZZ& num, const mat_ZZ& den_f,
 	    if (den_p[k] == 0)
 		break;
 
-	dpoly n(no_param, num_s[0]);
-	dpoly D(no_param, den_s[k], 1);
+	zz2value(num_s[0], tz);
+	dpoly n(no_param, tz);
+	zz2value(den_s[k], tz);
+	dpoly D(no_param, tz, 1);
 	for ( ; ++k < len; )
 	    if (den_p[k] == 0) {
-		dpoly fact(no_param, den_s[k], 1);
+		zz2value(den_s[k], tz);
+		dpoly fact(no_param, tz, 1);
 		D *= fact;
 	    }
 
@@ -1204,7 +1228,8 @@ void ienumerator::reduce(evalue *factor, const mat_ZZ& num, const mat_ZZ& den_f,
 		if (den_s[k] == 0 || den_p[k] == 0)
 		    continue;
 
-		dpoly pd(no_param-1, den_s[k], 1);
+		zz2value(den_s[k], tz);
+		dpoly pd(no_param-1, tz, 1);
 
 		int l;
 		for (l = 0; l < k; ++l)

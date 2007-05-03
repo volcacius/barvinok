@@ -116,7 +116,7 @@ struct dpoly_r_scanner {
 	for (int i = 0; i < rc->len; ++i) {
 	    int k;
 	    for (k = 0; k < n; ++k)
-		if (num[k]->coeff[rc->len-1-i] != 0)
+		if (value_notzero_p(num[k]->coeff->p[rc->len-1-i]))
 		    break;
 	    if (k < n)
 		iter[i] = rc->c[i].begin();
@@ -146,12 +146,15 @@ struct dpoly_r_scanner {
 	    return false;
 
 	powers = (*iter[pos[0]])->powers;
-	for (int k = 0; k < n; ++k)
-	    mul(coeff[k], (*iter[pos[0]])->coeff, num[k]->coeff[rc->len-1-pos[0]]);
+	for (int k = 0; k < n; ++k) {
+	    value2zz(num[k]->coeff->p[rc->len-1-pos[0]], tmp);
+	    mul(coeff[k], (*iter[pos[0]])->coeff, tmp);
+	}
 	++iter[pos[0]];
 	for (int i = 1; i < len; ++i) {
 	    for (int k = 0; k < n; ++k) {
-		mul(tmp, (*iter[pos[i]])->coeff, num[k]->coeff[rc->len-1-pos[i]]);
+		value2zz(num[k]->coeff->p[rc->len-1-pos[i]], tmp);
+		mul(tmp, (*iter[pos[i]])->coeff, tmp);
 		add(coeff[k], coeff[k], tmp);
 	    }
 	    ++iter[pos[i]];
@@ -218,7 +221,8 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 
 	dpoly *n[num_s.length()];
 	for (int i = 0; i < num_s.length(); ++i) {
-	    n[i] = new dpoly(no_param, num_s[i]);
+	    zz2value(num_s[i], tz);
+	    n[i] = new dpoly(no_param, tz);
 	    /* Search for other numerator (j) with same num_p.
 	     * If found, replace a[j]/b[j] * n[j] and a[i]/b[i] * n[i]
 	     * by 1/(b[j]*b[i]/g) * (a[j]*b[i]/g * n[j] + a[i]*b[j]/g * n[i])
@@ -228,8 +232,10 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 		if (num_p[i] != num_p[j])
 		    continue;
 		ZZ g = GCD(c2[i].d, c2[j].d);
-		*n[j] *= c2[j].n * c2[i].d/g;
-		*n[i] *= c2[i].n * c2[j].d/g;
+		zz2value(c2[j].n * c2[i].d/g, tz);
+		*n[j] *= tz;
+		zz2value(c2[i].n * c2[j].d/g, tz);
+		*n[i] *= tz;
 		*n[j] += *n[i];
 		c2[j].n = 1;
 		c2[j].d *= c2[i].d/g;
@@ -246,10 +252,12 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 		break;
 	    }
 	}
-	dpoly D(no_param, den_s[k], 1);
+	zz2value(den_s[k], tz);
+	dpoly D(no_param, tz, 1);
 	for ( ; ++k < len; )
 	    if (den_p[k] == 0) {
-		dpoly fact(no_param, den_s[k], 1);
+		zz2value(den_s[k], tz);
+		dpoly fact(no_param, tz, 1);
 		D *= fact;
 	    }
 
@@ -276,15 +284,16 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 	    if (q.length() != 0)
 		reduce(q, num_p, pden);
 	} else {
-	    ZZ zz_zero(INIT_VAL, 0);
-	    dpoly one(no_param, zz_zero);
+	    value_set_si(tz, 0);
+	    dpoly one(no_param, tz);
 	    dpoly_r *r = NULL;
 
 	    for (k = 0; k < len; ++k) {
 		if (den_s[k] == 0 || den_p[k] == 0)
 		    continue;
 
-		dpoly pd(no_param-1, den_s[k], 1);
+		zz2value(den_s[k], tz);
+		dpoly pd(no_param-1, tz, 1);
 
 		int l;
 		for (l = 0; l < k; ++l)
@@ -413,10 +422,13 @@ void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     ZZ sign = ZZ(INIT_VAL, 1);
     normalize(sign, num_s, den_s);
 
-    dpoly n(len, num_s);
-    dpoly D(len, den_s[0], 1);
+    zz2value(num_s, tz);
+    dpoly n(len, tz);
+    zz2value(den_s[0], tz);
+    dpoly D(len, tz, 1);
     for (int k = 1; k < len; ++k) {
-	dpoly fact(len, den_s[k], 1);
+	zz2value(den_s[k], tz);
+	dpoly fact(len, tz, 1);
 	D *= fact;
     }
     mpq_set_si(tcount, 0, 1);
@@ -445,10 +457,13 @@ void infinite_icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f
     ZZ sign = ZZ(INIT_VAL, 1);
     normalize(sign, num_s, den_s);
 
-    dpoly n(len, num_s);
-    dpoly D(len, den_s[0], 1);
+    zz2value(num_s, tz);
+    dpoly n(len, tz);
+    zz2value(den_s[0], tz);
+    dpoly D(len, tz, 1);
     for (int k = 1; k < len; ++k) {
-	dpoly fact(len, den_s[k], 1);
+	zz2value(den_s[k], tz);
+	dpoly fact(len, tz, 1);
 	D *= fact;
     }
 

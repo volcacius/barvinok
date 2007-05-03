@@ -15,11 +15,14 @@ using namespace NTL;
 
 class dpoly {
 public:
-    vec_ZZ coeff;
-    dpoly(int d, ZZ& degree, int offset = 0);
+    Vector *coeff;
+    dpoly(int d, const Value degree, int offset = 0);
+    ~dpoly() {
+	Vector_Free(coeff);
+    }
     void operator += (const dpoly& t);
-    void operator *= (const ZZ& f);
-    void operator *= (dpoly& f);
+    void operator *= (const Value f);
+    void operator *= (const dpoly& f);
     void div(dpoly& d, mpq_t count, ZZ& sign);
     void div(dpoly& d, mpq_t *count, const mpq_t& factor);
 private:

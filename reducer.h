@@ -60,6 +60,7 @@ struct reducer : public np_base {
     mpz_t tn;
     mpz_t td;
     int lower;	    // call base when only this many variables is left
+    Value tz;
 
     reducer(unsigned dim) : np_base(dim) {
 	vertex.SetDims(1, dim);
@@ -67,9 +68,11 @@ struct reducer : public np_base {
 	mpq_init(tcount);
 	mpz_init(tn);
 	mpz_init(td);
+	value_init(tz);
     }
 
     ~reducer() {
+	value_clear(tz);
 	mpq_clear(tcount);
 	mpz_clear(tn);
 	mpz_clear(td);
@@ -135,6 +138,7 @@ struct infinite_icounter : public ireducer {
      */
     mpq_t *count;
     unsigned len;
+    Value tz;
 
     infinite_icounter(unsigned dim, unsigned maxlen) : ireducer(dim), len(maxlen+1) {
 	/* Not sure whether it works for dim != 1 */
@@ -143,11 +147,13 @@ struct infinite_icounter : public ireducer {
 	for (int i = 0; i < len; ++i)
 	    mpq_init(count[i]);
 	lower = 1;
+	value_init(tz);
     }
     ~infinite_icounter() {
 	for (int i = 0; i < len; ++i)
 	    mpq_clear(count[i]);
 	delete [] count;
+	value_clear(tz);
     }
     virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
 };

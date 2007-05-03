@@ -9,73 +9,76 @@ using std::vector;
 /* Construct truncated expansion of (1+t)^(degree),
  * computing the first 1+d coefficients
  */
-dpoly::dpoly(int d, ZZ& degree, int offset)
+dpoly::dpoly(int d, const Value degree, int offset)
 {
-    coeff.SetLength(d+1);
+    coeff = Vector_Alloc(d+1);
 
     /* For small degrees, we only need to compute some coefficients */
     int min = d + offset;
-    if (degree >= 0 && degree < ZZ(INIT_VAL, min))
-	min = to_int(degree);
+    if (value_posz_p(degree) && value_cmp_si(degree, min) < 0)
+	min = VALUE_TO_INT(degree);
 
-    ZZ c = ZZ(INIT_VAL, 1);
+    Value c, tmp;
+    value_init(c);
+    value_init(tmp);
+    value_set_si(c, 1);
     if (!offset)
-	coeff[0] = c;
+	value_assign(coeff->p[0], c);
+    value_assign(tmp, degree);
     for (int i = 1; i <= min; ++i) {
-	c *= (degree -i + 1);
-	c /= i;
-	coeff[i-offset] = c;
+	value_multiply(c, c, tmp);
+	value_decrement(tmp, tmp);
+	mpz_divexact_ui(c, c, i);
+	value_assign(coeff->p[i-offset], c);
     }
+    value_clear(c);
+    value_clear(tmp);
 }
 
 void dpoly::operator += (const dpoly& t)
 {
-    assert(coeff.length() == t.coeff.length());
-    for (int i = 0; i < coeff.length(); ++i)
-	coeff[i] += t.coeff[i];
+    assert(coeff->Size == t.coeff->Size);
+    for (int i = 0; i < coeff->Size; ++i)
+	value_addto(coeff->p[i], coeff->p[i], t.coeff->p[i]);
 }
 
-void dpoly::operator *= (const ZZ& f)
+void dpoly::operator *= (const Value f)
 {
-    for (int i = 0; i < coeff.length(); ++i)
-	coeff[i] *= f;
+    for (int i = 0; i < coeff->Size; ++i)
+	value_multiply(coeff->p[i], coeff->p[i], f);
 }
 
-void dpoly::operator *= (dpoly& f)
+void dpoly::operator *= (const dpoly& f)
 {
-    assert(coeff.length() == f.coeff.length());
-    vec_ZZ old = coeff;
-    coeff = f.coeff[0] * coeff;
-    for (int i = 1; i < coeff.length(); ++i)
-	for (int j = 0; i+j < coeff.length(); ++j)
-	    coeff[i+j] += f.coeff[i] * old[j];
+    assert(coeff->Size == f.coeff->Size);
+    Vector *old = Vector_Alloc(coeff->Size);
+    Vector_Copy(coeff->p, old->p, coeff->Size);
+    Vector_Scale(coeff->p, coeff->p, f.coeff->p[0], coeff->Size);
+    for (int i = 1; i < coeff->Size; ++i)
+	for (int j = 0; i+j < coeff->Size; ++j)
+	    value_addmul(coeff->p[i+j], f.coeff->p[i], old->p[j]);
+    Vector_Free(old);
 }
 
 mpq_t *dpoly::div(dpoly& d) const
 {
-    int len = coeff.length();
-    Value tmp;
-    value_init(tmp);
-    mpq_t* c = new mpq_t[coeff.length()];
+    int len = coeff->Size;
+    mpq_t* c = new mpq_t[coeff->Size];
     mpq_t qtmp;
     mpq_init(qtmp);
     for (int i = 0; i < len; ++i) {
 	mpq_init(c[i]);
-	zz2value(coeff[i], tmp);
-	mpq_set_z(c[i], tmp);
+	mpq_set_z(c[i], coeff->p[i]);
 
 	for (int j = 1; j <= i; ++j) {
-	    zz2value(d.coeff[j], tmp);
-	    mpq_set_z(qtmp, tmp);
+	    mpq_set_z(qtmp, d.coeff->p[j]);
 	    mpq_mul(qtmp, qtmp, c[i-j]);
 	    mpq_sub(c[i], c[i], qtmp);
 	}
 
-	zz2value(d.coeff[0], tmp);
-	mpq_set_z(qtmp, tmp);
+	mpq_set_z(qtmp, d.coeff->p[0]);
 	mpq_div(c[i], c[i], qtmp);
     }
-    value_clear(tmp);
     mpq_clear(qtmp);
 
     return c;
@@ -83,7 +86,7 @@ mpq_t *dpoly::div(dpoly& d) const
 
 void dpoly::clear_div(mpq_t *c) const
 {
-    int len = coeff.length();
+    int len = coeff->Size;
 
     for (int i = 0; i < len; ++i)
 	mpq_clear(c[i]);
@@ -92,7 +95,7 @@ void dpoly::clear_div(mpq_t *c) const
 
 void dpoly::div(dpoly& d, mpq_t count, ZZ& sign)
 {
-    int len = coeff.length();
+    int len = coeff->Size;
     mpq_t *c = div(d);
 
     if (sign == -1)
@@ -105,7 +108,7 @@ void dpoly::div(dpoly& d, mpq_t count, ZZ& sign)
 
 void dpoly::div(dpoly& d, mpq_t *count, const mpq_t& factor)
 {
-    int len = coeff.length();
+    int len = coeff->Size;
     mpq_t *c = div(d);
 
     for (int i = 0; i < len; ++i) {
@@ -145,13 +148,14 @@ dpoly_r::dpoly_r(int len, int dim)
 dpoly_r::dpoly_r(dpoly& num, int dim)
 {
     denom = 1;
-    len = num.coeff.length();
+    len = num.coeff->Size;
     c = new dpoly_r_term_list[len];
     this->dim = dim;
     vector<int> powers(dim, 0);
 
     for (int i = 0; i < len; ++i) {
-	ZZ coeff = num.coeff[i];
+	ZZ coeff;
+	value2zz(num.coeff->p[i], coeff);
 	add_term(i, powers, coeff);
     }
 }
@@ -159,7 +163,7 @@ dpoly_r::dpoly_r(dpoly& num, int dim)
 dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
 {
     denom = 1;
-    len = num.coeff.length();
+    len = num.coeff->Size;
     c = new dpoly_r_term_list[len];
     this->dim = dim;
     int powers[dim];
@@ -169,14 +173,16 @@ dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
 	vector<int> powers(dim, 0);
 	powers[pos] = 1;
 
-	add_term(i, powers, num.coeff[i]);
+	value2zz(num.coeff->p[i], coeff);
+	add_term(i, powers, coeff);
 
 	for (int j = 1; j <= i; ++j) {
 	    dpoly_r_term_list::iterator k;
 	    for (k = c[i-j].begin(); k != c[i-j].end(); ++k) {
 		powers = (*k)->powers;
 		powers[pos]++;
-		negate(coeff, den.coeff[j-1]);
+		value2zz(den.coeff->p[j-1], coeff);
+		negate(coeff, coeff);
 		coeff *= (*k)->coeff;
 		add_term(i, powers, coeff);
 	    }
@@ -206,7 +212,8 @@ dpoly_r::dpoly_r(const dpoly_r* num, dpoly& den, int pos, int dim)
 	    for (k = c[i-j].begin(); k != c[i-j].end(); ++k) {
 		vector<int> powers = (*k)->powers;
 		powers[pos]++;
-		negate(coeff, den.coeff[j-1]);
+		value2zz(den.coeff->p[j-1], coeff);
+		negate(coeff, coeff);
 		coeff *= (*k)->coeff;
 		add_term(i, powers, coeff);
 	    }
@@ -226,9 +233,11 @@ dpoly_r::~dpoly_r()
 dpoly_r *dpoly_r::div(const dpoly& d) const
 {
     dpoly_r *rc = new dpoly_r(len, dim);
-    rc->denom = power(d.coeff[0], len);
-    ZZ inv_d = rc->denom / d.coeff[0];
     ZZ coeff;
+    ZZ coeff0;
+    value2zz(d.coeff->p[0], coeff0);
+    rc->denom = power(coeff0, len);
+    ZZ inv_d = rc->denom / coeff0;
 
     for (int i = 0; i < len; ++i) {
 	for (dpoly_r_term_list::iterator k = c[i].begin(); k != c[i].end(); ++k) {
@@ -239,7 +248,8 @@ dpoly_r *dpoly_r::div(const dpoly& d) const
 	for (int j = 1; j <= i; ++j) {
 	    dpoly_r_term_list::iterator k;
 	    for (k = rc->c[i-j].begin(); k != rc->c[i-j].end(); ++k) {
-		coeff = - d.coeff[j] * (*k)->coeff / d.coeff[0];
+		value2zz(d.coeff->p[j], coeff);
+		coeff = - coeff * (*k)->coeff / coeff0;
 		rc->add_term(i, (*k)->powers, coeff);
 	    }
 	}

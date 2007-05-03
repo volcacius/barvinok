@@ -4,6 +4,7 @@
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "evalue_read.h"
+#include "dpoly.h"
 #include "lattice_point.h"
 
 using namespace std;
@@ -13,6 +14,50 @@ void set_from_string(T& v, char *s)
 {
     istringstream str(s);
     str >> v;
+}
+
+int test_specialization(struct barvinok_options *options)
+{
+    Value v;
+    value_init(v);
+    mpq_t count;
+    mpq_init(count);
+    ZZ sign;
+
+    value_set_si(v, 5);
+    dpoly n(2, v);
+    assert(value_cmp_si(n.coeff->p[0], 1) == 0);
+    assert(value_cmp_si(n.coeff->p[1], 5) == 0);
+    assert(value_cmp_si(n.coeff->p[2], 10) == 0);
+
+    value_set_si(v, 1);
+    dpoly d(2, v, 1);
+    value_set_si(v, 2);
+    dpoly d2(2, v, 1);
+    d *= d2;
+    assert(value_cmp_si(d.coeff->p[0], 2) == 0);
+    assert(value_cmp_si(d.coeff->p[1], 1) == 0);
+    assert(value_cmp_si(d.coeff->p[2], 0) == 0);
+
+    sign = 1;
+    n.div(d, count, sign);
+    mpq_canonicalize(count);
+    assert(value_cmp_si(mpq_numref(count), 31) == 0);
+    assert(value_cmp_si(mpq_denref(count), 8) == 0);
+
+    value_set_si(v, -2);
+    dpoly n2(2, v);
+    assert(value_cmp_si(n2.coeff->p[0], 1) == 0);
+    assert(value_cmp_si(n2.coeff->p[1], -2) == 0);
+    assert(value_cmp_si(n2.coeff->p[2], 3) == 0);
+
+    n2.div(d, count, sign);
+    mpq_canonicalize(count);
+    assert(value_cmp_si(mpq_numref(count), 6) == 0);
+    assert(value_cmp_si(mpq_denref(count), 1) == 0);
+
+    value_clear(v);
+    mpq_clear(count);
 }
 
 int test_lattice_points(struct barvinok_options *options)
@@ -63,6 +108,7 @@ int test_lattice_points(struct barvinok_options *options)
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
+    test_specialization(options);
     test_lattice_points(options);
     barvinok_options_free(options);
 }
