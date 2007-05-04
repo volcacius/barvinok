@@ -30,6 +30,7 @@ struct barvinok_options {
     #define	BV_SPECIALIZATION_BF		2
     #define	BV_SPECIALIZATION_DF		1
     #define	BV_SPECIALIZATION_RANDOM	0
+    #define	BV_SPECIALIZATION_TODD		3
     int		incremental_specialization;
 
     unsigned long   	    max_index;

@@ -131,7 +131,7 @@ static struct argp_option barvinok_argp_options[] = {
        "maximal index of simple cones in decomposition" },
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
-    { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random]",	0 },
+    { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random|todd]" },
     { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
       "solver to use for basis reduction" },
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
@@ -238,6 +238,8 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->incremental_specialization = BV_SPECIALIZATION_DF;
 	else if (!strcmp(arg, "random"))
 	    options->incremental_specialization = BV_SPECIALIZATION_RANDOM;
+	else if (!strcmp(arg, "todd"))
+	    options->incremental_specialization = BV_SPECIALIZATION_TODD;
 	break;
     case BV_OPT_PRIMAL:
 	options->primal = 1;

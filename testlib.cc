@@ -6,6 +6,7 @@
 #include "evalue_read.h"
 #include "dpoly.h"
 #include "lattice_point.h"
+#include "tcounter.h"
 
 using namespace std;
 
@@ -105,10 +106,56 @@ int test_lattice_points(struct barvinok_options *options)
     delete [] num.E; 
 }
 
+int test_todd(struct barvinok_options *options)
+{
+    tcounter t(2);
+    assert(value_cmp_si(t.todd.coeff->p[0], 1) == 0);
+    assert(value_cmp_si(t.todd.coeff->p[1], -3) == 0);
+    assert(value_cmp_si(t.todd.coeff->p[2], 3) == 0);
+    assert(value_cmp_si(t.todd_denom->p[0], 1) == 0);
+    assert(value_cmp_si(t.todd_denom->p[1], 6) == 0);
+    assert(value_cmp_si(t.todd_denom->p[2], 36) == 0);
+
+    set_from_string(t.lambda, "[1 -1]");
+
+    mat_ZZ rays;
+    set_from_string(rays, "[[-1 0][-1 1]]");
+
+    QQ one(1, 1);
+
+    vec_ZZ v;
+    set_from_string(v, "[2 0 1]");
+    Vector *vertex = Vector_Alloc(3);
+    zz2values(v, vertex->p);
+
+    t.handle(rays, vertex->p, one, 1, NULL, options);
+    assert(value_cmp_si(mpq_numref(t.count), 71) == 0);
+    assert(value_cmp_si(mpq_denref(t.count), 24) == 0);
+
+    set_from_string(rays, "[[0 -1][1 -1]]");
+    set_from_string(v, "[0 2 1]");
+    zz2values(v, vertex->p);
+
+    t.handle(rays, vertex->p, one, 1, NULL, options);
+    assert(value_cmp_si(mpq_numref(t.count), 71) == 0);
+    assert(value_cmp_si(mpq_denref(t.count), 12) == 0);
+
+    set_from_string(rays, "[[1 0][0 1]]");
+    set_from_string(v, "[0 0 1]");
+    zz2values(v, vertex->p);
+
+    t.handle(rays, vertex->p, one, 1, NULL, options);
+    assert(value_cmp_si(mpq_numref(t.count), 6) == 0);
+    assert(value_cmp_si(mpq_denref(t.count), 1) == 0);
+
+    Vector_Free(vertex);
+}
+
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
     test_specialization(options);
     test_lattice_points(options);
+    test_todd(options);
     barvinok_options_free(options);
 }

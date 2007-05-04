@@ -16,6 +16,13 @@ using namespace NTL;
 class dpoly {
 public:
     Vector *coeff;
+    dpoly(const dpoly& o) {
+	coeff = Vector_Alloc(o.coeff->Size);
+	Vector_Copy(o.coeff->p, coeff->p, o.coeff->Size);
+    }
+    dpoly(int d) {
+	coeff = Vector_Alloc(d+1);
+    }
     dpoly(int d, const Value degree, int offset = 0);
     ~dpoly() {
 	Vector_Free(coeff);
@@ -25,7 +32,6 @@ public:
     void operator *= (const dpoly& f);
     void div(const dpoly& d, mpq_t count, ZZ& sign);
     void div(const dpoly& d, mpq_t *count, const mpq_t& factor);
-private:
     Vector *div(const dpoly &d);
 };
 

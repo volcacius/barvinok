@@ -1439,6 +1439,7 @@ polynomial since polynomials are continuous functions and will not change
 sign without passing through zero.
 
 \subsection{Maclaurin series division}
+\label{s:division}
 
 If $P(t)$ and $Q(t)$ are two Maclaurin series
 \begin{align*}
@@ -1467,3 +1468,273 @@ $$
 c_l = \frac{d_l}{b_0^{l+1}}
 .
 $$
+
+\subsection{Specialization through exponential substitution}
+
+This section draws heavily from \shortciteN{Koeppe2006experiments}.
+
+After computing the \rgf/ of a polytope,
+\begin{equation}
+\label{eq:rgf}
+f(\vec x)=
+\sum_{i\in I}\alpha_i
+    \frac{\sum_{k=1}^{r} \vec x^{\vec w_{ik} }}
+	 {\prod_{j=1}^{d}\left(1-\vec x^{\vec b_{ij}}\right)}
+,
+\end{equation}
+the number of lattice points in the polytope can be obtained
+by evaluating $f(\vec 1)$.  Since $\vec 1$ is a pole of each
+term, we need to compute the constant term in the Laurent expansions
+of each term in~\eqref{eq:rgf} about $\vec 1$.
+Since it easier to work with univariate series, a substitution is usually
+applied, either a \ai{polynomial substitution}
+$$
+\vec x = (1+t)^{\vec \lambda}
+,
+$$
+as implemented in \LattE/ \shortcite{latte1.1},
+or an \ai{exponential substitution} (see, e.g., \shortciteNP{Barvinok1999}),
+$$
+\vec x = e^{t \vec \lambda}
+,
+$$
+as implemented in \LattEmk/ \shortcite{latte-macchiato}.
+In each case, $\vec \lambda \in \ZZ^d$ is a vector that is not orthogonal
+to any of the $\vec b_{ij}$.
+Both substitutions also transform the problem of computing the
+constant term in the Laurent expansions about $\vec x = \vec 1$
+to that of computing the constant term in the
+Laurent expansions about $t = 0$.
+
+Consider now one of the terms in~\eqref{eq:rgf},
+$$
+g(t) =
+    \frac{\sum_{k=1}^{r} e^{a_k t}}
+	 {\prod_{j=1}^{d}\left(1-e^{c_j t}\right)}
+,
+$$
+with $a_k = \sp{w_{ik}}{\lambda}$ and $c_j = \sp{b_{ij}}{\lambda}$.
+We rewrite this equation as
+$$
+g(t) =
+(-1)^d
+    \frac{\sum_{k=1}^{r} e^{a_k t}}
+	 {t^d \prod_{j=1}^d c_j}
+    \prod_{j=1}^d \frac{-c_j t}
+	 {1-e^{c_j t}}
+.
+$$
+The second factor is analytic in a neighborhood of the origin
+$x = c_1 = \cdots = c_d = 0$ and therefore has a Taylor series expansion
+\begin{equation}
+\label{eq:todd}
+    \prod_{j=1}^d \frac{-c_j t}
+	 {1-e^{c_j t}}
+=
+    \sum_{m=0}^{\infty} \todd_m(-c_1, \ldots, -c_d) t^m
+,
+\end{equation}
+where $\todd_m$ is a homogeneous polynomial of degree $m$ called
+the $m$-th \ai{Todd polynomial}~\cite{Barvinok1999}.
+Also expanding the numerator in the first factor, we find
+$$
+g(t)  = \frac{(-1)^d}{t^d \prod_{j=1}^d c_j}
+	    \left(
+		\sum_{n=0}^{\infty}\frac{\sum_{k=1}^{r} a_k^n}{n!}
+	    \right)
+	    \left(
+		\sum_{m=0}^{\infty} \todd_m(-c_1, \ldots, -c_d) t^m
+	    \right)
+,
+$$
+with constant term
+\begin{multline}
+\label{eq:todd:constant}
+\frac{(-1)^d}{t^d \prod_{j=1}^d c_j}
+    \left(\sum_{i=0}^d \frac{\sum_{k=1}^{r} a_k^i}{i!}
+		    \todd_{d-i}(-c_1, \ldots, -c_d)\right)t^d
+= \\
+\frac{(-1)^d}{\prod_{j=1}^d c_j}
+    \sum_{i=0}^d \frac{\sum_{k=1}^{r} a_k^i}{i!} \todd_{d-i}(-c_1, \ldots, -c_d)
+.
+\end{multline}
+To compute the first $d+1$ terms in the Taylor series~\eqref{eq:todd},
+we write down the truncated Taylor series
+$$
+\frac{e^t -1}t \equiv
+	\sum_{i=0}^d \frac 1{(i+1)!} t^i \equiv
+	\frac 1 {(d+1)!} \sum_{i=0}^d \frac{(d+1)!}{(i+1)!} t^i
+\mod t^{d+1}
+,
+$$
+where we have
+$$
+	\frac 1 {(d+1)!} \sum_{i=0}^d \frac{(d+1)!}{(i+1)!} t^i
+		\in \frac 1{(d+1)!} \ZZ[t]
+.
+$$
+Computing the reciprocal as explained in Section~\ref{s:division},
+we find
+$$
+\frac{t}{e^t-1} = \frac 1{\frac{e^t -1}t}
+\equiv (d+1)! \frac 1{\sum_{i=0}^d \frac{(d+1)!}{(i+1)!} t^i}
+=: \sum_{i=0}^d b_i t^i
+.
+$$
+Note that the constant term of the denominator is $1/(d+1)!$.
+The denominators of the quotient are therefore $((d+1)!)^{i+1}/(d+1)!$.
+Also note that the $b_i$ are independent of the generating function
+and can be computed in advance.
+Substituting $t$ by $c_j t$, we have
+$$
+\frac{-c_j t}{1-e^{c_j t}} = \sum_{i=0}^d b_i c_j^i t^i
+.
+$$
+Multiplication of these truncated Taylor series for each $c_j$
+results in the first $d+1$ terms of~\eqref{eq:todd},
+$$
+    \sum_{m=0}^{d} \todd_m(-c_1, \ldots, -c_d) t^m
+=:
+    \sum_{m=0}^{d} \frac{\beta_m}{((d+1)!)^m} t^m
+,
+$$
+from which
+it is easy to compute the constant term~\eqref{eq:todd:constant}.
+Note that this convolution can also be computed without the use
+of rational coefficients,
+$$
+\frac{(-1)^d}{\prod_{j=1}^d c_j}
+    \sum_{i=0}^d \frac{\alpha_i}{i!} \frac{\beta_{d-i}}{((d+1)!)^{d-i}}
+=
+\frac{(-1)^d}{((d+1)!)^d\prod_{j=1}^d c_j}
+    \sum_{i=0}^d \left(\frac{((d+1)!)^i}{i!}\alpha_i\right) \beta_{d-i}
+,
+$$
+with $\alpha_i = \sum_{k=1}^{r} a_k^i$.
+
+\begin{example}
+Consider the \rgf/
+\begin{multline*}
+\f T x =
+\frac{x_1^2}{(1-x_1^{-1})(1-x_1^{-1}x_2)}
++
+\frac{x_2^2}{(1-x_2^{-1})(1-x_1 x_2^{-1})}
++ {} \\
+\frac1{(1-x_1)(1-x_2)}
+\end{multline*}
+from \shortciteN[Example~39]{Verdoolaege2005PhD}.
+Since this is a 2-dimensional problem, we first compute the first
+3 Todd polynomials (evaluated at $-1$),
+$$
+\frac{e^t -1}t \equiv
+1 + \frac 1 2 t + \frac 1 7 t^2 =
+\frac 1 6
+\begin{bmatrix}
+6 & 3 & 1
+\end{bmatrix}
+$$
+and
+$$
+\frac t{e^t -1} \equiv
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{3}{6} & \displaystyle\frac{-3}{36}
+\end{bmatrix}
+,
+$$
+where we represent each truncated power series by a vector of its
+coefficients.
+The vector $\vec\lambda = (1, -1)$ is not
+orthogonal to any of the rays, so we can use the substitution
+$\vec x = e^{(1, -1)t}$
+and obtain
+$$
+\frac{e^{2t}}{(1-e^{-t})(1-e^{-2t})}
++
+\frac{e^{-2t}}{(1-e^{t})(1-e^{2t})}
++
+\frac1{(1-e^{t})(1-e^{-t})}
+.
+$$
+We have
+\begin{align*}
+\frac{t}{1-e^{- t}} & = 
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{-3}{6} & \displaystyle\frac{-3}{36}
+\end{bmatrix}
+\\
+\frac{2t}{1-e^{-2 t}} & = 
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{-6}{6} & \displaystyle\frac{-12}{36}
+\end{bmatrix}
+\\
+\frac{-t}{1-e^{t}} & = 
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{3}{6} & \displaystyle\frac{-3}{36}
+\end{bmatrix}
+\\
+\frac{-2t}{1-e^{2t}} & = 
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{6}{6} & \displaystyle\frac{-12}{36}
+\end{bmatrix}
+.
+\end{align*}
+The first term in the \rgf/ evaluates to
+\begin{align*}
+&
+\frac 1{-1 \cdot -2}
+\begin{bmatrix}
+\displaystyle\frac{1}{1} & \displaystyle\frac{2}{1} & \displaystyle\frac{4}{2}
+\end{bmatrix}
+*
+\left(
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{-3}{6} & \displaystyle\frac{-3}{36}
+\end{bmatrix}
+\begin{bmatrix}
+\displaystyle\frac{-1}{1} & \displaystyle\frac{-6}{6} & \displaystyle\frac{-12}{36}
+\end{bmatrix}
+\right)
+\\
+= {} &
+\frac 1{2}
+\begin{bmatrix}
+\displaystyle\frac{1}{1} & \displaystyle\frac{2}{1} & \displaystyle\frac{4}{2}
+\end{bmatrix}
+*
+\begin{bmatrix}
+\displaystyle\frac{1}{1} & \displaystyle\frac{9}{6} & \displaystyle\frac{33}{36}
+\end{bmatrix}
+\\
+= {} &
+\frac 1{72}
+\begin{bmatrix}
+1 & 2 \cdot 6 & 4 \cdot 18
+\end{bmatrix}
+*
+\begin{bmatrix}
+1 & 9 & 33
+\end{bmatrix}
+= \frac {213}{72} = \frac{71}{24}
+.
+\end{align*}
+Due to symmetry, the second term evaluates to the same value,
+while for the third term we find
+$$
+\frac{1}{-1\cdot 1 \cdot 36}
+\begin{bmatrix}
+1 & 0 \cdot 6 & 0 \cdot 18
+\end{bmatrix}
+*
+\begin{bmatrix}
+1 & 0 & -3
+\end{bmatrix}
+=
+\frac{-3}{-36} = \frac 1{12}
+.
+$$
+The sum is
+$$
+\frac{71}{24} + \frac{71}{24} + \frac 1{12} = 6
+.
+$$
+\end{example}

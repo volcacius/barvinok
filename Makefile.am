@@ -81,6 +81,8 @@ libbarvinok_la_SOURCES = \
     scale.c \
     scale.h \
     scarf.cc \
+    tcounter.cc \
+    tcounter.h \
     volume.c \
     volume.h \
     mat_util.cc \
@@ -284,7 +286,7 @@ check-test: test
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		for options in '--index=10' '--primal --index=10'; do \
-		    for spec in 'random' 'bf' 'df'; do \
+		    for spec in 'random' 'bf' 'df' 'todd'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo -n $$i $$opt; \
 			./test $$opt < $$i || echo -n " NOT"; \

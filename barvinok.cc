@@ -19,6 +19,7 @@ extern "C" {
 #include <barvinok/sample.h>
 #include "conversion.h"
 #include "counter.h"
+#include "tcounter.h"
 #include "decomposer.h"
 #include "lattice_point.h"
 #include "reduce_domain.h"
@@ -661,10 +662,12 @@ static void barvinok_count_f(Polyhedron *P, Value* result,
 	return;
 
     np_base *cnt;
-    if (options->incremental_specialization == 2)
+    if (options->incremental_specialization == BV_SPECIALIZATION_BF)
 	cnt = new bfcounter(P->Dimension);
-    else if (options->incremental_specialization == 1)
+    else if (options->incremental_specialization == BV_SPECIALIZATION_DF)
 	cnt = new icounter(P->Dimension);
+    else if (options->incremental_specialization == BV_SPECIALIZATION_TODD)
+	cnt = new tcounter(P->Dimension);
     else
 	cnt = new counter(P->Dimension);
     cnt->start(P, options);
