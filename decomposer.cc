@@ -260,7 +260,7 @@ static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     Polyhedron_Polarize(cone);
     if (cone->NbRays - 1 != cone->Dimension) {
 	Polyhedron *tmp = cone;
-	cone = triangulate_cone(cone, options->MaxRays);
+	cone = triangulate_cone_with_options(cone, options);
 	Polyhedron_Free(tmp);
     }
     polar_signed_cone_consumer pssc(scc);
@@ -286,7 +286,7 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     if (cone->NbRays - 1 == cone->Dimension)
 	parts = cone;
     else
-	parts = triangulate_cone(cone, options->MaxRays);
+	parts = triangulate_cone_with_options(cone, options);
     int closed[cone->Dimension];
     Vector *average = NULL;
     Value tmp;
