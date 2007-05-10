@@ -16,14 +16,13 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
     lattice_point(V, rays, vertex, det, closed);
     num = vertex * lambda;
     den = rays * lambda;
-    offset = 0;
-    normalize(sign, offset, den);
 
-    num[0] += offset;
+    if (dim % 2)
+	sign = -sign;
+
     zz2value(num[0], tz);
     dpoly d(dim, tz);
     for (int k = 1; k < num.length(); ++k) {
-	num[k] += offset;
 	zz2value(num[k], tz);
 	dpoly term(dim, tz);
 	d += term;

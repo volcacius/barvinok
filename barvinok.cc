@@ -854,8 +854,9 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 
     lattice_point(V, sc.rays, lambda, &num, sc.det, sc.closed, options);
     den = sc.rays * lambda;
-    ZZ offset;
-    normalize(sign, offset, den);
+
+    if (dim % 2)
+	sign = -sign;
 
     zz2value(den[0], tz);
     dpoly n(dim, tz, 1);
@@ -866,7 +867,8 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
     }
     if (num.E != NULL) {
 	ZZ one(INIT_VAL, 1);
-	dpoly_n d(dim, offset, one);
+	ZZ zero(INIT_VAL, 0);
+	dpoly_n d(dim, zero, one);
 	d.div(n, c, sign);
 	for (unsigned long i = 0; i < sc.det; ++i) {
 	    evalue EV;
@@ -880,13 +882,13 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
     } else {
 	mpq_set_si(count, 0, 1);
 	if (num.constant.length() == 1) {
-	    num.constant[0] += offset;
 	    zz2value(num.constant[0], tz);
 	    dpoly d(dim, tz);
 	    d.div(n, count, sign);
 	} else {
 	    ZZ one(INIT_VAL, 1);
-	    dpoly_n d(dim, offset, one);
+	    ZZ zero(INIT_VAL, 0);
+	    dpoly_n d(dim, zero, one);
 	    d.div(n, c, sign);
 	    Value x, sum, acc;
 	    value_init(x);

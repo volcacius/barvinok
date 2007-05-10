@@ -6,7 +6,6 @@ struct counter : public np_base {
     vec_ZZ den;
     ZZ sign;
     vec_ZZ num;
-    ZZ offset;
     int j;
     mpq_t count;
     Value tz;
