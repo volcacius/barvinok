@@ -13,7 +13,6 @@ void zz2values(const vec_ZZ& v, Value *p);
 void matrix2zz(Matrix *M, mat_ZZ& m, unsigned nr, unsigned nc);
 Matrix *rays(Polyhedron *C);
 Matrix *rays2(Polyhedron *C);
-Matrix *rays2matrix(const mat_ZZ& rays);
 Matrix *zz2matrix(const mat_ZZ& rays);
 void rays(Polyhedron *C, mat_ZZ& rays);
 void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar);

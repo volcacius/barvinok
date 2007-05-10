@@ -301,30 +301,38 @@ void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *close
     if (value_one_p(values[dim]) && !closed)
 	values2zz(values, vertex, dim);
     else {
-	Matrix* Rays = rays2matrix(rays);
+	Matrix *Rays = zz2matrix(rays);
+	Matrix *R2 = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
-	int ok = Matrix_Inverse(Rays, inv);
+	int ok = Matrix_Inverse(R2, inv);
 	assert(ok);
-	Matrix_Free(Rays);
-	Rays = rays2matrix(rays);
-	Vector *lambda = Vector_Alloc(dim+1);
+	Matrix_Free(R2);
+	Vector *lambda = Vector_Alloc(dim);
 	Vector_Matrix_Product(values, inv, lambda->p);
 	Matrix_Free(inv);
 	for (int j = 0; j < dim; ++j)
 	    if (!closed || closed[j])
-		mpz_cdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
+		mpz_cdiv_q(lambda->p[j], lambda->p[j], values[dim]);
 	    else {
-		value_addto(lambda->p[j], lambda->p[j], lambda->p[dim]);
-		mpz_fdiv_q(lambda->p[j], lambda->p[j], lambda->p[dim]);
+		value_addto(lambda->p[j], lambda->p[j], values[dim]);
+		mpz_fdiv_q(lambda->p[j], lambda->p[j], values[dim]);
 	    }
-	value_set_si(lambda->p[dim], 1);
-	Vector *A = Vector_Alloc(dim+1);
+	Vector *A = Vector_Alloc(dim);
 	Vector_Matrix_Product(lambda->p, Rays, A->p);
 	Vector_Free(lambda);
 	Matrix_Free(Rays);
 	values2zz(A->p, vertex, dim);
 	Vector_Free(A);
     }
+}
+
+static Matrix *Matrix_AddRowColumn(Matrix *M)
+{
+    Matrix *M2 = Matrix_Alloc(M->NbRows+1, M->NbColumns+1);
+    for (int i = 0; i < M->NbRows; ++i)
+	Vector_Copy(M->p[i], M2->p[i], M->NbColumns);
+    value_set_si(M2->p[M->NbRows][M->NbColumns], 1);
+    return M2;
 }
 
 #define FORALL_COSETS(det,D,i,k)					\
@@ -375,7 +383,6 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
     Matrix* Rays = zz2matrix(rays);
     Matrix *U, *W, *D;
     Smith(Rays, &U, &W, &D);
-    Matrix_Free(Rays);
     Matrix_Free(U);
 
     /* Sanity check */
@@ -395,17 +402,15 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
     value_clear(tmp);
     value_assign(T->p[dim][dim], values[dim]);
 
-    Rays = rays2matrix(rays);
-    Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
-    int ok = Matrix_Inverse(Rays, inv);
+    Matrix *R2 = Matrix_AddRowColumn(Rays);
+    Matrix *inv = Matrix_Alloc(R2->NbRows, R2->NbColumns);
+    int ok = Matrix_Inverse(R2, inv);
     assert(ok);
-    Matrix_Free(Rays);
+    Matrix_Free(R2);
 
     Matrix *T2 = Matrix_Alloc(dim+1, dim+1);
     Matrix_Product(T, inv, T2);
     Matrix_Free(T);
-
-    Rays = rays2matrix(rays);
 
     Vector *lambda = Vector_Alloc(dim+1);
     Vector *lambda2 = Vector_Alloc(dim+1);
@@ -421,11 +426,11 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
 	Vector_Matrix_Product(lambda->p, Rays, lambda2->p);
 	for (int j = 0; j < dim; ++j)
 	    assert(mpz_divisible_p(lambda2->p[j], inv->p[dim][dim]));
-	Vector_AntiScale(lambda2->p, lambda2->p, inv->p[dim][dim], dim+1);
+	Vector_AntiScale(lambda2->p, lambda2->p, inv->p[dim][dim], dim);
 	Vector_Add(lambda2->p, values, lambda2->p, dim);
 	for (int j = 0; j < dim; ++j)
 	    assert(mpz_divisible_p(lambda2->p[j], values[dim]));
-	Vector_AntiScale(lambda2->p, lambda2->p, values[dim], dim+1);
+	Vector_AntiScale(lambda2->p, lambda2->p, values[dim], dim);
 	values2zz(lambda2->p, vertex[i], dim);
     END_FORALL_COSETS
     Vector_Free(lambda);

@@ -70,19 +70,6 @@ void matrix2zz(Matrix *M, mat_ZZ& m, unsigned nr, unsigned nc)
     }
 }
 
-Matrix *rays2matrix(const mat_ZZ& rays)
-{
-    unsigned dim = rays.NumRows();
-
-    Matrix *M = Matrix_Alloc(dim+1, dim+1);
-    assert(M);
-
-    for (int i = 0; i < dim; ++i)
-	zz2values(rays[i], M->p[i]);
-    value_set_si(M->p[dim][dim], 1);
-    return M;
-}
-
 Matrix *zz2matrix(const mat_ZZ& mat)
 {
     Matrix *M = Matrix_Alloc(mat.NumRows(), mat.NumCols());

@@ -73,13 +73,13 @@ public:
 	if (options->primal && index <= options->max_index)
 	    return false;
 
-	Matrix *M = rays2matrix(rays);
+	Matrix *M = zz2matrix(rays);
 	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
 	int ok = Matrix_Inverse(M, inv);
 	assert(ok);
 	Matrix_Free(M);
 
-	matrix2zz(inv, B, inv->NbRows - 1, inv->NbColumns - 1);
+	matrix2zz(inv, B, inv->NbRows, inv->NbColumns);
 	Matrix_Free(inv);
 
 	if (!options->primal && options->max_index > 1) {
