@@ -47,25 +47,24 @@ public:
     ~dpoly_n() {
 	Matrix_Free(coeff);
     }
-    dpoly_n(int d, ZZ& degree_0, ZZ& degree_1, int offset = 0) {
-	Value d0, d1;
+    dpoly_n(int d) {
+	Value d0, one;
 	value_init(d0);
-	value_init(d1);
-	zz2value(degree_0, d0);
-	zz2value(degree_1, d1);
+	value_init(one);
+	value_set_si(one, 1);
 	coeff = Matrix_Alloc(d+1, d+1+1);
 	value_set_si(coeff->p[0][0], 1);
 	value_set_si(coeff->p[0][d+1], 1);
 	for (int i = 1; i <= d; ++i) {
 	    value_multiply(coeff->p[i][0], coeff->p[i-1][0], d0);
 	    Vector_Combine(coeff->p[i-1], coeff->p[i-1]+1, coeff->p[i]+1,
-			   d1, d0, i);
+			   one, d0, i);
 	    value_set_si(coeff->p[i][d+1], i);
 	    value_multiply(coeff->p[i][d+1], coeff->p[i][d+1], coeff->p[i-1][d+1]);
 	    value_decrement(d0, d0);
 	}
 	value_clear(d0);
-	value_clear(d1);
+	value_clear(one);
     }
     void div(dpoly& d, Vector *count, ZZ& sign) {
 	int len = coeff->NbRows;
@@ -866,9 +865,7 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	n *= fact;
     }
     if (num.E != NULL) {
-	ZZ one(INIT_VAL, 1);
-	ZZ zero(INIT_VAL, 0);
-	dpoly_n d(dim, zero, one);
+	dpoly_n d(dim);
 	d.div(n, c, sign);
 	for (unsigned long i = 0; i < sc.det; ++i) {
 	    evalue EV;
@@ -886,9 +883,7 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	    dpoly d(dim, tz);
 	    d.div(n, count, sign);
 	} else {
-	    ZZ one(INIT_VAL, 1);
-	    ZZ zero(INIT_VAL, 0);
-	    dpoly_n d(dim, zero, one);
+	    dpoly_n d(dim);
 	    d.div(n, c, sign);
 	    Value x, sum, acc;
 	    value_init(x);
