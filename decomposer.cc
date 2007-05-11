@@ -42,6 +42,21 @@ static void normalize_cols(mat_ZZ& B)
     }
 }
 
+/* Remove common divisor of elements of B */
+static void normalize_matrix(mat_ZZ& B)
+{
+    ZZ gcd;
+    for (int i = 0; i < B.NumCols(); ++i)
+	for (int j = 0 ; j < B.NumRows(); ++j) {
+	    GCD(gcd, gcd, B[i][j]);
+	    if (IsOne(gcd))
+		return;
+	}
+    for (int i = 0; i < B.NumCols(); ++i)
+	for (int j = 0; j < B.NumRows(); ++j)
+	    B[i][j] /= gcd;
+}
+
 class cone {
 public:
     cone(const mat_ZZ& r, int row, const vec_ZZ& w) {
@@ -73,14 +88,10 @@ public:
 	if (options->primal && index <= options->max_index)
 	    return false;
 
-	Matrix *M = zz2matrix(rays);
-	Matrix *inv = Matrix_Alloc(M->NbRows, M->NbColumns);
-	int ok = Matrix_Inverse(M, inv);
-	assert(ok);
-	Matrix_Free(M);
-
-	matrix2zz(inv, B, inv->NbRows, inv->NbColumns);
-	Matrix_Free(inv);
+	inv(det, B, rays);
+	normalize_matrix(B);
+	if (sign(det) < 0)
+	    negate(B, B);
 
 	if (!options->primal && options->max_index > 1) {
 	    mat_ZZ B2 = B;
