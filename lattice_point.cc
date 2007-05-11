@@ -295,11 +295,13 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     return E;
 }
 
-void lattice_point(Value* values, Matrix *Rays, Value *vertex, int *closed)
+void lattice_point_fixed(Value *vertex, Value *vertex_res,
+			 Matrix *Rays, Matrix *Rays_res,
+			 Value *point, int *closed)
 {
     unsigned dim = Rays->NbRows;
-    if (value_one_p(values[dim]) && !closed)
-	Vector_Copy(values, vertex, dim);
+    if (value_one_p(vertex[dim]) && !closed)
+	Vector_Copy(vertex_res, point, Rays_res->NbColumns);
     else {
 	Matrix *R2 = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
@@ -307,16 +309,16 @@ void lattice_point(Value* values, Matrix *Rays, Value *vertex, int *closed)
 	assert(ok);
 	Matrix_Free(R2);
 	Vector *lambda = Vector_Alloc(dim);
-	Vector_Matrix_Product(values, inv, lambda->p);
+	Vector_Matrix_Product(vertex, inv, lambda->p);
 	Matrix_Free(inv);
 	for (int j = 0; j < dim; ++j)
 	    if (!closed || closed[j])
-		mpz_cdiv_q(lambda->p[j], lambda->p[j], values[dim]);
+		mpz_cdiv_q(lambda->p[j], lambda->p[j], vertex[dim]);
 	    else {
-		value_addto(lambda->p[j], lambda->p[j], values[dim]);
-		mpz_fdiv_q(lambda->p[j], lambda->p[j], values[dim]);
+		value_addto(lambda->p[j], lambda->p[j], vertex[dim]);
+		mpz_fdiv_q(lambda->p[j], lambda->p[j], vertex[dim]);
 	    }
-	Vector_Matrix_Product(lambda->p, Rays, vertex);
+	Vector_Matrix_Product(lambda->p, Rays_res, point);
 	Vector_Free(lambda);
     }
 }
@@ -365,13 +367,19 @@ static Matrix *Matrix_AddRowColumn(Matrix *M)
  * The denominator of lambda can be d1*d2, that of lambda2 = lambda*U
  * can be at most d1, since it is integer if v = 0.
  * The denominator of v + lambda2 is 1.
+ *
+ * The _res variants of the input variables may have been multiplied with
+ * a (list of) nonorthogonal vector(s) and may therefore have fewer columns
+ * than their original counterparts.
  */
-void lattice_point(Value* values, Matrix *Rays, Matrix *vertex,
-		   unsigned long det, int *closed)
+void lattice_points_fixed(Value *vertex, Value *vertex_res,
+			  Matrix *Rays, Matrix *Rays_res, Matrix *points,
+			  unsigned long det, int *closed)
 {
     unsigned dim = Rays->NbRows;
     if (det == 1) {
-	lattice_point(values, Rays, vertex->p[0], closed);
+	lattice_point_fixed(vertex, vertex_res, Rays, Rays_res,
+			    points->p[0], closed);
 	return;
     }
     Matrix *U, *W, *D;
@@ -386,14 +394,14 @@ void lattice_point(Value* values, Matrix *Rays, Matrix *vertex,
 
     Matrix *T = Matrix_Alloc(W->NbRows+1, W->NbColumns+1);
     for (int i = 0; i < W->NbRows; ++i)
-	Vector_Scale(W->p[i], T->p[i], values[dim], W->NbColumns);
+	Vector_Scale(W->p[i], T->p[i], vertex[dim], W->NbColumns);
     Matrix_Free(W);
     Value tmp;
     value_init(tmp);
     value_set_si(tmp, -1);
-    Vector_Scale(values, T->p[dim], tmp, dim);
+    Vector_Scale(vertex, T->p[dim], tmp, dim);
     value_clear(tmp);
-    value_assign(T->p[dim][dim], values[dim]);
+    value_assign(T->p[dim][dim], vertex[dim]);
 
     Matrix *R2 = Matrix_AddRowColumn(Rays);
     Matrix *inv = Matrix_Alloc(R2->NbRows, R2->NbColumns);
@@ -406,7 +414,7 @@ void lattice_point(Value* values, Matrix *Rays, Matrix *vertex,
     Matrix_Free(T);
 
     Vector *lambda = Vector_Alloc(dim+1);
-    Vector *lambda2 = Vector_Alloc(dim+1);
+    Vector *lambda2 = Vector_Alloc(Rays_res->NbColumns);
     FORALL_COSETS(det, D, i, k)
 	Vector_Matrix_Product(k->p, T2, lambda->p);
 	for (int j = 0; j < dim; ++j)
@@ -416,14 +424,14 @@ void lattice_point(Value* values, Matrix *Rays, Matrix *vertex,
 		mpz_cdiv_r(lambda->p[j], lambda->p[j], lambda->p[dim]);
 		value_addto(lambda->p[j], lambda->p[j], lambda->p[dim]);
 	    }
-	Vector_Matrix_Product(lambda->p, Rays, lambda2->p);
-	for (int j = 0; j < dim; ++j)
+	Vector_Matrix_Product(lambda->p, Rays_res, lambda2->p);
+	for (int j = 0; j < lambda2->Size; ++j)
 	    assert(mpz_divisible_p(lambda2->p[j], inv->p[dim][dim]));
-	Vector_AntiScale(lambda2->p, lambda2->p, inv->p[dim][dim], dim);
-	Vector_Add(lambda2->p, values, lambda2->p, dim);
-	for (int j = 0; j < dim; ++j)
-	    assert(mpz_divisible_p(lambda2->p[j], values[dim]));
-	Vector_AntiScale(lambda2->p, vertex->p[i], values[dim], dim);
+	Vector_AntiScale(lambda2->p, lambda2->p, inv->p[dim][dim], lambda2->Size);
+	Vector_Add(lambda2->p, vertex_res, lambda2->p, lambda2->Size);
+	for (int j = 0; j < lambda2->Size; ++j)
+	    assert(mpz_divisible_p(lambda2->p[j], vertex[dim]));
+	Vector_AntiScale(lambda2->p, points->p[i], vertex[dim], lambda2->Size);
     END_FORALL_COSETS
     Vector_Free(lambda);
     Vector_Free(lambda2);
@@ -685,7 +693,7 @@ static int lattice_point_fixed(Param_Vertices* V, const mat_ZZ& rays,
     mat_ZZ vertex;
     Matrix *points = Matrix_Alloc(det, dim);
     Matrix* Rays = zz2matrix(rays);
-    lattice_point(fixed->p, Rays, points, det, closed);
+    lattice_points_fixed(fixed->p, fixed->p, Rays, Rays, points, det, closed);
     Matrix_Free(Rays);
     matrix2zz(points, vertex, points->NbRows, points->NbColumns);
     Matrix_Free(points);

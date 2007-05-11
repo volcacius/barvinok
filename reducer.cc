@@ -360,7 +360,7 @@ void reducer::handle(const mat_ZZ& den, Value *V, const QQ& c, unsigned long det
 
     Matrix *points = Matrix_Alloc(det, dim);
     Matrix* Rays = zz2matrix(den);
-    lattice_point(V, Rays, points, det, closed);
+    lattice_points_fixed(V, V, Rays, Rays, points, det, closed);
     Matrix_Free(Rays);
     matrix2zz(points, vertex, points->NbRows, points->NbColumns);
     Matrix_Free(points);

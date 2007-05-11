@@ -120,7 +120,7 @@ void bf_base::handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
 
     Matrix *points = Matrix_Alloc(det, dim);
     Matrix* Rays = zz2matrix(rays);
-    lattice_point(vertex, Rays, points, det, closed);
+    lattice_points_fixed(vertex, vertex, Rays, Rays, points, det, closed);
     Matrix_Free(Rays);
     matrix2zz(points, t->terms, points->NbRows, points->NbColumns);
     Matrix_Free(points);

@@ -2,19 +2,19 @@
 
 struct counter : public np_base {
     Vector *lambda;
-    Matrix *vertex;
-    Vector *den;
+    Matrix *den;
     ZZ sign;
-    Vector *num;
+    Matrix *num;
     int j;
     mpq_t count;
+    Value tmp;
 
     counter(unsigned dim, unsigned long max_index) : np_base(dim) {
 	mpq_init(count);
-	vertex = Matrix_Alloc(max_index, dim);
-	num = Vector_Alloc(max_index);
-	den = Vector_Alloc(dim);
+	num = Matrix_Alloc(max_index, 1);
+	den = Matrix_Alloc(dim, 1);
 	lambda = Vector_Alloc(dim);
+	value_init(tmp);
     }
 
     virtual void init(Polyhedron *P) {
@@ -28,11 +28,11 @@ struct counter : public np_base {
     }
 
     ~counter() {
-	Matrix_Free(vertex);
-	Vector_Free(num);
-	Vector_Free(den);
+	Matrix_Free(num);
+	Matrix_Free(den);
 	Vector_Free(lambda);
 	mpq_clear(count);
+	value_clear(tmp);
     }
 
     void add_falling_powers(dpoly& n, Value c);

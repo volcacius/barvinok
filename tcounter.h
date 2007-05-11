@@ -2,10 +2,9 @@
 
 struct tcounter : public np_base {
     Vector *lambda;
-    Matrix *vertex;
-    Vector *den;
+    Matrix *den;
     ZZ sign;
-    Vector *num;
+    Matrix *num;
     mpq_t count;
     mpq_t tcount;
     dpoly todd;
@@ -20,9 +19,8 @@ struct tcounter : public np_base {
 	setup_todd(dim);
 	value_init(denom);
 	value_init(tmp);
-	vertex = Matrix_Alloc(max_index, dim);
-	num = Vector_Alloc(max_index);
-	den = Vector_Alloc(dim);
+	num = Matrix_Alloc(max_index, 1);
+	den = Matrix_Alloc(dim, 1);
 	lambda = Vector_Alloc(dim);
     }
 
@@ -32,9 +30,8 @@ struct tcounter : public np_base {
     void add_powers(dpoly& n, const Value c);
 
     ~tcounter() {
-	Matrix_Free(vertex);
-	Vector_Free(num);
-	Vector_Free(den);
+	Matrix_Free(num);
+	Matrix_Free(den);
 	Vector_Free(lambda);
 	mpq_clear(count);
 	mpq_clear(tcount);

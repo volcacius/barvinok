@@ -29,8 +29,8 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
 {
     Matrix* Rays = zz2matrix(rays);
     for (int k = 0; k < dim; ++k) {
-	Inner_Product(lambda->p, Rays->p[k], dim, &num->p[0]);
-	if (value_zero_p(num->p[0]))
+	Inner_Product(lambda->p, Rays->p[k], dim, &tmp);
+	if (value_zero_p(tmp))
 	    throw Orthogonal;
     }
 
@@ -38,22 +38,21 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
     assert(c.n == 1 || c.n == -1);
     sign = c.n;
 
-    lattice_point(V, Rays, vertex, det, closed);
-    vertex->NbRows = det;
-    num->Size = det;
-    Matrix_Vector_Product(vertex, lambda->p, num->p);
-    Matrix_Vector_Product(Rays, lambda->p, den->p);
+    Matrix_Vector_Product(Rays, lambda->p, den->p_Init);
+    Inner_Product(lambda->p, V, dim, &tmp);
+    lattice_points_fixed(V, &tmp, Rays, den, num, det, closed);
+    num->NbRows = det;
     Matrix_Free(Rays);
 
     if (dim % 2)
 	sign = -sign;
 
     dpoly d(dim);
-    for (int k = 0; k < num->Size; ++k)
-	add_falling_powers(d, num->p[k]);
-    dpoly n(dim, den->p[0], 1);
+    for (int k = 0; k < num->NbRows; ++k)
+	add_falling_powers(d, num->p_Init[k]);
+    dpoly n(dim, den->p_Init[0], 1);
     for (int k = 1; k < dim; ++k) {
-	dpoly fact(dim, den->p[k], 1);
+	dpoly fact(dim, den->p_Init[k], 1);
 	n *= fact;
     }
     d.div(n, count, sign);

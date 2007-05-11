@@ -14,9 +14,12 @@ struct barvinok_options;
 
 evalue *multi_monom(vec_ZZ& p);
 int normal_mod(Value *coef, int len, Value *m);
-void lattice_point(Value* values, Matrix *Rays, Value *vertex, int *closed);
-void lattice_point(Value* values, Matrix *Rays, Matrix *vertex,
-		   unsigned long det, int *closed);
+void lattice_point_fixed(Value *vertex, Value *vertex_res,
+			 Matrix *Rays, Matrix *Rays_res,
+			 Value *point, int *closed);
+void lattice_points_fixed(Value *vertex, Value *vertex_res,
+			  Matrix *Rays, Matrix *Rays_res, Matrix *points,
+			  unsigned long det, int *closed);
 void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num, 
 		   evalue **E_vertex, barvinok_options *options);
 
