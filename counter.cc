@@ -1,6 +1,29 @@
 #include "counter.h"
 #include "lattice_point.h"
 
+void counter::add_falling_powers(dpoly& n, Value degree)
+{
+    value_increment(n.coeff->p[0], n.coeff->p[0]);
+    if (n.coeff->Size == 1)
+	return;
+
+    int min = n.coeff->Size-1;
+    if (value_posz_p(degree) && value_cmp_si(degree, min) < 0)
+	min = VALUE_TO_INT(degree);
+
+    Value tmp;
+    value_init(tmp);
+    value_assign(tmp, degree);
+    value_addto(n.coeff->p[1], n.coeff->p[1], tmp);
+    for (int i = 2; i <= min; ++i) {
+	value_decrement(degree, degree);
+	value_multiply(tmp, tmp, degree);
+	mpz_divexact_ui(tmp, tmp, i);
+	value_addto(n.coeff->p[i], n.coeff->p[i], tmp);
+    }
+    value_clear(tmp);
+}
+
 void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long det,
 		     int *closed, barvinok_options *options)
 {
@@ -25,11 +48,9 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
     if (dim % 2)
 	sign = -sign;
 
-    dpoly d(dim, num->p[0]);
-    for (int k = 1; k < num->Size; ++k) {
-	dpoly term(dim, num->p[k]);
-	d += term;
-    }
+    dpoly d(dim);
+    for (int k = 0; k < num->Size; ++k)
+	add_falling_powers(d, num->p[k]);
     dpoly n(dim, den->p[0], 1);
     for (int k = 1; k < dim; ++k) {
 	dpoly fact(dim, den->p[k], 1);

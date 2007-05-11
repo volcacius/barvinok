@@ -35,6 +35,7 @@ struct counter : public np_base {
 	mpq_clear(count);
     }
 
+    void add_falling_powers(dpoly& n, Value c);
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
 			unsigned long det, int *closed, barvinok_options *options);
     virtual void get_count(Value *result) {
