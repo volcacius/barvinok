@@ -3615,6 +3615,24 @@ void evalue_div(evalue * e, Value n)
 	evalue_div(&e->x.p->arr[i], n);
 }
 
+void evalue_negate(evalue *e)
+{
+    int i, offset;
+
+    if (value_notzero_p(e->d)) {
+	value_oppose(e->x.n, e->x.n);
+	return;
+    }
+    if (e->x.p->type == partition) {
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    evalue_negate(&e->x.p->arr[2*i+1]);
+	return;
+    }
+    offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	evalue_negate(&e->x.p->arr[i]);
+}
+
 void evalue_add_constant(evalue *e, const Value cst)
 {
     int i;

@@ -17,6 +17,28 @@ void set_from_string(T& v, char *s)
     str >> v;
 }
 
+int test_evalue(struct barvinok_options *options)
+{
+    unsigned nvar, nparam;
+    char **all_vars;
+    evalue *poly1, poly2;
+
+    poly1 = evalue_read_from_str("(1/4 * n^4 + 1/2 * n^3 + 1/4 * n^2)",
+				 NULL, &all_vars, &nvar, &nparam,
+				 options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+
+    value_init(poly2.d);
+    evalue_copy(&poly2, poly1);
+    evalue_negate(poly1);
+    eadd(&poly2, poly1);
+    reduce_evalue(poly1);
+    assert(EVALUE_IS_ZERO(*poly1));
+    free_evalue_refs(poly1);
+    free_evalue_refs(&poly2);
+    free(poly1);
+}
+
 int test_specialization(struct barvinok_options *options)
 {
     Value v;
@@ -154,6 +176,7 @@ int test_todd(struct barvinok_options *options)
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
+    test_evalue(options);
     test_specialization(options);
     test_lattice_points(options);
     test_todd(options);
