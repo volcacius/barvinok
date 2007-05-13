@@ -666,9 +666,9 @@ static void barvinok_count_f(Polyhedron *P, Value* result,
     else if (options->incremental_specialization == BV_SPECIALIZATION_DF)
 	cnt = new icounter(P->Dimension);
     else if (options->incremental_specialization == BV_SPECIALIZATION_TODD)
-	cnt = new tcounter(P->Dimension);
+	cnt = new tcounter(P->Dimension, options->max_index);
     else
-	cnt = new counter(P->Dimension);
+	cnt = new counter(P->Dimension, options->max_index);
     cnt->start(P, options);
 
     cnt->get_count(result);

@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <sstream>
+#include <barvinok/util.h>
 #include "conversion.h"
 #include "evalue_convert.h"
 #include "lattice_point.h"
@@ -204,14 +205,17 @@ static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
 	fdostream os(dup(fileno(out)));
 	Vector *coset = Vector_Alloc(nparam+1);
 	value_set_si(coset->p[nparam], 1);
-	mat_ZZ RT;
 	mat_ZZ R;
-	matrix2zz(L, RT, nparam, nparam);
-	R = transpose(RT);
+	Matrix_Transposition(L);
+	matrix2zz(L, R, nparam, nparam);
 	fprintf(out, "Lattice:\n");
 	os << R << endl;
+	unsigned long det = to_ulong(abs(determinant(R)));
 	mat_ZZ vertices;
-	lattice_point(coset->p, R, vertices, to_ulong(abs(determinant(R))), NULL);
+	Matrix *points = Matrix_Alloc(det, nparam);
+	lattice_point(coset->p, L, points, det, NULL);
+	matrix2zz(points, vertices, points->NbRows, points->NbColumns);
+	Matrix_Free(points);
 	Matrix_Free(L);
 	for (int i = 0; i < vertices.NumRows(); ++i) {
 	    evalue t;

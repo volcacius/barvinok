@@ -49,8 +49,10 @@ void tcounter::add_powers(dpoly& n, const Value c)
 void tcounter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long det,
 		     int *closed, barvinok_options *options)
 {
+    Matrix* Rays = zz2matrix(rays);
     for (int k = 0; k < dim; ++k) {
-	if (lambda * rays[k] == 0)
+	Inner_Product(lambda->p, Rays->p[k], dim, &num->p[0]);
+	if (value_zero_p(num->p[0]))
 	    throw Orthogonal;
     }
 
@@ -61,27 +63,26 @@ void tcounter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long d
     if (dim % 2)
 	sign = -sign;
 
-    lattice_point(V, rays, vertex, det, closed);
-    num = vertex * lambda;
-    den = rays * lambda;
+    lattice_point(V, Rays, vertex, det, closed);
+    vertex->NbRows = det;
+    num->Size = det;
+    Matrix_Vector_Product(vertex, lambda->p, num->p);
+    Matrix_Vector_Product(Rays, lambda->p, den->p);
+    Matrix_Free(Rays);
 
     dpoly t(todd);
-    zz2value(den[0], tz);
-    value_assign(denom, tz);
-    adapt_todd(t, tz);
+    value_assign(denom, den->p[0]);
+    adapt_todd(t, den->p[0]);
     for (int k = 1; k < dim; ++k) {
 	dpoly fact(todd);
-	zz2value(den[k], tz);
-	value_multiply(denom, denom, tz);
-	adapt_todd(fact, tz);
+	value_multiply(denom, denom, den->p[k]);
+	adapt_todd(fact, den->p[k]);
 	t *= fact;
     }
 
     dpoly n(dim);
-    for (int k = 0; k < num.length(); ++k) {
-	zz2value(num[k], tz);
-	add_powers(n, tz);
-    }
+    for (int k = 0; k < num->Size; ++k)
+	add_powers(n, num->p[k]);
 
     for (int i = 0; i < n.coeff->Size; ++i)
 	value_multiply(n.coeff->p[i], n.coeff->p[i], todd_denom->p[i]);

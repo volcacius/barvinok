@@ -1,23 +1,26 @@
 #include "reducer.h"
 
 struct counter : public np_base {
-    vec_ZZ lambda;
-    mat_ZZ vertex;
-    vec_ZZ den;
+    Vector *lambda;
+    Matrix *vertex;
+    Vector *den;
     ZZ sign;
-    vec_ZZ num;
+    Vector *num;
     int j;
     mpq_t count;
-    Value tz;
 
-    counter(unsigned dim) : np_base(dim) {
-	den.SetLength(dim);
+    counter(unsigned dim, unsigned long max_index) : np_base(dim) {
 	mpq_init(count);
-	value_init(tz);
+	vertex = Matrix_Alloc(max_index, dim);
+	num = Vector_Alloc(max_index);
+	den = Vector_Alloc(dim);
+	lambda = Vector_Alloc(dim);
     }
 
     virtual void init(Polyhedron *P) {
-	randomvector(P, lambda, dim);
+	vec_ZZ l;
+	randomvector(P, l, dim);
+	zz2values(l, lambda->p);
     }
 
     virtual void reset() {
@@ -25,8 +28,11 @@ struct counter : public np_base {
     }
 
     ~counter() {
+	Matrix_Free(vertex);
+	Vector_Free(num);
+	Vector_Free(den);
+	Vector_Free(lambda);
 	mpq_clear(count);
-	value_clear(tz);
     }
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,

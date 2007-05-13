@@ -295,13 +295,12 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     return E;
 }
 
-void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *closed)
+void lattice_point(Value* values, Matrix *Rays, Value *vertex, int *closed)
 {
-    unsigned dim = rays.NumRows();
+    unsigned dim = Rays->NbRows;
     if (value_one_p(values[dim]) && !closed)
-	values2zz(values, vertex, dim);
+	Vector_Copy(values, vertex, dim);
     else {
-	Matrix *Rays = zz2matrix(rays);
 	Matrix *R2 = Matrix_Copy(Rays);
 	Matrix *inv = Matrix_Alloc(Rays->NbRows, Rays->NbColumns);
 	int ok = Matrix_Inverse(R2, inv);
@@ -317,12 +316,8 @@ void lattice_point(Value* values, const mat_ZZ& rays, vec_ZZ& vertex, int *close
 		value_addto(lambda->p[j], lambda->p[j], values[dim]);
 		mpz_fdiv_q(lambda->p[j], lambda->p[j], values[dim]);
 	    }
-	Vector *A = Vector_Alloc(dim);
-	Vector_Matrix_Product(lambda->p, Rays, A->p);
+	Vector_Matrix_Product(lambda->p, Rays, vertex);
 	Vector_Free(lambda);
-	Matrix_Free(Rays);
-	values2zz(A->p, vertex, dim);
-	Vector_Free(A);
     }
 }
 
@@ -371,16 +366,14 @@ static Matrix *Matrix_AddRowColumn(Matrix *M)
  * can be at most d1, since it is integer if v = 0.
  * The denominator of v + lambda2 is 1.
  */
-void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
+void lattice_point(Value* values, Matrix *Rays, Matrix *vertex,
 		   unsigned long det, int *closed)
 {
-    unsigned dim = rays.NumRows();
-    vertex.SetDims(det, dim);
+    unsigned dim = Rays->NbRows;
     if (det == 1) {
-	lattice_point(values, rays, vertex[0], closed);
+	lattice_point(values, Rays, vertex->p[0], closed);
 	return;
     }
-    Matrix* Rays = zz2matrix(rays);
     Matrix *U, *W, *D;
     Smith(Rays, &U, &W, &D);
     Matrix_Free(U);
@@ -430,13 +423,11 @@ void lattice_point(Value* values, const mat_ZZ& rays, mat_ZZ& vertex,
 	Vector_Add(lambda2->p, values, lambda2->p, dim);
 	for (int j = 0; j < dim; ++j)
 	    assert(mpz_divisible_p(lambda2->p[j], values[dim]));
-	Vector_AntiScale(lambda2->p, lambda2->p, values[dim], dim);
-	values2zz(lambda2->p, vertex[i], dim);
+	Vector_AntiScale(lambda2->p, vertex->p[i], values[dim], dim);
     END_FORALL_COSETS
     Vector_Free(lambda);
     Vector_Free(lambda2);
     Matrix_Free(D);
-    Matrix_Free(Rays);
     Matrix_Free(inv);
 
     Matrix_Free(T2);
@@ -692,7 +683,12 @@ static int lattice_point_fixed(Param_Vertices* V, const mat_ZZ& rays,
     value_assign(fixed->p[dim], V->Vertex->p[0][nparam+1]);
 
     mat_ZZ vertex;
-    lattice_point(fixed->p, rays, vertex, det, closed);
+    Matrix *points = Matrix_Alloc(det, dim);
+    Matrix* Rays = zz2matrix(rays);
+    lattice_point(fixed->p, Rays, points, det, closed);
+    Matrix_Free(Rays);
+    matrix2zz(points, vertex, points->NbRows, points->NbColumns);
+    Matrix_Free(points);
     term->E = NULL;
     term->constant = vertex * lambda;
     Vector_Free(fixed);

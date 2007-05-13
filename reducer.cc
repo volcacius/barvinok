@@ -358,7 +358,12 @@ void reducer::handle(const mat_ZZ& den, Value *V, const QQ& c, unsigned long det
 {
     vec_QQ vc;
 
-    lattice_point(V, den, vertex, det, closed);
+    Matrix *points = Matrix_Alloc(det, dim);
+    Matrix* Rays = zz2matrix(den);
+    lattice_point(V, Rays, points, det, closed);
+    Matrix_Free(Rays);
+    matrix2zz(points, vertex, points->NbRows, points->NbColumns);
+    Matrix_Free(points);
 
     vc.SetLength(vertex.NumRows());
     for (int i = 0; i < vc.length(); ++i)

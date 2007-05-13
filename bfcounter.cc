@@ -118,7 +118,12 @@ void bf_base::handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
     vector< bfc_term_base * > v;
     v.push_back(t);
 
-    lattice_point(vertex, rays, t->terms, det, closed);
+    Matrix *points = Matrix_Alloc(det, dim);
+    Matrix* Rays = zz2matrix(rays);
+    lattice_point(vertex, Rays, points, det, closed);
+    Matrix_Free(Rays);
+    matrix2zz(points, t->terms, points->NbRows, points->NbColumns);
+    Matrix_Free(points);
 
     // the elements of factors are always lexpositive
     mat_ZZ   factors;

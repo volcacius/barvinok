@@ -1,28 +1,29 @@
 #include "reducer.h"
 
 struct tcounter : public np_base {
-    vec_ZZ lambda;
-    mat_ZZ vertex;
-    vec_ZZ den;
+    Vector *lambda;
+    Matrix *vertex;
+    Vector *den;
     ZZ sign;
-    vec_ZZ num;
+    Vector *num;
     mpq_t count;
     mpq_t tcount;
-    Value tz;
     dpoly todd;
     Vector *todd_denom;
     Value denom;
 
     Value tmp, tmp2;
 
-    tcounter(unsigned dim) : np_base(dim), todd(dim) {
-	den.SetLength(dim);
+    tcounter(unsigned dim, unsigned long max_index) : np_base(dim), todd(dim) {
 	mpq_init(count);
 	mpq_init(tcount);
-	value_init(tz);
 	setup_todd(dim);
 	value_init(denom);
 	value_init(tmp);
+	vertex = Matrix_Alloc(max_index, dim);
+	num = Vector_Alloc(max_index);
+	den = Vector_Alloc(dim);
+	lambda = Vector_Alloc(dim);
     }
 
     void setup_todd(unsigned dim);
@@ -31,16 +32,21 @@ struct tcounter : public np_base {
     void add_powers(dpoly& n, const Value c);
 
     ~tcounter() {
+	Matrix_Free(vertex);
+	Vector_Free(num);
+	Vector_Free(den);
+	Vector_Free(lambda);
 	mpq_clear(count);
 	mpq_clear(tcount);
-	value_clear(tz);
 	Vector_Free(todd_denom);
 	value_clear(denom);
 	value_clear(tmp);
     }
 
     virtual void init(Polyhedron *P) {
-	randomvector(P, lambda, dim);
+	vec_ZZ l;
+	randomvector(P, l, dim);
+	zz2values(l, lambda->p);
     }
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,

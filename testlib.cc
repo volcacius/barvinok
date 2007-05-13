@@ -130,7 +130,7 @@ int test_lattice_points(struct barvinok_options *options)
 
 int test_todd(struct barvinok_options *options)
 {
-    tcounter t(2);
+    tcounter t(2, options->max_index);
     assert(value_cmp_si(t.todd.coeff->p[0], 1) == 0);
     assert(value_cmp_si(t.todd.coeff->p[1], -3) == 0);
     assert(value_cmp_si(t.todd.coeff->p[2], 3) == 0);
@@ -138,7 +138,9 @@ int test_todd(struct barvinok_options *options)
     assert(value_cmp_si(t.todd_denom->p[1], 6) == 0);
     assert(value_cmp_si(t.todd_denom->p[2], 36) == 0);
 
-    set_from_string(t.lambda, "[1 -1]");
+    vec_ZZ lambda;
+    set_from_string(lambda, "[1 -1]");
+    zz2values(lambda, t.lambda->p);
 
     mat_ZZ rays;
     set_from_string(rays, "[[-1 0][-1 1]]");
