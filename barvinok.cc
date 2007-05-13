@@ -685,25 +685,6 @@ static void uni_polynom(int param, Vector *c, evalue *EP)
 	evalue_set(&EP->x.p->arr[j], c->p[j], c->p[dim+1]);
 }
 
-static void multi_polynom(Vector *c, evalue* X, evalue *EP)
-{
-    unsigned dim = c->Size-2;
-    evalue EC;
-
-    value_init(EC.d);
-    evalue_set(&EC, c->p[dim], c->p[dim+1]);
-
-    value_init(EP->d);
-    evalue_set(EP, c->p[dim], c->p[dim+1]);
-        
-    for (int i = dim-1; i >= 0; --i) {
-	emul(X, EP);       
-	value_assign(EC.x.n, c->p[i]);
-	eadd(&EC, EP);
-    }
-    free_evalue_refs(&EC);
-}
-
 Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 {
     int len = P->Dimension+2;
@@ -868,10 +849,10 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	dpoly_n d(dim);
 	d.div(n, c, sign);
 	for (unsigned long i = 0; i < sc.det; ++i) {
-	    evalue EV;
-	    multi_polynom(c, num.E[i], &EV);
-	    eadd(&EV , vE[vert]);
-	    free_evalue_refs(&EV);
+	    evalue *EV = evalue_polynomial(c, num.E[i]);
+	    eadd(EV, vE[vert]);
+	    free_evalue_refs(EV);
+	    free(EV);
 	    free_evalue_refs(num.E[i]);
 	    delete num.E[i];
 	}

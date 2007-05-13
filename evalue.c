@@ -4064,3 +4064,25 @@ void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
     Matrix_Free(eq);
     Matrix_Free(inv);
 }
+
+evalue *evalue_polynomial(Vector *c, evalue* X)
+{
+    unsigned dim = c->Size-2;
+    evalue EC;
+    evalue *EP = ALLOC(evalue);
+    int i;
+
+    value_init(EC.d);
+    evalue_set(&EC, c->p[dim], c->p[dim+1]);
+
+    value_init(EP->d);
+    evalue_set(EP, c->p[dim], c->p[dim+1]);
+        
+    for (i = dim-1; i >= 0; --i) {
+	emul(X, EP);
+	value_assign(EC.x.n, c->p[i]);
+	eadd(&EC, EP);
+    }
+    free_evalue_refs(&EC);
+    return EP;
+}
