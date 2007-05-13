@@ -824,34 +824,45 @@ static void smaller_constraint(Value *a, Value *b, Value *c, int pos, int shift,
     ConstraintSimplify(c, c, len-shift, tmp);
 }
 
-struct section { Polyhedron * D; evalue E; };
 
-evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
+/* For each pair of lower and upper bounds on the first variable,
+ * calls fn with the set of constraints on the remaining variables
+ * where these bounds are active, i.e., (stricly) larger/smaller than
+ * the other lower/upper bounds, the lower and upper bound and the
+ * call back data.
+ *
+ * If the first variable is equal to an affine combination of the
+ * other variables then fn is called with both lower and upper
+ * pointing to the corresponding equality.
+ */
+void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
+				void *cb_data)
 {
     unsigned dim = P->Dimension;
-    unsigned nvar = dim - C->Dimension;
+    Matrix *M;
     int *pos;
     int i, j, p, n, z;
-    struct section *s;
-    Matrix *M, *M2;
-    int nd = 0;
     int k, l, k2, l2, q;
-    evalue *L, *U;
-    evalue *F;
     Value g;
-    Polyhedron *T;
-    evalue mone;
 
-    assert(nvar == 1);
+    if (value_zero_p(P->Constraint[0][0]) &&
+	    value_notzero_p(P->Constraint[0][1])) {
+	M = Matrix_Alloc(P->NbConstraints-1, dim-1+2);
+	for (i = 1; i < P->NbConstraints; ++i) {
+	    value_assign(M->p[i-1][0], P->Constraint[i][0]);
+	    Vector_Copy(P->Constraint[i]+2, M->p[i-1]+1, dim);
+	}
+	fn(M, P->Constraint[0], P->Constraint[0], cb_data);
+	Matrix_Free(M);
+	return;
+    }
 
-    NALLOC(pos, P->NbConstraints);
     value_init(g);
-    value_init(mone.d);
-    evalue_set_si(&mone, -1, 1);
+    pos = ALLOCN(int, P->NbConstraints);
 
     for (i = 0, z = 0; i < P->NbConstraints; ++i)
 	if (value_zero_p(P->Constraint[i][1]))
-	    ++z;
+	    pos[P->NbConstraints-1 - z++] = i;
     /* put those with positive coefficients first; number: p */
     for (i = 0, p = 0, n = P->NbConstraints-z-1; i < P->NbConstraints; ++i)
 	if (value_pos_p(P->Constraint[i][1]))
@@ -860,71 +871,118 @@ evalue * ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, int MaxRays)
 	    pos[n--] = i;
     n = P->NbConstraints-z-p;
     assert (p >= 1 && n >= 1);
-    s = (struct section *) malloc(p * n * sizeof(struct section));
-    M = Matrix_Alloc((p-1) + (n-1), dim-nvar+2);
+
+    M = Matrix_Alloc((p-1) + (n-1) + z + 1, dim-1+2);
+    for (i = 0; i < z; ++i) {
+	value_assign(M->p[i][0], P->Constraint[pos[P->NbConstraints-1 - i]][0]);
+	Vector_Copy(P->Constraint[pos[P->NbConstraints-1 - i]]+2,
+		    M->p[i]+1, dim);
+    }
     for (k = 0; k < p; ++k) {
 	for (k2 = 0; k2 < p; ++k2) {
 	    if (k2 == k)
 		continue;
-	    q = k2 - (k2 > k);
+	    q = 1 + z + k2 - (k2 > k);
 	    smaller_constraint(
 		P->Constraint[pos[k]],
 		P->Constraint[pos[k2]],
-		M->p[q], 0, nvar, dim+2, k2 > k, &g);
+		M->p[q], 0, 1, dim+2, k2 > k, &g);
 	}
 	for (l = p; l < p+n; ++l) {
 	    for (l2 = p; l2 < p+n; ++l2) {
 		if (l2 == l)
 		    continue;
-		q = l2-1 - (l2 > l);
+		q = 1 + z + l2-1 - (l2 > l);
 		smaller_constraint(
 		    P->Constraint[pos[l2]],
 		    P->Constraint[pos[l]],
-		    M->p[q], 0, nvar, dim+2, l2 > l, &g);
+		    M->p[q], 0, 1, dim+2, l2 > l, &g);
 	    }
-	    M2 = Matrix_Copy(M);
-	    T = Constraints2Polyhedron(M2, P->NbRays);
-	    Matrix_Free(M2);
-	    s[nd].D = DomainIntersection(T, C, MaxRays);
-	    Domain_Free(T);
-	    POL_ENSURE_VERTICES(s[nd].D);
-	    if (emptyQ(s[nd].D)) {
-		Polyhedron_Free(s[nd].D);
-		continue;
-	    }
-	    L = bv_ceil3(P->Constraint[pos[k]]+1+nvar, 
-		      dim-nvar+1,
-		      P->Constraint[pos[k]][0+1], s[nd].D);
-	    U = bv_ceil3(P->Constraint[pos[l]]+1+nvar, 
-		      dim-nvar+1,
-		      P->Constraint[pos[l]][0+1], s[nd].D);
-	    eadd(L, U);
-	    eadd(&mone, U);
-	    emul(&mone, U);
-	    s[nd].E = *U;
-	    free_evalue_refs(L); 
-	    free(L);
-	    free(U);
-	    ++nd;
+	    smaller_constraint(P->Constraint[pos[k]],
+				P->Constraint[pos[l]],
+				M->p[z], 0, 1, dim+2, 0, &g);
+	    fn(M, P->Constraint[pos[k]], P->Constraint[pos[l]], cb_data);
 	}
     }
-
     Matrix_Free(M);
+
+    free(pos);
+    value_clear(g);
+}
+
+struct section { Polyhedron * D; evalue E; };
+
+struct PLL_data {
+    int nd;
+    unsigned MaxRays;
+    Polyhedron *C;
+    evalue mone;
+    struct section *s;
+};
+
+static void PLL_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
+{
+    struct PLL_data *data = (struct PLL_data *)cb_data;
+    unsigned dim = M->NbColumns-1;
+    Matrix *M2;
+    Polyhedron *T;
+    evalue *L, *U;
+
+    M2 = Matrix_Copy(M);
+    T = Constraints2Polyhedron(M2, data->MaxRays);
+    Matrix_Free(M2);
+    data->s[data->nd].D = DomainIntersection(T, data->C, data->MaxRays);
+    Domain_Free(T);
+
+    POL_ENSURE_VERTICES(data->s[data->nd].D);
+    if (emptyQ(data->s[data->nd].D)) {
+	Polyhedron_Free(data->s[data->nd].D);
+	return;
+    }
+    L = bv_ceil3(lower+1+1, dim-1+1, lower[0+1], data->s[data->nd].D);
+    U = bv_ceil3(upper+1+1, dim-1+1, upper[0+1], data->s[data->nd].D);
+    eadd(L, U);
+    eadd(&data->mone, U);
+    emul(&data->mone, U);
+    data->s[data->nd].E = *U;
+    free_evalue_refs(L); 
+    free(L);
+    free(U);
+    ++data->nd;
+}
+
+static evalue *ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
+{
+    unsigned dim = P->Dimension;
+    unsigned nvar = dim - C->Dimension;
+    int ssize = (P->NbConstraints+1) * (P->NbConstraints+1) / 4;
+    struct PLL_data data;
+    evalue *F;
+    int k;
+
+    assert(nvar == 1);
+
+    value_init(data.mone.d);
+    evalue_set_si(&data.mone, -1, 1);
+
+    data.s = ALLOCN(struct section, ssize);
+    data.nd = 0;
+    data.MaxRays = MaxRays;
+    data.C = C;
+    for_each_lower_upper_bound(P, PLL_cb, &data);
 
     F = ALLOC(evalue);
     value_init(F->d);
     value_set_si(F->d, 0);
-    F->x.p = new_enode(partition, 2*nd, dim-nvar);
-    for (k = 0; k < nd; ++k) {
-	EVALUE_SET_DOMAIN(F->x.p->arr[2*k], s[k].D);
+    F->x.p = new_enode(partition, 2*data.nd, dim-nvar);
+    for (k = 0; k < data.nd; ++k) {
+	EVALUE_SET_DOMAIN(F->x.p->arr[2*k], data.s[k].D);
 	value_clear(F->x.p->arr[2*k+1].d);
-	F->x.p->arr[2*k+1] = s[k].E;
+	F->x.p->arr[2*k+1] = data.s[k].E;
     }
-    free(s);
+    free(data.s);
 
-    free_evalue_refs(&mone); 
-    value_clear(g);
-    free(pos);
+    free_evalue_refs(&data.mone); 
 
     return F;
 }

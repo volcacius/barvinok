@@ -110,6 +110,10 @@ int Polyhedron_is_unbounded(Polyhedron *P, unsigned nparam, unsigned MaxRays);
 void Vector_Oppose(Value *p1, Value *p2, unsigned len);
 void Matrix_Transposition(Matrix *M);
 
+typedef void (*for_each_lower_upper_bound_fn)(Matrix *, Value *, Value *, void *);
+void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
+				void *cb_data);
+
 const char *barvinok_version();
 
 #if defined(__cplusplus)
