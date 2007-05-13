@@ -1576,17 +1576,30 @@ $$
 $$
 Computing the reciprocal as explained in Section~\ref{s:division},
 we find
-$$
+\begin{equation}
+\label{eq:t-exp-1}
 \frac{t}{e^t-1} = \frac 1{\frac{e^t -1}t}
 \equiv (d+1)! \frac 1{\sum_{i=0}^d \frac{(d+1)!}{(i+1)!} t^i}
 =: \sum_{i=0}^d b_i t^i
 .
-$$
+\end{equation}
 Note that the constant term of the denominator is $1/(d+1)!$.
 The denominators of the quotient are therefore $((d+1)!)^{i+1}/(d+1)!$.
 Also note that the $b_i$ are independent of the generating function
 and can be computed in advance.
-Substituting $t$ by $c_j t$, we have
+An alternative way of computing the $b_i$ is to note that
+$$
+\frac{t}{e^t-1} = \sum_{i=0}^\infty B_i \frac{t^i}{i!}
+,
+$$
+with $B_i = i! \, b_i$ the \ai{Bernoulli number}s, which can be computed
+using the recurrence
+$$
+    \sum_{j=0}^m{m+1\choose{j}}B_j = 0
+.
+$$
+
+Substituting $t$ by $c_j t$ in~\eqref{eq:t-exp-1}, we have
 $$
 \frac{-c_j t}{1-e^{c_j t}} = \sum_{i=0}^d b_i c_j^i t^i
 .
