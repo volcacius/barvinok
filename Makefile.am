@@ -56,6 +56,8 @@ libbarvinok_la_SOURCES = \
     genfun.cc \
     util.c \
     version.c \
+    bernoulli.c \
+    bernoulli.h \
     bfcounter.cc \
     bfcounter.h \
     conversion.cc \

@@ -1593,11 +1593,7 @@ $$
 ,
 $$
 with $B_i = i! \, b_i$ the \ai{Bernoulli number}s, which can be computed
-using the recurrence
-$$
-    \sum_{j=0}^m{m+1\choose{j}}B_j = 0
-.
-$$
+using the recurrence~\eqref{eq:Bernoulli} (see Section~\ref{s:nested}).
 
 Substituting $t$ by $c_j t$ in~\eqref{eq:t-exp-1}, we have
 $$
@@ -1752,3 +1748,155 @@ $$
 .
 $$
 \end{example}
+
+\subsection{Approximate Enumeration using Nested Sums}
+\label{s:nested}
+
+If $P \in \QQ^d$ is a polyhedron and $p(\vec x) \in \QQ[\vec x]$ is a
+polynomial and we want to sum $p(\vec x)$ over all integer values
+of (a subset of) the variables $\vec x$, then we can do this incrementally
+by taking a variable $x_1$ with lower bound $L(\vec{\hat x})$
+and upper bound $U(\vec{\hat x})$, with $\vec{\hat x} = (x_2, \ldots, x_d)$,
+and computing
+\begin{equation}
+\label{eq:nested:sum}
+Q(\vec{\hat x}) = \sum_{x_1 = L(\vec{\hat x})}^{U(\vec{\hat x})} p(\vec x)
+.
+\end{equation}
+Since $P$ is a polytope, the lower bound is a maximum of affine expressions
+in the remaining variables, while the upper bound is a minimum of such expressions.
+If the coefficients in these expressions are all integer, then we can
+compute $Q(\vec{\hat x})$ exactly as a piecewise polynomial using formulas
+for sums of powers, as proposed by, e.g.,
+\shortciteN{Tawbi1994,Sakellariou1997sums}.
+If some of the coefficients are not integer, we can apply the same formulas
+to obtain an approximation.
+Note that if we take the initial polynomial to be the constant $1$, then
+this gives us a method for computing an approximation of the number
+of integer points in a (parametric) polytope.
+
+The first step is to compute the chamber decomposition of $P$ when viewed
+as a 1-dimensional parametric polytope.  That is, we need to partition
+the projection of $P$ onto the remaining variables into polyhedral cells
+such that in each cell, both the upper and the lower bound are described
+by a single affine expression.  Basically, for each pair of lower and upper
+bound, we compute the cell where the chosen lower bound is (strictly)
+smaller than all other lower bounds and similarly for the upper bound.
+
+For any given pair of lower and upper bound $(l(\vec {\hat x}), u(\vec{\hat x}))$,
+the formula~\eqref{eq:nested:sum} is computed for each monomial of $p(\vec x)$
+separately.  For the constant term $\alpha_0$, we have
+$$
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_0(\vec{\hat x})
+    = \alpha_0(\vec{\hat x}) \left(u(\vec{\hat x}) - l(\vec {\hat x}) + 1\right)
+.
+$$
+For the higher degree monomials, we use the formula
+$$
+\sum_{k=0}^{m-1} k^n = {1\over{n+1}}\sum_{k=0}^n{n+1\choose{k}} B_k m^{n+1-k}
+=: S_n(m)
+,
+$$
+with $B_i$ the \ai{Bernoulli number}s, which can be computed
+using the recurrence
+\begin{equation}
+\label{eq:Bernoulli}
+    \sum_{j=0}^m{m+1\choose{j}}B_j = 0
+\qquad B_0 = 1
+.
+\end{equation}
+
+\newcounter{saveenumi}
+
+Since we can only directly apply the summation formula when
+the lower bound is zero (or one), we need to consider several
+cases.
+\begin{enumerate}
+\item $l(\vec {\hat x}) \ge 1$
+
+\begin{align*}
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
+& =
+\alpha_n(\vec{\hat x})
+\left(
+\sum_{x_1 = 1}^{u(\vec{\hat x})} x_1^n
+-
+\sum_{x_1 = 1}^{l(\vec {\hat x})-1} x_1^n
+\right)
+\\
+& =
+\alpha_n(\vec{\hat x})
+\left( S_n(u(\vec{\hat x})+1) - S_n(l(\vec {\hat x})) \right)
+\end{align*}
+
+\item $u(\vec{\hat x}) \le -1$
+
+\begin{align*}
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
+& =
+\alpha_n(\vec{\hat x}) (-1)^n
+\sum_{x_1 = -u(\vec {\hat x})}^{-l(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
+\\
+& =
+\alpha_n(\vec{\hat x}) (-1)^n
+\left( S_n(-l(\vec{\hat x})+1) - S_n(-u(\vec {\hat x})) \right)
+\end{align*}
+
+\item $l(\vec {\hat x}) \le 0$ and $u(\vec{\hat x}) \ge 0$
+
+\begin{align*}
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
+& =
+\alpha_n(\vec{\hat x})
+\left(
+\sum_{x_1 = 0}^{u(\vec{\hat x})} x_1^n
++
+(-1)^n
+\sum_{x_1 = 1}^{-l(\vec {\hat x})} x_1^n
+\right)
+\\
+& =
+\alpha_n(\vec{\hat x})
+\left(
+S_n(u(\vec{\hat x})+1)
++
+(-1)^n
+S_n(-l(\vec{\hat x})+1)
+\right)
+\end{align*}
+
+\setcounter{saveenumi}{\value{enumi}}
+\end{enumerate}
+
+If the coefficients in the lower and upper bound are all
+integer, then the above 3 cases partition (the integer points in)
+the projection of $P$ onto the remaining variables.
+However, if some of the coefficients are rational, then the lower
+and upper bound can lie in the open interval $(0,1)$ for some
+values of $\vec{\hat x}$.  We therefore also need to consider
+the following two cases.
+Note that the results will not be correct in these cases, but
+not taking them into account would lead to a greater loss in accuracy.
+
+\begin{enumerate}
+\setcounter{enumi}{\value{saveenumi}}
+\item $0 < l(\vec {\hat x}) < 1$
+
+$$
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
+=
+\alpha_n(\vec{\hat x})
+S_n(u(\vec{\hat x})+1)
+$$
+
+\item $0 < -u(\vec {\hat x}) < 1$ and $l(\vec {\hat x}) \le 0$
+
+$$
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
+=
+\alpha_n(\vec{\hat x})
+(-1)^n
+S_n(-l(\vec{\hat x})+1)
+$$
+
+\end{enumerate}

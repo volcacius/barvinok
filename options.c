@@ -117,7 +117,7 @@ const char *scale_opts[] = {
 
 static struct argp_option approx_argp_options[] = {
     { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
-    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume",	0,
+    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume|bernouilli",	0,
 	"method to use in polynomial approximation [default: drop]" },
     { "scale-options",	    BV_OPT_SCALE,
 	"fast|slow,narrow|narrow2,chamber",	0 },
@@ -169,6 +169,8 @@ static error_t approx_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->approximation_method = BV_APPROX_DROP;
 	else if (!strcmp(arg, "volume"))
 	    options->approximation_method = BV_APPROX_VOLUME;
+	else if (!strcmp(arg, "bernoulli"))
+	    options->approximation_method = BV_APPROX_BERNOULLI;
 	else
 	    argp_error(state, "unknown value for --approximation-method option");
 	break;

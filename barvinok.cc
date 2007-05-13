@@ -27,6 +27,7 @@ extern "C" {
 #include "remove_equalities.h"
 #include "scale.h"
 #include "volume.h"
+#include "bernoulli.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -1489,6 +1490,9 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
 static evalue* enumerate(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options)
 {
+    if (options->approximation_method == BV_APPROX_BERNOULLI)
+	return Bernoulli_sum(P, C, options);
+
     //P = unfringe(P, MaxRays);
     Polyhedron *next;
     Polyhedron *Corig = C;
