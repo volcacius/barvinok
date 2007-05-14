@@ -446,20 +446,20 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 		}
 	    }
 
-	    eadd(&tmp, sum);
+	    if (nvar > 1) {
+		evalue *res = Bernoulli_sum_evalue(&tmp, nvar-1, options);
+		eadd(res, sum);
+		free_evalue_refs(res);
+		free(res);
+	    } else
+		eadd(&tmp, sum);
+
 	    free_evalue_refs(&tmp);
 	    D->next = next;;
 	}
     }
 
     free(data.s);
-
-    if (nvar > 1) {
-	evalue *res = Bernoulli_sum_evalue(sum, nvar-1, options);
-	free_evalue_refs(sum);
-	free(sum);
-	return res;
-    }
 
     return sum;
 }
