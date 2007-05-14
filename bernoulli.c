@@ -461,6 +461,7 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 
     free(data.s);
 
+    reduce_evalue(sum);
     return sum;
 }
 
