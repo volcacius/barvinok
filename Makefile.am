@@ -17,6 +17,7 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
+		  barvinok_summate \
 		  @bv_extra_programs@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan barvinok_maximize
@@ -157,6 +158,16 @@ barvinok_maximize_SOURCES = \
 	verify.h \
 	verify.c
 EXTRA_barvinok_maximize_SOURCES = fdstream.cc fdstream.h
+barvinok_summate_SOURCES = \
+	evalue_convert.cc \
+	evalue_convert.h \
+	evalue_read.c \
+	evalue_read.h \
+	$(FDSTREAM) \
+	summate.cc \
+	verify.h \
+	verify.c
+EXTRA_barvinok_summate_SOURCES = fdstream.cc fdstream.h
 4coins_SOURCES = 4coins.cc
 if HAVE_CDDLIB
 POLYSIGN = polysign_cddf.cc polysign_cdd.cc
