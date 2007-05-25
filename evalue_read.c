@@ -445,7 +445,7 @@ static evalue *read_periodic(struct stream *s, struct parameter **p)
     token_free(tok);
 
     tok = stream_next_token(s);
-    if (tok->type == '_') {
+    if (tok && tok->type == '_') {
 	int pos;
 	token_free(tok);
 	tok = stream_next_token(s);
@@ -466,12 +466,14 @@ static evalue *read_periodic(struct stream *s, struct parameter **p)
 	    free(list[n]);
 	}
     } else if (n == 1) {
-	stream_push_token(s, tok);
+	if (tok)
+	    stream_push_token(s, tok);
 	e = create_fract_like(s, list[0], flooring, p);
 	n = 0;
     } else {
 	stream_error(s, tok, "unexpected token");
-	stream_push_token(s, tok);
+	if (tok)
+	    stream_push_token(s, tok);
     }
 
 out:
