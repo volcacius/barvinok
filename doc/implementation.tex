@@ -1749,6 +1749,124 @@ $$
 $$
 \end{example}
 
+Note that the run-time complexities of polynomial and exponential
+substitution are basically the same.  The experiments of
+\citeN{Koeppe2006primal} are somewhat misleading in this respect
+since the polynomial substitution (unlike the exponential
+substitution) had not been optimized to take full
+advantage of the stopped Barvinok decomposition.
+For comparison, \autoref{t:hickerson} shows running times
+for the same experiments of that paper, but using
+barvinok version \verb+barvinok-0.23-47-gaa9024e+
+on an Athlon MP 1500+ with 512MiB internal memory.
+This machine appears to be slightly slower than the
+machine used in the experiments of \citeN{Koeppe2006primal}
+as computing {\tt hickerson-14} using the dual decomposition
+with polynomial substitution an maximal index 1
+took 2768 seconds on this machine using \LattEmk/.
+At this stage, it is not clear yet why the number of
+cones in the dual decomposition of {\tt hickerson-13}
+differs from that of \LattE/~\shortcite{latte1.1} and
+\LattEmk/~\cite{latte-macchiato}.
+We conclude from \autoref{t:hickerson} that (our implementation of)
+the exponential substitution is always slightly faster than
+(our implementation of) the polynomial substitution.
+The optimal maximal index for these examples is about 500,
+which agrees with the experiments of \citeN{Koeppe2006primal}.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{rrrrrrr}
+\hline
+&
+\multicolumn{3}{c}{Dual decomposition} &
+\multicolumn{3}{c}{Primal decomposition}
+\\
+&
+& \multicolumn{2}{c}{Time (s)} &
+& \multicolumn{2}{c}{Time (s)}
+\\
+\cline{3-4}
+\cline{6-7}
+Max.\ index & Cones & Poly & Exp & Cones & Poly & Exp \\
+\hline
+\multicolumn{7}{c}{{\tt hickerson-12}}
+\\
+\hline
+1 & 11625 & 9.24 & 8.90 & 7929 & 4.80 & 4.55
+\\
+10 & 4251 & 4.32 & 4.19 & 803 & 0.66 & 0.62
+\\
+100 & 980 & 1.42 & 1.35 & 84 & 0.13 & 0.12
+\\
+200 & 550 & 1.00 & 0.92 & 76 & 0.12 & 0.12
+\\
+300 & 474 & 0.93 & 0.86 & 58 & 0.12 & 0.10
+\\
+500 & 410 & 0.90 & 0.83 & 42 & 0.10 & 0.10
+\\
+1000 & 130 & 0.42 & 0.38 & 22 & {\bf 0.10} & {\bf 0.07}
+\\
+2000 & 10 & {\bf 0.10} & {\bf 0.10} & 22 & 0.10 & 0.09
+\\
+5000 & 7 & 0.12 & 0.11 & 7 & 0.12 & 0.10
+\\
+\hline
+\multicolumn{7}{c}{{\tt hickerson-13}}
+\\
+\hline
+1 & 494836 & 489 & 463 & 483507 & 339 & 315
+\\
+10 & 296151 & 325 & 309 & 55643 & 51 & 48
+\\
+100 & 158929 & 203 & 192 & 9158 & 11 & 10
+\\
+200 & 138296 & 184 & 173 & 6150 & 9 & 8
+\\
+300 & 110438 & 168 & 157 & 4674 & 8 & 7
+\\
+500 & 102403 & 163 & 151 & 3381  & {\bf 8} & {\bf 7}
+\\
+1000 & 83421 & {\bf 163} & {\bf 149} & 2490 & 8 & 7
+\\
+2000 & 77055 & 170 & 153 & 1857 & 10 & 8
+\\
+5000 & 57265 & 246 & 211 & 1488 & 13 & 11
+\\
+10000 & 50963 & 319 & 269 & 1011 & 26 & 21
+\\
+\hline
+\multicolumn{7}{c}{{\tt hickerson-14}}
+\\
+\hline
+1 & 1682743 & 2171 & 2064 & 552065 & 508 & 475
+\\
+10 & 1027619 & 1453 & 1385 & 49632 & 62 & 59
+\\
+100 & 455474 & 768 & 730 & 8470 & 14 & 13
+\\
+200 & 406491 & 699 & 661 & 5554 & 11 & 10
+\\
+300 & 328340 & 627 & 590 & 4332 & 11 & 9
+\\
+500 & 303566 & 605 & 565 & 3464 & {\bf 11} & {\bf 9}
+\\
+1000 & 232626 & {\bf 581} & {\bf 532} & 2384 & 12 & 10
+\\
+2000 & 195368 & 607 & 545 & 1792 & 14 & 12
+\\
+5000 & 147496 & 785 & 682 & 1276 & 19 & 16
+\\
+10000 & 128372 & 966 & 824 & 956 & 29 & 23
+\\
+\hline
+\end{tabular}
+\caption{Timing results of dual and primal decomposition with
+polynomial or exponential substitution on the Hickerson examples}
+\label{t:hickerson}
+\end{center}
+\end{table}
+
 \subsection{Approximate Enumeration using Nested Sums}
 \label{s:nested}
 
