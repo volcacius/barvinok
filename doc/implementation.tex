@@ -1886,9 +1886,10 @@ in the remaining variables, while the upper bound is a minimum of such expressio
 If the coefficients in these expressions are all integer, then we can
 compute $Q(\vec{\hat x})$ exactly as a piecewise polynomial using formulas
 for sums of powers, as proposed by, e.g.,
-\shortciteN{Tawbi1994,Sakellariou1997sums}.
+\shortciteN{Tawbi1994,Sakellariou1997sums,VanEngelen2004}.
 If some of the coefficients are not integer, we can apply the same formulas
-to obtain an approximation.
+to obtain an approximation, which can is some cases be shown
+to be an overapproximation~\shortcite{VanEngelen2004}.
 Note that if we take the initial polynomial to be the constant $1$, then
 this gives us a method for computing an approximation of the number
 of integer points in a (parametric) polytope.
@@ -1910,11 +1911,12 @@ $$
 .
 $$
 For the higher degree monomials, we use the formula
-$$
+\begin{equation}
+\label{eq:summation}
 \sum_{k=0}^{m-1} k^n = {1\over{n+1}}\sum_{k=0}^n{n+1\choose{k}} B_k m^{n+1-k}
 =: S_n(m)
 ,
-$$
+\end{equation}
 with $B_i$ the \ai{Bernoulli number}s, which can be computed
 using the recurrence
 \begin{equation}
@@ -1923,6 +1925,9 @@ using the recurrence
 \qquad B_0 = 1
 .
 \end{equation}
+Note that \eqref{eq:summation} is also valid if $m = 0$,
+i.e., $S_n(0) = 0$, a fact
+that can be easily shown using Newton series~\shortcite{VanEngelen2004}.
 
 \newcounter{saveenumi}
 
