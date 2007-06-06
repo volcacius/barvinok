@@ -132,8 +132,23 @@ static struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random|todd]" },
-    { "gbr",		    BV_OPT_GBR,    	    "[cdd]",		0,
-      "solver to use for basis reduction" },
+#if defined(HAVE_LIBGLPK) || defined(HAVE_LIBCDDGMP)
+    { "gbr",		    BV_OPT_GBR,
+#if defined(HAVE_LIBGLPK) && defined(HAVE_LIBCDDGMP)
+	"cdd|glpk",
+#elif defined(HAVE_LIBGLPK)
+	"glpk",
+#elif defined(HAVE_LIBCDDGMP)
+	"cdd",
+#endif
+	0,	"solver to use for basis reduction "
+#ifdef HAVE_LIBGLPK
+		"[default: glpk]"
+#elif defined HAVE_LIBCDDGMP
+		"[default: cdd]"
+#endif
+	},
+#endif
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
     { "recurse",	    BV_OPT_RECURSE,    	    "",
@@ -252,6 +267,8 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     case BV_OPT_GBR:
 	if (!strcmp(arg, "cdd"))
 	    options->gbr_lp_solver = BV_GBR_CDD;
+	if (!strcmp(arg, "glpk"))
+	    options->gbr_lp_solver = BV_GBR_GLPK;
 	break;
     case BV_OPT_MAXINDEX:
 	options->max_index = strtoul(arg, NULL, 0);
