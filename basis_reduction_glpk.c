@@ -47,6 +47,7 @@ static LPX *init_lp(Polyhedron *P)
     lpx_add_cols(lp, 2*P->Dimension);
     for (i = 0; i < 2; ++i) {
 	for (j = 0; j < P->NbConstraints; ++j) {
+	    int type = j < P->NbEq ? LPX_FX : LPX_LO;
 	    for (k = 0, l = 0; k < P->Dimension; ++k) {
 		if (value_zero_p(P->Constraint[j][1+k]))
 		    continue;
@@ -55,7 +56,7 @@ static LPX *init_lp(Polyhedron *P)
 		++l;
 	    }
 	    lpx_set_mat_row(lp, 1+i*P->NbConstraints+j, l, ind, val);
-	    lpx_set_row_bnds(lp, 1+i*P->NbConstraints+j, LPX_LO,
+	    lpx_set_row_bnds(lp, 1+i*P->NbConstraints+j, type,
 			     -VALUE_TO_DOUBLE(P->Constraint[j][1+P->Dimension]), 0);
 	}
 	for (k = 0, l = 0; k < P->Dimension; ++k) {
