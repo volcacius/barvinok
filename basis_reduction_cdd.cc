@@ -137,7 +137,7 @@ void CDD_LP::get_alpha(int row, mytype *alpha)
 	if (lp->nbindex[j+1] == row+1) {
 	    dd_set(*alpha, lp->dsol[j]);
 	    break;
-	} else if (lp->nbindex[j+1] == row+neq+1) {
+	} else if (lp->nbindex[j+1] == row+neq+2*P->NbEq+1) {
 	    dd_neg(*alpha, lp->dsol[j]);
 	    break;
 	}
