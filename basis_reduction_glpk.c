@@ -85,6 +85,7 @@ static void solve_lp(LPX *lp)
 
 static void get_obj_val(LPX* lp, double *F)
 {
+    assert(lpx_get_status(lp) == LPX_OPT);
     *F = lpx_get_obj_val(lp);
     assert(*F > -1e-10);
     if (*F < 0)
