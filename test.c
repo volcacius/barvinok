@@ -34,7 +34,7 @@ static void time_diff(struct tms *before, struct tms *after)
 
 int main(int argc, char **argv)
 {
-    int i, nbPol, nbVec, nbMat, func, j;
+    int i, nbPol, nbVec, nbMat, func, j, n;
     Polyhedron *A, *B, *C, *D, *E, *F, *G;
     char s[128];
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -173,8 +173,42 @@ int main(int argc, char **argv)
 	    Domain_Free(B);
 	    Domain_Free(C);
 	    break;
+	case 10: {
+	    evalue *EP;
+	    Value cb, ck;
+
+	    value_init(cb);
+	    value_init(ck);
+	    fgets(s, 128, stdin);
+	    sscanf(s, "%d", &n);
+	    for (j = 0; j < n; ++j) {
+		Polyhedron *P;
+		M = Matrix_Read();
+		P = Constraints2Polyhedron(M, options->MaxRays);
+		Matrix_Free(M);
+		A = DomainConcat(P, A);
+	    }
+	    fgets(s, 128, stdin);
+	    /* workaround for apparent bug in older gmps */
+	    *strchr(s, '\n') = '\0';
+	    while ((*s=='#') || (value_read(ck, s) != 0)) {
+		fgets(s, 128, stdin);
+		/* workaround for apparent bug in older gmps */
+		*strchr(s, '\n') = '\0';
+	    }
+	    C = Universe_Polyhedron(0);
+	    EP = barvinok_enumerate_union(A, C, options->MaxRays);
+	    value_set_double(cb, compute_evalue(EP, &ck)+.25);
+	    if (value_ne(cb, ck))
+		return -1;
+	    Domain_Free(C);
+	    value_clear(cb);
+	    value_clear(ck);
+	    free_evalue_refs(EP);
+	    free(EP);
 	}
-	Polyhedron_Free(A);
+	}
+	Domain_Free(A);
     }
     for (i = 0; i < nbVec; ++i) {
 	int ok;

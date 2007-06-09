@@ -3441,7 +3441,7 @@ gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron*
 	assert(P->Dimension == D2->Dimension);
 	gen_fun *P_gf;
 
-	P_gf = series(Polyhedron_Copy(P), nparam, options);
+	P_gf = series(Polyhedron_Copy(P), P->Dimension, options);
 	if (!gf)
 	    gf = P_gf;
 	else {
