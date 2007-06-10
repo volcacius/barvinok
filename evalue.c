@@ -3329,28 +3329,29 @@ evalue *esum_over_domain_cst(int nvar, Polyhedron *D, Matrix *C)
     return t;
 }
 
-evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D, 
-			  Matrix *C)
+static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D, 
+			  int *signs, Matrix *C, unsigned MaxRays)
 {
     Vector *row = NULL;
-    int i;
+    int i, offset;
     evalue *res;
     Matrix *origC;
     evalue *factor = NULL;
     evalue cum;
+    int negate_odd = 0;
 
     if (EVALUE_IS_ZERO(*e))
 	return 0;
 
     if (D->next) {
-	Polyhedron *DD = Disjoint_Domain(D, 0, 0);
+	Polyhedron *DD = Disjoint_Domain(D, 0, MaxRays);
 	Polyhedron *Q;
 
 	Q = DD;
 	DD = Q->next;
 	Q->next = 0;
 
-	res = esum_over_domain(e, nvar, Q, C);
+	res = esum_over_domain(e, nvar, Q, signs, C, MaxRays);
 	Polyhedron_Free(Q);
 
 	for (Q = DD; Q; Q = DD) {
@@ -3359,7 +3360,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    DD = Q->next;
 	    Q->next = 0;
 
-	    t = esum_over_domain(e, nvar, Q, C);
+	    t = esum_over_domain(e, nvar, Q, signs, C, MaxRays);
 	    Polyhedron_Free(Q);
 
 	    if (!res)
@@ -3444,15 +3445,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	}
 
 	row = Vector_Alloc(1 + D->Dimension + 1 + 1);
-	for (i = 0; i < D->NbRays; ++i)
-	    if (value_notzero_p(D->Ray[i][pos]))
-		break;
-	assert(i < D->NbRays);
-	if (value_neg_p(D->Ray[i][pos])) {
-	    factor = ALLOC(evalue);
-	    value_init(factor->d);
-	    evalue_set_si(factor, -1, 1);
-	}
+	negate_odd = signs[pos-1] < 0;
 	value_set_si(row->p[0], 1);
 	value_set_si(row->p[pos], 1);
 	value_set_si(row->p[1 + nvar], -1);
@@ -3462,10 +3455,9 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	assert(0);
     }
 
-    i = type_offset(e->x.p);
+    offset = type_offset(e->x.p);
 
-    res = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
-    ++i;
+    res = esum_over_domain(&e->x.p->arr[offset], nvar, D, signs, C, MaxRays);
 
     if (factor) {
 	value_init(cum.d);
@@ -3473,7 +3465,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     }
 
     origC = C;
-    for (; i < e->x.p->size; ++i) {
+    for (i = 1; offset+i < e->x.p->size; ++i) {
 	evalue *t;
 	if (row) {
 	    Matrix *prevC = C;
@@ -3487,10 +3479,14 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	if (C)
 	    Matrix_Print(stderr, P_VALUE_FMT, C);
 	*/
-	t = esum_over_domain(&e->x.p->arr[i], nvar, D, C);
+	t = esum_over_domain(&e->x.p->arr[offset+i], nvar, D, signs, C, MaxRays);
 
-	if (t && factor)
-	    emul(&cum, t);
+	if (t) {
+	    if (factor)
+		emul(&cum, t);
+	    if (negate_odd && (i % 2))
+		evalue_negate(t);
+	}
 
 	if (!res)
 	    res = t;
@@ -3499,7 +3495,7 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    free_evalue_refs(t);
 	    free(t);
 	}
-	if (factor && i+1 < e->x.p->size)
+	if (factor && offset+i+1 < e->x.p->size)
 	    emul(factor, &cum);
     }
     if (C != origC)
@@ -3519,9 +3515,25 @@ evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     return res;
 }
 
-evalue *esum(evalue *e, int nvar)
+static void domain_signs(Polyhedron *D, int *signs)
 {
-    int i;
+    int j, k;
+
+    POL_ENSURE_VERTICES(D);
+    for (j = 0; j < D->Dimension; ++j) {
+	signs[j] = 0;
+	for (k = 0; k < D->NbRays; ++k) {
+	    signs[j] = value_sign(D->Ray[k][1+j]);
+	    if (signs[j])
+		break;
+	}
+    }
+}
+
+evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
+{
+    int i, dim;
+    int *signs;
     evalue *res = ALLOC(evalue);
     value_init(res->d);
 
@@ -3535,11 +3547,19 @@ evalue *esum(evalue *e, int nvar)
 
     assert(value_zero_p(e->d));
     assert(e->x.p->type == partition);
+    evalue_split_domains_into_orthants(e, MaxRays);
+
+    assert(e->x.p->size >= 2);
+    dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
+
+    signs = alloca(sizeof(int) * dim);
 
     for (i = 0; i < e->x.p->size/2; ++i) {
 	evalue *t;
+	domain_signs(EVALUE_DOMAIN(e->x.p->arr[2*i]), signs);
 	t = esum_over_domain(&e->x.p->arr[2*i+1], nvar,
-			     EVALUE_DOMAIN(e->x.p->arr[2*i]), 0);
+			     EVALUE_DOMAIN(e->x.p->arr[2*i]), signs, 0,
+			     MaxRays);
 	eadd(t, res);
 	free_evalue_refs(t);
 	free(t);
@@ -3548,6 +3568,11 @@ evalue *esum(evalue *e, int nvar)
     reduce_evalue(res);
 
     return res;
+}
+
+evalue *esum(evalue *e, int nvar)
+{
+    return evalue_sum(e, nvar, 0);
 }
 
 /* Initial silly implementation */
@@ -3718,7 +3743,7 @@ static void evalue_frac2polynomial_r(evalue *e, int *signs, int sign, int in_fra
  */
 void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 {
-    int i, j, k, dim;
+    int i, dim;
     int *signs;
 
     if (value_notzero_p(e->d))
@@ -3733,19 +3758,12 @@ void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 
     signs = alloca(sizeof(int) * dim);
 
+    if (!sign)
+	for (i = 0; i < dim; ++i)
+	    signs[i] = 0;
     for (i = 0; i < e->x.p->size/2; ++i) {
-	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
-	POL_ENSURE_VERTICES(D);
-	for (j = 0; j < dim; ++j) {
-	    signs[j] = 0;
-	    if (!sign)
-		continue;
-	    for (k = 0; k < D->NbRays; ++k) {
-		signs[j] = value_sign(D->Ray[k][1+j]);
-		if (signs[j])
-		    break;
-	    }
-	}
+	if (sign)
+	    domain_signs(EVALUE_DOMAIN(e->x.p->arr[2*i]), signs);
 	evalue_frac2polynomial_r(&e->x.p->arr[2*i+1], signs, sign, 0);
     }
 }

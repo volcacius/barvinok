@@ -108,6 +108,7 @@ void evalue_frac2floor2(evalue *e, int shift);
 int evalue_frac2floor_in_domain3(evalue *e, Polyhedron *D, int shift);
 void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays);
 evalue *esum(evalue *E, int nvar);
+evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays);
 void eor(evalue *e1, evalue *res);
 void evalue_denom(const evalue *e, Value *d);
 void evalue_div(evalue * e, Value n);

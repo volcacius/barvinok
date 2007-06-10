@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);
     else {
-	evalue *sum = esum(EP, nvar);
+	evalue *sum = evalue_sum(EP, nvar, bv_options->MaxRays);
 	print_evalue(stdout, sum, all_vars+nvar);
 	free_evalue_refs(sum);
 	free(sum);
