@@ -250,13 +250,20 @@ BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
 endif
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
-	check-lexmin check-approx
+	check-lexmin check-approx check-evalue
 check-testlib: testlib
 	./testlib
 check-approx: test_approx
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i | ./test_approx -q -r 10 ; \
+	    fi \
+	done
+check-evalue: barvinok_maximize barvinok_summate
+	@for i in $(top_srcdir)/tests/evalue/*; do \
+	    if test -f $$i; then \
+		./barvinok_maximize -T < $$i; \
+		./barvinok_summate -T < $$i; \
 	    fi \
 	done
 check-enumerate: barvinok_enumerate
