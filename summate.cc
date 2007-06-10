@@ -6,6 +6,7 @@
 #include "progname.h"
 #include "evalue_convert.h"
 #include "evalue_read.h"
+#include "verify.h"
 
 using std::cout;
 using std::cerr;
@@ -24,7 +25,7 @@ struct argp_option argp_options[] = {
 
 struct options {
     struct convert_options   convert;
-    struct barvinok_options  *barvinok;
+    struct verify_options    verify;
     char* var_list;
     int verbose;
 };
@@ -36,7 +37,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = &options->convert;
-	state->child_inputs[1] = &options->barvinok;
+	state->child_inputs[1] = &options->verify;
+	state->child_inputs[2] = options->verify.barvinok;
 	options->var_list = NULL;
 	options->verbose = 0;
 	break;
@@ -52,6 +54,195 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+static int check_poly_sum(const struct check_poly_data *data,
+			  int nparam, Value *z,
+			  const struct verify_options *options);
+
+struct check_poly_sum_data : public check_poly_data {
+    Polyhedron	    	**S;
+    evalue		 *EP;
+    evalue		 *sum;
+
+    check_poly_sum_data(Value *z, evalue *EP, evalue *sum) :
+	    		EP(EP), sum(sum) {
+	this->z = z;
+	this->check = check_poly_sum;
+    }
+};
+
+static void sum(Polyhedron *S, int pos, const check_poly_sum_data *data,
+		evalue *s, const struct verify_options *options)
+{
+    if (!S) {
+	evalue *e = evalue_eval(data->EP, data->z+1);
+	eadd(e, s);
+	free_evalue_refs(e);
+	free(e);
+    } else {
+	Value LB, UB;
+	int ok;
+	value_init(LB);
+	value_init(UB);
+	ok = !(lower_upper_bounds(1+pos, S, data->z, &LB, &UB));
+	assert(ok);
+	for (; value_le(LB, UB); value_increment(LB, LB)) {
+	    value_assign(data->z[1+pos], LB);
+	    sum(S->next, pos+1, data, s, options);
+	}
+	value_set_si(data->z[1+pos], 0);
+	value_clear(LB);
+	value_clear(UB);
+    }
+}
+
+static evalue *sum(const check_poly_sum_data *data,
+			  const struct verify_options *options)
+{
+    evalue *s = evalue_zero();
+    for (int i = 0; i < data->EP->x.p->size/2; ++i)
+	if (!emptyQ2(data->S[i]))
+	    sum(data->S[i], 0, data, s, options);
+    return s;
+}
+
+static int check_poly_sum(const struct check_poly_data *data,
+			  int nparam, Value *z,
+			  const struct verify_options *options)
+{
+    const check_poly_sum_data *sum_data;
+    sum_data = static_cast<const check_poly_sum_data *>(data);
+    evalue *e, *s;
+    int k;
+    int ok;
+
+    e = evalue_eval(sum_data->sum, z);
+    if (options->print_all) {
+	printf("sum(");
+	value_print(stdout, VALUE_FMT, z[0]);
+	for (k = 1; k < nparam; ++k) {
+	    printf(", ");
+	    value_print(stdout, VALUE_FMT, z[k]);
+	}
+	printf(") = ");
+	value_print(stdout, VALUE_FMT, e->x.n);
+	if (value_notone_p(e->d)) {
+	    printf("/");
+	    value_print(stdout, VALUE_FMT, e->d);
+	}
+    }
+
+    s = sum(sum_data, options);
+
+    if (options->print_all) {
+	printf(", sum(EP) = ");
+	value_print(stdout, VALUE_FMT, s->x.n);
+	if (value_notone_p(s->d)) {
+	    printf("/");
+	    value_print(stdout, VALUE_FMT, s->d);
+	}
+	printf(". ");
+    }
+
+    ok = eequal(e, s);
+
+    if (!ok) {
+	printf("\n"); 
+	fflush(stdout);
+	fprintf(stderr,"Error !\n");
+	fprintf(stderr,"sum( ");
+	value_print(stderr, VALUE_FMT, z[0]);
+	for (k = 1; k < nparam; ++k) {
+	    fprintf(stderr, ", ");
+	    value_print(stderr, VALUE_FMT, z[k]);
+	}
+	fprintf(stderr," ) should be ");
+	value_print(stderr, VALUE_FMT, s->x.n);
+	if (value_notone_p(s->d)) {
+	    fprintf(stderr, "/");
+	    value_print(stderr, VALUE_FMT, s->d);
+	}
+	fprintf(stderr,", while summation gives ");
+	value_print(stderr, VALUE_FMT, e->x.n);
+	if (value_notone_p(e->d)) {
+	    fprintf(stderr, "/");
+	    value_print(stderr, VALUE_FMT, e->d);
+	}
+	fprintf(stderr, ".\n");
+    } else if (options->print_all)
+	printf("OK.\n");
+
+    free_evalue_refs(s);
+    free(s);
+    free_evalue_refs(e);
+    free(e);
+
+    return ok;
+}
+
+static int verify(Polyhedron *P, evalue *sum, evalue *EP,
+		  unsigned nvar, unsigned nparam, Vector *p,
+		  struct verify_options *options)
+{
+    Polyhedron *CS;
+    unsigned MaxRays = options->barvinok->MaxRays;
+    int error = 0;
+
+    CS = check_poly_context_scan(NULL, &P, P->Dimension, options);
+
+    check_poly_init(P, options);
+
+    if (!(CS && emptyQ2(CS))) {
+	check_poly_sum_data data(p->p, EP, sum);
+	data.S = ALLOCN(Polyhedron *, EP->x.p->size/2);
+	for (int i = 0; i < EP->x.p->size/2; ++i) {
+	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	    data.S[i] = Polyhedron_Scan(A, P, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
+	}
+	error = !check_poly(CS, &data, nparam, 0, p->p+1+nvar, options);
+	for (int i = 0; i < EP->x.p->size/2; ++i)
+	    Domain_Free(data.S[i]);
+	free(data.S);
+    }
+
+    if (!options->print_all)
+	printf("\n");
+
+    if (CS) {
+	Domain_Free(CS);
+	Domain_Free(P);
+    }
+
+    return error;
+}
+
+static int verify(evalue *EP, evalue *sum, unsigned nvar, unsigned nparam,
+		  struct verify_options *options)
+{
+    Vector *p;
+
+    p = Vector_Alloc(nvar+nparam+2);
+    value_set_si(p->p[nvar+nparam+1], 1);
+
+    assert(value_zero_p(sum->d));
+    assert(sum->x.p->type == partition);
+    int error = 0;
+
+    for (int i = 0; i < sum->x.p->size/2; ++i) {
+	Polyhedron *D = EVALUE_DOMAIN(sum->x.p->arr[2*i]);
+	for (Polyhedron *P = D; P; P = P->next) {
+	    error = verify(P, sum, EP, nvar, nparam, p, options);
+	    if (error && !options->continue_on_error)
+		break;
+	}
+	if (error && !options->continue_on_error)
+	    break;
+    }
+
+    Vector_Free(p);
+
+    return error;
+}
+
 int main(int argc, char **argv)
 {
     evalue *EP;
@@ -62,13 +253,14 @@ int main(int argc, char **argv)
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
     static struct argp_child argp_children[] = {
 	{ &convert_argp,    	0,	"input conversion",	1 },
+	{ &verify_argp,    	0,	"verification",		2 },
 	{ &barvinok_argp,    	0,	"barvinok options",	3 },
 	{ 0 }
     };
     static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     int result = 0;
 
-    options.barvinok = bv_options;
+    options.verify.barvinok = bv_options;
     set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
@@ -76,13 +268,19 @@ int main(int argc, char **argv)
 			       &nvar, &nparam, bv_options->MaxRays);
     assert(EP);
 
+    if (options.verify.verify)
+	verify_options_set_range(&options.verify, nvar+nparam);
+
     evalue_convert(EP, &options.convert, options.verbose, nparam, all_vars);
 
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);
     else {
 	evalue *sum = evalue_sum(EP, nvar, bv_options->MaxRays);
-	print_evalue(stdout, sum, all_vars+nvar);
+	if (options.verify.verify)
+	    result = verify(EP, sum, nvar, nparam, &options.verify);
+	else
+	    print_evalue(stdout, sum, all_vars+nvar);
 	free_evalue_refs(sum);
 	free(sum);
     }
