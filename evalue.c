@@ -2823,20 +2823,8 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     assert(T);
 
     assert(p->type == fractional);
-    pp = &p->arr[0];
     value_set_si(T->p[1][dim], 1);
-    poly_denom(pp, d);
-    while (value_zero_p(pp->d)) {
-	assert(pp->x.p->type == polynomial);
-	assert(pp->x.p->size == 2);
-	assert(value_notzero_p(pp->x.p->arr[1].d));
-	value_division(T->p[0][pp->x.p->pos-1], *d, pp->x.p->arr[1].d);
-	value_multiply(T->p[0][pp->x.p->pos-1], 
-		       T->p[0][pp->x.p->pos-1], pp->x.p->arr[1].x.n);
-	pp = &pp->x.p->arr[0];
-    }
-    value_division(T->p[0][dim], *d, pp->d);
-    value_multiply(T->p[0][dim], T->p[0][dim], pp->x.n);
+    evalue_extract_affine(&p->arr[0], T->p[0], &T->p[0][dim], d);
     I = DomainImage(D, T, 0);
     H = DomainConvex(I, 0);
     Domain_Free(I);
