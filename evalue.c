@@ -1938,6 +1938,14 @@ void evalue_copy(evalue *dst, const evalue *src)
 	 dst->x.p = ecopy(src->x.p);
 }
 
+evalue *evalue_dup(evalue *e)
+{
+    evalue *res = ALLOC(evalue);
+    value_init(res->d);
+    evalue_copy(res, e);
+    return res;
+}
+
 enode *new_enode(enode_type type,int size,int pos) {
   
   enode *res;
@@ -2836,6 +2844,24 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     return H;
 }
 
+static void replace_by_affine(evalue *e, Value offset)
+{
+    enode *p;
+    evalue inc;
+
+    p = e->x.p;
+    value_init(inc.d);
+    value_init(inc.x.n);
+    value_set_si(inc.d, 1);
+    value_oppose(inc.x.n, offset);
+    eadd(&inc, &p->arr[0]);
+    reorder_terms_about(p, &p->arr[0]); /* frees arr[0] */
+    value_clear(e->d);
+    *e = p->arr[1];
+    free(p);
+    free_evalue_refs(&inc);
+}
+
 int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 {
     int i;
@@ -2955,17 +2981,7 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
     value_subtract(d, max, min);
 
     if (bounded && value_eq(min, max)) {
-	evalue inc;
-	value_init(inc.d);
-	value_init(inc.x.n);
-	value_set_si(inc.d, 1);
-	value_oppose(inc.x.n, min);
-	eadd(&inc, &p->arr[0]);
-	reorder_terms_about(p, &p->arr[0]); /* frees arr[0] */
-	value_clear(e->d);
-	*e = p->arr[1];
-	free(p);
-	free_evalue_refs(&inc);
+	replace_by_affine(e, min);
 	r = 1;
     } else if (bounded && value_one_p(d) && p->size > 3) {
 	/* replace {g}^2 by -(g-min)^2 + (2{g}+1)*(g-min) - {g}
@@ -3790,11 +3806,13 @@ void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays)
     }
 }
 
-static Matrix *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
+static evalue *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
 						int max_periods,
+						Matrix **TT,
 						Value *min, Value *max)
 {
     Matrix *T;
+    evalue *f;
     Value d;
     int i;
 
@@ -3816,26 +3834,46 @@ static Matrix *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
 	    mpz_fdiv_q(*max, *max, d);
 	    value_assign(T->p[1][D->Dimension], d);
 	    value_subtract(d, *max, *min);
-	    if (value_ge(d, mp)) {
+	    if (value_ge(d, mp))
 		Matrix_Free(T);
-		T = NULL;
-	    }
+	    else
+		f = evalue_dup(&e->x.p->arr[0]);
 	    value_clear(mp);
-	} else {
+	} else
 	    Matrix_Free(T);
-	    T = NULL;
-	}
 	value_clear(d);
-	if (T)
-	    return T;
+	if (f) {
+	    *TT = T;
+	    return f;
+	}
     }
 
     for (i = type_offset(e->x.p); i < e->x.p->size; ++i)
-	if ((T = find_fractional_with_max_periods(&e->x.p->arr[i], D, max_periods,
-						  min, max)))
-	    return T;
+	if ((f = find_fractional_with_max_periods(&e->x.p->arr[i], D, max_periods,
+						  TT, min, max)))
+	    return f;
 
     return NULL;
+}
+
+static void replace_fract_by_affine(evalue *e, evalue *f, Value val)
+{
+    int i, offset;
+
+    if (value_notzero_p(e->d))
+	return;
+
+    offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	replace_fract_by_affine(&e->x.p->arr[i], f, val);
+
+    if (e->x.p->type != fractional)
+	return;
+
+    if (!eequal(&e->x.p->arr[0], f))
+	return;
+
+    replace_by_affine(e, val);
 }
 
 /* Look for fractional parts that can be removed by splitting the corresponding
@@ -3866,13 +3904,14 @@ void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays)
 
     for (i = 0; i < e->x.p->size/2; ++i) {
 	enode *p;
-	Matrix *T = NULL;
+	evalue *f;
+	Matrix *T;
 	Matrix *M;
 	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
 	Polyhedron *E;
-	T = find_fractional_with_max_periods(&e->x.p->arr[2*i+1], D, max_periods,
-					     &min, &max);
-	if (!T)
+	f = find_fractional_with_max_periods(&e->x.p->arr[2*i+1], D, max_periods,
+					     &T, &min, &max);
+	if (!f)
 	    continue;
 
 	M = Matrix_Alloc(2, 2+D->Dimension);
@@ -3913,15 +3952,19 @@ void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays)
 		value_addto(M->p[0][1+D->Dimension], M->p[0][1+D->Dimension],
 			    T->p[1][D->Dimension]);
 	    }
+	    replace_fract_by_affine(&p->arr[2*(i+j)+1], f, max);
 	    E = DomainAddConstraints(D, M, MaxRays);
 	    EVALUE_SET_DOMAIN(p->arr[2*(i+j)], E);
 	    if (evalue_range_reduction_in_domain(&p->arr[2*(i+j)+1], E))
 		reduce_evalue(&p->arr[2*(i+j)+1]);
+	    value_decrement(max, max);
 	}
 	value_clear(e->x.p->arr[2*i].d);
 	Domain_Free(D);
 	Matrix_Free(M);
 	Matrix_Free(T);
+	free_evalue_refs(f);
+	free(f);
 	free(e->x.p);
 	e->x.p = p;
 	--i;
