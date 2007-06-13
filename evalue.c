@@ -3812,7 +3812,7 @@ static evalue *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
 						Value *min, Value *max)
 {
     Matrix *T;
-    evalue *f;
+    evalue *f = NULL;
     Value d;
     int i;
 
