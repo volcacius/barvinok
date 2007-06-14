@@ -1628,10 +1628,10 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    if (value_zero_p(res->d) && res->x.p->type == relation) {
 	if (value_zero_p(e1->d) && e1->x.p->type == relation &&
 	    eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
-		if (res->x.p->size < 3 && e1->x.p->size == 3)
-		    explicit_complement(res);
-		if (e1->x.p->size < 3 && res->x.p->size == 3)
-		    explicit_complement(e1);
+		if (e1->x.p->size < 3 && res->x.p->size == 3) {
+		    free_evalue_refs(&res->x.p->arr[2]);
+		    res->x.p->size = 2;
+		}
 		for (i = 1; i < res->x.p->size; ++i)
 		    emul(&e1->x.p->arr[i], &res->x.p->arr[i]);
 		return;
