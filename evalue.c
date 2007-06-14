@@ -1461,7 +1461,7 @@ void eadd(const evalue *e1, evalue *res)
      return ;
  }/* eadd  */ 
  
-static void emul_rev (evalue *e1, evalue *res)
+static void emul_rev(const evalue *e1, evalue *res)
 {
     evalue ev;
     value_init(ev.d);
@@ -1471,7 +1471,7 @@ static void emul_rev (evalue *e1, evalue *res)
     *res = ev;
 }
 
-static void emul_poly(evalue *e1, evalue *res)
+static void emul_poly(const evalue *e1, evalue *res)
 {
     int i, j, offset = type_offset(res->x.p);
     evalue tmp;
@@ -1527,7 +1527,7 @@ static void emul_poly(evalue *e1, evalue *res)
     *res = tmp;
 }
 
-void emul_partitions (evalue *e1,evalue *res)
+void emul_partitions(const evalue *e1, evalue *res)
 {
     int n, i, j, k;
     Polyhedron *d;
@@ -1602,7 +1602,8 @@ void emul_partitions (evalue *e1,evalue *res)
  * do a copy of "res" befor calling this function if you nead it after. The vector type of 
  * evalues is not treated here */
 
-void emul (evalue *e1, evalue *res ){
+void emul(const evalue *e1, evalue *res)
+{
     int i,j;
 
 if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x.p->type==evector))) {    
