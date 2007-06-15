@@ -414,7 +414,7 @@ static void reorder_terms(evalue *e)
 
     assert(value_zero_p(e->d));
     p = e->x.p;
-    assert(p->type = fractional);  /* for now */
+    assert(p->type == fractional);  /* for now */
 
     value_init(f.d);
     value_set_si(f.d, 0);
