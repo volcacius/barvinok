@@ -2107,9 +2107,9 @@ static evalue* enumerate_sum(Polyhedron *P,
     reduce_evalue(EP);
     evalue_range_reduction(EP);
 
-    evalue_frac2floor2(EP, 1);
+    evalue_frac2floor(EP);
 
-    evalue *sum = esum(EP, nvar);
+    evalue *sum = evalue_sum(EP, nvar, options->MaxRays);
 
     free_evalue_refs(EP); 
     free(EP);

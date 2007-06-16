@@ -423,7 +423,7 @@ int evalue_convert(evalue *EP, struct convert_options *options,
     }
     if (options->floor) {
 	fprintf(stderr, "WARNING: floor conversion not supported\n");
-	evalue_frac2floor2(EP, 0);
+	evalue_frac2floor(EP);
 	if (params)
 	    print_evalue(stdout, EP, params);
     } else if (options->list && params) {

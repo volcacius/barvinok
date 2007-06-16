@@ -2831,7 +2831,7 @@ static Polyhedron *polynomial_projection(enode *p, Polyhedron *D, Value *d,
     Matrix *T = Matrix_Alloc(2, dim+1);
     assert(T);
 
-    assert(p->type == fractional);
+    assert(p->type == fractional || p->type == flooring);
     value_set_si(T->p[1][dim], 1);
     evalue_extract_affine(&p->arr[0], T->p[0], &T->p[0][dim], d);
     I = DomainImage(D, T, 0);
@@ -3229,8 +3229,12 @@ void evalue_frac2floor(evalue *e)
     evalue_frac2floor2(e, 1);
 }
 
+/* Add a new variable with lower bound 1 and upper bound specified
+ * by row.  If negative is true, then the new variable has upper
+ * bound -1 and lower bound specified by row.
+ */
 static Matrix *esum_add_constraint(int nvar, Polyhedron *D, Matrix *C,
-				   Vector *row)
+				   Vector *row, int negative)
 {
     int nr, nc;
     int i;
@@ -3257,7 +3261,10 @@ static Matrix *esum_add_constraint(int nvar, Polyhedron *D, Matrix *C,
 	}
     }
     value_set_si(C->p[nr-2][0], 1);
-    value_set_si(C->p[nr-2][1 + nvar], 1);
+    if (negative)
+	value_set_si(C->p[nr-2][1 + nvar], -1);
+    else
+	value_set_si(C->p[nr-2][1 + nvar], 1);
     value_set_si(C->p[nr-2][nc - 1], -1);
 
     Vector_Copy(row->p, C->p[nr-1], 1 + nvar + 1);
@@ -3343,7 +3350,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     Matrix *origC;
     evalue *factor = NULL;
     evalue cum;
-    int negate_odd = 0;
+    int negative = 0;
 
     if (EVALUE_IS_ZERO(*e))
 	return 0;
@@ -3450,10 +3457,15 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	}
 
 	row = Vector_Alloc(1 + D->Dimension + 1 + 1);
-	negate_odd = signs[pos-1] < 0;
+	negative = signs[pos-1] < 0;
 	value_set_si(row->p[0], 1);
-	value_set_si(row->p[pos], 1);
-	value_set_si(row->p[1 + nvar], -1);
+	if (negative) {
+	    value_set_si(row->p[pos], -1);
+	    value_set_si(row->p[1 + nvar], 1);
+	} else {
+	    value_set_si(row->p[pos], 1);
+	    value_set_si(row->p[1 + nvar], -1);
+	}
 	break;
     }
     default:
@@ -3474,7 +3486,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	evalue *t;
 	if (row) {
 	    Matrix *prevC = C;
-	    C = esum_add_constraint(nvar, D, C, row);
+	    C = esum_add_constraint(nvar, D, C, row, negative);
 	    if (prevC != origC)
 		Matrix_Free(prevC);
 	}
@@ -3489,7 +3501,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	if (t) {
 	    if (factor)
 		emul(&cum, t);
-	    if (negate_odd && (i % 2))
+	    if (negative && (i % 2))
 		evalue_negate(t);
 	}
 
@@ -3535,6 +3547,80 @@ static void domain_signs(Polyhedron *D, int *signs)
     }
 }
 
+static void shift_floor_in_domain(evalue *e, Polyhedron *D)
+{
+    Value d, m;
+    Polyhedron *I;
+    int i;
+    enode *p;
+
+    if (value_notzero_p(e->d))
+	return;
+
+    p = e->x.p;
+
+    for (i = type_offset(p); i < p->size; ++i)
+	shift_floor_in_domain(&p->arr[i], D);
+
+    if (p->type != flooring)
+	return;
+
+    value_init(d);
+    value_init(m);
+
+    I = polynomial_projection(p, D, &d, NULL);
+    assert(I->NbEq == 0); /* Should have been reduced */
+
+    for (i = 0; i < I->NbConstraints; ++i)
+	if (value_pos_p(I->Constraint[i][1]))
+	    break;
+    assert(i < I->NbConstraints);
+    if (i < I->NbConstraints) {
+	value_oppose(I->Constraint[i][2], I->Constraint[i][2]);
+	mpz_fdiv_q(m, I->Constraint[i][2], I->Constraint[i][1]);
+	if (value_neg_p(m)) {
+	    /* replace [e] by [e-m]+m such that e-m >= 0 */
+	    evalue f;
+
+	    value_init(f.d);
+	    value_init(f.x.n);
+	    value_set_si(f.d, 1);
+	    value_oppose(f.x.n, m);
+	    eadd(&f, &p->arr[0]);
+	    value_clear(f.x.n);
+
+	    value_set_si(f.d, 0);
+	    f.x.p = new_enode(flooring, 3, -1);
+	    value_clear(f.x.p->arr[0].d);
+	    f.x.p->arr[0] = p->arr[0];
+	    evalue_set_si(&f.x.p->arr[2], 1, 1);
+	    value_set_si(f.x.p->arr[1].d, 1);
+	    value_init(f.x.p->arr[1].x.n);
+	    value_assign(f.x.p->arr[1].x.n, m);
+	    reorder_terms_about(p, &f);
+	    value_clear(e->d);
+	    *e = p->arr[1];
+	    free(p);
+	}
+    }
+    Polyhedron_Free(I);
+    value_clear(d);
+    value_clear(m);
+}
+
+/* Make arguments of all floors non-negative */
+static void shift_floor_arguments(evalue *e)
+{
+    int i;
+
+    if (value_notzero_p(e->d) || e->x.p->type != partition)
+	return;
+
+    for (i = 0; i < e->x.p->size/2; ++i)
+	shift_floor_in_domain(&e->x.p->arr[2*i+1],
+				EVALUE_DOMAIN(e->x.p->arr[2*i]));
+}
+
 evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
 {
     int i, dim;
@@ -3548,11 +3634,13 @@ evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
 	return res;
     }
 
+    evalue_split_domains_into_orthants(e, MaxRays);
+    evalue_frac2floor2(e, 0);
     evalue_set_si(res, 0, 1);
 
     assert(value_zero_p(e->d));
     assert(e->x.p->type == partition);
-    evalue_split_domains_into_orthants(e, MaxRays);
+    shift_floor_arguments(e);
 
     assert(e->x.p->size >= 2);
     dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
@@ -3805,6 +3893,7 @@ void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays)
 	free_evalue_refs(&split);
 	Matrix_Free(C);
     }
+    reduce_evalue(e);
 }
 
 static evalue *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
