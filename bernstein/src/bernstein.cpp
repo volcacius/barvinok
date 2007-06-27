@@ -399,7 +399,7 @@ static unsigned int findMaxDegree(ex polynomial, const exvector& Vars, int pos)
 
 unsigned int findMaxDegree(ex polynomial, const exvector& Vars)
 {
-    return findMaxDegree(polynomial, Vars, 0);
+	return findMaxDegree(polynomial.expand(), Vars, 0);
 }
 
 }
