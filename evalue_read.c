@@ -485,6 +485,24 @@ out:
     return e;
 }
 
+/* frees product on error */
+static evalue *read_factor_and_multiply(struct stream *s, struct parameter **p,
+					evalue *product)
+{
+    evalue *e2;
+    e2 = evalue_read_factor(s, p);
+    if (!e2) {
+	stream_error(s, NULL, "unexpected EOF");
+	free_evalue_refs(product);
+	free(product);
+	return NULL;
+    }
+    emul(e2, product);
+    free_evalue_refs(e2);
+    free(e2);
+    return product;
+}
+
 static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 {
     struct token *tok;
@@ -523,6 +541,9 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 	    }
 	    value_assign(e->d, tok->u.v);
 	    token_free(tok);
+	} else if (tok && tok->type == TOKEN_IDENT) {
+	    stream_push_token(s, tok);
+	    e = read_factor_and_multiply(s, p, e);
 	} else if (tok)
 	    stream_push_token(s, tok);
     } else if (tok->type == TOKEN_IDENT) {
@@ -545,16 +566,8 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 
     tok = stream_next_token(s);
     if (tok && tok->type == '*') {
-	evalue *e2;
 	token_free(tok);
-	e2 = evalue_read_factor(s, p);
-	if (!e2) {
-	    stream_error(s, NULL, "unexpected EOF");
-	    return NULL;
-	}
-	emul(e2, e);
-	free_evalue_refs(e2);
-	free(e2);
+	e = read_factor_and_multiply(s, p, e);
     } else if (tok)
 	stream_push_token(s, tok);
 
@@ -574,9 +587,12 @@ static evalue *evalue_read_term(struct stream *s, struct parameter **p)
     if (!tok)
 	return e;
 
-    if (tok->type == '+') {
+    if (tok->type == '+' || tok->type == TOKEN_VALUE) {
 	evalue *e2;
-	token_free(tok);
+	if (tok->type == '+')
+	    token_free(tok);
+	else
+	    stream_push_token(s, tok);
 	e2 = evalue_read_term(s, p);
 	if (!e2) {
 	    stream_error(s, NULL, "unexpected EOF");
