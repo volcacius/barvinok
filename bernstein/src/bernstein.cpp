@@ -175,7 +175,7 @@ lst bernsteinExpansion(const matrix& vert, const ex& poly, const exvector& vars,
 	ex polynom = replaceVariablesInPolynomial(poly, vars, substitutions);
 
 #ifdef DEBUG
-	cout << variables << endl << endl;
+	cout << substitutions << endl << endl;
 	cout << "Preliminar Expansion: " << polynom << endl << endl;
 #endif
 
