@@ -262,7 +262,7 @@ struct parameter {
     struct parameter	*next;
 };
 
-struct parameter *parameter_new(char *name, int pos, struct parameter *next)
+struct parameter *parameter_new(const char *name, int pos, struct parameter *next)
 {
     struct parameter *p = ALLOC(struct parameter);
     p->name = strdup(name);
