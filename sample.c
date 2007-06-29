@@ -28,6 +28,7 @@ static Polyhedron *remove_ray(Polyhedron *P, unsigned MaxRays)
     Polyhedron *R;
     int rays;
 
+    POL_ENSURE_VERTICES(P);
     if (P->NbBid == 0)
 	for (; r < P->NbRays; ++r)
 	    if (value_zero_p(P->Ray[r][P->Dimension+1]))
@@ -251,8 +252,7 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
     int ok;
     enum lp_result res;
 
-    POL_ENSURE_VERTICES(P);
-    if (emptyQ(P))
+    if (emptyQ2(P))
 	return NULL;
 
     if (P->Dimension == 0) {
@@ -268,27 +268,41 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	    return sample;
 	}
 
-    Q = remove_ray(P, options->MaxRays);
-    if (Q) {
-	sample = Polyhedron_Sample(Q, options);
-	Polyhedron_Free(Q);
-	return sample;
-    }
-
     value_init(min);
     value_init(max);
 
     obj = Vector_Alloc(P->Dimension+1);
     value_set_si(obj->p[0], 1);
     res = polyhedron_range(P, obj->p, obj->p[0], &min, &max, options);
+    if (res == lp_unbounded) {
+unbounded:
+	value_clear(min);
+	value_clear(max);
+	Vector_Free(obj);
+
+	Q = remove_ray(P, options->MaxRays);
+	assert(Q);
+	sample = Polyhedron_Sample(Q, options);
+	Polyhedron_Free(Q);
+	return sample;
+    }
+    if (res == lp_empty) {
+	value_clear(min);
+	value_clear(max);
+	Vector_Free(obj);
+	return NULL;
+    }
     assert(res == lp_ok);
 
     if (value_eq(min, max)) {
 	Q = P;
     } else {
+	Matrix *M, *T;
 	Matrix *basis = Polyhedron_Reduced_Basis(P, options);
-	Matrix *M;
-	Matrix *T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
+
+	if (!basis)
+	    goto unbounded;
+	T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
 	inv = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
 	for (i = 0; i < P->Dimension; ++i)
 	    for (j = 0; j < P->Dimension; ++j)

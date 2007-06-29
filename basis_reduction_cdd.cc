@@ -13,7 +13,7 @@ struct CDD_LP {
 
     CDD_LP(Polyhedron *P);
     void set_obj(Value *row, int dim);
-    void solve();
+    int solve();
     void get_obj_val(mytype *F);
     int add_row(Value *row, int dim);
     void get_alpha(int row, mytype *alpha);
@@ -63,7 +63,7 @@ void CDD_LP::set_obj(Value *row, int dim)
     obj = row;
 }
 
-void CDD_LP::solve()
+int CDD_LP::solve()
 {
     if (lp)
 	dd_FreeLPData(lp);
@@ -112,6 +112,8 @@ void CDD_LP::solve()
     dd_ErrorType err = dd_NoError;
     dd_LPSolve(lp, dd_DualSimplex, &err);
     assert(err == dd_NoError);
+
+    return lp->LPS == dd_DualInconsistent;
 }
 
 void CDD_LP::get_obj_val(mytype *F)

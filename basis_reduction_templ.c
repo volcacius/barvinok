@@ -66,7 +66,8 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
     i = 0;
 
     GBR_lp_set_obj(lp, basis->p[0], dim);
-    GBR_lp_solve(lp);
+    if (GBR_lp_solve(lp))
+	goto unbounded;
     GBR_lp_get_obj_val(lp, &F[0]);
 
     do {
@@ -77,7 +78,8 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
 	} else {
 	    row = GBR_lp_add_row(lp, basis->p[i], dim);
 	    GBR_lp_set_obj(lp, basis->p[i+1], dim);
-	    GBR_lp_solve(lp);
+	    if (GBR_lp_solve(lp))
+		goto unbounded;
 	    GBR_lp_get_obj_val(lp, &F_new);
 
 	    GBR_lp_get_alpha(lp, row, &alpha);
@@ -101,7 +103,8 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
 		value_assign(tmp, mu[j]);
 		Vector_Combine(basis->p[i+1], basis->p[i], b_tmp->p, one, tmp, dim);
 		GBR_lp_set_obj(lp, b_tmp->p, dim);
-		GBR_lp_solve(lp);
+		if (GBR_lp_solve(lp))
+		    goto unbounded;
 		GBR_lp_get_obj_val(lp, &mu_F[j]);
 		if (i > 0)
 		    save_alpha(lp, row-i, i, alpha_buffer[j]);
@@ -141,6 +144,11 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
 	}
     } while (i < dim-1);
 
+    if (0) {
+unbounded:
+	Matrix_Free(basis);
+	basis = NULL;
+    }
     Vector_Free(b_tmp);
 
     value_clear(one);

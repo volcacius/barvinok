@@ -4,7 +4,7 @@
 
 static LPX *init_lp(Polyhedron *P);
 static void set_lp_obj(LPX *lp, Value *row, int dim);
-static void solve_lp(LPX *lp);
+static int solve_lp(LPX *lp);
 static void get_obj_val(LPX* lp, double *F);
 static int add_lp_row(LPX *lp, Value *row, int dim);
 static void get_alpha(LPX* lp, int row, double *alpha);
@@ -78,10 +78,11 @@ static void set_lp_obj(LPX *lp, Value *row, int dim)
     }
 }
 
-static void solve_lp(LPX *lp)
+static int solve_lp(LPX *lp)
 {
     lpx_adv_basis(lp);
     lpx_simplex(lp);
+    return lpx_get_status(lp) == LPX_UNBND;
 }
 
 static void get_obj_val(LPX* lp, double *F)
