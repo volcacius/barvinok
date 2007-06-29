@@ -1,3 +1,5 @@
+#include <math.h>
+
 #define DD_LPType		ddf_LPType
 #define DD_CreateLPData		ddf_CreateLPData
 #define DD_LPObjectiveType	ddf_LPObjectiveType 
@@ -27,6 +29,8 @@
 					} while (0)
 
 #define DD_set_z(a,b)	    	a[0] = VALUE_TO_DOUBLE(b)
+#define DD_floor(a,b)		value_set_si(a,(int)floor(b[0]+ddf_almostzero))
+#define DD_ceil(a,b)		value_set_si(a,(int)ceil(b[0]-ddf_almostzero))
 
 #define	cdd_polyhedron_affine_sign  cddf_polyhedron_affine_sign
 #define DD_rat_sign(sign,obj,val)  do {				    		\
@@ -36,5 +40,6 @@
 					    val[0] += ddf_almostzero;		\
 					sign = ddf_sgn(val);			\
 				    } while (0)
+#define	cdd_polyhedron_range  	    cddf_polyhedron_range
 
 #include "polysign_cdd_template.cc"

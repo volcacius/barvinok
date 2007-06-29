@@ -2,6 +2,7 @@
 #include <barvinok/basis_reduction.h>
 #include <barvinok/sample.h>
 #include <barvinok/options.h>
+#include "polysign.h"
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -242,12 +243,13 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
 Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 {
     int i, j;
-    Vector *sample = NULL;
+    Vector *sample = NULL, *obj = NULL;
     Polyhedron *Q;
-    Matrix *T, *inv, *M;
+    Matrix *inv = NULL;
     Value min, max, tmp;
     Vector *v;
     int ok;
+    enum lp_result res;
 
     POL_ENSURE_VERTICES(P);
     if (emptyQ(P))
@@ -273,40 +275,40 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	return sample;
     }
 
-    Matrix *basis = Polyhedron_Reduced_Basis(P, options);
-
-    T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
-    inv = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
-    for (i = 0; i < P->Dimension; ++i)
-	for (j = 0; j < P->Dimension; ++j)
-	    value_assign(T->p[i][j], basis->p[i][j]);
-    value_set_si(T->p[P->Dimension][P->Dimension], 1);
-    Matrix_Free(basis);
-
-    M = Matrix_Copy(T);
-    ok = Matrix_Inverse(M, inv);
-    assert(ok);
-    Matrix_Free(M);
-
-    Q = Polyhedron_Image(P, T, options->MaxRays);
-
-    POL_ENSURE_VERTICES(Q);
-
     value_init(min);
     value_init(max);
-    value_init(tmp);
 
-    mpz_cdiv_q(min, Q->Ray[0][1], Q->Ray[0][1+Q->Dimension]);
-    mpz_fdiv_q(max, Q->Ray[0][1], Q->Ray[0][1+Q->Dimension]);
+    obj = Vector_Alloc(P->Dimension+1);
+    value_set_si(obj->p[0], 1);
+    res = polyhedron_range(P, obj->p, obj->p[0], &min, &max, options);
+    assert(res == lp_ok);
 
-    for (j = 1; j < Q->NbRays; ++j) {
-	mpz_cdiv_q(tmp, Q->Ray[j][1], Q->Ray[j][1+Q->Dimension]);
-	if (value_lt(tmp, min))
-	    value_assign(min, tmp);
-	mpz_fdiv_q(tmp, Q->Ray[j][1], Q->Ray[j][1+Q->Dimension]);
-	if (value_gt(tmp, max))
-	    value_assign(max, tmp);
+    if (value_eq(min, max)) {
+	Q = P;
+    } else {
+	Matrix *basis = Polyhedron_Reduced_Basis(P, options);
+	Matrix *M;
+	Matrix *T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
+	inv = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
+	for (i = 0; i < P->Dimension; ++i)
+	    for (j = 0; j < P->Dimension; ++j)
+		value_assign(T->p[i][j], basis->p[i][j]);
+	value_set_si(T->p[P->Dimension][P->Dimension], 1);
+	Matrix_Free(basis);
+
+	M = Matrix_Copy(T);
+	ok = Matrix_Inverse(M, inv);
+	assert(ok);
+	Matrix_Free(M);
+
+	Q = Polyhedron_Image(P, T, options->MaxRays);
+	res = polyhedron_range(Q, obj->p, obj->p[0], &min, &max, options);
+	assert(res == lp_ok);
+
+	Matrix_Free(T);
     }
+
+    value_init(tmp);
 
     v = Vector_Alloc(1+Q->Dimension+1);
     value_set_si(v->p[1], -1);
@@ -329,21 +331,29 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	S_sample = Polyhedron_Sample(S, options);
 	Polyhedron_Free(S);
 	if (S_sample) {
-	    Vector *Q_sample = Vector_Alloc(Q->Dimension + 1);
+	    Vector *Q_sample = obj;
+	    obj = NULL;
 	    Matrix_Vector_Product(T, S_sample->p, Q_sample->p);
 	    Matrix_Free(T);
 	    Vector_Free(S_sample);
-	    sample = Vector_Alloc(P->Dimension + 1);
-	    Matrix_Vector_Product(inv, Q_sample->p, sample->p);
-	    Vector_Free(Q_sample);
+	    if (!inv)
+		sample = Q_sample;
+	    else {
+		sample = Vector_Alloc(P->Dimension + 1);
+		Matrix_Vector_Product(inv, Q_sample->p, sample->p);
+		Vector_Free(Q_sample);
+	    }
 	    break;
 	}
 	Matrix_Free(T);
     }
 
-    Matrix_Free(T);
-    Matrix_Free(inv);
-    Polyhedron_Free(Q);
+    if (obj)
+	Vector_Free(obj);
+    if (inv)
+	Matrix_Free(inv);
+    if (P != Q)
+	Polyhedron_Free(Q);
     Vector_Free(v);
 
     value_clear(min);

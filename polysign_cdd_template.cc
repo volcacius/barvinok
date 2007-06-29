@@ -8,12 +8,10 @@
 
 #define EMPTY_DOMAIN	-2
 
-static int polyhedron_affine_minmax(DD_LPObjectiveType obj, Polyhedron *P,
-				    Matrix *T, bool rational)
+static DD_LPType *solve_lp(DD_LPObjectiveType obj, Polyhedron *P,
+			   Value *f)
 {
-    DD_LPType  *lp;
-    assert(P->Dimension == T->NbColumns-1);
-    assert(T->NbRows == 2);
+    DD_LPType *lp;
     DD_rowrange irev = P->NbConstraints;
     DD_rowrange rows = irev + P->NbEq + 1;
     DD_colrange cols = 1 + P->Dimension;
@@ -37,12 +35,49 @@ static int polyhedron_affine_minmax(DD_LPObjectiveType obj, Polyhedron *P,
     }
     /* objective function */
     for (DD_colrange k = 0; k < P->Dimension; ++k)
-	DD_set_z(lp->A[rows-1][1+k], T->p[0][k]);
-    DD_set_z(lp->A[rows-1][0], T->p[0][P->Dimension]); 
+	DD_set_z(lp->A[rows-1][1+k], f[k]);
+    DD_set_z(lp->A[rows-1][0], f[P->Dimension]); 
 
     DD_ErrorType err = DD_NoError;
     DD_LPSolve(lp, DD_DualSimplex, &err);
     assert(err == DD_NoError);
+
+    return lp;
+}
+
+static lp_result polyhedron_affine_minmax(DD_LPObjectiveType obj, Polyhedron *P,
+					  Value *f, Value denom, Value *opt)
+{
+    lp_result res = lp_ok;
+    DD_LPType *lp = solve_lp(obj, P, f);
+    assert(value_one_p(denom));
+
+    switch(lp->LPS) {
+    case DD_Optimal:
+	if (obj == DD_LPmin)
+	    DD_ceil(*opt, lp->optvalue);
+	else
+	    DD_floor(*opt, lp->optvalue);
+	break;
+    case DD_DualInconsistent:
+	res = lp_unbounded;
+	break;
+    case DD_Inconsistent:
+	res = lp_empty;
+	break;
+    default:
+	assert(0);
+    }
+    DD_FreeLPData(lp);
+    return res;
+}
+
+static int polyhedron_affine_minmax_sign(DD_LPObjectiveType obj, Polyhedron *P,
+					 Matrix *T, bool rational)
+{
+    assert(P->Dimension == T->NbColumns-1);
+    assert(T->NbRows == 2);
+    DD_LPType *lp = solve_lp(obj, P, T->p[0]);
 
     int sign;
     if (lp->LPS == DD_Optimal) {
@@ -75,12 +110,12 @@ enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 
     INIT_CDD;
     bool rational = !POL_ISSET(options->MaxRays, POL_INTEGER);
-    int min = polyhedron_affine_minmax(DD_LPmin, D, T, rational);
+    int min = polyhedron_affine_minmax_sign(DD_LPmin, D, T, rational);
     if (min == EMPTY_DOMAIN)
 	return order_undefined;
     if (min > 0)
 	return order_gt;
-    int max = polyhedron_affine_minmax(DD_LPmax, D, T, rational);
+    int max = polyhedron_affine_minmax_sign(DD_LPmax, D, T, rational);
     assert(max != EMPTY_DOMAIN);
     if (max < 0)
 	return order_lt;
@@ -91,4 +126,21 @@ enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
     if (min == 0)
 	return order_ge;
     return order_unknown;
+}
+
+enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options)
+{
+    lp_result res;
+
+    if (emptyQ2(D))
+	return lp_empty;
+
+    INIT_CDD;
+    res = polyhedron_affine_minmax(DD_LPmin, D, obj, denom, min);
+    if (res != lp_ok)
+	return res;
+    res = polyhedron_affine_minmax(DD_LPmax, D, obj, denom, max);
+    return res;
 }

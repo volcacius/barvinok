@@ -38,5 +38,7 @@
 #define DD_rat_sign(sign,obj,val)   sign = dd_sgn(val)
 
 #define DD_set_z(a,b)	    	mpq_set_z(a,b)
+#define DD_floor(a,b)		mpz_fdiv_q(a,mpq_numref(b),mpq_denref(b))
+#define DD_ceil(a,b)		mpz_cdiv_q(a,mpq_numref(b),mpq_denref(b))
 
 #include "polysign_cdd_template.cc"

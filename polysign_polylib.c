@@ -50,3 +50,31 @@ enum order_sign PL_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
     Polyhedron_Free(I);
     return sign;
 }
+
+enum lp_result PL_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options)
+{
+    Polyhedron *I;
+    int bounded;
+
+    Matrix *T = Matrix_Alloc(2, D->Dimension+1);
+    Vector_Copy(obj, T->p[0], D->Dimension+1);
+    value_assign(T->p[1][D->Dimension], denom);
+
+    I = Polyhedron_Image(D, T, options->MaxRays);
+    Matrix_Free(T);
+    POL_ENSURE_VERTICES(I);
+
+    if (emptyQ(I)) {
+	Polyhedron_Free(I);
+	return lp_empty;
+    }
+    bounded = line_minmax(I, min, max);
+
+    if (!bounded)
+	return lp_unbounded;
+    if (value_gt(*min, *max))
+	return lp_empty;
+    return lp_ok;
+}

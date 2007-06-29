@@ -46,6 +46,9 @@ endif
 if HAVE_GLPK
     BR_GLPK = basis_reduction_glpk.c
 endif
+if HAVE_CDDLIB
+    POLYSIGN = polysign_cddf.cc polysign_cdd.cc
+endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
@@ -76,6 +79,10 @@ libbarvinok_la_SOURCES = \
     options.c \
     param_util.c \
     param_util.h \
+    $(POLYSIGN) \
+    polysign.c \
+    polysign_polylib.c \
+    polysign.h \
     reduce_domain.c \
     reduce_domain.h \
     reducer.cc \
@@ -99,6 +106,9 @@ EXTRA_libbarvinok_la_SOURCES = \
     basis_reduction_glpk.c \
     bernstein.cc \
     piputil.h \
+    polysign_cddf.cc \
+    polysign_cdd.cc \
+    polysign.c \
     initcdd.cc \
     initcdd.h
 if HAVE_GINAC
@@ -169,9 +179,6 @@ barvinok_summate_SOURCES = \
 	verify.c
 EXTRA_barvinok_summate_SOURCES = fdstream.cc fdstream.h
 4coins_SOURCES = 4coins.cc
-if HAVE_CDDLIB
-POLYSIGN = polysign_cddf.cc polysign_cdd.cc
-endif
 lexmin_SOURCES = \
 	lexmin.h \
 	lexmin.cc \
@@ -181,13 +188,8 @@ lexmin_SOURCES = \
 	edomain.h \
 	evalue_util.cc \
 	evalue_util.h \
-	$(POLYSIGN) \
-	polysign.c \
-	polysign_polylib.c \
-	polysign.h \
 	verify.h \
 	verify.c
-EXTRA_lexmin_SOURCES = polysign_cddf.cc polysign_cdd.cc polysign.c
 test_approx_SOURCES = \
 	test_approx.c \
 	verify.h \
