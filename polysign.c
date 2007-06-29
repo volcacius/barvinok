@@ -18,14 +18,14 @@ enum order_sign cddf_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 #endif
 
 enum order_sign polyhedron_affine_sign(Polyhedron *D, Matrix *T,
-					    struct lexmin_options *options)
+					    struct barvinok_options *options)
 {
-    if (options->polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
-	return PL_polyhedron_affine_sign(D, T, options->verify.barvinok);
-    else if (options->polysign == BV_LEXMIN_POLYSIGN_CDD)
-	return cdd_polyhedron_affine_sign(D, T, options->verify.barvinok);
-    else if (options->polysign == BV_LEXMIN_POLYSIGN_CDDF)
-	return cddf_polyhedron_affine_sign(D, T, options->verify.barvinok);
+    if (options->lp_solver == BV_LP_POLYLIB)
+	return PL_polyhedron_affine_sign(D, T, options);
+    else if (options->lp_solver == BV_LP_CDD)
+	return cdd_polyhedron_affine_sign(D, T, options);
+    else if (options->lp_solver == BV_LP_CDDF)
+	return cddf_polyhedron_affine_sign(D, T, options);
     else
 	assert(0);
 }

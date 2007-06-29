@@ -85,6 +85,12 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->gbr_lp_solver = BV_GBR_NONE;
 #endif
 
+#ifdef HAVE_LIBCDDGMP
+    options->lp_solver = BV_LP_CDD;
+#else
+    options->lp_solver = BV_LP_POLYLIB;
+#endif
+
     options->bernstein_optimize = BV_BERNSTEIN_NONE;
 
     options->bernstein_recurse = BV_BERNSTEIN_FACTORS;
@@ -141,7 +147,7 @@ static struct argp_option barvinok_argp_options[] = {
 #elif defined(HAVE_LIBCDDGMP)
 	"cdd",
 #endif
-	0,	"solver to use for basis reduction "
+	0,	"lp solver to use for basis reduction "
 #ifdef HAVE_LIBGLPK
 		"[default: glpk]"
 #elif defined HAVE_LIBCDDGMP
@@ -149,6 +155,19 @@ static struct argp_option barvinok_argp_options[] = {
 #endif
 	},
 #endif
+    { "lp",		    BV_OPT_LP,
+#if defined(HAVE_LIBCDDGMP)
+	"cdd|cddf|polylib",
+#else
+	"polylib",
+#endif
+	0,	"lp solver to use "
+#if defined(HAVE_LIBCDDGMP)
+	"[default: cdd]",
+#else
+	"[default: polylib]",
+#endif
+	},
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
     { "recurse",	    BV_OPT_RECURSE,    	    "",
@@ -269,6 +288,14 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->gbr_lp_solver = BV_GBR_CDD;
 	if (!strcmp(arg, "glpk"))
 	    options->gbr_lp_solver = BV_GBR_GLPK;
+	break;
+    case BV_OPT_LP:
+	if (!strcmp(arg, "cdd"))
+	    options->lp_solver = BV_LP_CDD;
+	if (!strcmp(arg, "cddf"))
+	    options->lp_solver = BV_LP_CDDF;
+	if (!strcmp(arg, "polylib"))
+	    options->lp_solver = BV_LP_POLYLIB;
 	break;
     case BV_OPT_MAXINDEX:
 	options->max_index = strtoul(arg, NULL, 0);

@@ -76,6 +76,11 @@ struct barvinok_options {
     #define	BV_BERNSTEIN_FACTORS	1
     #define	BV_BERNSTEIN_INTERVALS	2
     int		bernstein_recurse;
+
+    #define	BV_LP_POLYLIB		0
+    #define	BV_LP_CDD		1
+    #define	BV_LP_CDDF		2
+    int		lp_solver;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -91,7 +96,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_SCALE		263
 #define BV_OPT_VOL		264
 #define BV_OPT_RECURSE		265
-#define BV_OPT_LAST		265
+#define BV_OPT_LP		266
+#define BV_OPT_LAST		266
 
 #define BV_GRP_APPROX		1
 #define BV_GRP_LAST		1

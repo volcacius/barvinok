@@ -39,12 +39,10 @@ using std::ostream;
 
 #define EMPTINESS_CHECK     	(BV_OPT_LAST+1)
 #define NO_REDUCTION  	    	(BV_OPT_LAST+2)
-#define POLYSIGN  	    	(BV_OPT_LAST+3)
 
 struct argp_option argp_options[] = {
     { "emptiness-check",    EMPTINESS_CHECK,	"[none|count]",	    0 },
     { "no-reduction",	    NO_REDUCTION,	0,		    0 },
-    { "polysign",	    POLYSIGN,		"[cdd|cddf]",	    0 },
     { 0 }
 };
 
@@ -59,7 +57,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[1] = &options->verify;
 	options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_SAMPLE;
 	options->reduce = 1;
-	options->polysign = BV_LEXMIN_POLYSIGN_POLYLIB;
 	break;
     case EMPTINESS_CHECK:
 	if (!strcmp(arg, "none"))
@@ -71,12 +68,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case NO_REDUCTION:
 	options->reduce = 0;
-	break;
-    case POLYSIGN:
-	if (!strcmp(arg, "cddf"))
-	    options->polysign = BV_LEXMIN_POLYSIGN_CDDF;
-	else if (!strcmp(arg, "cdd"))
-	    options->polysign = BV_LEXMIN_POLYSIGN_CDD;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -1321,7 +1312,7 @@ max_term* indicator::create_max_term(const indicator_term *it)
     return maximum;
 }
 
-static order_sign evalue_sign(evalue *diff, EDomain *D, lexmin_options *options)
+static order_sign evalue_sign(evalue *diff, EDomain *D, barvinok_options *options)
 {
     order_sign sign = order_eq;
     evalue mone;
@@ -1508,7 +1499,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	else if (eequal(a->vertex[k], b->vertex[k]))
 	    diff_sign = order_eq;
 	else
-	    diff_sign = evalue_sign(diff, D, ind->options);
+	    diff_sign = evalue_sign(diff, D, ind->options->verify.barvinok);
 
 	if (diff_sign == order_undefined) {
 	    assert(sign == order_le || sign == order_ge);
@@ -2478,7 +2469,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	if (!best) {
 	    /* apparently there can be negative initial term on empty domains */
 	    if (ind.options->emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE &&
-		ind.options->polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
+		ind.options->verify.barvinok->lp_solver == BV_LP_POLYLIB)
 		assert(!neg);
 	    break;
 	}
@@ -2491,7 +2482,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 		    bool handled = ind.handle_equal_numerators(best);
 		    if (ind.options->emptiness_check !=
 				BV_LEXMIN_EMPTINESS_CHECK_NONE &&
-			ind.options->polysign == BV_LEXMIN_POLYSIGN_POLYLIB)
+			ind.options->verify.barvinok->lp_solver == BV_LP_POLYLIB)
 			assert(handled);
 		    /* If !handled then the leading coefficient is bigger than one;
 		     * must be an empty domain
@@ -2536,7 +2527,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	order_sign sign;
 	for (int k = 0; k < dim; ++k) {
 	    diff = ediff(best->vertex[k], second->vertex[k]);
-	    sign = evalue_sign(diff, ind.D, ind.options);
+	    sign = evalue_sign(diff, ind.D, ind.options->verify.barvinok);
 
 	    /* neg can never be smaller than best, unless it may still cancel.
 	     * This can happen if positive terms have been determined to
