@@ -815,12 +815,13 @@ static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
     int m = 0;
 
     while ((constraints = evalue_read_domain(s, &p, MaxRays))) {
+	struct section *sect;
 	evalue *e = evalue_read_term(s, &p);
 	if (!e) {
 	    stream_error(s, NULL, "missing evalue");
 	    break;
 	}
-	struct section *sect = ALLOC(struct section);
+	sect = ALLOC(struct section);
 	sect->constraints = constraints;
 	sect->e = e;
 	sect->next = part;
