@@ -228,6 +228,7 @@ struct barvinok_options {
     #define	BV_SPECIALIZATION_BF		2
     #define	BV_SPECIALIZATION_DF		1
     #define	BV_SPECIALIZATION_RANDOM	0
+    #define	BV_SPECIALIZATION_TODD		3
     int         incremental_specialization;
 
     unsigned long           max_index;
@@ -246,6 +247,7 @@ struct barvinok_options {
     #define     BV_APPROX_DROP          1
     #define     BV_APPROX_SCALE         2
     #define     BV_APPROX_VOLUME        3
+    #define	BV_APPROX_BERNOULLI	4
     int                     approximation_method;
     #define     BV_APPROX_SCALE_FAST    (1 << 0)
     #define     BV_APPROX_SCALE_NARROW  (1 << 1)
@@ -272,6 +274,12 @@ struct barvinok_options {
     #define     BV_BERNSTEIN_FACTORS    1
     #define     BV_BERNSTEIN_INTERVALS  2
     int         bernstein_recurse;
+
+    #define	BV_LP_POLYLIB		0
+    #define	BV_LP_GLPK		1
+    #define	BV_LP_CDD		2
+    #define	BV_LP_CDDF		3
+    int		lp_solver;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -553,7 +561,7 @@ of the functions from \PolyLib/ with the same name.
 
 \begin{verbatim}
 void eadd(const evalue *e1,evalue *res);
-void emul (evalue *e1, evalue *res );
+void emul(const evalue *e1, evalue *res);
 \end{verbatim}
 The functions \ai[\tt]{eadd} and \ai[\tt]{emul} takes
 two (pointers to) \ai[\tt]{evalue}s \verb+e1+ and \verb+res+
@@ -590,8 +598,11 @@ are assumed to correspond to indicator functions.
 
 \begin{verbatim}
 evalue *esum(evalue *E, int nvar);
+evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays);
 \end{verbatim}
-The function \ai[\tt]{esum} performs the summation
+The function \ai[\tt]{esum} has been superseded by
+\ai[\tt]{evalue\_sum}.
+The function \ai[\tt]{evalue\_sum} performs the summation
 operation from \citeN[Section~4.5.4]{Verdoolaege2005PhD}.
 The piecewise step-polynomial represented by \verb+E+ is summated
 over its first \verb+nvar+ variables.
