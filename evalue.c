@@ -3843,8 +3843,11 @@ void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 	return;
     assert(e->x.p->type == partition);
     /* make sure all variables in the domains have a fixed sign */
-    if (sign)
+    if (sign) {
 	evalue_split_domains_into_orthants(e, MaxRays);
+	if (EVALUE_IS_ZERO(*e))
+	    return;
+    }
 
     assert(e->x.p->size >= 2);
     dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
