@@ -78,8 +78,9 @@ struct barvinok_options {
     int		bernstein_recurse;
 
     #define	BV_LP_POLYLIB		0
-    #define	BV_LP_CDD		1
-    #define	BV_LP_CDDF		2
+    #define	BV_LP_GLPK		1
+    #define	BV_LP_CDD		2
+    #define	BV_LP_CDDF		3
     int		lp_solver;
 };
 

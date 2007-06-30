@@ -22,6 +22,8 @@ enum order_sign polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 {
     if (options->lp_solver == BV_LP_POLYLIB)
 	return PL_polyhedron_affine_sign(D, T, options);
+    else if (options->lp_solver == BV_LP_GLPK)
+	return glpk_polyhedron_affine_sign(D, T, options);
     else if (options->lp_solver == BV_LP_CDD)
 	return cdd_polyhedron_affine_sign(D, T, options);
     else if (options->lp_solver == BV_LP_CDDF)
@@ -36,6 +38,8 @@ enum lp_result polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 {
     if (options->lp_solver == BV_LP_POLYLIB)
 	return PL_polyhedron_range(D, obj, denom, min, max, options);
+    else if (options->lp_solver == BV_LP_GLPK)
+	return glpk_polyhedron_range(D, obj, denom, min, max, options);
     else if (options->lp_solver == BV_LP_CDD)
 	return cdd_polyhedron_range(D, obj, denom, min, max, options);
     else if (options->lp_solver == BV_LP_CDDF)

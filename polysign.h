@@ -31,6 +31,9 @@ enum lp_result polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 enum lp_result PL_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options);
+enum lp_result glpk_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options);
 enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options);

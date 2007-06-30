@@ -42,12 +42,11 @@ if HAVE_GINAC
 endif
 if HAVE_CDDLIB
     BR_CDD = basis_reduction_cdd.cc initcdd.cc
+    POLYSIGN_CDD = polysign_cddf.cc polysign_cdd.cc
 endif
 if HAVE_GLPK
     BR_GLPK = basis_reduction_glpk.c
-endif
-if HAVE_CDDLIB
-    POLYSIGN = polysign_cddf.cc polysign_cdd.cc
+    POLYSIGN_GLPK = polysign_glpk.c
 endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
@@ -79,7 +78,8 @@ libbarvinok_la_SOURCES = \
     options.c \
     param_util.c \
     param_util.h \
-    $(POLYSIGN) \
+    $(POLYSIGN_CDD) \
+    $(POLYSIGN_GLPK) \
     polysign.c \
     polysign_polylib.c \
     polysign.h \
