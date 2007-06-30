@@ -1,4 +1,5 @@
 #include <sstream>
+#include <barvinok/set.h>
 #include <barvinok/options.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
