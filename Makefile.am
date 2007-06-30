@@ -256,14 +256,14 @@ check-testlib: testlib
 check-approx: test_approx
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
-		echo $$i | ./test_approx -q -r 10 ; \
+		echo $$i | ./test_approx -q -r 10 || exit; \
 	    fi \
 	done
 check-evalue: barvinok_maximize barvinok_summate
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
-		./barvinok_maximize -T < $$i; \
-		./barvinok_summate -T < $$i; \
+		./barvinok_maximize -T < $$i || exit; \
+		./barvinok_summate -T < $$i || exit; \
 	    fi \
 	done
 check-enumerate: barvinok_enumerate
@@ -274,7 +274,7 @@ check-enumerate: barvinok_enumerate
 		    for spec in 'random' 'bf' 'df'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo "        $$opt"; \
-			./barvinok_enumerate --verify $$opt < $$i; \
+			./barvinok_enumerate --verify $$opt < $$i || exit; \
 		    done \
 		done \
 	    fi \
@@ -287,7 +287,7 @@ check-enumerate_e: barvinok_enumerate_e
 			for spec in 'random' 'bf' 'df'; do \
 			    opt="--specialization=$$spec $$options"; \
 			    echo $$i $$opt; \
-			    ./barvinok_enumerate_e --verify $$opt < $$i; \
+			    ./barvinok_enumerate_e --verify $$opt < $$i || exit; \
 			done \
 		    done \
 		fi \
@@ -298,7 +298,7 @@ check-enumerate_e: barvinok_enumerate_e
 		for spec in 'random' 'bf' 'df'; do \
 		    opt="--specialization=$$spec --scarf"; \
 		    echo $$i $$opt; \
-		    ./barvinok_enumerate_e --verify $$opt < $$i; \
+		    ./barvinok_enumerate_e --verify $$opt < $$i || exit; \
 		done \
 	    fi \
 	done
@@ -322,7 +322,7 @@ check-lexmin: lexmin
 		for spec in 'random' 'bf' 'df'; do \
 		    opt="--specialization=$$spec"; \
 		    echo $$i $$opt; \
-		    ./lexmin --verify $$opt < $$i; \
+		    ./lexmin --verify $$opt < $$i || exit; \
 		done \
 	    fi \
 	done
