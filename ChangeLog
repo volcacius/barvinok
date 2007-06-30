@@ -1,3 +1,12 @@
+version: 0.24
+date: Sat Jun 30 23:37:31 CEST 2007
+changes:
+    - support exponential (Todd) substitution for non-parametric problems
+    - support primal and stopped decomposition on parametric problems
+    - support nested sums polynomial approximation of quasi-polynomials
+    - add barvinok_summate for summating a polynomial over a polytope
+    - speed improvements in barvinok_count and polyhedron_sample
+---
 version: 0.23
 date: Sat Apr 28 20:10:35 CEST 2007
 changes:
