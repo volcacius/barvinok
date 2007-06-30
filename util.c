@@ -611,7 +611,7 @@ void Line_Length(Polyhedron *P, Value *len)
 	    if (!p || value_gt(tmp, pos))
 		value_assign(pos, tmp);
 	    p = 1;
-	} else {
+	} else if (value_neg_p(P->Constraint[i][1])) {
 	    mpz_fdiv_q(tmp, tmp, P->Constraint[i][1]);
 	    if (!n || value_lt(tmp, neg))
 		value_assign(neg, tmp);
