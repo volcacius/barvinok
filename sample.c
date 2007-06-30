@@ -280,6 +280,9 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	return sample;
     }
 
+    if (P->Dimension == 1)
+	POL_ENSURE_VERTICES(P);
+
     for (i = 0; i < P->NbRays; ++i)
 	if (value_one_p(P->Ray[i][1+P->Dimension])) {
 	    sample = Vector_Alloc(P->Dimension+1);
