@@ -1490,9 +1490,6 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
 static evalue* enumerate(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options)
 {
-    if (options->approximation_method == BV_APPROX_BERNOULLI)
-	return Bernoulli_sum(P, C, options);
-
     //P = unfringe(P, MaxRays);
     Polyhedron *next;
     Polyhedron *Corig = C;
@@ -1643,7 +1640,11 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
     Porig->next = next;
     Polyhedron_Free(CA);
 
-    eres = enumerate(P, C, options);
+    if (options->approximation_method == BV_APPROX_BERNOULLI) {
+	eres = Bernoulli_sum(P, C, options);
+	Domain_Free(P);
+    } else
+	eres = enumerate(P, C, options);
 
     C->next = Cnext;
 
