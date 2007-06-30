@@ -254,6 +254,37 @@ static Polyhedron *remove_all_equalities(Polyhedron *P, Matrix **T,
     return P;
 }
 
+static Vector *product_sample(Polyhedron *P, Matrix *T,
+			      struct barvinok_options *options)
+{
+    int i;
+    Vector *sample = NULL;
+    Vector *tmp = Vector_Alloc(T->NbRows);
+    i = 0;
+    for (; P; P = P->next) {
+	Vector *P_sample;
+	Polyhedron *next = P->next;
+	P->next = NULL;
+	P_sample = Polyhedron_Sample(P, options);
+	if (!P_sample) {
+	    Vector_Free(tmp);
+	    tmp = NULL;
+	    break;
+	}
+	Vector_Copy(P_sample->p, tmp->p+i, P->Dimension);
+	Vector_Free(P_sample);
+	i += P->Dimension;
+	P->next = next;
+    }
+    if (tmp) {
+	sample = Vector_Alloc(T->NbRows + 1);
+	Matrix_Vector_Product(T, tmp->p, sample->p);
+	value_set_si(sample->p[T->NbRows], 1);
+	Vector_Free(tmp);
+    }
+    return sample;
+}
+
 /* This function implements the algorithm described in
  * "An Implementation of the Generalized Basis Reduction Algorithm
  *  for Integer Programming" of Cook el al. to find an integer point
@@ -270,6 +301,7 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
     Vector *v;
     int ok;
     enum lp_result res;
+    Matrix *T;
 
     if (emptyQ2(P))
 	return NULL;
@@ -291,7 +323,6 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	}
 
     if (P->NbEq > 0) {
-	Matrix *T;
 	Vector *Q_sample;
 	Polyhedron *Q = remove_all_equalities(P, &T, options->MaxRays);
 	if (!Q)
@@ -303,6 +334,14 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	    Matrix_Vector_Product(T, Q_sample->p, sample->p);
 	    Vector_Free(Q_sample);
 	}
+	Matrix_Free(T);
+	return sample;
+    }
+
+    Q = Polyhedron_Factor(P, 0, &T, options->MaxRays);
+    if (Q) {
+	sample = product_sample(Q, T, options);
+	Domain_Free(Q);
 	Matrix_Free(T);
 	return sample;
     }
