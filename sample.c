@@ -235,6 +235,25 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
     return Q;
 }
 
+static Polyhedron *remove_all_equalities(Polyhedron *P, Matrix **T,
+					 unsigned MaxRays)
+{
+    /* Matrix "view" of equalities */
+    Matrix M;
+    M.NbRows = P->NbEq;
+    M.NbColumns = P->Dimension+2;
+    M.p_Init = P->p_Init;
+    M.p = P->Constraint;
+
+    *T = compress_variables(&M, 0);
+
+    if (!*T)
+	return NULL;
+    P = Polyhedron_Preimage(P, *T, MaxRays);
+
+    return P;
+}
+
 /* This function implements the algorithm described in
  * "An Implementation of the Generalized Basis Reduction Algorithm
  *  for Integer Programming" of Cook el al. to find an integer point
@@ -267,6 +286,23 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 	    Vector_Copy(P->Ray[i]+1, sample->p, P->Dimension+1);
 	    return sample;
 	}
+
+    if (P->NbEq > 0) {
+	Matrix *T;
+	Vector *Q_sample;
+	Polyhedron *Q = remove_all_equalities(P, &T, options->MaxRays);
+	if (!Q)
+	    return NULL;
+	Q_sample = Polyhedron_Sample(Q, options);
+	Polyhedron_Free(Q);
+	if (Q_sample) {
+	    sample = Vector_Alloc(P->Dimension + 1);
+	    Matrix_Vector_Product(T, Q_sample->p, sample->p);
+	    Vector_Free(Q_sample);
+	}
+	Matrix_Free(T);
+	return sample;
+    }
 
     value_init(min);
     value_init(max);
