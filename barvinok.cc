@@ -1877,6 +1877,7 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
     negative_test_constraint(P->Constraint[l], P->Constraint[u],
 			     row->p, nvar+i, P->Dimension+2, &f);
     *neg = AddConstraints(row->p, 1, P, MaxRays);
+    POL_ENSURE_VERTICES(*neg);
 
     /* We found an independent, but useless constraint
      * Maybe we should detect this earlier and not
@@ -1889,6 +1890,7 @@ static bool SplitOnConstraint(Polyhedron *P, int i, int l, int u,
 
     oppose_constraint(row->p, P->Dimension+2, &f);
     *pos = AddConstraints(row->p, 1, P, MaxRays);
+    POL_ENSURE_VERTICES(*pos);
 
     if (emptyQ((*pos))) {
 	Polyhedron_Free(*neg);
@@ -2009,10 +2011,12 @@ static bool double_bound_pair(Polyhedron *P, int nvar, int exist,
 		   P->Dimension+1);
     ConstraintSimplify(row->p, row->p, P->Dimension+2, &f);
     *pos = AddConstraints(row->p, 1, P, 0);
+    POL_ENSURE_VERTICES(*pos);
     value_set_si(f, -1);
     Vector_Scale(row->p+1, row->p+1, f, P->Dimension+1);
     value_decrement(row->p[P->Dimension+1], row->p[P->Dimension+1]);
     *neg = AddConstraints(row->p, 1, P, 0);
+    POL_ENSURE_VERTICES(*neg);
     Vector_Free(row);
     value_clear(f);
 
@@ -2687,6 +2691,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_set_si(M->p[0][0], 0);
 		    Polyhedron *para = AddConstraints(M->p[0], 1, P,
 						      options->MaxRays);
+		    POL_ENSURE_VERTICES(para);
 		    if (emptyQ(para)) {
 			Polyhedron_Free(para);
 			continue;
@@ -2704,6 +2709,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
 		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
+		    POL_ENSURE_VERTICES(neg);
+		    POL_ENSURE_VERTICES(pos);
 		    if (emptyQ(neg) && emptyQ(pos)) {
 			Polyhedron_Free(para);
 			Polyhedron_Free(pos);
@@ -2773,6 +2780,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
 		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
+		    POL_ENSURE_VERTICES(neg);
+		    POL_ENSURE_VERTICES(pos);
 		    if (emptyQ(neg) || emptyQ(pos)) {
 			Polyhedron_Free(pos);
 			Polyhedron_Free(neg);
@@ -2819,6 +2828,8 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		    value_decrement(M->p[0][P->Dimension+1],
 				    M->p[0][P->Dimension+1]);
 		    pos = AddConstraints(M->p[0], 1, P, options->MaxRays);
+		    POL_ENSURE_VERTICES(neg);
+		    POL_ENSURE_VERTICES(pos);
 		    if (emptyQ(neg) || emptyQ(pos)) {
 			Polyhedron_Free(pos);
 			Polyhedron_Free(neg);
@@ -3078,6 +3089,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		    Vector_Scale(row->p+1, row->p+1, f, len-1);
 		    value_decrement(row->p[len-1], row->p[len-1]);
 		    Polyhedron *T = AddConstraints(row->p, 1, P, options->MaxRays);
+		    POL_ENSURE_VERTICES(T);
 		    if (!emptyQ(T)) {
 			//printf("not all_pos: i: %d, l: %d, u: %d\n", i, l, u);
 			info[i] = (constraint)(info[i] ^ ALL_POS);
@@ -3094,6 +3106,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 			oppose_constraint(row->p, len, &f);
 			Polyhedron *T = AddConstraints(row->p, 1, P,
 						       options->MaxRays);
+			POL_ENSURE_VERTICES(T);
 			if (emptyQ(T)) {
 			    //printf("one_neg i: %d, l: %d, u: %d\n", i, l, u);
 			    info[i] = (constraint)(info[i] | ONE_NEG);
@@ -3112,6 +3125,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 			    oppose_constraint(row->p, len, &f);
 			    Polyhedron *T = AddConstraints(row->p, 1, P,
 							   options->MaxRays);
+			    POL_ENSURE_VERTICES(T);
 			    if (emptyQ(T)) {
 				// printf("rot_neg i: %d, l: %d, u: %d\n", i, l, u);
 				info[i] = (constraint)(info[i] | ROT_NEG);
