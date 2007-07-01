@@ -254,24 +254,24 @@ endif
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
 	check-lexmin check-approx check-evalue
-check-testlib: testlib
-	./testlib
-check-approx: test_approx
+check-testlib: testlib$(EXEEXT)
+	./testlib$(EXEEXT)
+check-approx: test_approx$(EXEEXT)
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
-		echo $$i | ./test_approx -q -r 10 || exit; \
+		echo $$i | ./test_approx$(EXEEXT) -q -r 10 || exit; \
 	    fi \
 	done
-check-evalue: @bv_barvinok_maximize@ barvinok_summate
+check-evalue: @bv_barvinok_maximize@ barvinok_summate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
 		if test -n "@bv_barvinok_maximize@"; then \
-		    ./barvinok_maximize -T < $$i || exit; \
+		    ./barvinok_maximize$(EXEEXT) -T < $$i || exit; \
 		fi; \
-		./barvinok_summate -T < $$i || exit; \
+		./barvinok_summate$(EXEEXT) -T < $$i || exit; \
 	    fi \
 	done
-check-enumerate: barvinok_enumerate
+check-enumerate: barvinok_enumerate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
@@ -279,12 +279,12 @@ check-enumerate: barvinok_enumerate
 		    for spec in 'random' 'bf' 'df'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo "        $$opt"; \
-			./barvinok_enumerate --verify $$opt < $$i || exit; \
+			./barvinok_enumerate$(EXEEXT) --verify $$opt < $$i || exit; \
 		    done \
 		done \
 	    fi \
 	done
-check-enumerate_e: barvinok_enumerate_e
+check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
 	@for dir in $(BEE_TESTDIRS); do \
 	    for i in $(top_srcdir)/tests/$$dir/*; do \
 		if test -f $$i; then \
@@ -292,7 +292,7 @@ check-enumerate_e: barvinok_enumerate_e
 			for spec in 'random' 'bf' 'df'; do \
 			    opt="--specialization=$$spec $$options"; \
 			    echo $$i $$opt; \
-			    ./barvinok_enumerate_e --verify $$opt < $$i || exit; \
+			    ./barvinok_enumerate_e$(EXEEXT) --verify $$opt < $$i || exit; \
 			done \
 		    done \
 		fi \
@@ -303,31 +303,31 @@ check-enumerate_e: barvinok_enumerate_e
 		for spec in 'random' 'bf' 'df'; do \
 		    opt="--specialization=$$spec --scarf"; \
 		    echo $$i $$opt; \
-		    ./barvinok_enumerate_e --verify $$opt < $$i || exit; \
+		    ./barvinok_enumerate_e$(EXEEXT) --verify $$opt < $$i || exit; \
 		done \
 	    fi \
 	done
-check-test: test
+check-test: test$(EXEEXT)
 	@for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		for options in '--index=10' '--primal --index=10'; do \
 		    for spec in 'random' 'bf' 'df' 'todd'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo -n $$i $$opt; \
-			./test $$opt < $$i || echo -n " NOT"; \
+			./test$(EXEEXT) $$opt < $$i || echo -n " NOT"; \
 			echo " ok"; \
 		    done \
 		done \
 	    fi \
 	done
 if HAVE_GLPK
-check-lexmin: lexmin
+check-lexmin: lexmin$(EXEEXT)
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
 		for spec in 'random' 'bf' 'df'; do \
 		    opt="--specialization=$$spec"; \
 		    echo $$i $$opt; \
-		    ./lexmin --verify $$opt < $$i || exit; \
+		    ./lexmin$(EXEEXT) --verify $$opt < $$i || exit; \
 		done \
 	    fi \
 	done
