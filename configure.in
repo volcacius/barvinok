@@ -265,6 +265,7 @@ AC_ARG_WITH(bernstein,
             [ with_bernstein=$withval],  [ with_bernstein=yes ])
 AC_MSG_RESULT($with_bernstein)
 
+AC_SUBST(bv_barvinok_maximize)
 have_ginac=false
 if test "$with_bernstein" != "no"; then
 	AC_LANG_PUSH(C++)
@@ -272,7 +273,7 @@ if test "$with_bernstein" != "no"; then
 		have_ginac=true
 		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
 		PACKAGE_LIBS="-lbarvinok -lbernstein"
-		bv_extra_programs="barvinok_maximize\$(EXEEXT) $bv_extra_programs"
+		bv_barvinok_maximize="barvinok_maximize\$(EXEEXT)"
 	])
 	AC_LANG_POP
 fi

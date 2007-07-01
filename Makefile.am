@@ -18,7 +18,7 @@ noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate \
-		  @bv_extra_programs@
+		  @bv_extra_programs@ @bv_barvinok_maximize@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
 		 polytope_scan barvinok_maximize
 pkginclude_HEADERS = \
@@ -261,10 +261,12 @@ check-approx: test_approx
 		echo $$i | ./test_approx -q -r 10 || exit; \
 	    fi \
 	done
-check-evalue: barvinok_maximize barvinok_summate
+check-evalue: @bv_barvinok_maximize@ barvinok_summate
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
-		./barvinok_maximize -T < $$i || exit; \
+		if test -n "@bv_barvinok_maximize@"; then \
+		    ./barvinok_maximize -T < $$i || exit; \
+		fi; \
 		./barvinok_summate -T < $$i || exit; \
 	    fi \
 	done
