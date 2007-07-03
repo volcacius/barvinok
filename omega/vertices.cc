@@ -1,20 +1,17 @@
 #include <omega.h>
+#include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "omega/convert.h"
 #include "vertices.h"
+#include "param_util.h"
 #include "config.h"
-
-#ifdef HAVE_GROWING_CHERNIKOVA
-#define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
 
 void vertices(Relation& r)
 {
     varvector vv;
     varvector params;
     Param_Polyhedron *PP;
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     Polyhedron *D = relation2Domain(r, vv, params);
     assert(!D->next);
@@ -25,7 +22,7 @@ void vertices(Relation& r)
     for (int i = 0; i < params.size(); ++i)
 	param_names[i] = params[i]->char_name();
 
-    PP = Polyhedron2Param_Domain(D, ctx, MAXRAYS);
+    PP = Polyhedron2Param_Polyhedron(D, ctx, options);
     Param_Polyhedron_Print(stdout, PP, (char **)param_names);
 
     delete [] param_names;
@@ -33,4 +30,5 @@ void vertices(Relation& r)
     Param_Polyhedron_Free(PP);
     Polyhedron_Free(ctx);
     Domain_Free(D);
+    barvinok_options_free(options);
 }

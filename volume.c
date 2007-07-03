@@ -613,7 +613,6 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     unsigned nparam = C->Dimension;
     unsigned nvar = P->Dimension - C->Dimension;
     Param_Polyhedron *PP;
-    unsigned PP_MaxRays = options->MaxRays;
     unsigned MaxRays;
     int i, j;
     Value fact;
@@ -644,16 +643,13 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
 
     TC = true_context(P, C, options->MaxRays);
 
-    if (PP_MaxRays & POL_NO_DUAL)
-	PP_MaxRays = 0;
-
     MaxRays = options->MaxRays;
     POL_UNSET(options->MaxRays, POL_INTEGER);
 
     value_init(fact);
     Factorial(nvar, &fact);
 
-    PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
+    PP = Polyhedron2Param_Polyhedron(P, C, options);
 
     for (nd = 0, D = PP->D; D; ++nd, D = D->next);
     s = ALLOCN(struct section, nd);

@@ -1,3 +1,4 @@
+#include <barvinok/options.h>
 #include "param_util.h"
 
 void Param_Vertex_Common_Denominator(Param_Vertices *V)
@@ -25,4 +26,13 @@ void Param_Vertex_Common_Denominator(Param_Vertices *V)
     }
 
     value_clear(lcm);
+}
+
+Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *Din, Polyhedron *Cin,
+					      struct barvinok_options *options)
+{
+    unsigned MaxRays = options->MaxRays;
+    if (MaxRays & POL_NO_DUAL)
+	MaxRays = 0;
+    return Polyhedron2Param_Domain(Din, Cin, MaxRays);
 }

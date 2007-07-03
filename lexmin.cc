@@ -23,6 +23,7 @@
 #include "polysign.h"
 #include "verify.h"
 #include "lexmin.h"
+#include "param_util.h"
 
 #undef CS   /* for Solaris 10 */
 
@@ -2632,7 +2633,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     Polyhedron *Corig = C;
     vector<max_term*> all_max;
     Polyhedron *Q;
-    unsigned P2PSD_MaxRays;
 
     if (emptyQ2(P))
 	return all_max;
@@ -2656,12 +2656,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 	}
     }
 
-    if (options->verify.barvinok->MaxRays & POL_NO_DUAL)
-	P2PSD_MaxRays = 0;
-    else
-	P2PSD_MaxRays = options->verify.barvinok->MaxRays;
-
-    PP = Polyhedron2Param_Domain(P, C, P2PSD_MaxRays);
+    PP = Polyhedron2Param_Polyhedron(P, C, options->verify.barvinok);
 
     unsigned dim = P->Dimension - nparam;
 

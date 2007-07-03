@@ -28,6 +28,7 @@ extern "C" {
 #include "scale.h"
 #include "volume.h"
 #include "bernoulli.h"
+#include "param_util.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -1453,14 +1454,6 @@ void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 	}
 }
 
-static inline Param_Polyhedron *Polyhedron2Param_MR(Polyhedron *Din,
-    Polyhedron *Cin, int WS)
-{
-    if (WS & POL_NO_DUAL)
-	WS = 0;
-    return Polyhedron2Param_Domain(Din, Cin, WS);
-}
-
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 
 				       barvinok_options *options);
 
@@ -1749,7 +1742,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 	    return eres;
     }
 
-    PP = Polyhedron2Param_MR(P, C, options->MaxRays);
+    PP = Polyhedron2Param_Polyhedron(P, C, options);
 
     if (do_scale)
 	eres = scale(PP, P, C, options);
@@ -2592,7 +2585,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
     Polyhedron *CEq;
     Matrix *CT;
     Polyhedron *PR = P;
-    PP = Polyhedron2Param_Domain(PR,C, options->MaxRays);
+    PP = Polyhedron2Param_Polyhedron(PR, C, options);
     Polyhedron_Free(C);
 
     int nd;

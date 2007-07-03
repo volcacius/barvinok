@@ -1,7 +1,9 @@
 #include <bernstein/bernstein.h>
 #include <bernstein/piecewise_lst.h>
+#include <barvinok/options.h>
 #include <barvinok/bernstein.h>
 #include "polyfunc.h"
+#include "param_util.h"
 #include "omega/convert.h"
 
 using namespace GiNaC;
@@ -15,6 +17,7 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
     Param_Polyhedron *PP;
     exvector exvars;
     exvector exparams;
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     cout << "maximize " << polyfunc->poly << " over ";
     polyfunc->domain.simplify();
@@ -53,7 +56,7 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
 	    exparams.push_back(symbol(vv[i]->char_name()));
     }
 
-    PP = Polyhedron2Param_Domain(D, ctx, 0);
+    PP = Polyhedron2Param_Polyhedron(D, ctx, options);
     piecewise_lst *pl = new piecewise_lst(exparams);
     for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
 	GiNaC::matrix VM = domainVertices(PP, Q, exparams);
@@ -68,4 +71,5 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
 
     Polyhedron_Free(ctx);
     Domain_Free(D);
+    barvinok_options_free(options);
 }

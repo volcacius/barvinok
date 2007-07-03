@@ -597,12 +597,9 @@ static Param_Polyhedron *Param_Polyhedron_Domain(Param_Polyhedron *PP,
 static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
 				        struct barvinok_options *options)
 {
-    unsigned PP_MaxRays = options->MaxRays;
     unsigned Rat_MaxRays = options->MaxRays;
     Param_Polyhedron *PP;
-    if (PP_MaxRays & POL_NO_DUAL)
-	PP_MaxRays = 0;
-    PP = Polyhedron2Param_Domain(P, C, PP_MaxRays);
+    PP = Polyhedron2Param_Polyhedron(P, C, options);
     POL_UNSET(Rat_MaxRays, POL_INTEGER);
 
     if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
