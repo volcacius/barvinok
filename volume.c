@@ -141,7 +141,7 @@ static void Param_Inner_Product(Value *constraint, Matrix *Vertex,
 }
 
 /* Compute a dummy Param_Domain that contains all vertices of Param_Domain D
- * (which contains the vertices of P) that lie on the facet obtain by
+ * (which contains the vertices of P) that lie on the facet obtained by
  * saturating constraint c of P
  */
 static Param_Domain *face_vertices(Param_Polyhedron *PP, Param_Domain *D,
