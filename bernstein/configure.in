@@ -7,6 +7,20 @@ versioninfo=1:0:0
 AC_CANONICAL_HOST
 AC_PROG_LIBTOOL
 
+AC_ARG_WITH(default-prefix,
+	AS_HELP_STRING([--with-default-prefix=DIR],
+	    [Default installation prefix of optional packages]))
+if test "${with_default_prefix+set}" = set; then
+	if test "${with_libgmp+set}" != set -a \
+	   -f "$with_default_prefix/include/gmp.h"; then
+		with_libgmp=$with_default_prefix
+	fi
+	if test "${with_polylib+set}" != set -a \
+	   -f "$with_default_prefix/include/polylib/polylibgmp.h"; then
+		with_polylib=$with_default_prefix
+	fi
+fi
+
 dnl Check for GMP library
 AC_MSG_CHECKING(whether to use GMP)
 AC_ARG_WITH(libgmp, 

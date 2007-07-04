@@ -29,6 +29,45 @@ gl_INIT
 AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(sys/times.h)
 
+AC_ARG_WITH(default-prefix,
+	AS_HELP_STRING([--with-default-prefix=DIR],
+	    [Default installation prefix of optional packages]))
+if test "${with_default_prefix+set}" = set; then
+	if test "${with_ginac_prefix+set}" != set -a \
+	   "${with_ginac_exec_prefix+set}" != set -a \
+	   -f "$with_default_prefix/bin/ginac-config"; then
+		with_ginac_prefix=$with_default_prefix
+	fi
+	if test "${with_libgmp+set}" != set -a \
+	   -f "$with_default_prefix/include/gmp.h"; then
+		with_libgmp=$with_default_prefix
+	fi
+	if test "${with_polylib+set}" != set -a \
+	   -f "$with_default_prefix/include/polylib/polylibgmp.h"; then
+		with_polylib=$with_default_prefix
+	fi
+	if test "${with_piplib+set}" != set -a \
+	   -f "$with_default_prefix/include/piplib/piplibMP.h"; then
+		with_piplib=$with_default_prefix
+	fi
+	if test "${with_ntl+set}" != set -a \
+	   -f "$with_default_prefix/include/NTL/ZZ.h"; then
+		with_ntl=$with_default_prefix
+	fi
+	if test "${with_omega+set}" != set -a \
+	   -f "$with_default_prefix/include/omega/omega.h"; then
+		with_omega=$with_default_prefix
+	fi
+	if test "${with_cddlib+set}" != set -a \
+	   -f "$with_default_prefix/include/cddmp.h"; then
+		with_cddlib=$with_default_prefix
+	fi
+	if test "${with_glpk+set}" != set -a \
+	   -f "$with_default_prefix/include/glpk.h"; then
+		with_glpk=$with_default_prefix
+	fi
+fi
+
 dnl Check for GMP library
 AC_MSG_CHECKING(whether to use GMP)
 AC_ARG_WITH(libgmp, 
