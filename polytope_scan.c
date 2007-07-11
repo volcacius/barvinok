@@ -4,20 +4,41 @@
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include <barvinok/basis_reduction.h>
-#include "config.h"
+#include "argp.h"
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-struct option options[] = {
-    { "direct",    no_argument,  0,  'd' },
-    { "version",   no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+struct argp_option argp_options[] = {
+    { "direct",		'd',  0,	0,
+	"don't apply generalized basis reduction first" },
+    { 0 }
 };
-#endif
+
+struct options {
+    struct barvinok_options *barvinok;
+    int direct;
+};
+
+error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct options *options = state->input;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = options->barvinok;
+	options->direct = 0;
+	break;
+    case 'd':
+	options->direct = 1;
+	break;
+    case 'V':
+	printf(barvinok_version());
+	exit(0);
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 static void scan_poly(Polyhedron *S, int pos, Value *z, Matrix *T)
 {
@@ -60,24 +81,22 @@ int main(int argc, char **argv)
     int i, j, ok;
     Matrix *basis, *T, *inv;
     int c, ind = 0;
-    int direct = 0;
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    0,	0,  0 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
+    struct options options;
 
-    while ((c = getopt_long(argc, argv, "dV", options, &ind)) != -1) {
-	switch (c) {
-	case 'd':
-	    direct = 1;
-	    break;
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    options.barvinok = bv_options;
+
+    set_program_name(argv[0]);
+    argp_parse(&argp, argc, argv, 0, 0, &options);
 
     A = Polyhedron_Read(bv_options->MaxRays);
 
-    if (direct) {
+    if (options.direct) {
 	inv = Identity(A->Dimension+1);
 	P = A;
     } else {
