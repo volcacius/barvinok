@@ -404,7 +404,6 @@ AM_CONDITIONAL(HAVE_GLPK, test x$have_glpk = xtrue)
 if test "$have_glpk" = "true" -o "$have_cddlib" = "true"; then
     AC_LIBOBJ(sample)
     bv_extra_programs="polyhedron_sample\$(EXEEXT) 4coins\$(EXEEXT) lexmin\$(EXEEXT) $bv_extra_programs"
-    bv_extra_programs="polytope_scan\$(EXEEXT) $bv_extra_programs"
 fi
 
 AC_SUBST(GIT_HEAD_ID)

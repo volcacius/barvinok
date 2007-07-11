@@ -14,14 +14,14 @@ AM_LDFLAGS = -Llib
 
 lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
-		  barvinok_ehrhart
+		  barvinok_ehrhart polytope_scan
 noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate \
 		  @bv_extra_programs@ @bv_barvinok_maximize@
 EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
-		 polytope_scan barvinok_maximize
+		 barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
