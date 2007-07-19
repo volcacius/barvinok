@@ -79,7 +79,7 @@ enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);
 int eequal(const evalue *e1, const evalue *e2);
 void free_evalue_refs(evalue *e);
-void print_evalue(FILE *DST, const evalue *e, char **pname);
+void print_evalue(FILE *DST, const evalue *e, const char * const *pname);
 void print_enode(FILE *DST,enode *p,char **pname);
 void reduce_evalue (evalue *e);
 void reduce_evalue_in_domain(evalue *e, Polyhedron *D);

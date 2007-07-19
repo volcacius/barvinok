@@ -978,7 +978,7 @@ static void print_evalue_r(FILE *DST, const evalue *e, char **pname)
   return;
 } /* print_evalue */
 
-void print_evalue(FILE *DST, const evalue *e, char **pname)
+void print_evalue(FILE *DST, const evalue *e, const char * const *pname)
 {
     print_evalue_r(DST, e, pname);
     if (value_notzero_p(e->d))
