@@ -1397,7 +1397,7 @@ static void print_term(FILE *out, Value v, int pos, int dim, int nparam,
 	value_print(out, VALUE_FMT, v);
 }
 
-char **util_generate_names(int n, char *prefix)
+char **util_generate_names(int n, const char *prefix)
 {
     int i;
     int len = (prefix ? strlen(prefix) : 0) + 10;

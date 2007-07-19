@@ -2810,7 +2810,7 @@ static bool lexmin(int pos, Polyhedron *P, Value *context)
     return found;
 }
 
-static void print_list(FILE *out, Value *z, char* brackets, int len)
+static void print_list(FILE *out, Value *z, const char* brackets, int len)
 {
     fprintf(out, "%c", brackets[0]);
     value_print(out, VALUE_FMT,z[0]);

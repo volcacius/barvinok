@@ -145,7 +145,7 @@ static int check_poly_max(const struct check_poly_data *data,
     int ok;
     const check_poly_max_data *max_data;
     max_data = static_cast<const check_poly_max_data *>(data);
-    char *minmax;
+    const char *minmax;
     Value m, n, d;
     value_init(m);
     value_init(n);

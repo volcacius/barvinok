@@ -15,7 +15,7 @@ using std::cerr;
 using std::endl;
 
 template <typename T>
-void set_from_string(T& v, char *s)
+void set_from_string(T& v, const char *s)
 {
     std::istringstream str(s);
     str >> v;

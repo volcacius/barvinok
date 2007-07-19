@@ -94,7 +94,7 @@ Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
 
 Matrix *align_matrix(Matrix *M, int nrows);
 
-char **util_generate_names(int n, char *prefix);
+char **util_generate_names(int n, const char *prefix);
 void util_free_names(int n, char **names);
 void Polyhedron_pprint(FILE *out, Polyhedron *P, int dim, int nparam,
 		       char **iter_names, char **param_names);

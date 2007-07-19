@@ -317,7 +317,7 @@ struct bfe_term : public bfc_term_base {
     }
 };
 
-static void print_int_vector(int *v, int len, char *name)
+static void print_int_vector(int *v, int len, const char *name)
 {
     cerr << name << endl;
     for (int j = 0; j < len; ++j) {
@@ -353,7 +353,7 @@ static void print_bfe_terms(mat_ZZ& factors, bfc_vec& v)
 	cerr << v[i]->terms << endl;
 	bfe_term* bfet = static_cast<bfe_term *>(v[i]);
 	for (int j = 0; j < v[i]->terms.NumRows(); ++j) {
-           char * test[] = {"a", "b"};
+           const char * test[] = {"a", "b"};
            print_evalue(stderr, bfet->factors[j], test);
            fprintf(stderr, "\n");
 	}
