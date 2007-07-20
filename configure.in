@@ -6,6 +6,10 @@ AM_PROG_LEX
 AC_PROG_YACC
 AC_PROG_LIBTOOL
 
+if test "$LEX" = flex; then
+	LEX="flex -l"
+fi
+
 AC_MSG_CHECKING(for mona)
 AC_ARG_WITH(mona,
         [  --with-mona=DIR	  mona *source* directory ], [], [
