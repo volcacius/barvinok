@@ -1,6 +1,5 @@
 %{
 
-#include <pdgutil.h>
 #define compilingParser
 #include <basic/Dynamic_Array.h>
 #include <code_gen/code_gen.h>
@@ -450,11 +449,6 @@ printf("was substantially faster on the limited domain it handled.\n");
 	| COUNT relation ';' {
 	    double c = count_solutions(*$2);
 	    fprintf(stdout, "%.0f\n", c); 
-	}
-	| YAML relation ';' {
-	    pdg::OUnionSet os($2);
-	    os.Dump();
-	    os.free();
 	}
 	;
 
