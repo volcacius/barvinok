@@ -496,9 +496,11 @@ int main(int argc, char **argv)
     argp_parse(&argp, argc, argv, 0, 0, &options);
 
     M = Matrix_Read();
+    assert(M);
     A = Constraints2Polyhedron(M, bv_options->MaxRays);
     Matrix_Free(M);
     M = Matrix_Read();
+    assert(M);
     C = Constraints2Polyhedron(M, bv_options->MaxRays);
     Matrix_Free(M);
     param_name = Read_ParamNames(stdin, C->Dimension);
