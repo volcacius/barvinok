@@ -104,42 +104,6 @@ static Polyhedron *facet(Polyhedron *P, int c, unsigned MaxRays)
     return F;
 }
 
-/* Plug in the parametric vertex V in the constraint constraint.
- * The result is stored in row, with the denominator in position 0.
- */
-static void Param_Inner_Product(Value *constraint, Matrix *Vertex,
-				Value *row)
-{
-    unsigned nparam = Vertex->NbColumns - 2;
-    unsigned nvar = Vertex->NbRows;
-    int j;
-    Value tmp, tmp2;
-
-    value_set_si(row[0], 1);
-    Vector_Set(row+1, 0, nparam+1);
-
-    value_init(tmp);
-    value_init(tmp2);
-
-    for (j = 0 ; j < nvar; ++j) {
-	value_set_si(tmp, 1);
-	value_assign(tmp2,  constraint[1+j]);
-	if (value_ne(row[0], Vertex->p[j][nparam+1])) {
-	    value_assign(tmp, row[0]);
-	    value_lcm(row[0], Vertex->p[j][nparam+1], &row[0]);
-	    value_division(tmp, row[0], tmp);
-	    value_multiply(tmp2, tmp2, row[0]);
-	    value_division(tmp2, tmp2, Vertex->p[j][nparam+1]);
-	}
-	Vector_Combine(row+1, Vertex->p[j], row+1, tmp, tmp2, nparam+1);
-    }
-    value_set_si(tmp, 1);
-    Vector_Combine(row+1, constraint+1+nvar, row+1, tmp, row[0], nparam+1);
-
-    value_clear(tmp);
-    value_clear(tmp2);
-}
-
 /* Compute a dummy Param_Domain that contains all vertices of Param_Domain D
  * (which contains the vertices of P) that lie on the facet obtained by
  * saturating constraint c of P
