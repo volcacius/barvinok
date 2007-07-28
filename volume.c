@@ -5,6 +5,7 @@
 #include "reduce_domain.h"
 #include "param_util.h"
 #include "volume.h"
+#include "scale.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
@@ -18,7 +19,7 @@ static evalue *vertex2evalue(Value *vertex, int nparam)
 }
 
 static void matrix_print(evalue ***matrix, int dim, int *cols,
-			 char **param_names)
+			 const char * const *param_names)
 {
     int i, j;
 
