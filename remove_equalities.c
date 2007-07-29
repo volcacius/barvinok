@@ -1,6 +1,15 @@
 #include <barvinok/util.h>
 #include "remove_equalities.h"
 
+static void Polyhedron_Equalities_View(Polyhedron *P, Matrix *M)
+{
+    /* Matrix "view" of equalities */
+    M->NbRows = P->NbEq;
+    M->NbColumns = P->Dimension+2;
+    M->p_Init = P->p_Init;
+    M->p = P->Constraint;
+}
+
 static void transform(Polyhedron **P, Polyhedron **C, Matrix *CP, int free,
 		      unsigned MaxRays)
 {
@@ -39,18 +48,31 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
     int i;
     Matrix M;
 
-    if (Q->NbEq == 0)
-	return 0;
-
     if (C) {
 	D = *C;
 	assert(D->Dimension == nparam);
+    }
+
+    if (Q->NbEq == 0 && (!D || D->NbEq == 0))
+	return 0;
+
+    if (D && D->NbEq) {
+	Polyhedron_Equalities_View(D, &M);
+	CV = compress_variables(&M, 0);
+	transform(&Q, &D, CV, Q != *P, MaxRays);
+	nparam = CV->NbColumns-1;
     }
 
     /* compress_parms doesn't like equalities that only involve parameters */
     for (i = 0; i < Q->NbEq; ++i)
 	if (First_Non_Zero(Q->Constraint[i]+1, Q->Dimension-nparam) == -1)
 	    break;
+
+    /* If we already compressed the parameters, then there should be
+     * no such equalities left.
+     */
+    if (CV)
+	assert(i >= Q->NbEq);
 
     if (i < Q->NbEq) {
 	Matrix *M = Matrix_Alloc(Q->NbEq, 1+nparam+1);
@@ -80,11 +102,7 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	CP = CV;
 	CV = NULL;
     } else {
-	/* Matrix "view" of equalities */
-	M.NbRows = Q->NbEq;
-	M.NbColumns = Q->Dimension+2;
-	M.p_Init = Q->p_Init;
-	M.p = Q->Constraint;
+	Polyhedron_Equalities_View(Q, &M);
 	CP = compress_parms(&M, nparam);
 
 	if (isIdentity(CP)) {
