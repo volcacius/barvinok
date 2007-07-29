@@ -1479,12 +1479,12 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
     return eres;
 }
 
-/* frees P */
 static evalue* enumerate(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options)
 {
     //P = unfringe(P, MaxRays);
     Polyhedron *next;
+    Polyhedron *Porig = P;
     Polyhedron *Corig = C;
     Polyhedron *CEq = NULL, *rVD;
     int r = 0;
@@ -1504,6 +1504,8 @@ static evalue* enumerate(Polyhedron *P, Polyhedron* C,
 
     if (C->Dimension == 0 || emptyQ(P)) {
 constant:
+	if (CEq == Porig)
+	    CEq = Polyhedron_Copy(CEq);
 	eres = barvinok_enumerate_cst(P, CEq ? CEq : Polyhedron_Copy(C), options);
 out:
 	if (CP) {
@@ -1522,7 +1524,8 @@ out:
 	}
 	reduce_evalue(eres);
 	free_evalue_refs(&factor);
-	Domain_Free(P);
+	if (P != Porig)
+	    Domain_Free(P);
 	if (C != Corig)
 	    Polyhedron_Free(C);
 	   
@@ -1533,7 +1536,8 @@ out:
 
     if (P->NbEq != 0) {
 	Matrix *f;
-	P = remove_equalities_p(P, P->Dimension-nparam, &f, options->MaxRays);
+	P = remove_equalities_p(Polyhedron_Copy(P), P->Dimension-nparam, &f,
+				options->MaxRays);
 	mask(f, &factor, options);
 	Matrix_Free(f);
     }
@@ -1545,10 +1549,12 @@ out:
     if (P->NbEq != 0) {
 	Polyhedron *Q = P;
 	Polyhedron *D = C;
-	remove_all_equalities(&Q, &C, &CP, NULL, nparam, options->MaxRays);
+	remove_all_equalities(&P, &C, &CP, NULL, nparam, options->MaxRays);
 	if (C != D && D != Corig)
 	    Polyhedron_Free(D);
-	eres = enumerate(Q, C, options);
+	if (P != Q && Q != Porig)
+	    Domain_Free(Q);
+	eres = enumerate(P, C, options);
 	goto out;
     }
 
@@ -1575,7 +1581,8 @@ out:
 	}
     }
     if (T) {
-	Polyhedron_Free(P);
+	if (P != Porig)
+	    Polyhedron_Free(P);
 	P = T;
 	if (T->Dimension == C->Dimension) {
 	    P = T->next;
@@ -1633,11 +1640,11 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
     Porig->next = next;
     Polyhedron_Free(CA);
 
-    if (options->approximation_method == BV_APPROX_BERNOULLI) {
+    if (options->approximation_method == BV_APPROX_BERNOULLI)
 	eres = Bernoulli_sum(P, C, options);
-	Domain_Free(P);
-    } else
+    else
 	eres = enumerate(P, C, options);
+    Domain_Free(P);
 
     C->next = Cnext;
 
