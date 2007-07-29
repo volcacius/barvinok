@@ -1463,6 +1463,11 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
 {
     evalue *eres;
 
+    if (emptyQ2(C)) {
+	Polyhedron_Free(C);
+	return evalue_zero();
+    }
+
     ALLOC(evalue, eres);
     value_init(eres->d);
     value_set_si(eres->d, 0);
@@ -1502,7 +1507,7 @@ static evalue* enumerate(Polyhedron *P, Polyhedron* C,
     POL_ENSURE_FACETS(C);
     POL_ENSURE_VERTICES(C);
 
-    if (C->Dimension == 0 || emptyQ(P)) {
+    if (C->Dimension == 0 || emptyQ(P) || emptyQ(C)) {
 constant:
 	if (CEq == Porig)
 	    CEq = Polyhedron_Copy(CEq);
@@ -1546,7 +1551,7 @@ out:
 	P = Universe_Polyhedron(0);
 	goto constant;
     }
-    if (P->NbEq != 0) {
+    if (P->NbEq != 0 || C->NbEq != 0) {
 	Polyhedron *Q = P;
 	Polyhedron *D = C;
 	remove_all_equalities(&P, &C, &CP, NULL, nparam, options->MaxRays);
@@ -1619,8 +1624,8 @@ out:
 evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 					struct barvinok_options *options)
 {
-    Polyhedron *next, *Cnext, *CA;
-    Polyhedron *Porig = P;
+    Polyhedron *next, *Cnext, *C1;
+    Polyhedron *Corig = C;
     evalue *eres;
 
     if (P->next)
@@ -1633,20 +1638,20 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 
     Cnext = C->next;
     C->next = NULL;
-    CA = align_context(C, P->Dimension, options->MaxRays);
+    C1 = Polyhedron_Project(P, C->Dimension);
+    C = DomainIntersection(C, C1, options->MaxRays);
+    Polyhedron_Free(C1);
     next = P->next;
     P->next = NULL;
-    P = DomainIntersection(P, CA, options->MaxRays);
-    Porig->next = next;
-    Polyhedron_Free(CA);
 
     if (options->approximation_method == BV_APPROX_BERNOULLI)
 	eres = Bernoulli_sum(P, C, options);
     else
 	eres = enumerate(P, C, options);
-    Domain_Free(P);
+    Domain_Free(C);
 
-    C->next = Cnext;
+    P->next= next;
+    Corig->next = Cnext;
 
     return eres;
 }
