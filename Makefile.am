@@ -277,11 +277,14 @@ check-evalue: @bv_barvinok_maximize@ barvinok_summate$(EXEEXT)
 		./barvinok_summate$(EXEEXT) -T < $$i || exit; \
 	    fi \
 	done
+if HAVE_TOPCOM
+    TOPCOM_CD = '--chamber-decomposition=topcom'
+endif
 check-enumerate: barvinok_enumerate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		for options in '' '--series' '--series --primal'; do \
+		for options in '' '--series' '--series --primal' $(TOPCOM_CD); do \
 		    for spec in 'random' 'bf' 'df'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo "        $$opt"; \
