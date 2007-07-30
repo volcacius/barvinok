@@ -1035,7 +1035,7 @@ void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
 	
       /* prints each vertex */
       Print_Vertex(DST, V->Vertex, param_names);
-      printf( "\n" );
+      fprintf(DST, "\n");
     }
     END_FORALL_PVertex_in_ParamPolyhedron;
   }
