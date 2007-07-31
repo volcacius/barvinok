@@ -1,0 +1,3 @@
+[submodule "polylib"]
+	path = polylib
+	url = git://repo.or.cz/polylib.git
