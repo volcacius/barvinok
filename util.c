@@ -507,7 +507,7 @@ Polyhedron *remove_equalities(Polyhedron *P, unsigned MaxRays)
 
     m1 = Matrix_Alloc(dim, dim);
     for (i = 0; i < Q->NbEq; ++i)
-	Vector_Copy(P->Constraint[i]+1, m1->p[i], dim);
+	Vector_Copy(Q->Constraint[i]+1, m1->p[i], dim);
 
     /* m1 may not be unimodular, but we won't be throwing anything away */
     unimodular_complete(m1, Q->NbEq);
