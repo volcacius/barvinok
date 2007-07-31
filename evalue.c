@@ -961,7 +961,7 @@ void reduce_evalue (evalue *e) {
 	free(s.fixed);
 }
 
-static void print_evalue_r(FILE *DST, const evalue *e, char **pname)
+static void print_evalue_r(FILE *DST, const evalue *e, const char *const *pname)
 {
   if(value_notzero_p(e->d)) {    
     if(value_notone_p(e->d)) {
@@ -985,8 +985,8 @@ void print_evalue(FILE *DST, const evalue *e, const char * const *pname)
 	fprintf(DST, "\n");
 }
 
-void print_enode(FILE *DST,enode *p,char **pname) {
-  
+void print_enode(FILE *DST, enode *p, const char *const *pname)
+{
   int i;
   
   if (!p) {
@@ -1052,22 +1052,24 @@ void print_enode(FILE *DST,enode *p,char **pname) {
     }
     break;
   case partition: {
-    char **names = pname;
+    char **new_names = NULL;
+    const char *const *names = pname;
     int maxdim = EVALUE_DOMAIN(p->arr[0])->Dimension;
     if (!pname || p->pos < maxdim) {
-	NALLOC(names, maxdim);
+	new_names = ALLOCN(char *, maxdim);
 	for (i = 0; i < p->pos; ++i) {
 	    if (pname)
-		names[i] = pname[i];
+		new_names[i] = (char *)pname[i];
 	    else {
-		NALLOC(names[i], 10);
-		snprintf(names[i], 10, "%c", 'P'+i);
+		new_names[i] = ALLOCN(char, 10);
+		snprintf(new_names[i], 10, "%c", 'P'+i);
 	    }
 	}
 	for ( ; i < maxdim; ++i) {
-	    NALLOC(names[i], 10);
-	    snprintf(names[i], 10, "_p%d", i);
+	    new_names[i] = ALLOCN(char, 10);
+	    snprintf(new_names[i], 10, "_p%d", i);
 	}
+	names = (const char**)new_names;
     }
 
     for (i=0; i<p->size/2; i++) {
@@ -1077,8 +1079,8 @@ void print_enode(FILE *DST,enode *p,char **pname) {
 
     if (!pname || p->pos < maxdim) {
 	for (i = pname ? p->pos : 0; i < maxdim; ++i)
-	    free(names[i]);
-	free(names);
+	    free(new_names[i]);
+	free(new_names);
     }
 
     break;

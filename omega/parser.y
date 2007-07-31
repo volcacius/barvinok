@@ -489,7 +489,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		$2->setup_names();
 		for (int i = 0; i < globals->size(); ++i)
 		    param_names[i] = (*globals)[i+1]->char_name();
-		print_evalue(stdout, EP, (char**)param_names);
+		print_evalue(stdout, EP, param_names);
 		puts("");
 		delete [] param_names;
 		free_evalue_refs(EP); 
@@ -509,7 +509,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		    names[i] = $2->set_var(i+1)->char_name();
 		for (int i = 0; i < globals->size(); ++i)
 		    names[nvar+i] = (*globals)[i+1]->char_name();
-		print_evalue(stdout, EP, (char**)names);
+		print_evalue(stdout, EP, names);
 		puts("");
 		delete [] names;
 		free_evalue_refs(EP); 
@@ -529,7 +529,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		    names[i] = $4->set_var(i+1)->char_name();
 		for (int i = 0; i < globals->size(); ++i)
 		    names[nvar+i] = (*globals)[i+1]->char_name();
-		print_evalue(stdout, EP, (char**)names);
+		print_evalue(stdout, EP, names);
 		puts("");
 		delete [] names;
 		free_evalue_refs(EP); 

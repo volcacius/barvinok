@@ -152,7 +152,7 @@ int main(int argc, char **argv)
 	    Polyhedron_Print(stdout, P_VALUE_FMT, C);
 	    EP = barvinok_enumerate_with_options(A, C, options);
 	    param_name = Read_ParamNames(stdin, C->Dimension);
-	    print_evalue(stdout, EP, param_name);
+	    print_evalue(stdout, EP, (const char**)param_name);
 	    free_evalue_refs(EP);
 	    free(EP);
 	    Polyhedron_Free(C);

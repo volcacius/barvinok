@@ -18,7 +18,7 @@ struct verify_options {
 
     /* "generated" options */
     int st;
-    char **params;
+    const char *const *params;
     struct barvinok_options *barvinok;
 };
 

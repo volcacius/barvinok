@@ -1041,7 +1041,7 @@ void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
   }
 }
 
-void Enumeration_Print(FILE *Dst, Enumeration *en, char **params)
+void Enumeration_Print(FILE *Dst, Enumeration *en, const char * const *params)
 {
     for (; en; en = en->next) {
 	Print_Domain(Dst, en->ValidityDomain, params);

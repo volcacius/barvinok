@@ -46,8 +46,8 @@ int main(int argc, char **argv)
 	P->next = 0;
 	exist = P->Dimension - nvar - nparam;
 	EP = barvinok_enumerate_e(P, exist, nparam, MAXRAYS);
-	print_evalue(stderr, EP, param_name);
+	print_evalue(stderr, EP, (const char **)param_name);
 	eadd(EP, &sum);
     }
-    print_evalue(stderr, &sum, param_name);
+    print_evalue(stderr, &sum, (const char **)param_name);
 }

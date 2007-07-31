@@ -232,9 +232,9 @@ int main(int argc,char *argv[])
 	evalue *EC = barvinok_lexsmaller_ev(D, D, dim, C, MAXRAYS);
 	if (verbose >= 2) {
 	    puts("EP");
-	    print_evalue(stdout, EP, param_name);
+	    print_evalue(stdout, EP, (const char **)param_name);
 	    puts("EC");
-	    print_evalue(stdout, EC, param_name);
+	    print_evalue(stdout, EC, (const char **)param_name);
 	}
 	value_init(mone.d);
 	evalue_set_si(&mone, -1, 1);
@@ -247,7 +247,7 @@ int main(int argc,char *argv[])
     }
     if (verbose >= 1) {
 	puts("Enumeration");
-	print_evalue(stdout, EP, param_name);
+	print_evalue(stdout, EP, (const char **)param_name);
     }
     en = partition2enumeration(EP);
 

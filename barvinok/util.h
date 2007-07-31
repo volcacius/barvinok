@@ -68,7 +68,7 @@ void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g);
 int unimodular_complete(Matrix *M, int row);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
-void Enumeration_Print(FILE *Dst, Enumeration *en, char **params);
+void Enumeration_Print(FILE *Dst, Enumeration *en, const char * const *params);
 void Enumeration_Free(Enumeration *en);
 void Enumeration_mod2table(Enumeration *en, unsigned nparam);
 size_t Enumeration_size(Enumeration *en);

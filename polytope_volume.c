@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, C->Dimension);
 
     EP = Param_Polyhedron_Volume(A, C, bv_options);
-    print_evalue(stdout, EP, param_name);
+    print_evalue(stdout, EP, (const char **)param_name);
     fprintf(stdout, "\n");
     free_evalue_refs(EP);
     free(EP);
