@@ -186,6 +186,7 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
     }
     assert(NbEq > 0);
     Q = Polyhedron_Alloc(P->Dimension-NbEq, P->NbConstraints-NbEq, P->NbRays);
+    Q->NbEq = P->NbEq - NbEq;
     for (i = 0, k = 0; i < P->NbConstraints; ++i) {
 	if (i < P->NbEq) {
 	    int pos = First_Non_Zero(P->Constraint[i]+1, dim);
