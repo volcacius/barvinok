@@ -3,6 +3,21 @@
 #include "polysign.h"
 #include "config.h"
 
+#ifndef HAVE_LIBGLPK
+enum order_sign glpk_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
+					    struct barvinok_options *options)
+{
+    assert(0);
+}
+
+enum lp_result glpk_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options)
+{
+    assert(0);
+}
+#endif
+
 #ifndef HAVE_LIBCDDGMP
 enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
@@ -12,6 +27,20 @@ enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 
 enum order_sign cddf_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
+{
+    assert(0);
+}
+
+enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options)
+{
+    assert(0);
+}
+
+enum lp_result cddf_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options)
 {
     assert(0);
 }
