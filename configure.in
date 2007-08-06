@@ -361,12 +361,6 @@ if test "$glpk_package" != "no"; then
 fi
 AM_CONDITIONAL(HAVE_GLPK, test x$have_glpk = xtrue)
 
-AC_SUBST(bv_extra_programs)
-if test "$have_glpk" = "true" -o "$have_cddlib" = "true"; then
-    AC_LIBOBJ(sample)
-    bv_extra_programs="polyhedron_sample\$(EXEEXT) 4coins\$(EXEEXT) lexmin\$(EXEEXT) $bv_extra_programs"
-fi
-
 AC_SUBST(GIT_HEAD_ID)
 AC_SUBST(GIT_HEAD)
 AC_SUBST(GIT_HEAD_VERSION)

@@ -30,9 +30,8 @@ noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate verify_lexsmaller piptest \
-		  @bv_extra_programs@ @bv_barvinok_maximize@
-EXTRA_PROGRAMS = polyhedron_sample 4coins lexmin \
-		 barvinok_maximize
+		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@
+EXTRA_PROGRAMS = barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
@@ -67,6 +66,8 @@ libbarvinok_la_SOURCES = \
     barvinok/barvinok.h \
     NTL_QQ.cc \
     basis_reduction.c \
+    basis_reduction_pip.c \
+    basis_reduction_pip_dual.c \
     evalue.c \
     genfun.cc \
     util.c \
@@ -103,6 +104,7 @@ libbarvinok_la_SOURCES = \
     reducer.h \
     remove_equalities.h \
     remove_equalities.c \
+    sample.c \
     scale.c \
     scale.h \
     scarf.cc \

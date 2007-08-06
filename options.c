@@ -79,7 +79,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 #elif defined HAVE_LIBCDDGMP
     options->gbr_lp_solver = BV_GBR_CDD;
 #else
-    options->gbr_lp_solver = BV_GBR_NONE;
+    options->gbr_lp_solver = BV_GBR_PIP;
 #endif
 
 #ifdef HAVE_LIBGLPK
@@ -137,23 +137,25 @@ static struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random|todd]" },
-#if defined(HAVE_LIBGLPK) || defined(HAVE_LIBCDDGMP)
     { "gbr",		    BV_OPT_GBR,
 #if defined(HAVE_LIBGLPK) && defined(HAVE_LIBCDDGMP)
-	"cdd|glpk",
+	"cdd|glpk|pip|pip-dual",
 #elif defined(HAVE_LIBGLPK)
-	"glpk",
+	"glpk|pip|pip-dual",
 #elif defined(HAVE_LIBCDDGMP)
-	"cdd",
+	"cdd|pip|pip-dual",
+#else
+	"pip|pip-dual",
 #endif
 	0,	"lp solver to use for basis reduction "
 #ifdef HAVE_LIBGLPK
 		"[default: glpk]"
 #elif defined HAVE_LIBCDDGMP
 		"[default: cdd]"
+#else
+		"[default: pip]"
 #endif
 	},
-#endif
     { "lp",		    BV_OPT_LP,
 #if defined(HAVE_LIBGLPK) && defined(HAVE_LIBCDDGMP)
 	"cdd|cddf|glpk|polylib",
@@ -293,6 +295,10 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->gbr_lp_solver = BV_GBR_CDD;
 	if (!strcmp(arg, "glpk"))
 	    options->gbr_lp_solver = BV_GBR_GLPK;
+	if (!strcmp(arg, "pip"))
+	    options->gbr_lp_solver = BV_GBR_PIP;
+	if (!strcmp(arg, "pip-dual"))
+	    options->gbr_lp_solver = BV_GBR_PIP_DUAL;
 	break;
     case BV_OPT_LP:
 	if (!strcmp(arg, "cdd"))
