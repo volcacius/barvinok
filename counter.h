@@ -4,7 +4,6 @@ struct counter : public np_base {
     Vector *lambda;
     Matrix *den;
     Matrix *num;
-    int j;
     mpq_t count;
     Value tmp;
 
