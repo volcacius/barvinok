@@ -266,7 +266,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 	    q.SetLength(num_s.length());
 	    for (int i = 0; i < num_s.length(); ++i) {
 		mpq_set_si(tcount, 0, 1);
-		n[i]->div(D, tcount, one);
+		n[i]->div(D, tcount, 1);
 
 		value2zz(mpq_numref(tcount), q[i].n);
 		value2zz(mpq_denref(tcount), q[i].d);
@@ -437,7 +437,7 @@ void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 	D *= fact;
     }
     mpq_set_si(tcount, 0, 1);
-    n.div(D, tcount, one);
+    n.div(D, tcount, 1);
     zz2value(c.n, tn);
     if (sign == -1)
 	value_oppose(tn, tn);

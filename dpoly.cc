@@ -82,7 +82,7 @@ Vector *dpoly::div(const dpoly& d)
     return denom;
 }
 
-void dpoly::div(const dpoly& d, mpq_t count, ZZ& sign)
+void dpoly::div(const dpoly& d, mpq_t count, int sign)
 {
     int len = coeff->Size;
     Vector *denom = div(d);

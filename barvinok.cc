@@ -68,7 +68,7 @@ public:
 	value_clear(d0);
 	value_clear(one);
     }
-    void div(dpoly& d, Vector *count, ZZ& sign) {
+    void div(dpoly& d, Vector *count, int sign) {
 	int len = coeff->NbRows;
 	Matrix * c = Matrix_Alloc(coeff->NbRows, coeff->NbColumns);
 	Value tmp;
@@ -415,7 +415,7 @@ void bfcounter::base(mat_ZZ& factors, bfc_vec& v)
 	    zz2value(v[i]->terms[k][0], tz);
 	    dpoly n(total_power, tz);
 	    mpq_set_si(tcount, 0, 1);
-	    n.div(D, tcount, one);
+	    n.div(D, tcount, 1);
 	    if (total_power % 2)
 		bfct->c[k].n = -bfct->c[k].n;
 	    zz2value(bfct->c[k].n, tn);
@@ -796,7 +796,6 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 		    public enumerator_base {
     vec_ZZ lambda;
     vec_ZZ den;
-    ZZ sign;
     term_info num;
     Vector *c;
     mpq_t count;
@@ -825,14 +824,13 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 
 void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
+    int sign = sc.sign;
     int r = 0;
     assert(sc.rays.NumRows() == dim);
     for (int k = 0; k < dim; ++k) {
 	if (lambda * sc.rays[k] == 0)
 	    throw Orthogonal;
     }
-
-    sign = sc.sign;
 
     lattice_point(V, sc.rays, lambda, &num, sc.det, sc.closed, options);
     den = sc.rays * lambda;
@@ -1118,7 +1116,7 @@ void ienumerator::reduce(evalue *factor, const mat_ZZ& num, const mat_ZZ& den_f,
 	    else {
 		mpq_set_si(tcount, 0, 1);
 		one = 1;
-		n.div(D, tcount, one);
+		n.div(D, tcount, 1);
 
 		if (value_notzero_p(mpq_numref(tcount))) {
 		    evalue f;

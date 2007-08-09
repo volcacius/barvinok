@@ -30,7 +30,7 @@ public:
     void operator += (const dpoly& t);
     void operator *= (const Value f);
     void operator *= (const dpoly& f);
-    void div(const dpoly& d, mpq_t count, ZZ& sign);
+    void div(const dpoly& d, mpq_t count, int sign);
     void div(const dpoly& d, mpq_t *count, const mpq_t& factor);
     Vector *div(const dpoly &d);
 };

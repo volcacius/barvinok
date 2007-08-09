@@ -3,7 +3,6 @@
 struct counter : public np_base {
     Vector *lambda;
     Matrix *den;
-    ZZ sign;
     Matrix *num;
     int j;
     mpq_t count;

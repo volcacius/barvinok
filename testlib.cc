@@ -73,7 +73,6 @@ int test_specialization(struct barvinok_options *options)
     value_init(v);
     mpq_t count;
     mpq_init(count);
-    ZZ sign;
 
     value_set_si(v, 5);
     dpoly n(2, v);
@@ -90,8 +89,7 @@ int test_specialization(struct barvinok_options *options)
     assert(value_cmp_si(d.coeff->p[1], 1) == 0);
     assert(value_cmp_si(d.coeff->p[2], 0) == 0);
 
-    sign = 1;
-    n.div(d, count, sign);
+    n.div(d, count, 1);
     mpq_canonicalize(count);
     assert(value_cmp_si(mpq_numref(count), 31) == 0);
     assert(value_cmp_si(mpq_denref(count), 8) == 0);
@@ -102,7 +100,7 @@ int test_specialization(struct barvinok_options *options)
     assert(value_cmp_si(n2.coeff->p[1], -2) == 0);
     assert(value_cmp_si(n2.coeff->p[2], 3) == 0);
 
-    n2.div(d, count, sign);
+    n2.div(d, count, 1);
     mpq_canonicalize(count);
     assert(value_cmp_si(mpq_numref(count), 6) == 0);
     assert(value_cmp_si(mpq_denref(count), 1) == 0);

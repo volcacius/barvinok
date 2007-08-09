@@ -365,7 +365,7 @@ void bf_reducer::reduce(barvinok_options *options)
 		    zz2value(v[i]->terms[k][0], tmp);
 		    dpoly n(no_param, tmp);
 		    mpq_set_si(bf->tcount, 0, 1);
-		    n.div(D, bf->tcount, bf->one);
+		    n.div(D, bf->tcount, 1);
 
 		    if (value_zero_p(mpq_numref(bf->tcount)))
 			continue;

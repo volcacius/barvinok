@@ -36,7 +36,7 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
 
     assert(c.d == 1);
     assert(c.n == 1 || c.n == -1);
-    sign = c.n;
+    int sign = to_int(c.n);
 
     Matrix_Vector_Product(Rays, lambda->p, den->p_Init);
     Inner_Product(lambda->p, V, dim, &tmp);
