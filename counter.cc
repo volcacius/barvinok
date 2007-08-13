@@ -28,17 +28,17 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
 		     int *closed, barvinok_options *options)
 {
     Matrix* Rays = zz2matrix(rays);
-    for (int k = 0; k < dim; ++k) {
-	Inner_Product(lambda->p, Rays->p[k], dim, &tmp);
-	if (value_zero_p(tmp))
-	    throw Orthogonal;
-    }
 
     assert(c.d == 1);
     assert(c.n == 1 || c.n == -1);
     int sign = to_int(c.n);
 
     Matrix_Vector_Product(Rays, lambda->p, den->p_Init);
+    for (int k = 0; k < dim; ++k)
+	if (value_zero_p(den->p_Init[k])) {
+	    Matrix_Free(Rays);
+	    throw Orthogonal;
+	}
     Inner_Product(lambda->p, V, dim, &tmp);
     lattice_points_fixed(V, &tmp, Rays, den, num, det, closed);
     num->NbRows = det;
