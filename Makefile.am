@@ -99,6 +99,7 @@ libbarvinok_la_SOURCES = \
     mat_util.cc \
     mat_util.h \
     barvinok.cc \
+    barvinok_e.cc \
     $(BERNSTEIN_CC) \
     $(BR_CDD) \
     $(BR_GLPK)
