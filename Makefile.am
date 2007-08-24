@@ -92,6 +92,7 @@ libbarvinok_la_SOURCES = \
     scale.c \
     scale.h \
     scarf.cc \
+    series.cc \
     tcounter.cc \
     tcounter.h \
     volume.c \
