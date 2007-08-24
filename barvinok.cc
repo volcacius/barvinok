@@ -1701,3 +1701,8 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
     delete gf;
     return EP;
 }
+
+evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
+{
+    return evalue_sum(e, nvar, options->MaxRays);
+}

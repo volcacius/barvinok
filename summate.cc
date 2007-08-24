@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <iostream>
-#include <barvinok/evalue.h>
+#include <barvinok/barvinok.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "argp.h"
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);
     else {
-	evalue *sum = evalue_sum(EP, nvar, bv_options->MaxRays);
+	evalue *sum = barvinok_summate(EP, nvar, bv_options);
 	if (options.verify.verify)
 	    result = verify(EP, sum, nvar, nparam, &options.verify);
 	else
