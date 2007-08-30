@@ -15,18 +15,18 @@ Polyhedron *reduce_domain(Polyhedron *D, int nd,
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
-#define FORALL_REDUCED_DOMAIN(PP,C,nd,options,i,D,rVD)		    \
+#define FORALL_REDUCED_DOMAIN(PP,C,nd,options,i,PD,rVD)			    \
 	do {								    \
-	    Param_Domain *D;						    \
+	    Param_Domain *PD;						    \
 	    Polyhedron *rVD;						    \
 	    int i;							    \
 	    Param_Domain *_frd_next;					    \
 	    Vector *_frd_inner = inner_point(C);			    \
 	    if (nd < 0)							    \
-		for (nd = 0, D = PP->D; D; ++nd, D = D->next);		    \
-	    for (i = 0, D = PP->D; D; D = _frd_next) {			    \
-		rVD = reduce_domain(D->Domain, nd, _frd_inner, options);    \
-		_frd_next = D->next;					    \
+		for (nd = 0, PD = PP->D; PD; ++nd, PD = PD->next);	    \
+	    for (i = 0, PD = PP->D; PD; PD = _frd_next) {		    \
+		rVD = reduce_domain(PD->Domain, nd, _frd_inner, options);   \
+		_frd_next = PD->next;					    \
 		if (!rVD)						    \
 		    continue;						    \
 		{
