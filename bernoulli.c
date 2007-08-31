@@ -7,6 +7,7 @@
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 static struct bernoulli_coef bernoulli_coef;
+static struct poly_list bernoulli;
 static struct poly_list faulhaber;
 
 struct bernoulli_coef *bernoulli_coef_compute(int n)
@@ -80,52 +81,72 @@ struct bernoulli_coef *bernoulli_coef_compute(int n)
     return &bernoulli_coef;
 }
 
-struct poly_list *faulhaber_compute(int n)
+/*
+ * Compute either Bernoulli B_n or Faulhaber F_n polynomials.
+ *
+ * B_n =         sum_{k=0}^n {  n  \choose k } b_k x^{n-k}
+ * F_n = 1/(n+1) sum_{k=0}^n { n+1 \choose k } b_k x^{n+1-k}
+ */
+static struct poly_list *bernoulli_faulhaber_compute(int n, struct poly_list *pl,
+						     int faulhaber)
 {
     int i, j;
     Value factor;
     struct bernoulli_coef *bc;
 
-    if (n < faulhaber.n)
-	return &faulhaber;
+    if (n < pl->n)
+	return pl;
 
-    if (n >= faulhaber.size) {
+    if (n >= pl->size) {
 	int size = 3*(n + 5)/2;
 	Vector **poly;
 
 	poly = ALLOCN(Vector *, size);
-	for (i = 0; i < faulhaber.n; ++i)
-	    poly[i] = faulhaber.poly[i];
-	free(faulhaber.poly);
-	faulhaber.poly = poly;
+	for (i = 0; i < pl->n; ++i)
+	    poly[i] = pl->poly[i];
+	free(pl->poly);
+	pl->poly = poly;
 
-	faulhaber.size = size;
+	pl->size = size;
     }
 
     bc = bernoulli_coef_compute(n);
 
     value_init(factor);
-    for (i = faulhaber.n; i <= n; ++i) {
-	faulhaber.poly[i] = Vector_Alloc(i+3);
-	value_assign(faulhaber.poly[i]->p[i+1], bc->lcm->p[i]);
-	mpz_mul_ui(faulhaber.poly[i]->p[i+2], bc->lcm->p[i], i+1);
+    for (i = pl->n; i <= n; ++i) {
+	pl->poly[i] = Vector_Alloc(i+faulhaber+2);
+	value_assign(pl->poly[i]->p[i+faulhaber], bc->lcm->p[i]);
+	if (faulhaber)
+	    mpz_mul_ui(pl->poly[i]->p[i+2], bc->lcm->p[i], i+1);
+	else
+	    value_assign(pl->poly[i]->p[i+1], bc->lcm->p[i]);
 	value_set_si(factor, 1);
 	for (j = 1; j <= i; ++j) {
-	    mpz_mul_ui(factor, factor, i+2-j);
+	    mpz_mul_ui(factor, factor, i+faulhaber+1-j);
 	    mpz_divexact_ui(factor, factor, j);
-	    value_division(faulhaber.poly[i]->p[i+1-j],
+	    value_division(pl->poly[i]->p[i+faulhaber-j],
 			   bc->lcm->p[i], bc->den->p[j]);
-	    value_multiply(faulhaber.poly[i]->p[i+1-j],
-			   faulhaber.poly[i]->p[i+1-j], bc->num->p[j]);
-	    value_multiply(faulhaber.poly[i]->p[i+1-j],
-			   faulhaber.poly[i]->p[i+1-j], factor);
+	    value_multiply(pl->poly[i]->p[i+faulhaber-j],
+			   pl->poly[i]->p[i+faulhaber-j], bc->num->p[j]);
+	    value_multiply(pl->poly[i]->p[i+faulhaber-j],
+			   pl->poly[i]->p[i+faulhaber-j], factor);
 	}
-	Vector_Normalize(faulhaber.poly[i]->p, i+3);
+	Vector_Normalize(pl->poly[i]->p, i+faulhaber+2);
     }
     value_clear(factor);
     pl->n = n+1;
 
-    return &faulhaber;
+    return pl;
+}
+
+struct poly_list *bernoulli_compute(int n)
+{
+    return bernoulli_faulhaber_compute(n, &bernoulli, 0);
+}
+
+struct poly_list *faulhaber_compute(int n)
+{
+    return bernoulli_faulhaber_compute(n, &faulhaber, 1);
 }
 
 /* shift variables in polynomial one down */

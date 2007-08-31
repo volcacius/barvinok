@@ -32,6 +32,12 @@ struct bernoulli_coef *bernoulli_coef_compute(int n);
  */
 struct poly_list *faulhaber_compute(int n);
 
+/*
+ * Compute Bernoulli polynomials up to the nth.
+ * The returned structure will contain at least n+1 polynomials (0..n).
+ */
+struct poly_list *bernoulli_compute(int n);
+
 evalue *Bernoulli_sum(Polyhedron *P, Polyhedron *C,
 			struct barvinok_options *options);
 evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,

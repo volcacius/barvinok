@@ -205,7 +205,7 @@ int test_todd(struct barvinok_options *options)
 int test_bernoulli(struct barvinok_options *options)
 {
     struct bernoulli_coef *bernoulli_coef;
-    struct poly_list *faulhaber;
+    struct poly_list *faulhaber, *bernoulli;
     bernoulli_coef = bernoulli_coef_compute(2);
     faulhaber = faulhaber_compute(4);
     bernoulli_coef = bernoulli_coef_compute(8);
@@ -217,6 +217,16 @@ int test_bernoulli(struct barvinok_options *options)
     assert(value_cmp_si(faulhaber->poly[3]->p[3], -2) == 0);
     assert(value_cmp_si(faulhaber->poly[3]->p[4], 1) == 0);
     assert(value_cmp_si(faulhaber->poly[3]->p[5], 4) == 0);
+
+    bernoulli = bernoulli_compute(6);
+    assert(value_cmp_si(bernoulli->poly[6]->p[0], 1) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[1], 0) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[2], -21) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[3], 0) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[4], 105) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[5], -126) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[6], 42) == 0);
+    assert(value_cmp_si(bernoulli->poly[6]->p[7], 42) == 0);
 
     unsigned nvar, nparam;
     char **all_vars;
