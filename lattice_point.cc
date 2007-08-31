@@ -575,25 +575,23 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = rays.NumCols();
+
+    /* It doesn't really make sense to call lattice_point when dim == 0,
+     * but apparently it happens from indicator_constructor in lexmin.
+     */
+    if (!dim)
+	return;
+
     vec_ZZ vertex;
     vertex.SetLength(nparam+1);
 
-    Value lcm, tmp;
-    value_init(lcm);
+    Value tmp;
     value_init(tmp);
-    value_set_si(lcm, 1);
 
-    for (int j = 0; j < V->Vertex->NbRows; ++j) {
-	value_lcm(lcm, V->Vertex->p[j][nparam+1], &lcm);
-    }
+    assert(V->Vertex->NbRows > 0);
+    Param_Vertex_Common_Denominator(V);
 
-    if (value_notone_p(lcm)) {
-	Matrix * mv = Matrix_Alloc(dim, nparam+1);
-	for (int j = 0 ; j < dim; ++j) {
-	    value_division(tmp, lcm, V->Vertex->p[j][nparam+1]);
-	    Vector_Scale(V->Vertex->p[j], mv->p[j], tmp, nparam+1);
-	}
-
+    if (value_notone_p(V->Vertex->p[0][nparam+1])) {
 	Matrix* Rays = zz2matrix(rays);
 	Matrix *T = Transpose(Rays);
 	Matrix *T2 = Matrix_Copy(T);
@@ -602,8 +600,11 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	assert(ok);
 	Matrix_Free(Rays);
 	Matrix_Free(T2);
-	Matrix *L = Matrix_Alloc(inv->NbRows, mv->NbColumns);
-	Matrix_Product(inv, mv, L);
+	/* temporarily ignore (common) denominator */
+	V->Vertex->NbColumns--;
+	Matrix *L = Matrix_Alloc(inv->NbRows, V->Vertex->NbColumns);
+	Matrix_Product(inv, V->Vertex, L);
+	V->Vertex->NbColumns++;
 	Matrix_Free(inv);
 
 	evalue f;
@@ -616,18 +617,19 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	for (int i = 0; i < dim; ++i) {
 	    remainders[i] = evalue_zero();
 	    one = 1;
-	    ceil(L->p[i], nparam+1, lcm, one, remainders[i], options);
+	    ceil(L->p[i], nparam+1, V->Vertex->p[0][nparam+1],
+		 one, remainders[i], options);
 	}
 	Matrix_Free(L);
 
 
 	for (int i = 0; i < V->Vertex->NbRows; ++i) {
-	    values2zz(mv->p[i], vertex, nparam+1);
+	    values2zz(V->Vertex->p[i], vertex, nparam+1);
 	    E_vertex[i] = multi_monom(vertex);
 	    num[i] = 0;
 
 	    value_set_si(f.x.n, 1);
-	    value_assign(f.d, lcm);
+	    value_assign(f.d, V->Vertex->p[0][nparam+1]);
 
 	    emul(&f, E_vertex[i]);
 
@@ -654,12 +656,9 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	free_evalue_refs(&f); 
 
 	Matrix_Free(T);
-	Matrix_Free(mv);
-	value_clear(lcm);
 	value_clear(tmp);
 	return;
     }
-    value_clear(lcm);
     value_clear(tmp);
 
     for (int i = 0; i < V->Vertex->NbRows; ++i) {
