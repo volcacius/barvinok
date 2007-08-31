@@ -74,6 +74,7 @@ typedef struct _enumeration {
 void evalue_set_si(evalue *ev, int n, int d);
 void evalue_set(evalue *ev, Value n, Value d);
 void evalue_copy(evalue *dst, const evalue *src);
+evalue *evalue_dup(const evalue *e);
 evalue *evalue_zero();
 enode *new_enode(enode_type type,int size,int pos);
 enode *ecopy(enode *e);

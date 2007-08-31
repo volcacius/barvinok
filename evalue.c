@@ -1941,7 +1941,7 @@ void evalue_copy(evalue *dst, const evalue *src)
 	 dst->x.p = ecopy(src->x.p);
 }
 
-evalue *evalue_dup(evalue *e)
+evalue *evalue_dup(const evalue *e)
 {
     evalue *res = ALLOC(evalue);
     value_init(res->d);
