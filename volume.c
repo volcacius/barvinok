@@ -106,37 +106,6 @@ static Polyhedron *facet(Polyhedron *P, int c, unsigned MaxRays)
     return F;
 }
 
-/* Compute a dummy Param_Domain that contains all vertices of Param_Domain D
- * (which contains the vertices of P) that lie on the facet obtained by
- * saturating constraint c of P
- */
-static Param_Domain *face_vertices(Param_Polyhedron *PP, Param_Domain *D,
-				   Polyhedron *P, int c)
-{
-    int nv;
-    Param_Vertices *V;
-    unsigned nparam = PP->V->Vertex->NbColumns-2;
-    Vector *row = Vector_Alloc(1+nparam+1);
-    Param_Domain *FD = ALLOC(Param_Domain);
-    FD->Domain = 0;
-    FD->next = 0;
-
-    nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
-    FD->F = ALLOCN(unsigned, nv);
-    memset(FD->F, 0, nv * sizeof(unsigned));
-
-    FORALL_PVertex_in_ParamPolyhedron(V, D, PP) /* _i, _ix, _bx internal counters */
-	int n;
-	Param_Inner_Product(P->Constraint[c], V->Vertex, row->p);
-	if (First_Non_Zero(row->p+1, nparam+1) == -1)
-	    FD->F[_ix] |= _bx;
-    END_FORALL_PVertex_in_ParamPolyhedron;
-
-    Vector_Free(row);
-
-    return FD;
-}
-
 /* Substitute parameters by the corresponding element in subs
  */
 static evalue *evalue_substitute_new(evalue *e, evalue **subs)
@@ -359,7 +328,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 		continue;
 	}
 	FF = facet(F, j, options->MaxRays);
-	FD = face_vertices(PP, D, F, j);
+	FD = Param_Polyhedron_Facet(PP, D, F, j);
 	tmp = volume_in_domain(PP, FD, dim, matrix, point,
 			       row+1, FF, options);
 	if (!vol)

@@ -1,6 +1,9 @@
 #include <barvinok/options.h>
 #include "param_util.h"
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+
 void Param_Vertex_Common_Denominator(Param_Vertices *V)
 {
     unsigned dim;
@@ -72,4 +75,35 @@ Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *Din, Polyhedron *Cin,
     if (MaxRays & POL_NO_DUAL)
 	MaxRays = 0;
     return Polyhedron2Param_Domain(Din, Cin, MaxRays);
+}
+
+/* Compute a dummy Param_Domain that contains all vertices of Param_Domain D
+ * (which contains the vertices of P) that lie on the facet obtained by
+ * saturating constraint c of P
+ */
+Param_Domain *Param_Polyhedron_Facet(Param_Polyhedron *PP, Param_Domain *D,
+				     Polyhedron *P, int c)
+{
+    int nv;
+    Param_Vertices *V;
+    unsigned nparam = PP->V->Vertex->NbColumns-2;
+    Vector *row = Vector_Alloc(1+nparam+1);
+    Param_Domain *FD = ALLOC(Param_Domain);
+    FD->Domain = 0;
+    FD->next = 0;
+
+    nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
+    FD->F = ALLOCN(unsigned, nv);
+    memset(FD->F, 0, nv * sizeof(unsigned));
+
+    FORALL_PVertex_in_ParamPolyhedron(V, D, PP) /* _i, _ix, _bx internal counters */
+	int n;
+	Param_Inner_Product(P->Constraint[c], V->Vertex, row->p);
+	if (First_Non_Zero(row->p+1, nparam+1) == -1)
+	    FD->F[_ix] |= _bx;
+    END_FORALL_PVertex_in_ParamPolyhedron;
+
+    Vector_Free(row);
+
+    return FD;
 }
