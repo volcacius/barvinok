@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "counter.h"
 #include "lattice_point.h"
 

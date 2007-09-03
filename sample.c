@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <barvinok/util.h>
 #include <barvinok/basis_reduction.h>
 #include <barvinok/sample.h>

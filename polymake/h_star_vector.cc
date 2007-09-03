@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <gmp.h>
 #include <cstdlib>
 #include <Rational.h>

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <unistd.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>

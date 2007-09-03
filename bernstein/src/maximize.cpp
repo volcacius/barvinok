@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <bernstein/bernstein.h>
 #include <bernstein/maximize.h>
 

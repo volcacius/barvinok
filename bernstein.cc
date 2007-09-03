@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <vector>
 #include <bernstein/bernstein.h>
 #include <bernstein/piecewise_lst.h>

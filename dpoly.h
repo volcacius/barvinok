@@ -1,7 +1,6 @@
 #ifndef DPOLY_H
 #define DPOLY_H
 
-#include <assert.h>
 #include <barvinok/set.h>
 #include <vector>
 #include <gmp.h>

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iostream>
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>

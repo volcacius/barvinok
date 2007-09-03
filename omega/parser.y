@@ -1,5 +1,6 @@
 %{
 
+#include <assert.h>
 #define compilingParser
 #include <basic/Dynamic_Array.h>
 #include <code_gen/code_gen.h>

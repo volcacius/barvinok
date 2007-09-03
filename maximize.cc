@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iostream>
 #include <bernstein/bernstein.h>
 #include <barvinok/evalue.h>

@@ -4,7 +4,7 @@
  *	- ginac functions
  */
 
-
+#include <assert.h>
 #include <iostream>
 #include <cln/cln.h>
 #include <string>

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <limits.h>
 #include <sys/times.h>
 #include <barvinok/barvinok.h>

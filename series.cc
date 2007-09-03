@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include "genfun_constructor.h"

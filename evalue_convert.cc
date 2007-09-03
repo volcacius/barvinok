@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <unistd.h>
 #include <sstream>
 #include <barvinok/util.h>

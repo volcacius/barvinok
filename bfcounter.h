@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <vector>
 #include <gmp.h>
 #include <barvinok/polylib.h>

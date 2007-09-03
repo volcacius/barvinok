@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <bernstein/bernstein.h>
 #include <bernstein/piecewise_lst.h>
 #include <barvinok/options.h>

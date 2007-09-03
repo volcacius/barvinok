@@ -1,6 +1,7 @@
 #ifndef REDUCER_H
 #define REDUCER_H
 
+#include <assert.h>
 #include <NTL/mat_ZZ.h>
 #include <barvinok/NTL_QQ.h>
 #include <barvinok/options.h>

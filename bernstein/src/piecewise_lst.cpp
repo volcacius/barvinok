@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <cln/cln.h>
 
 #include <bernstein/bernstein.h>

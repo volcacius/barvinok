@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iostream>
 #include <barvinok/genfun.h>
 #include <barvinok/util.h>

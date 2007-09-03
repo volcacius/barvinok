@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include "polysign.h"

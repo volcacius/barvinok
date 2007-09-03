@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <math.h>
 #include <glpk.h>
 #include <barvinok/basis_reduction.h>
