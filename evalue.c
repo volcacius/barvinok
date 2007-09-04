@@ -4264,3 +4264,27 @@ evalue *evalue_polynomial(Vector *c, const evalue* X)
     free_evalue_refs(&EC);
     return EP;
 }
+
+/* Create an evalue from an array of pairs of domains and evalues. */
+evalue *evalue_from_section_array(struct evalue_section *s, int n)
+{
+    int i;
+    evalue *res;
+
+    res = ALLOC(evalue);
+    value_init(res->d);
+
+    if (n == 0)
+	evalue_set_si(res, 0, 1);
+    else {
+	value_set_si(res->d, 0);
+	res->x.p = new_enode(partition, 2*n, s[0].D->Dimension);
+	for (i = 0; i < n; ++i) {
+	    EVALUE_SET_DOMAIN(res->x.p->arr[2*i], s[i].D);
+	    value_clear(res->x.p->arr[2*i+1].d);
+	    res->x.p->arr[2*i+1] = *s[i].E;
+	    free(s[i].E);
+	}
+    }
+    return res;
+}

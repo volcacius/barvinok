@@ -1608,14 +1608,9 @@ evalue *Param_Polyhedron_Enumerate(Param_Polyhedron *PP, Polyhedron *P,
     unsigned nparam = C->Dimension;
     unsigned dim = P->Dimension - nparam;
 
-    ALLOC(evalue, eres);
-    value_init(eres->d);
-    value_set_si(eres->d, 0);
-
     int nd;
     for (nd = 0, D=PP->D; D; ++nd, D=D->next);
-    struct section { Polyhedron *D; evalue E; };
-    section *s = new section[nd];
+    evalue_section *s = new evalue_section[nd];
 
     enumerator_base *et = NULL;
 try_again:
@@ -1628,8 +1623,7 @@ try_again:
     FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)
 	Param_Vertices *V;
 
-	value_init(s[i].E.d);
-	evalue_set_si(&s[i].E, 0, 1);
+	s[i].E = evalue_zero();
 	s[i].D = rVD;
 
 	FORALL_PVertex_in_ParamPolyhedron(V,D,PP) // _i is internal counter
@@ -1639,28 +1633,20 @@ try_again:
 		} catch (OrthogonalException &e) {
 		    FORALL_REDUCED_DOMAIN_RESET;
 		    for (; i >= 0; --i) {
-			free_evalue_refs(&s[i].E);
+			free_evalue_refs(s[i].E);
+			free(s[i].E);
 			Domain_Free(s[i].D);
 		    }
 		    goto try_again;
 		}
-	    eadd(et->vE[_i] , &s[i].E);
+	    eadd(et->vE[_i] , s[i].E);
 	END_FORALL_PVertex_in_ParamPolyhedron;
-	evalue_range_reduction_in_domain(&s[i].E, rVD);
+	evalue_range_reduction_in_domain(s[i].E, rVD);
     END_FORALL_REDUCED_DOMAIN
     Polyhedron_Free(TC);
 
     delete et;
-    if (nd == 0)
-	evalue_set_si(eres, 0, 1);
-    else {
-	eres->x.p = new_enode(partition, 2*nd, C->Dimension);
-	for (int j = 0; j < nd; ++j) {
-	    EVALUE_SET_DOMAIN(eres->x.p->arr[2*j], s[j].D);
-	    value_clear(eres->x.p->arr[2*j+1].d);
-	    eres->x.p->arr[2*j+1] = s[j].E;
-	}
-    }
+    eres = evalue_from_section_array(s, nd);
     delete [] s;
 
     return eres;

@@ -124,6 +124,13 @@ void evalue_substitute(evalue *e, evalue **subs);
 void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays);
 evalue *evalue_polynomial(Vector *c, const evalue* X);
 
+struct evalue_section {
+    Polyhedron *D;
+    evalue *E;
+};
+
+evalue *evalue_from_section_array(struct evalue_section *s, int n);
+
 #if defined(__cplusplus)
 }
 #endif

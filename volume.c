@@ -553,7 +553,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     Value fact;
     evalue *vol;
     int nd;
-    struct section { Polyhedron *D; evalue *E; } *s;
+    struct evalue_section *s;
     Param_Domain *D;
     Polyhedron *TC;
 
@@ -587,7 +587,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     PP = Polyhedron2Param_Polyhedron(P, C, options);
 
     for (nd = 0, D = PP->D; D; ++nd, D = D->next);
-    s = ALLOCN(struct section, nd);
+    s = ALLOCN(struct evalue_section, nd);
 
     matrix = ALLOCN(evalue **, nvar+1);
     for (i = 0; i < nvar+1; ++i)
@@ -611,21 +611,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     options->MaxRays = MaxRays;
     Polyhedron_Free(TC);
 
-    vol = ALLOC(evalue);
-    value_init(vol->d);
-    value_set_si(vol->d, 0);
-
-    if (nd == 0)
-	evalue_set_si(vol, 0, 1);
-    else {
-	vol->x.p = new_enode(partition, 2*nd, C->Dimension);
-	for (i = 0; i < nd; ++i) {
-	    EVALUE_SET_DOMAIN(vol->x.p->arr[2*i], s[i].D);
-	    value_clear(vol->x.p->arr[2*i+1].d);
-	    vol->x.p->arr[2*i+1] = *s[i].E;
-	    free(s[i].E);
-	}
-    }
+    vol = evalue_from_section_array(s, nd);
     free(s);
 
     for (i = 0; i < nvar+1; ++i)
