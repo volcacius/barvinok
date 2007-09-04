@@ -14,6 +14,8 @@ struct barvinok_options;
 
 evalue *multi_monom(vec_ZZ& p);
 int normal_mod(Value *coef, int len, Value *m);
+evalue *fractional_part(Value *coef, Value denom, int nvar,
+		        Polyhedron *PD, bool up);
 void lattice_point_fixed(Value *vertex, Value *vertex_res,
 			 Matrix *Rays, Matrix *Rays_res,
 			 Value *point, int *closed);

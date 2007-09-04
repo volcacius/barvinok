@@ -154,31 +154,39 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
     return false;
 }
 
-/* modifies coef argument ! */
-static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
-			    Polyhedron *PD, bool up)
+/* Computes the fractional part of the affine expression specified
+ * by coef (of length nvar+1) and the denominator denom.
+ * If PD is not NULL, then it specifies additional constraints
+ * on the variables that may be used to simplify the resulting
+ * fractional part expression.
+ *
+ * Modifies coef argument !
+ */
+evalue *fractional_part(Value *coef, Value denom, int nvar,
+		        Polyhedron *PD, bool up)
 {
     Value m;
     value_init(m);
+    evalue *EP = evalue_zero();
+    int sign = 1;
 
     if (up) {
-	/* f {{ x }} = f - f { -x } */
-	zz2value(f, m);
-	evalue_add_constant(EP, m);
-	Vector_Oppose(coef, coef, len);
-	f = -f;
+	/* {{ x }} = 1 - { -x } */
+	value_set_si(EP->x.n, 1);
+	Vector_Oppose(coef, coef, nvar+1);
+	sign = -1;
     }
 
-    value_assign(m, d);
-    int j = normal_mod(coef, len, &m);
+    value_assign(m, denom);
+    int j = normal_mod(coef, nvar+1, &m);
 
-    if (j == len) {
+    if (j == nvar+1) {
 	value_clear(m);
-	return;
+	return EP;
     }
 
     vec_ZZ num;
-    values2zz(coef, num, len);
+    values2zz(coef, num, nvar+1);
 
     ZZ g;
     value2zz(m, g);
@@ -189,22 +197,22 @@ static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
 
     int p = j;
     if (g % 2 == 0)
-	while (j < len-1 && (num[j] == g/2 || num[j] == 0))
+	while (j < nvar && (num[j] == g/2 || num[j] == 0))
 	    ++j;
-    if ((j < len-1 && num[j] > g/2) || (j == len-1 && num[j] >= (g+1)/2)) {
-	for (int k = j; k < len-1; ++k)
+    if ((j < nvar && num[j] > g/2) || (j == nvar && num[j] >= (g+1)/2)) {
+	for (int k = j; k < nvar; ++k)
 	    if (num[k] != 0)
 		num[k] = g - num[k];
-	num[len-1] = g - 1 - num[len-1];
+	num[nvar] = g - 1 - num[nvar];
 	value_assign(tmp.d, m);
-	ZZ t = f*(g-1);
+	ZZ t = sign*(g-1);
 	zz2value(t, tmp.x.n);
 	eadd(&tmp, EP);
-	f = -f;
+	sign = -sign;
     }
 
-    if (p >= len-1) {
-	ZZ t = num[len-1] * f;
+    if (p >= nvar) {
+	ZZ t = num[nvar] * sign;
 	zz2value(t, tmp.x.n);
 	value_assign(tmp.d, m);
 	eadd(&tmp, EP);
@@ -215,7 +223,7 @@ static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
 
 	if (PD && !mod_needed(PD, num, m, E)) {
 	    value_init(EV.x.n);
-	    zz2value(f, EV.x.n);
+	    value_set_si(EV.x.n, sign);
 	    value_assign(EV.d, m);
 	    emul(&EV, E);
 	    eadd(E, EP);
@@ -230,7 +238,7 @@ static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
 	    evalue_copy(&EV.x.p->arr[0], E);
 	    evalue_set_si(&EV.x.p->arr[1], 0, 1);
 	    value_init(EV.x.p->arr[2].x.n);
-	    zz2value(f, EV.x.p->arr[2].x.n);
+	    value_set_si(EV.x.p->arr[2].x.n, sign);
 	    value_set_si(EV.x.p->arr[2].d, 1);
 
 	    eadd(&EV, EP);
@@ -245,15 +253,20 @@ static void fractional_part(Value *coef, int len, Value d, ZZ f, evalue *EP,
 
 out:
     value_clear(m);
+
+    return EP;
 }
 
-static void ceil(Value *coef, int len, Value d, ZZ& f,
-                 evalue *EP, barvinok_options *options)
+static evalue *ceil(Value *coef, int len, Value d,
+		    barvinok_options *options)
 {
+    evalue *c;
+
     Vector_Oppose(coef, coef, len);
-    fractional_part(coef, len, d, f, EP, NULL, false);
+    c = fractional_part(coef, d, len-1, NULL, false);
     if (options->lookup_table)
-	evalue_mod2table(EP, len-1);
+	evalue_mod2table(c, len-1);
+    return c;
 }
 
 evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
@@ -278,11 +291,13 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 
     emul(&tmp, EP);
 
-    ZZ one;
-    one = 1;
     Vector_Oppose(val->p, val->p, len);
-    fractional_part(val->p, len, t, one, EP, P, false);
+    evalue *f = fractional_part(val->p, t, len-1, P, false);
     value_clear(t);
+
+    eadd(f, EP);
+    free_evalue_refs(f);
+    free(f);
 
     /* copy EP to malloc'ed evalue */
     evalue *E = ALLOC(evalue);
@@ -484,11 +499,20 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 
     vec_ZZ p = lambda * RT;
 
+    Value tmp;
+    value_init(tmp);
+
     if (det == 1) {
 	for (int i = 0; i < L->NbRows; ++i) {
+	    evalue *f;
 	    Vector_Oppose(L->p[i], L->p[i], nparam+1);
-	    fractional_part(L->p[i], nparam+1, V->p[i][nparam+1], p[i],
-			    EP, NULL, closed && !closed[i]);
+	    f = fractional_part(L->p[i], V->p[i][nparam+1], nparam,
+				NULL, closed && !closed[i]);
+	    zz2value(p[i], tmp);
+	    evalue_mul(f, tmp);
+	    eadd(f, EP);
+	    free_evalue_refs(f);
+	    free(f);
 	}
 	E[0] = EP;
     } else {
@@ -525,10 +549,16 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	    value_init(E[i]->d);
 	    evalue_copy(E[i], EP);
 	    for (int j = 0; j < L->NbRows; ++j) {
+		evalue *f;
 		Vector_Oppose(L->p[j], row->p, nparam+1);
 		value_addmul(row->p[nparam], L->p[j][nparam+1], lambda->p[j]);
-		fractional_part(row->p, nparam+1, denom, p[j],
-				E[i], NULL, closed && !closed[j]);
+		f = fractional_part(row->p, denom, nparam,
+				    NULL, closed && !closed[j]);
+		zz2value(p[j], tmp);
+		evalue_mul(f, tmp);
+		eadd(f, E[i]);
+		free_evalue_refs(f);
+		free(f);
 	    }
 	END_FORALL_COSETS
 	Vector_Free(row);
@@ -541,6 +571,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	free_evalue_refs(EP);
 	delete EP;
     }
+    value_clear(tmp);
 
     Matrix_Free(Rays);
     Matrix_Free(L);
@@ -611,15 +642,10 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	value_init(f.d);
 	value_init(f.x.n);
 
-	ZZ one;
-
 	evalue *remainders[dim];
-	for (int i = 0; i < dim; ++i) {
-	    remainders[i] = evalue_zero();
-	    one = 1;
-	    ceil(L->p[i], nparam+1, V->Vertex->p[0][nparam+1],
-		 one, remainders[i], options);
-	}
+	for (int i = 0; i < dim; ++i)
+	    remainders[i] = ceil(L->p[i], nparam+1, V->Vertex->p[0][nparam+1],
+				 options);
 	Matrix_Free(L);
 
 
