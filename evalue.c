@@ -3713,6 +3713,9 @@ void evalue_div(evalue *e, Value n)
 {
     int i, offset;
 
+    if (value_one_p(n) || EVALUE_IS_ZERO(*e))
+	return;
+
     if (value_notzero_p(e->d)) {
 	Value gc;
 	value_init(gc);
@@ -3739,6 +3742,9 @@ void evalue_div(evalue *e, Value n)
 void evalue_mul(evalue *e, Value n)
 {
     int i, offset;
+
+    if (value_one_p(n) || EVALUE_IS_ZERO(*e))
+	return;
 
     if (value_notzero_p(e->d)) {
 	Value gc;
