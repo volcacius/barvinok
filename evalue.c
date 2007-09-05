@@ -4210,7 +4210,13 @@ void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
     Matrix_Free(inv);
 }
 
-evalue *evalue_polynomial(Vector *c, evalue* X)
+/* Computes
+ *
+ *	\sum_{i=0}^n c_i/d X^i
+ *
+ * where d is the last element in the vector c.
+ */
+evalue *evalue_polynomial(Vector *c, const evalue* X)
 {
     unsigned dim = c->Size-2;
     evalue EC;

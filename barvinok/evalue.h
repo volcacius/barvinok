@@ -121,7 +121,7 @@ void evalue_extract_affine(const evalue *e, Value *coeff, Value *cst, Value *d);
 evalue *affine2evalue(Value *coeff, Value denom, int nvar);
 void evalue_substitute(evalue *e, evalue **subs);
 void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays);
-evalue *evalue_polynomial(Vector *c, evalue* X);
+evalue *evalue_polynomial(Vector *c, const evalue* X);
 
 #if defined(__cplusplus)
 }
