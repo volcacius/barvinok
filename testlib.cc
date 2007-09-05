@@ -204,18 +204,19 @@ int test_todd(struct barvinok_options *options)
 
 int test_bernoulli(struct barvinok_options *options)
 {
-    struct bernoulli *bernoulli;
-    bernoulli = bernoulli_compute(2);
-    bernoulli = bernoulli_compute(4);
-    bernoulli = bernoulli_compute(8);
-    assert(value_cmp_si(bernoulli->b_num->p[6], 1) == 0);
-    assert(value_cmp_si(bernoulli->b_den->p[6], 42) == 0);
-    assert(value_cmp_si(bernoulli->sum[3]->p[0], 0) == 0);
-    assert(value_cmp_si(bernoulli->sum[3]->p[1], 0) == 0);
-    assert(value_cmp_si(bernoulli->sum[3]->p[2], 1) == 0);
-    assert(value_cmp_si(bernoulli->sum[3]->p[3], -2) == 0);
-    assert(value_cmp_si(bernoulli->sum[3]->p[4], 1) == 0);
-    assert(value_cmp_si(bernoulli->sum[3]->p[5], 4) == 0);
+    struct bernoulli_coef *bernoulli_coef;
+    struct poly_list *faulhaber;
+    bernoulli_coef = bernoulli_coef_compute(2);
+    faulhaber = faulhaber_compute(4);
+    bernoulli_coef = bernoulli_coef_compute(8);
+    assert(value_cmp_si(bernoulli_coef->num->p[6], 1) == 0);
+    assert(value_cmp_si(bernoulli_coef->den->p[6], 42) == 0);
+    assert(value_cmp_si(faulhaber->poly[3]->p[0], 0) == 0);
+    assert(value_cmp_si(faulhaber->poly[3]->p[1], 0) == 0);
+    assert(value_cmp_si(faulhaber->poly[3]->p[2], 1) == 0);
+    assert(value_cmp_si(faulhaber->poly[3]->p[3], -2) == 0);
+    assert(value_cmp_si(faulhaber->poly[3]->p[4], 1) == 0);
+    assert(value_cmp_si(faulhaber->poly[3]->p[5], 4) == 0);
 
     unsigned nvar, nparam;
     char **all_vars;
@@ -223,7 +224,7 @@ int test_bernoulli(struct barvinok_options *options)
     base = evalue_read_from_str("(1 * n + 1)", NULL, &all_vars, &nvar, &nparam,
 				options->MaxRays);
 
-    sum1 = evalue_polynomial(bernoulli->sum[3], base);
+    sum1 = evalue_polynomial(faulhaber->poly[3], base);
     Free_ParamNames(all_vars, nvar+nparam);
 
     sum2 = evalue_read_from_str("(1/4 * n^4 + 1/2 * n^3 + 1/4 * n^2)",

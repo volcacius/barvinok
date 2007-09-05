@@ -6,93 +6,126 @@
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
-static struct bernoulli bernoulli;
+static struct bernoulli_coef bernoulli_coef;
+static struct poly_list faulhaber;
 
-struct bernoulli *bernoulli_compute(int n)
+struct bernoulli_coef *bernoulli_coef_compute(int n)
 {
     int i, j;
-    Value lcm, factor, tmp;
+    Value factor, tmp;
 
-    if (n < bernoulli.n)
-	return &bernoulli;
+    if (n < bernoulli_coef.n)
+	return &bernoulli_coef;
 
-    if (n >= bernoulli.size) {
-	int size = n + 5;
+    if (n >= bernoulli_coef.size) {
+	int size = 3*(n + 5)/2;
 	Vector *b;
-	Vector **sum;
 
 	b = Vector_Alloc(size);
-	if (bernoulli.n) {
-	    Vector_Copy(bernoulli.b_num->p, b->p, bernoulli.n);
-	    Vector_Free(bernoulli.b_num);
+	if (bernoulli_coef.n) {
+	    Vector_Copy(bernoulli_coef.num->p, b->p, bernoulli_coef.n);
+	    Vector_Free(bernoulli_coef.num);
 	}
-	bernoulli.b_num = b;
+	bernoulli_coef.num = b;
 	b = Vector_Alloc(size);
-	if (bernoulli.n) {
-	    Vector_Copy(bernoulli.b_den->p, b->p, bernoulli.n);
-	    Vector_Free(bernoulli.b_den);
+	if (bernoulli_coef.n) {
+	    Vector_Copy(bernoulli_coef.den->p, b->p, bernoulli_coef.n);
+	    Vector_Free(bernoulli_coef.den);
 	}
-	bernoulli.b_den = b;
-	sum = ALLOCN(Vector *, size);
-	for (i = 0; i < bernoulli.n; ++i)
-	    sum[i] = bernoulli.sum[i];
-	free(bernoulli.sum);
-	bernoulli.sum = sum;
+	bernoulli_coef.den = b;
+	b = Vector_Alloc(size);
+	if (bernoulli_coef.n) {
+	    Vector_Copy(bernoulli_coef.lcm->p, b->p, bernoulli_coef.n);
+	    Vector_Free(bernoulli_coef.lcm);
+	}
+	bernoulli_coef.lcm = b;
 
-	bernoulli.size = size;
+	bernoulli_coef.size = size;
     }
-    value_init(lcm);
     value_init(factor);
     value_init(tmp);
-    value_set_si(lcm, 1);
-    for (i = 0; i < bernoulli.n; ++i)
-	value_lcm(lcm, bernoulli.b_den->p[i], &lcm);
-    for (i = bernoulli.n; i <= n; ++i) {
+    for (i = bernoulli_coef.n; i <= n; ++i) {
 	if (i == 0) {
-	    value_set_si(bernoulli.b_num->p[0], 1);
-	    value_set_si(bernoulli.b_den->p[0], 1);
+	    value_set_si(bernoulli_coef.num->p[0], 1);
+	    value_set_si(bernoulli_coef.den->p[0], 1);
+	    value_set_si(bernoulli_coef.lcm->p[0], 1);
 	    continue;
 	}
-	value_set_si(bernoulli.b_num->p[i], 0);
+	value_set_si(bernoulli_coef.num->p[i], 0);
 	value_set_si(factor, -(i+1));
 	for (j = i-1; j >= 0; --j) {
 	    mpz_mul_ui(factor, factor, j+1);
 	    mpz_divexact_ui(factor, factor, i+1-j);
-	    value_division(tmp, lcm, bernoulli.b_den->p[j]);
-	    value_multiply(tmp, tmp, bernoulli.b_num->p[j]);
+	    value_division(tmp, bernoulli_coef.lcm->p[i-1],
+			   bernoulli_coef.den->p[j]);
+	    value_multiply(tmp, tmp, bernoulli_coef.num->p[j]);
 	    value_multiply(tmp, tmp, factor);
-	    value_addto(bernoulli.b_num->p[i], bernoulli.b_num->p[i], tmp);
+	    value_addto(bernoulli_coef.num->p[i], bernoulli_coef.num->p[i], tmp);
 	}
-	mpz_mul_ui(bernoulli.b_den->p[i], lcm, i+1);
-	Gcd(bernoulli.b_num->p[i], bernoulli.b_den->p[i], &tmp);
+	mpz_mul_ui(bernoulli_coef.den->p[i], bernoulli_coef.lcm->p[i-1], i+1);
+	Gcd(bernoulli_coef.num->p[i], bernoulli_coef.den->p[i], &tmp);
 	if (value_notone_p(tmp)) {
-	    value_division(bernoulli.b_num->p[i], bernoulli.b_num->p[i], tmp);
-	    value_division(bernoulli.b_den->p[i], bernoulli.b_den->p[i], tmp);
+	    value_division(bernoulli_coef.num->p[i],
+			    bernoulli_coef.num->p[i], tmp);
+	    value_division(bernoulli_coef.den->p[i],
+			    bernoulli_coef.den->p[i], tmp);
 	}
-	value_lcm(lcm, bernoulli.b_den->p[i], &lcm);
+	value_lcm(bernoulli_coef.lcm->p[i-1], bernoulli_coef.den->p[i],
+		  &bernoulli_coef.lcm->p[i]);
     }
-    for (i = bernoulli.n; i <= n; ++i) {
-	bernoulli.sum[i] = Vector_Alloc(i+3);
-	value_assign(bernoulli.sum[i]->p[i+1], lcm);
-	mpz_mul_ui(bernoulli.sum[i]->p[i+2], lcm, i+1);
+    bernoulli_coef.n = n+1;
+    value_clear(factor);
+    value_clear(tmp);
+
+    return &bernoulli_coef;
+}
+
+struct poly_list *faulhaber_compute(int n)
+{
+    int i, j;
+    Value factor;
+    struct bernoulli_coef *bc;
+
+    if (n < faulhaber.n)
+	return &faulhaber;
+
+    if (n >= faulhaber.size) {
+	int size = 3*(n + 5)/2;
+	Vector **poly;
+
+	poly = ALLOCN(Vector *, size);
+	for (i = 0; i < faulhaber.n; ++i)
+	    poly[i] = faulhaber.poly[i];
+	free(faulhaber.poly);
+	faulhaber.poly = poly;
+
+	faulhaber.size = size;
+    }
+
+    bc = bernoulli_coef_compute(n);
+
+    value_init(factor);
+    for (i = faulhaber.n; i <= n; ++i) {
+	faulhaber.poly[i] = Vector_Alloc(i+3);
+	value_assign(faulhaber.poly[i]->p[i+1], bc->lcm->p[i]);
+	mpz_mul_ui(faulhaber.poly[i]->p[i+2], bc->lcm->p[i], i+1);
 	value_set_si(factor, 1);
 	for (j = 1; j <= i; ++j) {
 	    mpz_mul_ui(factor, factor, i+2-j);
 	    mpz_divexact_ui(factor, factor, j);
-	    value_division(bernoulli.sum[i]->p[i+1-j], lcm, bernoulli.b_den->p[j]);
-	    value_multiply(bernoulli.sum[i]->p[i+1-j],
-			   bernoulli.sum[i]->p[i+1-j], bernoulli.b_num->p[j]);
-	    value_multiply(bernoulli.sum[i]->p[i+1-j],
-			   bernoulli.sum[i]->p[i+1-j], factor);
+	    value_division(faulhaber.poly[i]->p[i+1-j],
+			   bc->lcm->p[i], bc->den->p[j]);
+	    value_multiply(faulhaber.poly[i]->p[i+1-j],
+			   faulhaber.poly[i]->p[i+1-j], bc->num->p[j]);
+	    value_multiply(faulhaber.poly[i]->p[i+1-j],
+			   faulhaber.poly[i]->p[i+1-j], factor);
 	}
-	Vector_Normalize(bernoulli.sum[i]->p, i+3);
+	Vector_Normalize(faulhaber.poly[i]->p, i+3);
     }
-    bernoulli.n = n+1;
-    value_clear(lcm);
     value_clear(factor);
-    value_clear(tmp);
+    pl->n = n+1;
 
-    return &bernoulli;
+    return &faulhaber;
 }
 
 /* shift variables in polynomial one down */
@@ -117,7 +150,7 @@ static evalue *shifted_copy(evalue *src)
     return e;
 }
 
-static evalue *power_sums(struct bernoulli *bernoulli, evalue *poly,
+static evalue *power_sums(struct poly_list *faulhaber, evalue *poly,
 			  Vector *arg, Value denom, int neg, int alt_neg)
 {
     int i;
@@ -125,7 +158,7 @@ static evalue *power_sums(struct bernoulli *bernoulli, evalue *poly,
     evalue *sum = evalue_zero();
 
     for (i = 1; i < poly->x.p->size; ++i) {
-	evalue *term = evalue_polynomial(bernoulli->sum[i], base);
+	evalue *term = evalue_polynomial(faulhaber->poly[i], base);
 	evalue *factor = shifted_copy(&poly->x.p->arr[i]);
 	emul(factor, term);
 	if (alt_neg && (i % 2))
@@ -213,10 +246,10 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     } else {
 	evalue *poly_u = NULL, *poly_l = NULL;
 	Polyhedron *D;
-	struct bernoulli *bernoulli;
+	struct poly_list *faulhaber;
 	assert(data->e->x.p->type == polynomial);
 	assert(data->e->x.p->pos == 1);
-	bernoulli = bernoulli_compute(data->e->x.p->size-1);
+	faulhaber = faulhaber_compute(data->e->x.p->size-1);
 	/* lower is the constraint
 	 *			 b i - l' >= 0		i >= l'/b = l
 	 * upper is the constraint
@@ -241,10 +274,10 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 		Vector_Copy(upper+2, row->p, dim+1);
 		value_oppose(tmp, upper[1]);
 		value_addto(row->p[dim], row->p[dim], tmp);
-		poly_u = power_sums(bernoulli, data->e, row, tmp, 0, 0);
+		poly_u = power_sums(faulhaber, data->e, row, tmp, 0, 0);
 	    }
 	    Vector_Oppose(lower+2, row->p, dim+1);
-	    extra = power_sums(bernoulli, data->e, row, lower[1], 1, 0);
+	    extra = power_sums(faulhaber, data->e, row, lower[1], 1, 0);
 	    eadd(poly_u, extra);
 	    eadd(linear, extra);
 
@@ -267,11 +300,11 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    if (!poly_l) {
 		Vector_Copy(lower+2, row->p, dim+1);
 		value_addto(row->p[dim], row->p[dim], lower[1]);
-		poly_l = power_sums(bernoulli, data->e, row, lower[1], 0, 1);
+		poly_l = power_sums(faulhaber, data->e, row, lower[1], 0, 1);
 	    }
 	    Vector_Oppose(upper+2, row->p, dim+1);
 	    value_oppose(tmp, upper[1]);
-	    extra = power_sums(bernoulli, data->e, row, tmp, 1, 1);
+	    extra = power_sums(faulhaber, data->e, row, tmp, 1, 1);
 	    eadd(poly_l, extra);
 	    eadd(linear, extra);
 
@@ -293,13 +326,13 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    if (!poly_l) {
 		Vector_Copy(lower+2, row->p, dim+1);
 		value_addto(row->p[dim], row->p[dim], lower[1]);
-		poly_l = power_sums(bernoulli, data->e, row, lower[1], 0, 1);
+		poly_l = power_sums(faulhaber, data->e, row, lower[1], 0, 1);
 	    }
 	    if (!poly_u) {
 		Vector_Copy(upper+2, row->p, dim+1);
 		value_oppose(tmp, upper[1]);
 		value_addto(row->p[dim], row->p[dim], tmp);
-		poly_u = power_sums(bernoulli, data->e, row, tmp, 0, 0);
+		poly_u = power_sums(faulhaber, data->e, row, tmp, 0, 0);
 	    }
 	
 	    data->s[data->ns].E = ALLOC(evalue);
@@ -328,7 +361,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 		Vector_Copy(upper+2, row->p, dim+1);
 		value_oppose(tmp, upper[1]);
 		value_addto(row->p[dim], row->p[dim], tmp);
-		poly_u = power_sums(bernoulli, data->e, row, tmp, 0, 0);
+		poly_u = power_sums(faulhaber, data->e, row, tmp, 0, 0);
 	    }
 
 	    eadd(linear, poly_u);
@@ -357,7 +390,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    if (!poly_l) {
 		Vector_Copy(lower+2, row->p, dim+1);
 		value_addto(row->p[dim], row->p[dim], lower[1]);
-		poly_l = power_sums(bernoulli, data->e, row, lower[1], 0, 1);
+		poly_l = power_sums(faulhaber, data->e, row, lower[1], 0, 1);
 	    }
 
 	    eadd(linear, poly_l);

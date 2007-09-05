@@ -6,15 +6,31 @@ extern "C" {
 
 struct barvinok_options;
 
-struct bernoulli {
-    Vector  *b_num;
-    Vector  *b_den;
-    Vector  **sum;
+struct bernoulli_coef {
+    Vector  *num;
+    Vector  *den;
+    Vector  *lcm;	/* lcm of this and previous denominators */
     int	    size;
-    int	    n;
+    int	    n;		/* The number of Bernoulli coefficients */
 };
 
-struct bernoulli *bernoulli_compute(int n);
+struct poly_list {
+    Vector  **poly;
+    int	    size;
+    int	    n;		/* The number of polynomials */
+};
+
+/*
+ * Compute Bernoulli coefficients up to the nth.
+ * The returned structure will contain at least n+1 coefficients (0..n).
+ */
+struct bernoulli_coef *bernoulli_coef_compute(int n);
+
+/*
+ * Compute Faulhaber polynomials up to the nth.
+ * The returned structure will contain at least n+1 polynomials (0..n).
+ */
+struct poly_list *faulhaber_compute(int n);
 
 evalue *Bernoulli_sum(Polyhedron *P, Polyhedron *C,
 			struct barvinok_options *options);
