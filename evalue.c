@@ -3768,6 +3768,37 @@ void evalue_mul(evalue *e, Value n)
 	evalue_mul(&e->x.p->arr[i], n);
 }
 
+/* Multiplies the evalue e by the n/d */
+void evalue_mul_div(evalue *e, Value n, Value d)
+{
+    int i, offset;
+
+    if ((value_one_p(n) && value_one_p(d)) || EVALUE_IS_ZERO(*e))
+	return;
+
+    if (value_notzero_p(e->d)) {
+	Value gc;
+	value_init(gc);
+	value_multiply(e->x.n, e->x.n, n);
+	value_multiply(e->d, e->d, d);
+	Gcd(e->x.n, e->d, &gc);
+	if (value_notone_p(gc)) {
+	    value_division(e->d, e->d, gc);
+	    value_division(e->x.n, e->x.n, gc);
+	}
+	value_clear(gc);
+	return;
+    }
+    if (e->x.p->type == partition) {
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    evalue_mul_div(&e->x.p->arr[2*i+1], n, d);
+	return;
+    }
+    offset = type_offset(e->x.p);
+    for (i = e->x.p->size-1; i >= offset; --i)
+	evalue_mul_div(&e->x.p->arr[i], n, d);
+}
+
 void evalue_negate(evalue *e)
 {
     int i, offset;
