@@ -216,6 +216,25 @@ static int verify(Polyhedron *P, evalue *sum, evalue *EP,
     return error;
 }
 
+/*
+ * Project on final dim dimensions
+ */
+Polyhedron *DomainProject(Polyhedron *D, unsigned dim, unsigned MaxRays)
+{
+    Polyhedron *P;
+    Polyhedron *R;
+
+    R = Polyhedron_Project(D, dim);
+    for (P = D->next; P; P = P->next) {
+	Polyhedron *R2 = Polyhedron_Project(P, dim);
+	Polyhedron *R3 = DomainUnion(R, R2, MaxRays);
+	Polyhedron_Free(R2);
+	Domain_Free(R);
+	R = R3;
+    }
+    return R;
+}
+
 static int verify(evalue *EP, evalue *sum, unsigned nvar, unsigned nparam,
 		  struct verify_options *options)
 {
@@ -224,21 +243,29 @@ static int verify(evalue *EP, evalue *sum, unsigned nvar, unsigned nparam,
     p = Vector_Alloc(nvar+nparam+2);
     value_set_si(p->p[nvar+nparam+1], 1);
 
-    assert(value_zero_p(sum->d));
-    assert(sum->x.p->type == partition);
+    assert(value_zero_p(EP->d));
+    assert(EP->x.p->type == partition);
+
+    Polyhedron *EP_D = EVALUE_DOMAIN(EP->x.p->arr[0]);
+    Polyhedron *D = Polyhedron_Project(EP_D, nparam);
+
+    for (int i = 1; i < EP->x.p->size/2; ++i) {
+	Polyhedron *D2 = D;
+	EP_D = DomainProject(EVALUE_DOMAIN(EP->x.p->arr[2*i]), nparam,
+			     options->barvinok->MaxRays);
+	D = DomainUnion(EP_D, D, options->barvinok->MaxRays);
+	Domain_Free(D2);
+    }
+
     int error = 0;
 
-    for (int i = 0; i < sum->x.p->size/2; ++i) {
-	Polyhedron *D = EVALUE_DOMAIN(sum->x.p->arr[2*i]);
-	for (Polyhedron *P = D; P; P = P->next) {
-	    error = verify(P, sum, EP, nvar, nparam, p, options);
-	    if (error && !options->continue_on_error)
-		break;
-	}
+    for (Polyhedron *P = D; P; P = P->next) {
+	error = verify(P, sum, EP, nvar, nparam, p, options);
 	if (error && !options->continue_on_error)
 	    break;
     }
 
+    Domain_Free(D);
     Vector_Free(p);
 
     return error;
