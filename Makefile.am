@@ -276,7 +276,7 @@ dist-hook:
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
-	check-lexmin check-approx check-evalue
+	check-lexmin check-approx check-evalue check-euler
 check-testlib: testlib$(EXEEXT)
 	./testlib$(EXEEXT)
 check-approx: test_approx$(EXEEXT)
@@ -292,6 +292,13 @@ check-evalue: @bv_barvinok_maximize@ barvinok_summate$(EXEEXT)
 		    ./barvinok_maximize$(EXEEXT) -T < $$i || exit; \
 		fi; \
 		./barvinok_summate$(EXEEXT) -T < $$i || exit; \
+	    fi \
+	done
+check-euler: barvinok_summate$(EXEEXT)
+	@for i in $(top_srcdir)/tests/euler/*; do \
+	    if test -f $$i; then \
+		echo $$i; \
+		./barvinok_summate$(EXEEXT) -T --summation=euler < $$i || exit; \
 	    fi \
 	done
 check-enumerate: barvinok_enumerate$(EXEEXT)

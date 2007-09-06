@@ -1,0 +1,5 @@
+#variables x
+3x -n >= 0
+-5x +m >= 0
+
+x^2 + m * x + n
