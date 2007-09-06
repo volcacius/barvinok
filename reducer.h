@@ -27,7 +27,7 @@ struct np_base : public signed_cone_consumer {
     }
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
-			unsigned long det, int *closed,
+			unsigned long det,
 			barvinok_options *options) = 0;
     virtual void handle(const signed_cone& sc, barvinok_options *options);
     virtual void start(Polyhedron *P, barvinok_options *options);
@@ -80,7 +80,7 @@ struct reducer : public np_base {
     }
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
-			unsigned long det, int *closed, barvinok_options *options);
+			unsigned long det, barvinok_options *options);
     void reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);
     virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f) = 0;
     virtual void base(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);

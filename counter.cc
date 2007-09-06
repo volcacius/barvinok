@@ -26,7 +26,7 @@ void counter::add_falling_powers(dpoly& n, Value degree)
 }
 
 void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long det,
-		     int *closed, barvinok_options *options)
+		     barvinok_options *options)
 {
     Matrix* Rays = zz2matrix(rays);
 
@@ -41,7 +41,7 @@ void counter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long de
 	    throw Orthogonal;
 	}
     Inner_Product(lambda->p, V, dim, &tmp);
-    lattice_points_fixed(V, &tmp, Rays, den, num, det, closed);
+    lattice_points_fixed(V, &tmp, Rays, den, num, det);
     num->NbRows = det;
     Matrix_Free(Rays);
 

@@ -768,7 +768,7 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	    throw Orthogonal;
     }
 
-    lattice_point(V, sc.rays, lambda, &num, sc.det, sc.closed, options);
+    lattice_point(V, sc.rays, lambda, &num, sc.det, options);
     den = sc.rays * lambda;
 
     if (dim % 2)
@@ -1179,7 +1179,6 @@ static int edegree(evalue *e)
 void ienumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(sc.det == 1);
-    assert(!sc.closed);
     assert(sc.rays.NumRows() == dim);
 
     lattice_point(V, sc.rays, vertex[0], E_vertex, options);
@@ -1360,7 +1359,6 @@ void bfenumerator::base(mat_ZZ& factors, bfc_vec& v)
 void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(sc.det == 1);
-    assert(!sc.closed);
     assert(sc.rays.NumRows() == enumerator_base::dim);
 
     bfe_term* t = new bfe_term(enumerator_base::dim);

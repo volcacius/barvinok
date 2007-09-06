@@ -13,7 +13,7 @@ void np_base::handle(const signed_cone& sc, barvinok_options *options)
 {
     assert(sc.rays.NumRows() == dim);
     factor.n *= sc.sign;
-    handle(sc.rays, current_vertex, factor, sc.det, sc.closed, options);
+    handle(sc.rays, current_vertex, factor, sc.det, options);
     factor.n *= sc.sign;
 }
 
@@ -353,14 +353,14 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
     }
 }
 
-void reducer::handle(const mat_ZZ& den, Value *V, const QQ& c, unsigned long det,
-		     int *closed, barvinok_options *options)
+void reducer::handle(const mat_ZZ& den, Value *V, const QQ& c,
+		     unsigned long det, barvinok_options *options)
 {
     vec_QQ vc;
 
     Matrix *points = Matrix_Alloc(det, dim);
     Matrix* Rays = zz2matrix(den);
-    lattice_points_fixed(V, V, Rays, Rays, points, det, closed);
+    lattice_points_fixed(V, V, Rays, Rays, points, det);
     Matrix_Free(Rays);
     matrix2zz(points, vertex, points->NbRows, points->NbColumns);
     Matrix_Free(points);

@@ -214,7 +214,7 @@ static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
 	unsigned long det = to_ulong(abs(determinant(R)));
 	mat_ZZ vertices;
 	Matrix *points = Matrix_Alloc(det, nparam);
-	lattice_points_fixed(coset->p, coset->p, L, L, points, det, NULL);
+	lattice_points_fixed(coset->p, coset->p, L, L, points, det);
 	matrix2zz(points, vertices, points->NbRows, points->NbColumns);
 	Matrix_Free(points);
 	Matrix_Free(L);

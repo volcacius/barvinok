@@ -47,7 +47,7 @@ struct tcounter : public np_base {
     }
 
     virtual void handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
-			unsigned long det, int *closed, barvinok_options *options);
+			unsigned long det, barvinok_options *options);
     virtual void get_count(Value *result) {
 	assert(value_one_p(&count[0]._mp_den));
 	value_assign(*result, &count[0]._mp_num);

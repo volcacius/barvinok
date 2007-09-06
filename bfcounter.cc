@@ -112,7 +112,7 @@ int bf_base::setup_factors(const mat_ZZ& rays, mat_ZZ& factors,
 }
 
 void bf_base::handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
-		     unsigned long det, int *closed, barvinok_options *options)
+		     unsigned long det, barvinok_options *options)
 {
     bfc_term* t = new bfc_term(dim);
     vector< bfc_term_base * > v;
@@ -120,7 +120,7 @@ void bf_base::handle(const mat_ZZ& rays, Value *vertex, const QQ& c,
 
     Matrix *points = Matrix_Alloc(det, dim);
     Matrix* Rays = zz2matrix(rays);
-    lattice_points_fixed(vertex, vertex, Rays, Rays, points, det, closed);
+    lattice_points_fixed(vertex, vertex, Rays, Rays, points, det);
     Matrix_Free(Rays);
     matrix2zz(points, t->terms, points->NbRows, points->NbColumns);
     Matrix_Free(points);

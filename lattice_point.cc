@@ -162,20 +162,12 @@ static bool mod_needed(Polyhedron *PD, vec_ZZ& num, Value d, evalue *E)
  *
  * Modifies coef argument !
  */
-evalue *fractional_part(Value *coef, Value denom, int nvar,
-		        Polyhedron *PD, bool up)
+evalue *fractional_part(Value *coef, Value denom, int nvar, Polyhedron *PD)
 {
     Value m;
     value_init(m);
     evalue *EP = evalue_zero();
     int sign = 1;
-
-    if (up) {
-	/* {{ x }} = 1 - { -x } */
-	value_set_si(EP->x.n, 1);
-	Vector_Oppose(coef, coef, nvar+1);
-	sign = -1;
-    }
 
     value_assign(m, denom);
     int j = normal_mod(coef, nvar+1, &m);
@@ -263,7 +255,7 @@ static evalue *ceil(Value *coef, int len, Value d,
     evalue *c;
 
     Vector_Oppose(coef, coef, len);
-    c = fractional_part(coef, d, len-1, NULL, false);
+    c = fractional_part(coef, d, len-1, NULL);
     if (options->lookup_table)
 	evalue_mod2table(c, len-1);
     return c;
@@ -292,7 +284,7 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     emul(&tmp, EP);
 
     Vector_Oppose(val->p, val->p, len);
-    evalue *f = fractional_part(val->p, t, len-1, P, false);
+    evalue *f = fractional_part(val->p, t, len-1, P);
     value_clear(t);
 
     eadd(f, EP);
@@ -312,10 +304,10 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
 
 void lattice_point_fixed(Value *vertex, Value *vertex_res,
 			 Matrix *Rays, Matrix *Rays_res,
-			 Value *point, int *closed)
+			 Value *point)
 {
     unsigned dim = Rays->NbRows;
-    if (value_one_p(vertex[dim]) && !closed)
+    if (value_one_p(vertex[dim]))
 	Vector_Copy(vertex_res, point, Rays_res->NbColumns);
     else {
 	Matrix *R2 = Matrix_Copy(Rays);
@@ -327,12 +319,7 @@ void lattice_point_fixed(Value *vertex, Value *vertex_res,
 	Vector_Matrix_Product(vertex, inv, lambda->p);
 	Matrix_Free(inv);
 	for (int j = 0; j < dim; ++j)
-	    if (!closed || closed[j])
-		mpz_cdiv_q(lambda->p[j], lambda->p[j], vertex[dim]);
-	    else {
-		value_addto(lambda->p[j], lambda->p[j], vertex[dim]);
-		mpz_fdiv_q(lambda->p[j], lambda->p[j], vertex[dim]);
-	    }
+	    mpz_cdiv_q(lambda->p[j], lambda->p[j], vertex[dim]);
 	Vector_Matrix_Product(lambda->p, Rays_res, point);
 	Vector_Free(lambda);
     }
@@ -389,12 +376,12 @@ static Matrix *Matrix_AddRowColumn(Matrix *M)
  */
 void lattice_points_fixed(Value *vertex, Value *vertex_res,
 			  Matrix *Rays, Matrix *Rays_res, Matrix *points,
-			  unsigned long det, int *closed)
+			  unsigned long det)
 {
     unsigned dim = Rays->NbRows;
     if (det == 1) {
 	lattice_point_fixed(vertex, vertex_res, Rays, Rays_res,
-			    points->p[0], closed);
+			    points->p[0]);
 	return;
     }
     Matrix *U, *W, *D;
@@ -433,12 +420,7 @@ void lattice_points_fixed(Value *vertex, Value *vertex_res,
     FORALL_COSETS(det, D, i, k)
 	Vector_Matrix_Product(k->p, T2, lambda->p);
 	for (int j = 0; j < dim; ++j)
-	    if (!closed || closed[j])
-		mpz_fdiv_r(lambda->p[j], lambda->p[j], lambda->p[dim]);
-	    else {
-		mpz_cdiv_r(lambda->p[j], lambda->p[j], lambda->p[dim]);
-		value_addto(lambda->p[j], lambda->p[j], lambda->p[dim]);
-	    }
+	    mpz_fdiv_r(lambda->p[j], lambda->p[j], lambda->p[dim]);
 	Vector_Matrix_Product(lambda->p, Rays_res, lambda2->p);
 	for (int j = 0; j < lambda2->Size; ++j)
 	    assert(mpz_divisible_p(lambda2->p[j], inv->p[dim][dim]));
@@ -468,7 +450,7 @@ void lattice_points_fixed(Value *vertex, Value *vertex_res,
  */
 static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 					 Matrix *V,
-					 unsigned long det, int *closed)
+					 unsigned long det)
 {
     unsigned nparam = V->NbColumns-2;
     evalue **E = new evalue *[det];
@@ -506,8 +488,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	for (int i = 0; i < L->NbRows; ++i) {
 	    evalue *f;
 	    Vector_Oppose(L->p[i], L->p[i], nparam+1);
-	    f = fractional_part(L->p[i], V->p[i][nparam+1], nparam,
-				NULL, closed && !closed[i]);
+	    f = fractional_part(L->p[i], V->p[i][nparam+1], nparam, NULL);
 	    zz2value(p[i], tmp);
 	    evalue_mul(f, tmp);
 	    eadd(f, EP);
@@ -552,8 +533,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 		evalue *f;
 		Vector_Oppose(L->p[j], row->p, nparam+1);
 		value_addmul(row->p[nparam], L->p[j][nparam+1], lambda->p[j]);
-		f = fractional_part(row->p, denom, nparam,
-				    NULL, closed && !closed[j]);
+		f = fractional_part(row->p, denom, nparam, NULL);
 		zz2value(p[j], tmp);
 		evalue_mul(f, tmp);
 		eadd(f, E[i]);
@@ -582,10 +562,10 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 
 static evalue **lattice_point(const mat_ZZ& rays, vec_ZZ& lambda,
 			      Param_Vertices *V,
-			      unsigned long det, int *closed,
+			      unsigned long det,
 			      barvinok_options *options)
 {
-    evalue **lp = lattice_point_fractional(rays, lambda, V->Vertex, det, closed);
+    evalue **lp = lattice_point_fractional(rays, lambda, V->Vertex, det);
     if (options->lookup_table) {
 	for (int i = 0; i < det; ++i)
 	    evalue_mod2table(lp[i], V->Vertex->NbColumns-2);
@@ -701,7 +681,7 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 }
 
 static int lattice_point_fixed(Param_Vertices* V, const mat_ZZ& rays,
-    vec_ZZ& lambda, term_info* term, unsigned long det, int *closed)
+    vec_ZZ& lambda, term_info* term, unsigned long det)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
     unsigned dim = rays.NumCols();
@@ -718,7 +698,7 @@ static int lattice_point_fixed(Param_Vertices* V, const mat_ZZ& rays,
     mat_ZZ vertex;
     Matrix *points = Matrix_Alloc(det, dim);
     Matrix* Rays = zz2matrix(rays);
-    lattice_points_fixed(fixed->p, fixed->p, Rays, Rays, points, det, closed);
+    lattice_points_fixed(fixed->p, fixed->p, Rays, Rays, points, det);
     Matrix_Free(Rays);
     matrix2zz(points, vertex, points->NbRows, points->NbColumns);
     Matrix_Free(points);
@@ -737,7 +717,7 @@ static int lattice_point_fixed(Param_Vertices* V, const mat_ZZ& rays,
  * The result is returned in term.
  */
 void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
-    term_info* term, unsigned long det, int *closed,
+    term_info* term, unsigned long det,
     barvinok_options *options)
 {
     unsigned nparam = V->Vertex->NbColumns - 2;
@@ -747,11 +727,11 @@ void lattice_point(Param_Vertices* V, const mat_ZZ& rays, vec_ZZ& lambda,
 
     Param_Vertex_Common_Denominator(V);
 
-    if (lattice_point_fixed(V, rays, lambda, term, det, closed))
+    if (lattice_point_fixed(V, rays, lambda, term, det))
 	return;
 
-    if (det != 1 || closed || value_notone_p(V->Vertex->p[0][nparam+1])) {
-	term->E = lattice_point(rays, lambda, V, det, closed, options);
+    if (det != 1 || value_notone_p(V->Vertex->p[0][nparam+1])) {
+	term->E = lattice_point(rays, lambda, V, det, options);
 	return;
     }
     for (int i = 0; i < V->Vertex->NbRows; ++i) {

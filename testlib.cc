@@ -142,7 +142,7 @@ int test_lattice_points(struct barvinok_options *options)
 		    "a,b,c", &all_vars, &nvar, &nparam, options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
 
-    lattice_point(&V, rays, lambda, &num, 4, NULL, options);
+    lattice_point(&V, rays, lambda, &num, 4, options);
     Matrix_Free(V.Vertex);
 
     for (int i = 0; i < 4; ++i) {
@@ -179,7 +179,7 @@ int test_todd(struct barvinok_options *options)
     Vector *vertex = Vector_Alloc(3);
     zz2values(v, vertex->p);
 
-    t.handle(rays, vertex->p, one, 1, NULL, options);
+    t.handle(rays, vertex->p, one, 1, options);
     assert(value_cmp_si(mpq_numref(t.count), 71) == 0);
     assert(value_cmp_si(mpq_denref(t.count), 24) == 0);
 
@@ -187,7 +187,7 @@ int test_todd(struct barvinok_options *options)
     set_from_string(v, "[0 2 1]");
     zz2values(v, vertex->p);
 
-    t.handle(rays, vertex->p, one, 1, NULL, options);
+    t.handle(rays, vertex->p, one, 1, options);
     assert(value_cmp_si(mpq_numref(t.count), 71) == 0);
     assert(value_cmp_si(mpq_denref(t.count), 12) == 0);
 
@@ -195,7 +195,7 @@ int test_todd(struct barvinok_options *options)
     set_from_string(v, "[0 0 1]");
     zz2values(v, vertex->p);
 
-    t.handle(rays, vertex->p, one, 1, NULL, options);
+    t.handle(rays, vertex->p, one, 1, options);
     assert(value_cmp_si(mpq_numref(t.count), 6) == 0);
     assert(value_cmp_si(mpq_denref(t.count), 1) == 0);
 

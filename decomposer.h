@@ -11,18 +11,15 @@ using namespace NTL;
 #endif
 
 struct signed_cone {
-    signed_cone(const mat_ZZ& rays, int sign, unsigned long det,
-		int *closed = NULL) :
-			C(NULL), rays(rays), sign(sign), det(det), closed(closed) {}
-    signed_cone(Polyhedron *C, const mat_ZZ& rays, int sign, unsigned long det = 0,
-		int *closed = NULL) :
-			C(C), rays(rays), sign(sign), det(det), closed(closed) {}
+    signed_cone(const mat_ZZ& rays, int sign, unsigned long det) :
+			C(NULL), rays(rays), sign(sign), det(det) {}
+    signed_cone(Polyhedron *C, const mat_ZZ& rays, int sign,
+		unsigned long det = 0) :
+			C(C), rays(rays), sign(sign), det(det) {}
     Polyhedron *C;
     const mat_ZZ& rays;
     int sign;
     unsigned long det;
-    /* facet not containing ray is closed */
-    int *closed;
 };
 
 struct signed_cone_consumer {

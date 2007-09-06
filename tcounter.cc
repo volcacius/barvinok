@@ -46,8 +46,8 @@ void tcounter::add_powers(dpoly& n, const Value c)
     }
 }
 
-void tcounter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long det,
-		     int *closed, barvinok_options *options)
+void tcounter::handle(const mat_ZZ& rays, Value *V, const QQ& c,
+		      unsigned long det, barvinok_options *options)
 {
     Matrix* Rays = zz2matrix(rays);
 
@@ -65,7 +65,7 @@ void tcounter::handle(const mat_ZZ& rays, Value *V, const QQ& c, unsigned long d
 	    throw Orthogonal;
 	}
     Inner_Product(lambda->p, V, dim, &tmp);
-    lattice_points_fixed(V, &tmp, Rays, den, num, det, closed);
+    lattice_points_fixed(V, &tmp, Rays, den, num, det);
     num->NbRows = det;
     Matrix_Free(Rays);
 

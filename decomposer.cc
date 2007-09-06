@@ -59,27 +59,20 @@ static void normalize_matrix(mat_ZZ& B)
 
 class cone {
 public:
-    cone(const mat_ZZ& r, int row, const vec_ZZ& w) {
+    cone(const mat_ZZ& r, int row, const vec_ZZ& w, int s) {
+	sgn = s;
 	rays = r;
 	rays[row] = w;
 	set_det();
-	set_closed(NULL);
     }
     cone(const signed_cone& sc) {
 	rays = sc.rays;
+	sgn = sc.sign;
 	set_det();
-	set_closed(sc.closed);
     }
     void set_det() {
 	det = determinant(rays);
-    }
-    void set_closed(int *cl) {
-	closed = NULL;
-	if (cl) {
-	    closed = new int[rays.NumRows()];
-	    for (int i = 0; i < rays.NumRows(); ++i)
-		closed[i] = cl[i];
-	}
+	assert(!IsZero(det));
     }
     bool needs_split(barvinok_options *options) {
 	index = abs(det);
@@ -133,33 +126,33 @@ public:
 	}
     }
 
-    ~cone() {
-	if (closed)
-	    delete [] closed;
-    }
-
     ZZ det;
     ZZ index;
     mat_ZZ rays;
     mat_ZZ B;
-    int *closed;
+    int sgn;
 };
 
+std::ostream & operator<<(std::ostream & os, const cone& c)
+{
+    os << c.rays << endl;
+    os << "det: " << c.det << endl;
+    os << "sign: " << c.sgn << endl;
+    return os;
+}
+
 static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
-			     barvinok_options *options)
+		      bool primal, barvinok_options *options)
 {
     vector<cone *> nonuni;
-    cone * c = new cone(sc);
-    ZZ det = c->det;
-    int s = sign(det);
-    assert(det != 0);
+    cone *c = new cone(sc);
     if (c->needs_split(options)) {
 	nonuni.push_back(c);
     } else {
 	try {
 	    options->stats->base_cones++;
-	    scc.handle(signed_cone(sc.C, sc.rays, sc.sign, to_ulong(c->index),
-				   sc.closed), options);
+	    scc.handle(signed_cone(sc.C, sc.rays, sc.sign, to_ulong(c->index)),
+				   options);
 	    delete c;
 	} catch (...) {
 	    delete c;
@@ -169,7 +162,6 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
     }
     vec_ZZ lambda;
     vec_ZZ v;;
-    int closed[c->rays.NumRows()];
     while (!nonuni.empty()) {
 	c = nonuni.back();
 	nonuni.pop_back();
@@ -177,36 +169,25 @@ static void decompose(const signed_cone& sc, signed_cone_consumer& scc,
 	for (int i = 0; i < c->rays.NumRows(); ++i) {
 	    if (lambda[i] == 0)
 		continue;
-	    cone *pc = new cone(c->rays, i, v);
-	    if (c->closed) {
-		for (int j = 0; j < c->rays.NumRows(); ++j) {
-		    if (lambda[j] == 0)
-			closed[j] = c->closed[j];
-		    else if (j == i) {
-			if (lambda[i] > 0)
-			    closed[j] = c->closed[j];
-			else
-			    closed[j] = !c->closed[j];
-		    } else if (sign(lambda[i]) == sign(lambda[j])) {
-			if (c->closed[i] == c->closed[j])
-			    closed[j] = i < j;
-			else
-			    closed[j] = c->closed[j];
-		    } else
-			closed[j] = c->closed[i] && c->closed[j];
+	    cone *pc = new cone(c->rays, i, v, sign(lambda[i]) * c->sgn);
+	    if (primal) {
+		for (int j = 0; j <= i; ++j) {
+		    if ((j == i && sign(lambda[i]) < 0) ||
+			(j < i && sign(lambda[i]) == sign(lambda[j]))) {
+			pc->rays[j] = -pc->rays[j];
+			pc->sgn = -pc->sgn;
+		    }
 		}
-		pc->set_closed(closed);
 	    }
-	    assert (pc->det != 0);
 	    if (pc->needs_split(options)) {
 		assert(abs(pc->det) < abs(c->det));
 		nonuni.push_back(pc);
 	    } else {
 		try {
 		    options->stats->base_cones++;
-		    scc.handle(signed_cone(pc->rays, sign(pc->det) * s,
-					   to_ulong(pc->index),
-					   pc->closed), options);
+		    scc.handle(signed_cone(pc->rays, pc->sgn,
+					   to_ulong(pc->index)),
+					   options);
 		    delete pc;
 		} catch (...) {
 		    delete c;
@@ -280,7 +261,7 @@ static void polar_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 	for (Polyhedron *Polar = cone; Polar; Polar = Polar->next) {
 	    rays(Polar, r);
 	    normalize_rows(r);
-	    decompose(signed_cone(Polar, r, 1), pssc, options);
+	    decompose(signed_cone(Polar, r, 1), pssc, false, options);
 	}
 	Domain_Free(cone);
     } catch (...) {
@@ -298,7 +279,6 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 	parts = cone;
     else
 	parts = triangulate_cone_with_options(cone, options);
-    int closed[cone->Dimension];
     Vector *average = NULL;
     Value tmp;
     if (parts != cone) {
@@ -308,26 +288,29 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
     mat_ZZ ray;
     try {
 	for (Polyhedron *simple = parts; simple; simple = simple->next) {
-	    for (int i = 0, r = 0; r < simple->NbRays; ++r) {
-		if (value_notzero_p(simple->Ray[r][1+simple->Dimension]))
-		    continue;
+	    int sign = 1;
+	    Matrix *Rays = rays2(simple);
+	    for (int i = 0; i < Rays->NbRows; ++i) {
 		if (simple == cone) {
-		    closed[i] = 1;
+		    continue;
 		} else {
 		    int f;
 		    for (f = 0; f < simple->NbConstraints; ++f) {
-			Inner_Product(simple->Ray[r]+1, simple->Constraint[f]+1,
+			Inner_Product(Rays->p[i], simple->Constraint[f]+1,
 				      simple->Dimension, &tmp);
 			if (value_notzero_p(tmp))
 			    break;
 		    }
 		    assert(f < simple->NbConstraints);
-		    closed[i] = is_internal(average, simple->Constraint[f]);
+		    if (!is_internal(average, simple->Constraint[f])) {
+			Vector_Oppose(Rays->p[i], Rays->p[i], Rays->NbColumns);
+			sign = -sign;
+		    }
 		}
-		++i;
 	    }
-	    rays(simple, ray);
-	    decompose(signed_cone(simple, ray, 1, 0, closed), scc, options);
+	    matrix2zz(Rays, ray, Rays->NbRows, Rays->NbColumns);
+	    Matrix_Free(Rays);
+	    decompose(signed_cone(simple, ray, sign), scc, true, options);
 	}
 	Domain_Free(parts);
 	if (parts != cone) {
@@ -393,7 +376,7 @@ void barvinok_decompose(Polyhedron *C, Polyhedron **ppos, Polyhedron **pneg)
     POL_ENSURE_VERTICES(C);
     mat_ZZ r;
     rays(C, r);
-    decompose(signed_cone(C, r, 1), pc, options);
+    decompose(signed_cone(C, r, 1), pc, false, options);
     *ppos = pc.pos;
     *pneg = pc.neg;
     barvinok_options_free(options);
