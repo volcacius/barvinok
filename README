@@ -10,10 +10,9 @@ The second is a generalization of an Ehrhart series.
 
 This library shares some functionality with LattE
 (http://www.math.ucdavis.edu/~latte/)
-and uses PolyLib (included) and NTL (http://shoup.net/ntl/).
+and uses PolyLib (included) PIP (included) and NTL (http://shoup.net/ntl/).
 
 Additionally, the following packages can optionally be used
-- PIP (http://www.piplib.org/)
 - Omega (http://www.cs.umd.edu/projects/omega/ or 
     http://www.liacs.nl/~sverdool/gitweb.cgi?p=omega.git;a=summary)
 - GLPK (http://www.gnu.org/software/glpk/)
@@ -41,12 +40,6 @@ For Omega,
 
 vi -c '/DESTDIR=/|s/=.*$/=\/opt/|wq' Makefile.config
 make libomega.a libcode_gen.a
-make install
-
-For piplib,
-
-./configure --with-gmp=/path/to/gmp --prefix=/opt
-make
 make install
 
 Configure this library using

@@ -4,7 +4,10 @@ endif
 if BUNDLED_POLYLIB
     MAYBE_POLYLIB = polylib
 endif
-SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) lib . omega doc
+if BUNDLED_PIPLIB
+    MAYBE_PIPLIB = piplib
+endif
+SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) lib . omega doc
 
 FORCE:
 lib/libgnu.la: FORCE
@@ -13,10 +16,12 @@ bernstein/libbernstein.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C bernstein libbernstein.la
 polylib/libpolylibgmp.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C polylib libpolylibgmp.la
+piplib/libpiplibMP.la: FORCE
+	$(MAKE) $(AM_MAKEFLAGS) -C piplib libpiplibMP.la
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib @GINACLIB_CPPFLAGS@ \
-	      @POLYLIB_CPPFLAGS@
-AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
+	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @GINACLIB_CPPFLAGS@
+AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@
 
 lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
@@ -24,9 +29,9 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
-		  barvinok_summate verify_lexsmaller \
+		  barvinok_summate verify_lexsmaller piptest \
 		  @bv_extra_programs@ @bv_barvinok_maximize@
-EXTRA_PROGRAMS = piptest polyhedron_sample 4coins lexmin \
+EXTRA_PROGRAMS = polyhedron_sample 4coins lexmin \
 		 barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
@@ -85,6 +90,8 @@ libbarvinok_la_SOURCES = \
     options.c \
     param_util.c \
     param_util.h \
+    piputil.h \
+    piputil.c \
     $(POLYSIGN_CDD) \
     $(POLYSIGN_GLPK) \
     polysign.c \
@@ -115,7 +122,6 @@ EXTRA_libbarvinok_la_SOURCES = \
     basis_reduction_cdd.cc \
     basis_reduction_glpk.c \
     bernstein.cc \
-    piputil.h \
     polysign_cddf.cc \
     polysign_cdd.cc \
     polysign.c \
@@ -127,10 +133,14 @@ endif
 if BUNDLED_POLYLIB
     POLYLIB_LA = $(top_builddir)/polylib/libpolylibgmp.la
 endif
+if BUNDLED_PIPLIB
+    PIPLIB_LA = $(top_builddir)/piplib/libpiplibMP.la
+endif
 libbarvinok_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
-			$(BERNSTEIN_LA) lib/libgnu.la
+			$(PIPLIB_LA) @PIPLIB_LIBS@ $(BERNSTEIN_LA) \
+			lib/libgnu.la
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
-LDADD = libbarvinok.la @POLYLIB_LIBS@
+LDADD = libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 test_SOURCES = test.c
 testlib_SOURCES = \
@@ -171,7 +181,7 @@ barvinok_enumerate_e_SOURCES = \
 EXTRA_barvinok_enumerate_e_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
-barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la @POLYLIB_LIBS@
+barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
@@ -259,11 +269,7 @@ dist-hook:
 	    echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID; \
 	fi
 
-if HAVE_PIPLIB
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
-else
-BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf
-endif
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
 	check-lexmin check-approx check-evalue

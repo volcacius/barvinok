@@ -66,11 +66,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 #endif
 	break;
     case 'p':
-#ifdef HAVE_PIPLIB
 	arguments->pip = 1;
-#else
-	error(0, 0, "--pip option not supported");
-#endif
 	break;
     case 'v':
 	arguments->verbose = 1;

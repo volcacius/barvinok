@@ -1159,13 +1159,6 @@ evalue* barvinok_enumerate_pip(Polyhedron *P, unsigned exist, unsigned nparam,
     return E;
 }
 
-#ifndef HAVE_PIPLIB
-evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
-		  unsigned exist, unsigned nparam, struct barvinok_options *options)
-{
-    return 0;
-}
-#else
 evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
 		  unsigned exist, unsigned nparam, struct barvinok_options *options)
 {
@@ -1192,7 +1185,6 @@ evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
 
     return EP;
 }
-#endif
 
 static bool is_single(Value *row, int pos, int len)
 {

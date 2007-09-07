@@ -15,8 +15,8 @@ occ_SOURCES = \
 	y.tab.cc \
 	omega_calc/yylex.h
 LDADD = -lcode_gen -lomega ../libbarvinok.la ../bernstein/libbernstein.la \
-	@POLYLIB_LIBS@
-AM_LDFLAGS = @OMEGA_LDFLAGS@ @POLYLIB_LDFLAGS@
+	@POLYLIB_LIBS@ @PIPLIB_LIBS@
+AM_LDFLAGS = @OMEGA_LDFLAGS@ @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/bernstein/include \
 	    @OMEGA_CPPFLAGS@
 
