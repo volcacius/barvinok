@@ -2,7 +2,6 @@
 #include <iomanip>
 #include <vector>
 #include <assert.h>
-#include "config.h"
 #include <barvinok/genfun.h>
 #include <barvinok/barvinok.h>
 #include "conversion.h"
@@ -326,13 +325,6 @@ struct parallel_cones {
     vector<pair<Vector *, QQ> >	    vertices;
     parallel_cones(int *pos) : pos(pos) {}
 };
-
-#ifndef HAVE_COMPRESS_PARMS
-static Matrix *compress_parms(Matrix *M, unsigned nparam)
-{
-    assert(0);
-}
-#endif
 
 struct parallel_polytopes {
     gf_base *red;

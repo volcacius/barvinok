@@ -23,14 +23,6 @@
 
 #undef CS   /* for Solaris 10 */
 
-#include "config.h"
-#ifndef HAVE_COUNT_POINTS4
-#define count_points(a,b,c,d) {				\
-	    int cc = count_points(a,b,c);		\
-	    value_set_si(*d,cc);			\
-	}
-#endif
-
 struct check_poly_EP_data {
     struct check_poly_data   cp;
     Polyhedron		    *S;

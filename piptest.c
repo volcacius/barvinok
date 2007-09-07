@@ -1,13 +1,8 @@
 #include "piputil.h"
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
-#include "config.h"
 
-#ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    0
-#else
-#define MAXRAYS  600
-#endif
 
 int main(int argc, char **argv)
 {

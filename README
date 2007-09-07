@@ -10,9 +10,7 @@ The second is a generalization of an Ehrhart series.
 
 This library shares some functionality with LattE
 (http://www.math.ucdavis.edu/~latte/)
-and uses PolyLib (http://icps.u-strasbg.fr/polylib/ or
-http://www.kotnet.org/~skimo/polylib/) and
-NTL (http://shoup.net/ntl/).
+and uses PolyLib (included) and NTL (http://shoup.net/ntl/).
 
 Additionally, the following packages can optionally be used
 - PIP (http://www.piplib.org/)
@@ -21,15 +19,14 @@ Additionally, the following packages can optionally be used
 - GLPK (http://www.gnu.org/software/glpk/)
 - GiNaC (http://www.ginac.de/) (needed for the bernstein library)
 
-Both NTL and PolyLib need to have been compiled with GMP
-support.
-For NTL this means you have to specify
+NTL needs to have been compiled with GMP support.
+That is, you have to specify
     NTL_GMP_LIP=on
 
 Suppose you want to put everything in /opt,
-Then you configure/compile PolyLib using
+Then you configure/compile NTL using
 
-./configure --with-libgmp=/path/to/gmp --prefix=/opt
+./configure --prefix=/opt
 make
 make install
 
@@ -54,11 +51,7 @@ make install
 
 Configure this library using
 
-./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt
-
-or
-
-./configure --prefix=/opt --with-polylib=/opt --with-ntl=/opt --disable-fractional
+./configure --prefix=/opt --with-libgmp=/path/to/gmp  --with-ntl=/opt
 
 If you want shared libraries, then configure with the --enable-shared option.
 Note that this doesn't work on some systems because we link in libntl, which
@@ -78,8 +71,6 @@ If you want to put any one of these packages in the default location
 For more information on other arguments,
 
 ./configure --help
-
-Please use PolyLib version 5.21.0 or later.
 
 The input format of barvinok_enumerate is the same as that
 of testehrhart from the PolyLib distribution.

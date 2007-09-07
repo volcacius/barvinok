@@ -1,12 +1,7 @@
 #include <barvinok/util.h>
 #include "omega/convert.h"
-#include "config.h"
 
-#ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
 
 static void max_index(Constraint_Handle c, varvector& vv, varvector& params)
 {

@@ -14,10 +14,11 @@ occ_SOURCES = \
 	vertices.h \
 	y.tab.cc \
 	omega_calc/yylex.h
-LDADD = -lcode_gen -lomega ../libbarvinok.la ../bernstein/libbernstein.la
-LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
-CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/bernstein/include \
-	    @OMEGA_CPPFLAGS@ @CPPFLAGS@
+LDADD = -lcode_gen -lomega ../libbarvinok.la ../bernstein/libbernstein.la \
+	@POLYLIB_LIBS@
+AM_LDFLAGS = @OMEGA_LDFLAGS@ @POLYLIB_LDFLAGS@
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/bernstein/include \
+	    @OMEGA_CPPFLAGS@
 
 EXTRA_DIST = \
 	parser.l \

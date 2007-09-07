@@ -2,11 +2,8 @@
 #include <assert.h>
 #include <barvinok/util.h>
 #include <barvinok/options.h>
+#include <polylib/ranking.h>
 #include "config.h"
-
-#ifndef HAVE_ENUMERATE4
-#define Polyhedron_Enumerate(a,b,c,d) Polyhedron_Enumerate(a,b,c)
-#endif
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
@@ -15,10 +12,6 @@
 #define NALLOC(p,n) p = (typeof(p))malloc((n) * sizeof(*p))
 #else
 #define NALLOC(p,n) p = (void *)malloc((n) * sizeof(*p))
-#endif
-
-#ifndef HAVE_ENUMERATION_FREE
-#define Enumeration_Free(en)	/* just leak some memory */
 #endif
 
 void manual_count(Polyhedron *P, Value* result)
@@ -32,10 +25,6 @@ void manual_count(Polyhedron *P, Value* result)
     Enumeration_Free(en);
     Polyhedron_Free(U);
 }
-
-#ifndef HAVE_ENUMERATION_FREE
-#undef Enumeration_Free
-#endif
 
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
@@ -1279,17 +1268,6 @@ Polyhedron *DomainConcat(Polyhedron *head, Polyhedron *tail)
     return head;
 }
 
-#ifndef HAVE_LEXSMALLER
-
-evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
-			       Polyhedron *C, unsigned MaxRays)
-{
-    assert(0);
-}
-
-#else
-#include <polylib/ranking.h>
-
 evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
 			       Polyhedron *C, unsigned MaxRays)
 {
@@ -1341,7 +1319,6 @@ Enumeration *barvinok_lexsmaller(Polyhedron *P, Polyhedron *D, unsigned dim,
 
     return partition2enumeration(EP);
 }
-#endif
 
 /* "align" matrix to have nrows by inserting
  * the necessary number of rows and an equal number of columns in front

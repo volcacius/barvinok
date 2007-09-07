@@ -5,11 +5,7 @@
 #include "argp.h"
 #include "config.h"
 
-#ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    (POL_NO_DUAL | POL_INTEGER)
-#else
-#define MAXRAYS  600
-#endif
 
 #ifndef HAVE_LIBGLPK
 Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)

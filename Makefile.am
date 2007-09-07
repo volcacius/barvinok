@@ -1,16 +1,22 @@
 if HAVE_GINAC
     MAYBE_BERNSTEIN = bernstein
 endif
-SUBDIRS = $(MAYBE_BERNSTEIN) lib . omega doc
+if BUNDLED_POLYLIB
+    MAYBE_POLYLIB = polylib
+endif
+SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) lib . omega doc
 
 FORCE:
 lib/libgnu.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C lib libgnu.la
 bernstein/libbernstein.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C bernstein libbernstein.la
+polylib/libpolylibgmp.la: FORCE
+	$(MAKE) $(AM_MAKEFLAGS) -C polylib libpolylibgmp.la
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib @GINACLIB_CPPFLAGS@
-AM_LDFLAGS = -Llib
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib @GINACLIB_CPPFLAGS@ \
+	      @POLYLIB_CPPFLAGS@
+AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@
 
 lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
@@ -18,9 +24,9 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
-		  barvinok_summate \
+		  barvinok_summate verify_lexsmaller \
 		  @bv_extra_programs@ @bv_barvinok_maximize@
-EXTRA_PROGRAMS = piptest verify_lexsmaller polyhedron_sample 4coins lexmin \
+EXTRA_PROGRAMS = piptest polyhedron_sample 4coins lexmin \
 		 barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
@@ -89,6 +95,7 @@ libbarvinok_la_SOURCES = \
     reducer.cc \
     reducer.h \
     remove_equalities.h \
+    remove_equalities.c \
     scale.c \
     scale.h \
     scarf.cc \
@@ -117,9 +124,13 @@ EXTRA_libbarvinok_la_SOURCES = \
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
-libbarvinok_la_LIBADD = @LTLIBOBJS@ $(BERNSTEIN_LA) lib/libgnu.la
+if BUNDLED_POLYLIB
+    POLYLIB_LA = $(top_builddir)/polylib/libpolylibgmp.la
+endif
+libbarvinok_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
+			$(BERNSTEIN_LA) lib/libgnu.la
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
-LDADD = libbarvinok.la
+LDADD = libbarvinok.la @POLYLIB_LIBS@
 
 test_SOURCES = test.c
 testlib_SOURCES = \
@@ -160,7 +171,7 @@ barvinok_enumerate_e_SOURCES = \
 EXTRA_barvinok_enumerate_e_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
-barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la
+barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la @POLYLIB_LIBS@
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \

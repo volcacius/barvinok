@@ -42,9 +42,9 @@ if test "${with_default_prefix+set}" = set; then
 	   -f "$with_default_prefix/include/gmp.h"; then
 		with_libgmp=$with_default_prefix
 	fi
-	if test "${with_polylib+set}" != set -a \
+	if test "${with_polylib_prefix+set}" != set -a \
 	   -f "$with_default_prefix/include/polylib/polylibgmp.h"; then
-		with_polylib=$with_default_prefix
+		with_polylib_prefix=$with_default_prefix
 	fi
 	if test "${with_piplib+set}" != set -a \
 	   -f "$with_default_prefix/include/piplib/piplibMP.h"; then
@@ -78,7 +78,9 @@ if test "x$gmp_package" = "xno"; then
 	AC_MSG_ERROR(Need gmp)
 else
 	AC_MSG_RESULT(yes)
-	if test "x$gmp_package" != "xyes"; then
+	if test "x$gmp_package" = "xyes"; then
+		bv_configure_args="$bv_configure_args --with-libgmp"
+	else
 	    GMP_DIR=$gmp_package
 	    if test ! -d "$GMP_DIR"; then
 	    	AC_ERROR(Directory given for GMP Distribution is not a directory)
@@ -98,114 +100,68 @@ else
 fi
 AC_CHECK_DECL(mpz_divisible_p,[],[AC_LIBOBJ(mpz_divisible_p)],[#include <gmp.h>])
 
+# BV_SUBMODULE(SUBMODULE)
+AC_DEFUN([BV_SUBMODULE],[
+	case "$with_$1" in
+	no)
+		AC_MSG_ERROR(Need $1)
+		;;
+	bundled|system)
+		;;
+	*)
+		if test -d $srcdir/.git -a \
+			! -d $srcdir/$1/.git; then
+			AC_MSG_WARN(
+[git repo detected, but submodule $1 not initialized])
+			AC_MSG_WARN([You may want to run])
+			AC_MSG_WARN([	git submodule init])
+			AC_MSG_WARN([	git submodule update])
+			AC_MSG_WARN([	sh autogen.sh])
+		fi
+		if test -f $srcdir/$1/configure; then
+			with_$1="bundled"
+		else
+			with_$1="system"
+		fi
+		;;
+	esac
+])
+
 AC_ARG_WITH(polylib,
-            [  --with-polylib=DIR      DIR Location of PolyLib],
-            [ echo "Package polylib : $withval" && polylib_package=$withval],  
-            [ polylib_package=yes ])
+	[AS_HELP_STRING([--with-polylib=bundled|system],[Which PolyLib to use])])
+AC_ARG_WITH(polylib_prefix,
+	[AS_HELP_STRING([--with-polylib-prefix=DIR],[Location of system PolyLib])])
 
-if test "$polylib_package" = "no"; then
-    AC_MSG_ERROR(Need polylib)
+if test "x$with_polylib_prefix" != "x"; then
+	with_polylib="system"
+fi
+BV_SUBMODULE(polylib)
+AC_MSG_CHECKING([which PolyLib to use])
+AC_MSG_RESULT($with_polylib)
+
+AC_SUBST(POLYLIB_CPPFLAGS)
+AC_SUBST(POLYLIB_LDFLAGS)
+AC_SUBST(POLYLIB_LIBS)
+if test "$with_polylib" = "bundled"; then
+	bv_configure_args="$bv_configure_args --with-polylib-builddir=../polylib"
+	POLYLIB_CPPFLAGS="-Ipolylib/include -I$srcdir/polylib/include"
+else
+	POLYLIB_LIBS="-lpolylibgmp"
+	if test "x$with_polylib_prefix" != "x"; then
+		POLYLIB_CPPFLAGS="-I$with_polylib_prefix/include"
+		POLYLIB_LDFLAGS="-L$with_polylib_prefix/lib"
+	fi
+	SAVE_CPPFLAGS="$CPPFLAGS"
+	CPPFLAGS="$POLYLIB_CPPFLAGS $CPPFLAGS"
+	AC_CHECK_HEADERS([polylib/polylibgmp.h], [], [
+		AC_MSG_ERROR(Need PolyLib)
+	])
+	CPPFLAGS="$SAVE_CPPFLAGS"
 fi
 
-if test "$polylib_package" != "yes"; then
-    CPPFLAGS="-I$polylib_package/include $CPPFLAGS"
-    LDFLAGS="-L$polylib_package/lib $LDFLAGS"
-    LD_LIBRARY_PATH="$polylib_package/lib:$LD_LIBRARY_PATH"
-    export LD_LIBRARY_PATH
-fi
+AM_CONDITIONAL(BUNDLED_POLYLIB, test $with_polylib = bundled)
 
-AC_CHECK_HEADERS([polylib/polylibgmp.h], [], [
-    AC_MSG_ERROR(Need polylib)
-])
-AC_CHECK_LIB(polylibgmp, PolyhedronTSort,[],[
-    AC_MSG_ERROR(Need polylib)
-])
-AC_CHECK_FUNCS(Enumeration_Free)
-AC_CHECK_FUNCS(compress_parms, [AC_LIBOBJ(remove_equalities)])
 AC_SUBST(bv_extra_programs)
-AC_CHECK_FUNCS(LexSmaller,[
-	bv_extra_programs="verify_lexsmaller\$(EXEEXT) $bv_extra_programs"
-    ])
-AC_REPLACE_FUNCS(DomainConstraintSimplify)
-AC_TRY_RUN([
-#include <polylib/polylibgmp.h>
-
-int main()
-{
-    int i, j;
-    Polyhedron *P;
-    Matrix *M = Matrix_Alloc(6,5);
-    for (i = 0; i < 6; ++i) {
-	value_set_si(M->p[i][0], 1);
-	for (j = 1; j < 4; ++j)
-	    value_set_si(M->p[i][j], (j-1 == i/2) * (1-2*(i%2)));
-	value_set_si(M->p[i][4], i%2);
-    }
-    P = Constraints2Polyhedron(M, 6);
-    return !(P->NbRays == 8);
-}
-],
-[AC_DEFINE(HAVE_GROWING_CHERNIKOVA,[],
-	  [PolyLib automatically grows the Chernikova table space])],
-AC_MSG_WARN([This version of PolyLib does not automatically])
-AC_MSG_WARN([enlarge the Chernikova table space]),
-AC_MSG_WARN([Unable to determine whether PolyLib automatically])
-AC_MSG_WARN([grows the Chernikova table space]))
-
-AC_TRY_RUN([
-#include <polylib/polylibgmp.h>
-
-int main()
-{
-    enode *en = new_enode(polynomial, 1, 1);
-    return !(en->arr[0].x.p == NULL);
-}
-],,
-AC_MSG_WARN([This version of polylib leaks]),[true])
-
-AC_TRY_RUN([
-#include <stdio.h>
-#include <polylib/polylibgmp.h>
-
-int main()
-{
-    Matrix *M;
-    Polyhedron *P, *C;
-    Param_Polyhedron *PP;
-    int i;
-    Param_Vertices *V;
-
-    freopen("$srcdir/tests/ehrhart/t12.in", "r", stdin);
-    M = Matrix_Read();
-    P = Constraints2Polyhedron(M, 1024);
-    M = Matrix_Read();
-    C = Constraints2Polyhedron(M, 1024);
-    PP = Polyhedron2Param_Domain(P, C, 1024);
-    for (i = 0, V = PP->V; V; ++i, V = V->next)
-	;
-    return !(i == 10);
-}
-],
-[],
-AC_MSG_ERROR([This version of polylib produces incorrect vertices.]),
-AC_MSG_WARN([Unable to determine whether PolyLib computes correct vertices]))
-
-AC_MSG_CHECKING([number of arguments of Polyhedron_Enumerate])
-AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
-	       [Polyhedron_Enumerate(NULL,NULL,0,NULL)],
-	       [AC_MSG_RESULT(4)
-		AC_DEFINE(HAVE_ENUMERATE4,[],
-			  [Polyhedron_Enumerate takes four arguments])],
-	       [AC_MSG_RESULT(3)])
-
-AC_MSG_CHECKING([number of arguments of count_points])
-AC_TRY_COMPILE([#include <polylib/polylibgmp.h>], 
-	       [count_points(0,NULL,NULL,NULL)],
-	       [AC_MSG_RESULT(4)
-		AC_DEFINE(HAVE_COUNT_POINTS4,[],
-			  [count_points takes four arguments])],
-	       [AC_MSG_RESULT(3)])
-
 AC_ARG_WITH(piplib,
             [  --with-piplib=DIR       DIR Location of PIP],
             [ echo "Package piplib : $withval" && piplib_package=$withval],  
@@ -311,7 +267,7 @@ if test "$with_bernstein" != "no"; then
 	AM_PATH_GINAC(1.3.3, [
 		have_ginac=true
 		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
-		PACKAGE_LIBS="-lbarvinok -lbernstein"
+		EXTRA_PACKAGE_LIBS="-lbernstein $EXTRA_PACKAGE_LIBS"
 		bv_barvinok_maximize="barvinok_maximize\$(EXEEXT)"
 	])
 	AC_LANG_POP
@@ -458,11 +414,20 @@ CPPFLAGS="$SAVE_CPPFLAGS"
 AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
 
+PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lpolylibgmp"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_FILES(Makefile lib/Makefile doc/Makefile omega/Makefile)
+if test $with_polylib = bundled; then
+	AC_CONFIG_SUBDIRS(polylib)
+fi
 if test x$have_ginac = xtrue; then
     AC_CONFIG_SUBDIRS(bernstein)
 fi
+AC_CONFIG_COMMANDS_POST([
+	dnl pass on arguments to subdir configures, but don't
+	dnl add them to config.status
+	ac_configure_args="$ac_configure_args $bv_configure_args"
+])
 AC_OUTPUT

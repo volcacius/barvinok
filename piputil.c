@@ -2,13 +2,8 @@
 #include <piplib/piplibMP.h>
 #include <assert.h>
 #include "piputil.h"
-#include "config.h"
 
-#ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
 
 static PipMatrix *poly2pip(Polyhedron *P, int pos, int n, int nparam)
 {

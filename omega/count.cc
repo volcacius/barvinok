@@ -4,16 +4,11 @@
 #include <omega.h>
 #include "omega/convert.h"
 #include "count.h"
-#include "config.h"
 
 #include <iostream>
 using namespace std;
 
-#ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
 
 evalue *count_relation(Relation& r)
 {

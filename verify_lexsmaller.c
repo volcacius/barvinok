@@ -2,11 +2,7 @@
 #include <barvinok/util.h>
 #include "config.h"
 
-#ifdef HAVE_GROWING_CHERNIKOVA
 #define MAXRAYS    POL_NO_DUAL
-#else
-#define MAXRAYS  600
-#endif
 
 #include "config.h"
 #ifndef HAVE_GETOPT_H
