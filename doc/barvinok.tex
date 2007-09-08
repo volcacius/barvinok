@@ -21,6 +21,7 @@
 
 \maketitle
 
+\addcontentsline{toc}{section}{\contentsname}
 \tableofcontents
 
 \listoffigures
@@ -44,7 +45,10 @@
 
 \index{index|(}
 
+\let\savesection\section
+\def\section#1#2{\savesection#1#2\addcontentsline{toc}{section}{\indexname}}
 \printindex
+\let\section\savesection
 
 \index{index|)}
 

@@ -289,7 +289,9 @@
    {}%
 \@ifundefined{chapter}%
  {\def\thebibliography#1{\section*{\refname\@mkboth
-   {\uppercase{\refname}}{\uppercase{\refname}}}\list
+   {\uppercase{\refname}}{\uppercase{\refname}}}
+   \addcontentsline{toc}{section}{References}
+   \list
    {[\arabic{enumi}]}{\settowidth\labelwidth{[#1]}
    \leftmargin\labelwidth
    \advance\leftmargin\labelsep
