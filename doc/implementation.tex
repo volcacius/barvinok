@@ -2023,3 +2023,1228 @@ S_n(-l(\vec{\hat x})+1)
 $$
 
 \end{enumerate}
+
+\subsection{Summation using local Euler-Maclaurin formula}
+
+\sindex{local}{Euler-Maclaurin formula}
+In this section we provide some implementation details
+on using \ai{local Euler-Maclaurin formula} to compute
+the sum of a piecewise polynomial evaluated in all integer
+points of a two-dimensional parametric polytope.
+For the theory behind these formula and a discussion
+of the original implementation (for non-parametric simplices),
+we refer to \shortciteN{Berline2006local}.
+
+In particular, consider a parametric piecewise polynomial
+in $n$ parameters and $m$ variables
+$c : \ZZ^n \to \ZZ^m \to \QQ : \vec p \mapsto c(\vec p)$,
+with $c(\vec p) : \ZZ^m \to \QQ : \vec x \mapsto c(\vec p)(\vec x)$
+and
+$$
+c_{\vec p}(\vec x) =
+\begin{cases}
+c_1(\vec p)(\vec x) & \text{if $\vec x \in D_1(\vec p)$}
+\\
+\vdots
+\\
+c_r(\vec p)(\vec x) & \text{if $\vec x \in D_r(\vec p)$}
+,
+\end{cases}
+$$
+with the $c_i$ polynomials, $c_i \in (\QQ[\vec p])[\vec x]$, and 
+the $D_i$ disjoint linearly parametric polytopes.
+We want to compute
+$$
+g(\vec p) = \sum_{\vec x \in \ZZ^m} c(\vec p)(\vec x)
+.
+$$
+
+\subsubsection{Reduction to the summation of a parametric polynomial
+over a parametric polytope with a fixed combinatorial structure}
+
+Since the $D_i$ are disjoint, we can consider each
+$(c_i, D_i)$-pair individually and compute
+$$
+g(\vec p) = \sum_{i=1}^r g_i(\vec p) =
+\sum_{i=1}^r \sum_{\vec x \in D_r(\vec p) \cap \ZZ^m} c_r(\vec p)(\vec x)
+.
+$$
+The second step is to compute the \ai{chamber decomposition}
+~\shortcite[Section 4.2.3]{Verdoolaege2005PhD} of each parametric
+polytope $D_i$.
+The result is a subdivision of the parameter space into chambers
+$C_{ij}$ such that $D_i$ has a fixed combinatorial structure,
+in particular a fixed set of parametric vertices,
+on (the interior of) each $C_{ij}$.  Applying \autoref{p:inclusion-exclusion},
+this subdivision can be transformed into a partition
+$\{\, \tilde C_{ij} \,\}$ by
+making some of the facets of the chambers open%
+~\shortcite[Section~3.2]{Koeppe2007parametric}.
+Since we are only interested in integer parameter values,
+any of the resulting open facets $\sp a p + c > 0$,
+with $\vec a \in \ZZ^n$ and $c \in \ZZ$,
+can then be replaced by  $\sp a p + c-1 \ge 0$.
+Again, we have
+$$
+g_i(\vec p) = \sum_j g_{ij}(\vec p) =
+\sum_j \sum_{\vec x \in C_{ij}(\vec p) \cap \ZZ^m} c_r(\vec p)(\vec x)
+.
+$$
+
+After this reduction, the technique of
+\shortciteN{Berline2006local} can be applied practically verbatim
+to the parametric polytope with a fixed combinatorial structure.
+In principle, we could also handle piecewise quasi-polynomials
+using the technique of \shortciteN[Section~4.5.4]{Verdoolaege2005PhD},
+except that we only need to create an extra variable for each
+distinct floor expression in a monomial, rather than for each
+occurrence of a floor expression in a monomial.
+However, since we currently only support two-dimensional polytopes,
+this reduction has not been implemented yet.
+
+\subsubsection{Summation over a one-dimensional parametric polytope}
+
+The basis for the summation technique is the local
+Euler-Maclaurin formula~\cite[Theorem~26]{Berline2006local}
+\begin{equation}
+\label{eq:EML}
+\sum_{\vec x \in P(\vec p) \cap \Lambda} h(\vec p)(\vec x)
+= \sum_{F(\vec p) \in {\mathcal F}(P(\vec p))}
+	    \int_{F(\vec p)} D_{P(\vec p),F(\vec p)} \cdot h(\vec p)
+,
+\end{equation}
+where $P(\vec p)$ is a parametric polytope,
+$\Lambda$ is a lattice, ${\mathcal F}(P(\vec p))$
+are the faces of $P(\vec p)$, $D_{P(\vec p),F(\vec p)}$ is a
+specific differential operator associated to the face of a polytope.
+The \ai{Lebesgue measure} used in the integral is such that the
+integral of the indicator function of a lattice element of
+the lattice $\Lambda \cap (\affhull(F(\vec p)) - F(\vec p))$ is 1,
+i.e., the intersection of $\Lambda$ with the linear subspace
+parallel to the affine hull of the face $F(\vec p)$.
+Note that the original theorem is formulated for a non-parametric
+polytope and a non-parametric polynomial.  However, as we will see,
+in each of the steps in the computation, the parameters can be
+treated as symbolic constants without affecting the validity of the formula,
+see also~\shortciteN[Section 6]{Berline2006local}.
+
+The differential operator $D_{P(\vec p),F(\vec p)}$ is obtained
+by plugging in the vector $\vec D=(D_1,\ldots,D_m)$ of first
+order differential operators, i.e., $D_k$ is the first order
+differential operator in the $k$th variable,
+in the function $\mu_{P(\vec p),F(\vec p)}$.
+This function is determined by the \defindex{transverse cone}
+of the polyhedron $P(\vec p)$ along its face $F(\vec p)$,
+which is the \ai{supporting cone} of $P(\vec p)$ along $F(\vec p)$
+projected into the linear subspace orthogonal to $F(\vec p)$.
+The lattice associated to this space is the projection of
+$\Lambda$ into this space.
+
+In particular, for a zero-dimensional affine cone in the zero-dimensional
+space, we have $\mu = 1$~\cite[Proposition 12]{Berline2006local},
+while for a one-dimensional affine
+cone $K = (-t + \RR_+) r$ in the one-dimensional space, where
+$r$ is a primitive integer vector and $t \in [0,1)$,
+we have~\cite[(13)]{Berline2006local}
+\begin{equation}
+\label{eq:mu:1}
+\mu(K)(\xi) = \frac{e^{t y}}{1-e^y} + \frac 1{y}
+= -\sum_{n=0}^\infty \frac{b(n+1, t)}{(n+1)!} y^n
+,
+\end{equation}
+with $y = \sps \xi r$ and $b(n,t)$ the \ai{Bernoulli polynomial}s
+defined by the generating series
+$$
+\frac{e^{ty} y}{e^y - 1} = \sum_{n=0}^\infty \frac{b(n,t)}{n!} y^n
+.
+$$
+The constant terms of these Bernoulli polynomials
+are the \ai{Bernoulli number}s.
+
+Applying \eqref{eq:EML} to a one-dimensional parametric polytope
+$P(\vec p) = [v_1(\vec p), v_2(\vec p)]$, we find
+$$
+\begin{aligned}
+\sum_{x \in P(\vec p) \cap \ZZ} h(\vec p)(x)
+= & \int_{P(\vec p)} D_{P(\vec p), P(\vec p)} \cdot h(\vec p)
+\\
+& + \int_{v_1(\vec p)} D_{P(\vec p), v_1(\vec p)} \cdot h(\vec p)
+\\
+& + \int_{v_2(\vec p)} D_{P(\vec p), v_2(\vec p)} \cdot h(\vec p)
+.
+\end{aligned}
+$$
+The transverse cone of a polytope along the whole polytope is
+a zero-dimensional cone in a zero-dimensional space and so
+$D_{P(\vec p), P(\vec p)} = \mu_{P(\vec p), P(\vec p)}(D) = 1$.
+The transverse cone along $v_1(\vec p)$ is $v_1(\vec p) + \RR_+$
+and so $D_{P(\vec p), v_1(\vec p)} = \mu(v_1(\vec p) + \RR_+)(D)$
+as in \eqref{eq:mu:1}, with $y = \sps D 1 = D$ and
+$t = \ceil{v_1(\vec p)} - v_1(\vec p) =
+\fractional{-v_1(\vec p)}$.
+Similarly we find
+$D_{P(\vec p), v_2(\vec p)} = \mu(v_2(\vec p) - \RR_+)(D)$
+as in \eqref{eq:mu:1}, with $y = \sps D {-1} = -D$ and
+$t = v_2(\vec p) - \floor{v_2(\vec p)} =
+\fractional{v_2(\vec p)}$.
+Summarizing, we find
+$$
+\begin{aligned}
+\sum_{x \in P(\vec p) \cap \ZZ} h(\vec p)(x)
+= & \int_{v_1(\vec p)}^{v_2(\vec p)} h(\vec p)(t) \, dt
+\\
+& -\sum_{n=0}^\infty \frac{b(n+1, \fractional{-v_1(\vec p)})}{(n+1)!}
+	(D^n h(\vec p))(v_1(\vec p))
+\\
+& -\sum_{n=0}^\infty (-1)^n \frac{b(n+1, \fractional{v_2(\vec p)})}{(n+1)!}
+	(D^n h(\vec p))(v_2(\vec p))
+.
+\end{aligned}
+$$
+
+Note that in order to apply this formula, we need to verify
+first that $v_1(\vec p)$ is indeed smaller than (or equal to)
+$v_2(\vec p)$.  Since the combinatorial structure of $P(\vec p)$
+does not change throughout the interior of the chamber, we only
+need to check the order of the two vertices for one value
+of the parameters from the interior of the chamber, a point
+which we may compute as in \autoref{s:interior}.
+
+\subsubsection{Summation over a two-dimensional parametric polytope}
+
+For two-dimensional polytope, formula~\eqref{eq:EML} has three kinds
+of contributions: the integral of the polynomial over the polytope,
+contributions along edges and contributions along vertices.
+As suggested by~\citeN{Berline2007personal}, the integral can be computed
+by applying the Green-Stokes theorem:
+$$
+    \iint_{P(\vec p)}
+    \left(\frac{\partial M}{\partial x} - \frac{\partial L}{\partial y}\right) =
+    \int_{\partial P(\vec p)} (L\, dx + M\, dy)
+.
+$$
+In particular, if $M(\vec p)(x,y)$ is such that
+$\frac{\partial M}{\partial x}(\vec p)(x,y) = h(\vec p)(x,y)$
+then
+$$
+    \iint_{P(\vec p)} h(\vec p)(x,y) =
+    \int_{\partial P(\vec p)} M(\vec p)(x,y) \, dy
+.
+$$
+Care must be taken to integrate over the boundary in the positive
+direction.  Assuming the vertices of the polygon are not given
+in a predetermined order, we can check the correct orientation
+of the vertices of each edge individually.  Let $\vec n = (n_1, n_2)$
+be the inner normal of a facet and let $\vec v_1(\vec p)$
+and $\vec v_2(\vec p)$ be the two vertices of the facet, then
+the vertices are in the correct order if
+$$
+\begin{vmatrix}
+v_{2,1}(\vec p)-v_{1,1}(\vec p) & n_1
+\\
+v_{2,2}(\vec p)-v_{1,2}(\vec p) & n_2
+\end{vmatrix}
+\ge 0
+.
+$$
+Since these two vertices belong to the same edge, their order
+will not change within a chamber and so we can again perform
+this check for a single value of the parameters.
+To integrate $M$ over an edge $F$, let $\vec f$ be a primitive
+integer vector in the direction of the edge.
+Then $\vec v_2(\vec p) = \vec v_1(\vec p) + k(\vec p) \, \vec f$
+and any point on the edge can be written as
+$\vec v_1(\vec p) + \lambda \vec f$ with
+$0 \le \lambda \le k(\vec p)$.
+That is,
+\begin{equation}
+\label{eq:EML:int}
+\int_F M(\vec p)(x,y) \, dy
+=
+\int_0^{k(\vec p)}
+    M(\vec p)(v_{1,1}(\vec p) + \lambda f_1,
+	      v_{1,2}(\vec p) + \lambda f_2)
+    f_2 \, d\lambda
+.
+\end{equation}
+
+For the edges, we can again apply \eqref{eq:mu:1}, but we
+must first project the supporting cone at the edge into
+the linear subspace orthogonal to the edge.
+Let $\vec n = (n_1, n_2)$ be the (primitive integer) inner normal
+of this facet $F(\vec p)$, then $\vec f = (-n_2, n_1)$ is parallel
+to the facet and we can write one of the vertices $\vec v(\vec p)$
+as a linear combination of these two vectors:
+\begin{equation}
+\label{eq:EML:facet:coordinates}
+\vec v(\vec p)
+=
+\begin{bmatrix}
+\vec f & \vec n
+\end{bmatrix}
+\vec a(\vec p)
+=
+\begin{bmatrix}
+-n_2 & n_1 \\
+n_1 & n_2
+\end{bmatrix}
+\vec a(\vec p)
+\end{equation}
+or
+\begin{equation}
+\label{eq:EML:facet:coordinates:2}
+\vec a(\vec p)
+=
+\begin{bmatrix}
+-n_2 & n_1 \\
+n_1 & n_2
+\end{bmatrix}^{-1}
+\vec v(\vec p)
+=
+\begin{bmatrix}
+-n_2/d & n_1/d \\
+n_1/d & n_2/d
+\end{bmatrix}
+\vec v(\vec p),
+\end{equation}
+with $d = n_1^2+n_2^2$.
+The lattice associated to the linear subspace orthogonal
+to the facet is the projection of $\Lambda$ into this space.
+Since $\vec n$ is primitive, a basis for this lattice can be
+identified with $\vec n/d$.
+The coordinate of the whole facet in this space is therefore
+$
+d a_2(\vec p) =
+\begin{bmatrix}
+n_1 & n_2
+\end{bmatrix}
+\vec v(\vec p)
+$, while the transverse cone is $d a_2(\vec p) + \RR_+$.
+Similarly, a linear functional $\vec \xi'$ projects onto
+a linear functional $\xi = \sp {\xi'} n/d$ in the linear subspace.
+Applying \eqref{eq:mu:1}, with $y = \frac{n_1}d D_1 + \frac{n_2}d D_2$
+and $t = \fractional{- n_1 v_1(\vec p) - n_2 v_2(\vec p)}$, we therefore
+find
+\begin{align*}
+D_{P(\vec p), F(\vec p)}
+& =
+-\sum_{n=0}^\infty
+    \frac{b(n+1, \fractional{-n_1 v_1(\vec p) - n_2 v_2(\vec p)})}{(n+1)!}
+	\left(\frac{n_1}d D_1 + \frac{n_2}d D_2\right)^n
+\\
+& =
+- \sum_{i=0}^\infty \sum_{j=0}^\infty
+    \frac{b(i+j+1, \fractional{-n_1 v_1(\vec p) - n_2 v_2(\vec p)})}{(i+j+1)!}
+	\frac{n_1^i n_2^j}{d^{i+j}} D_1^i D_2^j
+.
+\end{align*}
+After applying this differential operator to the polynomial
+$h(\vec p)(\vec x)$, the resulting polynomial
+$
+h'(\vec p)(\vec x) = D_{P(\vec p), F(\vec p)} \cdot h(\vec p)(\vec x)
+$
+needs to be integrated over the facet.
+The measure to be used is such that the integral of a lattice tile
+in the linear space parallel to the facet is 1, i.e.,
+$$
+\int_{\vec 0}^{\vec f} 1 = \int_0^1 1 dz = 1,
+$$
+with $z$ the coordinate along $\vec f$.
+Referring to \eqref{eq:EML:facet:coordinates} and
+\eqref{eq:EML:facet:coordinates:2}, all points of the facet
+have the form $\vec x(\vec p) = z \, \vec f + a_2(\vec p) \, \vec n$,
+while the $z$-coordinate of the vertices $\vec v_1(\vec p)$
+and $\vec v_2(\vec p)$ are
+$(-n_2 v_{1,1} + n_1 v_{1,2})/d$
+and
+$(-n_2 v_{2,1} + n_1 v_{2,2})/d$, respectively.
+That is, the contribution of the facet is equal to
+$$
+\int_{(-n_2 v_{1,1} + n_1 v_{1,2})/d}^{(-n_2 v_{2,1} + n_1 v_{2,2})/d}
+h'(\vec p)\left(z \, \vec f + a_2(\vec p) \, \vec n\right) \, dz
+,
+$$
+where, again, we need to ensure that the lower limit is smaller
+than the upper limit using the usual method of plugging in a
+particular value of the parameters.
+
+Finally, we consider the contributions of the vertices.
+The \ai{transverse cone}s are in this case simply the supporting cones.
+Since $\mu$ is a valuation, we may apply \ai{Barvinok's decomposition}
+and assume that the cone is unimodular.
+For an affine cone
+\begin{align*}
+K &= \vec v(\vec p) + \RR_+ \vec r_1 + \RR_+ \vec r_2
+\\
+&= (a_1(\vec p) + \RR_+) \vec r_1 + (a_2(\vec p) + \RR_+) \vec r_2,
+\end{align*}
+with
+$$
+\vec a(\vec p) =
+\begin{bmatrix}
+\vec r_1 & \vec r_2
+\end{bmatrix}^{-1}
+\vec v(\vec p)
+,
+$$
+we have~\cite[Proposition~31]{Berline2006local},
+\begin{equation}
+\label{eq:mu:2}
+\mu(K)(\vec\xi)
+=
+\frac{e^{t_1 y_1 + t_2 y_2}}{(1-e^{y_1})(1-e^{y_2})}
++ \frac 1{y_1}B(y_2 - C_1 y_1, t_2)
++ \frac 1{y_2}B(y_1 - C_2 y_2, t_1)
+- \frac 1{y_1 y_2},
+\end{equation}
+with
+$$
+B(y,t) =
+\frac{e^{t y}}{1-e^y} + \frac 1{y}
+= -\sum_{n=0}^\infty \frac{b(n+1, t)}{(n+1)!} y^n
+,
+$$
+$y_i = \sps{\vec\xi}{\vec r_i}$,
+$C_i = \sps{\vec v_1}{\vec v_2}/\sps{\vec v_i}{\vec v_i}$
+and
+$t_i = \fractional{-a_i(\vec p)}$.
+Expanding \eqref{eq:mu:2}, we find
+\begin{align*}
+\mu(K)(\vec\xi)
+& =
+\left(
+-\frac{b(0,t1)}{y_1} - \sum_{n=0}^\infty \frac{b(n+1,t_1)}{(n+1)!} y_1^n
+\right)
+\left(
+-\frac{b(0,t2)}{y_2} - \sum_{n=0}^\infty \frac{b(n+1,t_2)}{(n+1)!} y_2^n
+\right)
+\\
+& \phantom{=}
+-
+\left(
+\sum_{n=0}^\infty \frac{b(n+1,t_2)}{(n+1)!} \frac{y_2^n}{y_1}
++
+\sum_{n=0}^\infty \frac{b(n+1,t_2)}{(n+1)!} \frac{(y_2-C_1 y_1)^n-y_2^n}{y_1}
+\right)
+\\
+& \phantom{=}
+-
+\left(
+\sum_{n=0}^\infty \frac{b(n+1,t_1)}{(n+1)!} \frac{y_1^n}{y_2}
++
+\sum_{n=0}^\infty \frac{b(n+1,t_1)}{(n+1)!} \frac{(y_1-C_2 y_2)^n-y_1^n}{y_2}
+\right)
+\\
+& \phantom{=}
+- \frac 1{y_1 y_2}
+\\
+& =
+\sum_{n_1=0}^\infty
+\sum_{n_2=0}^\infty
+c(C_1, C_2, t_1, t_2; n_1, n_2) \, y_1^n y_2^n
+,
+\end{align*}
+with
+\begin{align*}
+c(C_1, C_2, t_1, t_2; n_1, n_2)
+= &
+\frac{b(n_1+1,t_1)}{(n_1+1)!} \frac{b(n_2+1,t_2)}{(n_2+1)!}
+\\
+&
+-
+\frac{b(n_1+n_2+1,t_2)}{(n_1+n_2+1)!} {n_1+n_2+1 \choose n_1+1}
+\left(-C_1\right)^{n_1+1}
+\\
+&
+-
+\frac{b(n_1+n_2+1,t_1)}{(n_1+n_2+1)!} {n_1+n_2+1 \choose n_2+1}
+\left(-C_2\right)^{n_2+1}
+.
+\end{align*}
+For $\vec \xi = \vec D$, we have
+\begin{align*}
+y_1^n y_2^n
+& =
+\left( r_{1,1} D_1 + r_{1,2} D_2 \right)^{n_1}
+\left( r_{2,1} D_1 + r_{2,2} D_2 \right)^{n_2}
+\\
+& =
+\left(
+\sum_{k=0}^{n_1} r_{1,1}^k r_{1,2}^{n_1 - k} { n_1 \choose k} D_1^k D_2^{n_1-k}
+\right)
+\left(
+\sum_{l=0}^{n_2} r_{2,1}^l r_{2,2}^{n_2 - l} { n_2 \choose l} D_1^l D_2^{n_2-l}
+\right)
+\end{align*}
+and so
+$
+D_{P(\vec p), \vec v(\vec p)} = \mu(K)(\vec D)
+=
+$
+$$
+\sum_{i=0}^\infty
+\sum_{j=0}^\infty
+\sum_{\shortstack{$\scriptstyle i+j = n_1+n_2$\\$\scriptstyle n_1 \ge 0$\\$\scriptstyle n_2 \ge 0$}}
+\sum_{\shortstack{$\scriptstyle k+l = i$\\$\scriptstyle 0 \le k \le n_1$\\$\scriptstyle 0 \le l \le n_2$}}
+c(C_1, C_2, t_1, t_2; n_1, n_2)
+r_{1,1}^k r_{1,2}^{n_1 - k}
+r_{2,1}^l r_{2,2}^{n_2 - l}
+{ n_1 \choose k} { n_2 \choose l} D_1^i D_2^j
+.
+$$
+The contribution of this vertex is then
+$$
+h'(\vec p)(\vec v(\vec p))
+,
+$$
+with $
+h'(\vec p)(\vec x) = D_{P(\vec p), \vec v(\vec p)} \cdot h(\vec p)(\vec x)
+$.
+
+\begin{example}
+As a simple example, consider the (non-parametric) triangle
+in \autoref{f:EML:triangle} and assume we want to compute
+$$
+\sum_{\vec x \in T \cap \ZZ^2} x_1 x_2
+.
+$$
+Since $T \cap \ZZ^2 = \{\, (2,4), (3,4), (2,5) \, \}$,
+the result should be
+$$
+2 \cdot 4 + 3 \cdot 4 + 2 \cdot 5 = 30
+.
+$$
+
+\begin{figure}
+\intercol=1.2cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS@i@={(2,4),(3,4),(2,5),(2,4)},{0*[|(2)]\xypolyline{}}
+\POS(2.35,4.25)*{x_1 x_2}
+\POS(2,4)*+!U{(2,4)}
+\POS(3,4)*+!U{(3,4)}
+\POS(2,5)*+!D{(2,5)}
+\POS(2,4)*{\cdot}
+\POS(3,4)*{\cdot}
+\POS(2,5)*{\cdot}
+\POS(-1,0)\ar(4,0)
+\POS(0,-1)\ar(0,5.5)
+\end{xy}
+\caption{Sum of polynomial $x_1 x_2$ over the integer points in a triangle $T$}
+\label{f:EML:triangle}
+\end{figure}
+
+Let us first consider the integral
+$$
+\iint_T x_1 x_2 = \int_{\partial T} \frac{x_1^2 x_2}2 \, d x_2
+.
+$$
+Integration along each of the edges of the triangle yields
+the following.
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)](1,0)
+}
+\end{xy}
+}%
+For the edge in the margin, we have $\vec f = (1,0)$, i.e., $f_2 = 0$.
+The contribution of this edge to the integral is therefore zero.
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(1,0)\ar@[|(2)](0,1)
+}
+\end{xy}
+}%
+For this edge, we have $\vec f = (-1,1)$.
+The contribution of this edge to the integral is therefore
+$$
+\int_0^1 \frac{(3-\lambda)^2(4+\lambda)}2 d\lambda
+= \frac{337}{24}
+.
+$$
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,1)\ar@[|(2)](0,0)
+}
+\end{xy}
+}%
+For this edge, we have $\vec f = (0,-1)$.
+The contribution of this edge to the integral is therefore
+$$
+\int_0^1 \frac{2^2(5-\lambda)}2 (-1) d\lambda
+= -9
+.
+$$
+
+The total integral is therefore
+$$
+\int_{\partial T} \frac{x_1^2 x_2}2 \, d x_2
+= 0 + \frac{337}{24} - 9 = \frac{121}{24}
+.
+$$
+
+Now let us consider the contributions of the edges.
+We will need the following \ai{Bernoulli number}s in our
+computations.
+\begin{align*}
+b(1,0) & = - \frac 1 2
+\\
+b(2,0) & = \frac 1 6
+\\
+b(3,0) & = 0
+\\
+b(4,0) & = -\frac 1 {30}
+\end{align*}
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)]@{-}(1,0)
+\POS(0.5,0)\ar(0.5,1)
+}
+\end{xy}
+}%
+The normal to the facet $F_1$ in the margin is $\vec n = (0,1)$.
+The vector $\vec f = (-1,0)$ is parallel to the facet.
+We have
+$$
+\begin{bmatrix}
+2 \\ 4
+\end{bmatrix}
+=
+-2
+\begin{bmatrix}
+-1 \\ 0
+\end{bmatrix}
++4
+\begin{bmatrix}
+0 \\ 1
+\end{bmatrix}
+\quad\text{and}\quad
+\begin{bmatrix}
+3 \\ 4
+\end{bmatrix}
+=
+-3
+\begin{bmatrix}
+-1 \\ 0
+\end{bmatrix}
++4
+\begin{bmatrix}
+0 \\ 1
+\end{bmatrix}
+.
+$$
+Therefore $t = \fractional{-4} = 0$, $y = D_2$,
+\begin{align*}
+D_{T,F_1}
+& = 
+- \sum_{j=0}^\infty \frac{b(j+1, 0)}{(j+1)!} D_2^j
+\\
+& =
+- \frac{b(1,0)}1 - \frac{b(2,0)}2 D_2 + \cdots
+\end{align*}
+and
+$$
+h'(\vec x) =
+D_{T,F_1} \cdot x_1 x_2 =
+\left(\frac 1 2 - \frac 1{12} D_2\right) \cdot x_1 x_2
+=
+\frac 1 2 x_1 x_2 - \frac 1{12} x_1
+.
+$$
+With $x_1 = - z$ and $x_2 = 4$, the contribution of this facet
+is
+$$
+\int_{-3}^{-2} - 2 z + \frac 1{12} z \, dz
+=
+\frac{115}{24}
+.
+$$
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)]@{-}(0,1)
+\POS(0,0.5)\ar(1,0.5)
+}
+\end{xy}
+}%
+The normal to the facet $F_2$ in the margin is $\vec n = (1,0)$.
+The vector $\vec f = (0,1)$ is parallel to the facet.
+We have
+$$
+\begin{bmatrix}
+2 \\ 4
+\end{bmatrix}
+=
+4
+\begin{bmatrix}
+0 \\ 1
+\end{bmatrix}
++2
+\begin{bmatrix}
+1 \\ 0
+\end{bmatrix}
+\quad\text{and}\quad
+\begin{bmatrix}
+2 \\ 5
+\end{bmatrix}
+=
+5
+\begin{bmatrix}
+0 \\ 1
+\end{bmatrix}
++2
+\begin{bmatrix}
+1 \\ 0
+\end{bmatrix}
+.
+$$
+Therefore $t = \fractional{-2} = 0$, $y = D_1$,
+\begin{align*}
+D_{T,F_2}
+& = 
+- \sum_{i=0}^\infty \frac{b(i+1, 0)}{(i+1)!} D_1^i
+\\
+& =
+- \frac{b(1,0)}1 - \frac{b(2,0)}2 D_1 + \cdots
+\end{align*}
+and
+$$
+h'(\vec x) =
+D_{T,F_2} \cdot x_1 x_2 =
+\left(\frac 1 2 - \frac 1{12} D_1\right) \cdot x_1 x_2
+=
+\frac 1 2 x_1 x_2 - \frac 1{12} x_2
+.
+$$
+With $x_1 = 2$ and $x_2 = z$, the contribution of this facet
+is
+$$
+\int_{4}^{5} z - \frac 1{12} z \, dz
+=
+\frac{33}{8}
+.
+$$
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(1,0)\ar@[|(2)]@{-}(0,1)
+\POS(0.5,0.5)\ar(-0.5,-0.5)
+}
+\end{xy}
+}%
+The normal to the facet $F_3$ in the margin is $\vec n = (-1,-1)$.
+The vector $\vec f = (1,-1)$ is parallel to the facet.
+We have
+$$
+\begin{bmatrix}
+3 \\ 4
+\end{bmatrix}
+=
+-\frac 1 2
+\begin{bmatrix}
+1 \\ -1
+\end{bmatrix}
+-\frac 7 2
+\begin{bmatrix}
+-1 \\ -1
+\end{bmatrix}
+\quad\text{and}\quad
+\begin{bmatrix}
+2 \\ 5
+\end{bmatrix}
+=
+-\frac 3 2
+\begin{bmatrix}
+1 \\ -1
+\end{bmatrix}
+-\frac 7 2
+\begin{bmatrix}
+-1 \\ -1
+\end{bmatrix}
+.
+$$
+Therefore $t = \fractional{7} = 0$, $y = -\frac 1 2 D_1 -\frac 1 2 D_2$,
+\begin{align*}
+D_{T,F_3}
+& = 
+- \sum_{i=0}^\infty \sum_{j=0}^\infty
+    \frac{b(i+j+1, 0)}{(i+j+1)!}
+	\frac{(-1)^{i+j}}{2^{i+j}} D_1^i D_2^j
+\\
+& =
+- \frac{b(1,0)}1
++ \frac 1 2 \frac{b(2,0)}2 D_1
++ \frac 1 2 \frac{b(2,0)}2 D_2 + \cdots
+\end{align*}
+and
+$$
+h'(\vec x) =
+D_{T,F_4} \cdot x_1 x_2 =
+\left(\frac 1 2 + \frac 1{24} D_1 + \frac 1{24} D_2\right) \cdot x_1 x_2
+=
+\frac 1 2 x_1 x_2 + \frac 1{24} x_2 + \frac 1{24} x_1
+.
+$$
+With $x_1 = z + \frac 7 2$ and $x_2 = -z + \frac 7 2$,
+the contribution of this facet
+is
+$$
+\int_{-\frac 3 2}^{-\frac 1 2}
+\frac 1 2 (z + \frac 7 2)(-z + \frac 7 2)
++ \frac 1{24}(-z + \frac 7 2)
++ \frac 1{24}(z + \frac 7 2) \, dz
+=
+\frac{47}{8}
+.
+$$
+
+The total contribution of the edges is therefore
+$$
+\frac{115}{24}+\frac{33}8+
+\frac{47}{8} = \frac{355}{24}
+.
+$$
+
+Finally, we consider the contributions of the vertices.
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(1,0)\ar@[|(2)](0,1)
+\POS(1,0)\ar@[|(2)](0,0)
+}
+\end{xy}
+}%
+For the vertex $\vec v = (3,4)$, we have
+$\vec r_1 = (-1,0)$ and $\vec r_2 = (-1,1)$.
+Since $\vec v$ is integer, we have $t_1 = t_2 = 0$.
+Also, $C_1 = 1$, $C_2 = 1/2$, $y_1 = -D_1$ and $y_2 = -D_1 + D_2$.
+Since the total degree of the polynomial $x_1 x_2$ is two,
+we only need the coefficients of $\mu(K)(\vec \xi)$ up to
+$n_1+n_2 = 2$.
+
+\noindent
+\begin{tabular}{c|c|c}
+$n_1$ & $n_2$
+\\
+\hline
+0 & 0 &
+$
+\left(
+\frac{b(1,0)}{1!}
+\frac{b(1,0)}{1!}
+-
+\frac{b(2,0)}{2!}
+{1 \choose 1}(-1)^1
+-
+\frac{b(2,0)}{2!}
+{1 \choose 1}(-\frac 12)^1
+\right)
+$
+\\
+1 & 0 &
+$
+\left(
+\frac{b(2,0)}{2!}
+\frac{b(1,0)}{1!}
+-
+\frac{b(3,0)}{3!}
+{2 \choose 2}(-1)^2
+-
+\frac{b(3,0)}{3!}
+{2 \choose 1}(-\frac 12)^1
+\right)
+\left(
+-D_1
+\right)
+$
+\\
+0 & 1 &
+$
+\left(
+\frac{b(1,0)}{1!}
+\frac{b(2,0)}{2!}
+-
+\frac{b(3,0)}{3!}
+{2 \choose 1}(-1)^1
+-
+\frac{b(3,0)}{3!}
+{2 \choose 2}(-\frac 12)^2
+\right)
+\left(
+-D_1 + D_2
+\right)
+$
+\\
+2 & 0 &
+$
+\left(
+\frac{b(3,0)}{3!}
+\frac{b(1,0)}{1!}
+-
+\frac{b(4,0)}{4!}
+{3 \choose 3}(-1)^3
+-
+\frac{b(4,0)}{4!}
+{3 \choose 1}(-\frac 12)^1
+\right)
+\left(
+-D_1
+\right)^2
+$
+\\
+1 & 1 &
+$
+\left(
+\frac{b(2,0)}{2!}
+\frac{b(2,0)}{2!}
+-
+\frac{b(4,0)}{4!}
+{3 \choose 2}(-1)^2
+-
+\frac{b(4,0)}{4!}
+{3 \choose 2}(-\frac 12)^2
+\right)
+\left(
+-D_1
+\right)
+\left(
+-D_1 + D_2
+\right)
+$
+\\
+0 & 2 &
+$
+\left(
+\frac{b(1,0)}{1!}
+\frac{b(3,0)}{3!}
+-
+\frac{b(4,0)}{4!}
+{3 \choose 1}(-1)^1
+-
+\frac{b(4,0)}{4!}
+{3 \choose 3}(-\frac 12)^3
+\right)
+\left(
+-D_1 + D_2
+\right)^2
+$
+\end{tabular}
+
+We find
+\begin{align*}
+h'(\vec x)
+&=
+\left(
+\frac 3 8 - \frac 1{24} (-D_1) - \frac 1{24} (-D_1 + D_2)
++ \frac 7{576} (-D_1 D_2)
+- \frac 5{1152} (-2 D_1 D2)
+\right) x_1 x_2
+\\
+&=
+\frac 3 8 x_1 x_2 + \frac 1{24} x_2 - \frac 1{24} (-x_2 + x_1)
++ \frac 7{576} (-1)
+- \frac 5{1152} (-2)
+.
+\end{align*}
+The contribution of this vertex is therefore
+$$
+h'(3,4) = \frac {1355}{288}
+.
+$$
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,1)\ar@[|(2)](1,0)
+\POS(0,1)\ar@[|(2)](0,0)
+}
+\end{xy}
+}%
+For the vertex $\vec v = (2,5)$, we have
+$\vec r_1 = (0,-1)$ and $\vec r_2 = (1,-1)$.
+Since $\vec v$ is integer, we have $t_1 = t_2 = 0$.
+Also, $C_1 = 1$, $C_2 = 1/2$, $y_1 = -D_2$ and $y_2 = D_1 - D_2$.
+We similarly find
+$$
+h'(\vec x)
+=
+\frac 3 8 x_1 x_2 + \frac 1{24} x_1 - \frac 1{24} (x_2 - x_1)
++ \frac 7{576} (-1)
+- \frac 5{1152} (-2)
+.
+$$
+The contribution of this vertex is therefore
+$$
+h'(2,5) = \frac {1067}{288}
+.
+$$
+
+\marginpar{%
+\intercol=1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,-1)*\xybox{
+\POS@i@={(0,0),(1,0),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)](1,0)
+\POS(0,0)\ar@[|(2)](0,1)
+}
+\end{xy}
+}%
+For the vertex $\vec v = (2,4)$, we have
+$\vec r_1 = (1,0)$ and $\vec r_2 = (0,1)$.
+Since $\vec v$ is integer, we have $t_1 = t_2 = 0$.
+The computations are easier in this case since
+$C_1 = C_2 = 0$, $y_1 = D_1$ and $y_2 = D_2$.
+We find
+$$
+h'(\vec x)
+=
+\frac 1 4 x_1 x_2 - \frac 1{12} x_2 - \frac 1{12} x_1
++ \frac 1{144} (1)
+.
+$$
+The contribution of this vertex is therefore
+$$
+h'(2,4) = \frac {253}{144}
+.
+$$
+
+The total contribution of the vertices is then
+$$
+\frac {1355}{288} + \frac {1067}{288} + \frac {253}{144}
+= \frac {61}6
+$$
+and the total sum is
+$$
+\frac{121}{24}+\frac{355}{24}+\frac{61}6 = 30
+.
+$$
+
+\end{example}
+
+\begin{example}
+Consider the parametric polytope
+$$
+P(n) = \{\, \vec x \mid x_1 \ge 2 \wedge 3 x_1 \le n + 9
+\wedge 4 \le x_2 \le 5 \,\}
+.
+$$
+If $n \ge -3$, then the vertices of this polytope are
+$(2,4)$, $(2,5)$, $(3+n/3,4)$ and $(3+n/3,5)$.
+The contributions of the faces of $P(n)$ to
+$$
+\sum_{\vec x \in P(n) \cap \ZZ^2} x_1 x_2
+$$
+for the chamber $n \ge -3$ are shown in \autoref{t:sum:rectangle}.
+The final result is
+$$
+\begin{cases}
+\frac{ n^2}{2}
+ - 3 n  \fractional{\frac{ n}{3}}
+ + \frac{21}{2} n 
+ + \frac{9}{2}  \fractional{\frac{ n}{3}}^2
+ - \frac{63}{2}  \fractional{\frac{ n}{3}}
+ + 45 
+& \text{if $  n+3 \ge 0$}.
+\end{cases}
+$$
+
+\begin{table}
+\intercol=1cm
+\begin{tabular}{lc}
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*[|(2)]\xypolyline{}}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+\frac{ n^2}{4}
+ + \frac{9}{2} n 
+ + \frac{45}{4} 
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)]@{-}(0,1)
+\POS(0,0.5)*+!L{2}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+\frac{33}{8}
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(1,0)\ar@[|(2)]@{-}(1,1)
+\POS(1,0.5)*+!L{3+n/3}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+ - \frac{3}{2} n  \fractional{\frac{ n}{3}}
+ + \frac{3}{4} n 
+ + \frac{9}{4}  \fractional{\frac{ n}{3}}^2
+ - \frac{63}{4}  \fractional{\frac{ n}{3}}
+ + \frac{57}{8} 
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)]@{-}(1,0)
+\POS(0.5,0)*+!D{4}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+\frac{23}{216} n^2 
+ + \frac{23}{12} n 
+ + \frac{115}{24} 
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,1)\ar@[|(2)]@{-}(1,1)
+\POS(0.5,1)*+!U{5}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+\frac{31}{216} n^2 
+ + \frac{31}{12} n 
+ + \frac{155}{24} 
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(1,1)\ar@[|(2)](1,0)
+\POS(1,1)\ar@[|(2)](0,1)
+\POS(1,1)*+!LU{(3+n/3,5)}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+ - \frac{31}{36} n  \fractional{\frac{ n}{3}}
+ + \frac{31}{72} n 
+ + \frac{31}{24}  \fractional{\frac{ n}{3}}^2
+ - \frac{217}{24}  \fractional{\frac{ n}{3}}
+ + \frac{589}{144} 
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,1)\ar@[|(2)](1,1)
+\POS(0,1)\ar@[|(2)](0,0)
+\POS(0,1)*+!LU{(2,5)}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+\frac{341}{144}
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(0,0)\ar@[|(2)](1,0)
+\POS(0,0)\ar@[|(2)](0,1)
+\POS(0,0)*+!LD{(2,4)}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+\frac{253}{144}
+$
+\\
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,-0.5)*\xybox{
+\POS@i@={(0,0),(1,0),(1,1),(0,1),(0,0)},{0*\xypolyline{--}}
+\POS(1,0)\ar@[|(2)](1,1)
+\POS(1,0)\ar@[|(2)](0,0)
+\POS(1,0)*+!LD{(3+n/3,4)}
+\POS(0,1.1)*{}\POS(0,-0.1)*{}
+}
+\end{xy}
+&
+$
+\displaystyle
+ - \frac{23}{36} n  \fractional{\frac{ n}{3}}
+ + \frac{23}{72} n 
+ + \frac{23}{24}  \fractional{\frac{ n}{3}}^2
+ - \frac{161}{24}  \fractional{\frac{ n}{3}}
+ + \frac{437}{144} 
+$
+\end{tabular}
+\caption{Contributions of the faces of $P(n)$ to the sum of $x_1 x_2$ over
+the integer points of $P(n)$}
+\label{t:sum:rectangle}
+\end{table}
+
+\end{example}
