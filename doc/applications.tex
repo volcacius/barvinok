@@ -377,3 +377,112 @@ from \piplib/ \cite{Feautrier:PIP}, except that the value
 for the ``\ai{big parameter}'' needs to be $-1$, since there is
 no need for big parameters, and it does not read any options
 from the input file.
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_summate}}
+{barvinok\_summate}}
+
+Given a piecewise quasi-polynomial,
+the program \ai[\tt]{barvinok\_summate} computes the \ai{sum} of
+the piecewise quasi-polynomial evaluated in all (integer) values of
+a subset of the variables.  The result is an expression in the
+remaining variables.
+
+The input format corresponds to the {\em output\/} format
+of \ai[\tt]{barvinok\_enumerate} and \ai[\tt]{barvinok\_enumerate\_e}.
+That is, the program expects a list of guarded quasi-polynomials.
+Each guarded quasi-polynomial consists of a domain and a quasi-polynomial,
+separated by an empty line.
+The domain is specified as a list of constraints, each on a separate
+line, consisting of an affine expression in the variables followed
+by \verb+>= 0+.
+Use the \ai[\tt]{--verbose} option to check that your input
+was parsed correctly.
+The list of guarded quasi-polynomials may be preceded by
+a line specifying the variables over which to sum as
+\verb+#variables+ followed by a comma separated list of variable names.
+
+For example
+\begin{verbatim}
+> cat square_p3
+#variables x,y
+x -2 >= 0
+-3x + n + 9 >= 0
+y -4 >= 0
+-y +5 >= 0
+
+x * y
+> ./barvinok_summate < square_p3 
+         n + 3 >= 0
+         - n  -1 >= 0
+
+18         n  >= 0
+          1 >= 0
+
+( 1/2 * n^2 + ( -3 * {( 1/3 * n + 0 )
+} + 21/2 )
+ * n + ( 9/2 * {( 1/3 * n + 0 )
+}^2 + -63/2 * {( 1/3 * n + 0 )
+} + 45 )
+ )
+\end{verbatim}
+
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--variables} & & 
+comma separated list of variables over which to sum
+\\
+\ai[\tt]{--verbose} & \ai[\tt]{-v} &
+print parsed piecewise quasi-polynomial
+\\
+\ai[\tt]{--summation} & & 
+specifies which summation method to use;
+\ai[\tt]{barvinok} refers to the method of
+\shortciteN[Section~4.5.4]{Verdoolaege2005PhD}, while
+\ai[\tt]{euler} refers to the method of
+\autoref{s:euler}
+\end{tabular}
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_maximize}}
+{barvinok\_maximize}}
+
+Given a piecewise quasi-polynomial,
+the program \ai[\tt]{barvinok\_maximize} computes an \ai{upper bound} for
+the values attained by the piecewise quasi-polynomial
+over all (integer) values of a subset of the variables.
+The result is an expression in the remaining variables.
+
+The input format corresponds to the {\em output\/} format
+of \ai[\tt]{barvinok\_enumerate} and \ai[\tt]{barvinok\_enumerate\_e}.
+That is, the program expects a list of guarded quasi-polynomials.
+Each guarded quasi-polynomial consists of a domain and a quasi-polynomial,
+separated by an empty line.
+The domain is specified as a list of constraints, each on a separate
+line, consisting of an affine expression in the variables followed
+by \verb+>= 0+.
+Use the \ai[\tt]{--verbose} option to check that your input
+was parsed correctly.
+The list of guarded quasi-polynomials may be preceded by
+a line specifying the variables over which to compute the upper bound as
+\verb+#variables+ followed by a comma separated list of variable names.
+
+\begin{verbatim}
+> cat devos
+#variables V
+         U + 2V + 3 >= 0
+         - U -2V  >= 0
+         - U  10 >= 0
+         U  >= 0
+
+( {( 1/3 * U + ( 2/3 * V + 0 ) ) } )
+> ./barvinok_maximize < devos 
+(1*U >= 0 && -1*U + 10 >= 0) ? ((2.0/3.0)) : 0
+\end{verbatim}
+
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--variables} & & 
+comma separated list of variables over which to sum
+\\
+\ai[\tt]{--verbose} & \ai[\tt]{-v} &
+print parsed piecewise quasi-polynomial
+\end{tabular}
