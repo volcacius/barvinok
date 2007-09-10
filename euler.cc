@@ -124,7 +124,7 @@ struct power {
 /*
  * Computes the coefficients of
  *
- *	\mu(-t + R_+)(\xsi) = \sum_{n=0)^\infty -b(n+1, t)/(n+1)! \xsi^n
+ *	\mu(-t + R_+)(\xi) = \sum_{n=0)^\infty -b(n+1, t)/(n+1)! \xi^n
  *
  * where b(n, t) is the Bernoulli polynomial of degree n in t
  * and t(p) is an expression (a fractional part) of the parameters p
@@ -904,6 +904,121 @@ void summator_2d::integrate(Param_Polyhedron *PP, Param_Domain *PD)
     free(res);
 }
 
+evalue *summate_over_1d_pdomain(evalue *e,
+				Param_Polyhedron *PP, Param_Domain *PD,
+				Polyhedron *P, Value *inner,
+				struct barvinok_options *options)
+{
+    Param_Vertices *V;
+    int nbV = 0;
+    Param_Vertices *vertex[2];
+    unsigned nparam = PP->V->Vertex->NbColumns-2;
+    evalue *subs_0d[1+nparam];
+    evalue *a[2];
+    evalue *t[2];
+    unsigned degree = total_degree(e, 1);
+
+    for (int i = 0; i < nparam; ++i)
+	subs_0d[1+i] = term(i);
+
+    FORALL_PVertex_in_ParamPolyhedron(V, PD, PP)
+	vertex[nbV++] = V;
+    END_FORALL_PVertex_in_ParamPolyhedron;
+    assert(nbV == 2);
+
+    Vector *fixed = Vector_Alloc(2);
+    for (int i = 0; i < 2; ++i) {
+	Inner_Product(vertex[i]->Vertex->p[0], inner, nparam+1, &fixed->p[i]);
+	value_multiply(fixed->p[i],
+		       fixed->p[i], vertex[1-i]->Vertex->p[0][nparam+1]);
+    }
+    if (value_lt(fixed->p[1], fixed->p[0])) {
+	V = vertex[0];
+	vertex[0] = vertex[1];
+	vertex[1] = V;
+    }
+    Vector_Free(fixed);
+
+    Vector *coef = Vector_Alloc(nparam+1);
+    for (int i = 0; i < 2; ++i)
+    	a[i] = affine2evalue(vertex[i]->Vertex->p[0],
+			     vertex[i]->Vertex->p[0][nparam+1], nparam);
+    if (value_one_p(vertex[0]->Vertex->p[0][nparam+1]))
+	t[0] = evalue_zero();
+    else {
+	Vector_Oppose(vertex[0]->Vertex->p[0], coef->p, nparam+1);
+	t[0] = fractional_part(coef->p, vertex[0]->Vertex->p[0][nparam+1],
+			       nparam, NULL);
+    }
+    if (value_one_p(vertex[1]->Vertex->p[0][nparam+1]))
+	t[1] = evalue_zero();
+    else {
+	Vector_Copy(vertex[1]->Vertex->p[0], coef->p, nparam+1);
+	t[1] = fractional_part(coef->p, vertex[1]->Vertex->p[0][nparam+1],
+			       nparam, NULL);
+    }
+    Vector_Free(coef);
+
+    evalue *I = evalue_dup(e);
+    evalue_anti_derive(I, 0);
+    evalue *up = evalue_dup(I);
+    subs_0d[0] = a[1];
+    evalue_substitute(up, subs_0d);
+
+    subs_0d[0] = a[0];
+    evalue_substitute(I, subs_0d);
+    evalue_negate(I);
+    eadd(up, I);
+    free_evalue_refs(up);
+    free(up);
+
+    evalue *res = I;
+
+    mu_1d mu0(degree, t[0]);
+    mu_1d mu1(degree, t[1]);
+
+    evalue *dx = evalue_dup(e);
+    for (int n = 0; !EVALUE_IS_ZERO(*dx); ++n) {
+	evalue *d;
+
+	d = evalue_dup(dx);
+	subs_0d[0] = a[0];
+	evalue_substitute(d, subs_0d);
+	emul(mu0.coefficient(n), d);
+	eadd(d, res);
+	free_evalue_refs(d);
+	free(d);
+
+	d = evalue_dup(dx);
+	subs_0d[0] = a[1];
+	evalue_substitute(d, subs_0d);
+	emul(mu1.coefficient(n), d);
+	if (n % 2)
+	    evalue_negate(d);
+	eadd(d, res);
+	free_evalue_refs(d);
+	free(d);
+
+	evalue_derive(dx, 0);
+    }
+    free_evalue_refs(dx);
+    free(dx);
+
+    for (int i = 0; i < nparam; ++i) {
+	free_evalue_refs(subs_0d[1+i]);
+	delete subs_0d[1+i];
+    }
+
+    for (int i = 0; i < 2; ++i) {
+	free_evalue_refs(a[i]);
+	free(a[i]);
+	free_evalue_refs(t[i]);
+	free(t[i]);
+    }
+
+    return res;
+}
+
 static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 				   struct barvinok_options *options)
 {
@@ -917,8 +1032,6 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 
     MaxRays = options->MaxRays;
     POL_UNSET(options->MaxRays, POL_INTEGER);
-
-    assert(nvar == 2);
 
     U = Universe_Polyhedron(D->Dimension - nvar);
     PP = Polyhedron2Param_Polyhedron(D, U, options);
@@ -935,11 +1048,16 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 	Domain_Free(CA);
 
 	Vector *inner = inner_point(rVD);
-	summator_2d s2d(e, F, PP->nbV, inner->p+1, rVD->Dimension);
-
 	s[i].D = rVD;
-	s[i].E = s2d.summate_over_pdomain(PP, PD, options);
 
+	if (nvar == 1) {
+	    s[i].E = summate_over_1d_pdomain(e, PP, PD, F, inner->p+1, options);
+	} else if (nvar == 2) {
+	    summator_2d s2d(e, F, PP->nbV, inner->p+1, rVD->Dimension);
+
+	    s[i].E = s2d.summate_over_pdomain(PP, PD, options);
+
+	}
 	Polyhedron_Free(F);
 	Vector_Free(inner);
     END_FORALL_REDUCED_DOMAIN
@@ -960,7 +1078,7 @@ evalue *euler_summate(evalue *e, int nvar, struct barvinok_options *options)
     int i;
     evalue *res;
 
-    assert(nvar == 2);
+    assert(nvar <= 2);
 
     assert(nvar >= 0);
     if (nvar == 0 || EVALUE_IS_ZERO(*e))
