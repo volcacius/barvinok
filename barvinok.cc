@@ -19,6 +19,7 @@
 #include "counter.h"
 #include "tcounter.h"
 #include "decomposer.h"
+#include "euler.h"
 #include "lattice_point.h"
 #include "reduce_domain.h"
 #include "remove_equalities.h"
@@ -1702,5 +1703,8 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
 
 evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 {
-    return evalue_sum(e, nvar, options->MaxRays);
+    if (options->summation == BV_SUM_EULER)
+	return euler_summate(e, nvar, options);
+    else
+	return evalue_sum(e, nvar, options->MaxRays);
 }

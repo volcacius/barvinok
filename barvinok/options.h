@@ -83,6 +83,10 @@ struct barvinok_options {
     #define	BV_LP_CDD		2
     #define	BV_LP_CDDF		3
     int		lp_solver;
+
+    #define	BV_SUM_BARVINOK		0
+    #define	BV_SUM_EULER		1
+    int		summation;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -99,7 +103,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_VOL		264
 #define BV_OPT_RECURSE		265
 #define BV_OPT_LP		266
-#define BV_OPT_LAST		266
+#define BV_OPT_SUM		267
+#define BV_OPT_LAST		267
 
 #define BV_GRP_APPROX		1
 #define BV_GRP_LAST		1

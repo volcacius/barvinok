@@ -84,6 +84,8 @@ libbarvinok_la_SOURCES = \
     decomposer.h \
     dpoly.cc \
     dpoly.h \
+    euler.cc \
+    euler.h \
     genfun_constructor.cc \
     genfun_constructor.h \
     lattice_point.cc \

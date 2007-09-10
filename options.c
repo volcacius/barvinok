@@ -90,6 +90,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->lp_solver = BV_LP_POLYLIB;
 #endif
 
+    options->summation = BV_SUM_BARVINOK;
+
     options->bernstein_optimize = BV_BERNSTEIN_NONE;
 
     options->bernstein_recurse = BV_BERNSTEIN_FACTORS;
@@ -175,6 +177,8 @@ static struct argp_option barvinok_argp_options[] = {
 	"[default: polylib]",
 #endif
 	},
+    { "summation",	    BV_OPT_SUM,		"barvinok|euler", 0,
+	"[default: barvinok]" },
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
     { "recurse",	    BV_OPT_RECURSE,    	    "",
@@ -312,6 +316,12 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case BV_OPT_MAXINDEX:
 	options->max_index = strtoul(arg, NULL, 0);
+	break;
+    case BV_OPT_SUM:
+	if (!strcmp(arg, "barvinok"))
+	    options->summation = BV_SUM_BARVINOK;
+	if (!strcmp(arg, "euler"))
+	    options->summation = BV_SUM_EULER;
 	break;
     case BV_OPT_RECURSE:
 	if (!strcmp(arg, "none"))
