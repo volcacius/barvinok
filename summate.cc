@@ -19,7 +19,7 @@ using std::endl;
 
 struct argp_option argp_options[] = {
     { "variables",	    OPT_VARS,  	"list",	0,
-	"comma separated list of variables over which to maximize" },
+	"comma separated list of variables over which to sum" },
     { "verbose",	    'v',  	0,	0, },
     { 0 }
 };
