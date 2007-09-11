@@ -1,3 +1,13 @@
+version: 0.25
+date: Tue Sep 11 22:02:22 CEST 2007
+changes:
+    - add PolyLib and piplib as submodules
+    - remove compatibility with old versions of PolyLib and piplib
+    - support use of piplib for basis reduction
+    - support summation using local Euler-Maclaurin formula for 2D polytopes
+    - support TOPCOM based chamber decompositions
+    - simplify primal decomposition
+---
 version: 0.24
 date: Sat Jun 30 23:37:31 CEST 2007
 changes:
