@@ -273,6 +273,9 @@ dist-hook:
 	    echo $(GIT_HEAD_ID) > $(distdir)/GIT_HEAD_ID; \
 	fi
 
+dist-git: dist
+	mv $(distdir).tar.gz @GIT_HEAD_VERSION@.tar.gz
+
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
