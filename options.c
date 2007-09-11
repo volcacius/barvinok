@@ -18,8 +18,7 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 
 void barvinok_stats_clear(struct barvinok_stats *stats)
 {
-    stats->base_cones = 0;
-    stats->volume_simplices = 0;
+    memset(stats, 0, sizeof(*stats));
 }
 
 void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
@@ -27,6 +26,13 @@ void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
     fprintf(out, "Base cones: %d\n", stats->base_cones);
     if (stats->volume_simplices)
 	fprintf(out, "Volume simplices: %d\n", stats->volume_simplices);
+    if (stats->topcom_chambers) {
+	fprintf(out, "TOPCOM empty chambers: %d\n",
+		stats->topcom_empty_chambers);
+	fprintf(out, "TOPCOM chambers: %d\n", stats->topcom_chambers);
+	fprintf(out, "TOPCOM distinct chambers: %d\n",
+		stats->topcom_distinct_chambers);
+    }
 }
 
 struct barvinok_options *barvinok_options_new_with_defaults()
@@ -68,6 +74,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->count_sample_infinite = 0;
 #endif
     options->try_Delaunay_triangulation = 0;
+
+    options->chambers = BV_CHAMBERS_POLYLIB;
 
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
     options->approximation_method = BV_APPROX_NONE;
@@ -139,6 +147,10 @@ static struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random|todd]" },
+#ifdef POINTS2TRIANGS_PATH
+    { "chamber-decomposition", 	BV_OPT_CHAMBERS,    "polylib|topcom",	0,
+	"tool to use for chamber decomposition [default: polylib]" },
+#endif
     { "gbr",		    BV_OPT_GBR,
 #if defined(HAVE_LIBGLPK) && defined(HAVE_LIBCDDGMP)
 	"cdd|glpk|pip|pip-dual",
@@ -293,6 +305,12 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case BV_OPT_TABLE:
 	options->lookup_table = 1;
+	break;
+    case BV_OPT_CHAMBERS:
+	if (!strcmp(arg, "polylib"))
+	    options->chambers = BV_CHAMBERS_POLYLIB;
+	if (!strcmp(arg, "topcom"))
+	    options->chambers = BV_CHAMBERS_TOPCOM;
 	break;
     case BV_OPT_GBR:
 	if (!strcmp(arg, "cdd"))

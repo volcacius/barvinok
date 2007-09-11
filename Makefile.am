@@ -59,6 +59,9 @@ if HAVE_GLPK
     BR_GLPK = basis_reduction_glpk.c
     POLYSIGN_GLPK = polysign_glpk.c
 endif
+if HAVE_TOPCOM
+    TOPCOM = topcom.c topcom.h
+endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
@@ -113,6 +116,7 @@ libbarvinok_la_SOURCES = \
     series.cc \
     tcounter.cc \
     tcounter.h \
+    $(TOPCOM) \
     volume.c \
     volume.h \
     mat_util.cc \
@@ -130,7 +134,9 @@ EXTRA_libbarvinok_la_SOURCES = \
     polysign_cdd.cc \
     polysign.c \
     initcdd.cc \
-    initcdd.h
+    initcdd.h \
+    topcom.c \
+    topcom.h
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
@@ -304,11 +310,14 @@ check-euler: barvinok_summate$(EXEEXT)
 		./barvinok_summate$(EXEEXT) -T --summation=euler < $$i || exit; \
 	    fi \
 	done
+if HAVE_TOPCOM
+    TOPCOM_CD = '--chamber-decomposition=topcom'
+endif
 check-enumerate: barvinok_enumerate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		for options in '' '--series' '--series --primal'; do \
+		for options in '' '--series' '--series --primal' $(TOPCOM_CD); do \
 		    for spec in 'random' 'bf' 'df'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo "        $$opt"; \

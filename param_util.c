@@ -1,5 +1,7 @@
 #include <barvinok/options.h>
 #include "param_util.h"
+#include "topcom.h"
+#include "config.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
@@ -68,11 +70,11 @@ void Param_Inner_Product(Value *constraint, Matrix *Vertex, Value *row)
     value_clear(tmp2);
 }
 
-Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *Din, Polyhedron *Cin,
+static Param_Polyhedron *PL_P2PP(Polyhedron *Din, Polyhedron *Cin,
 					      struct barvinok_options *options)
 {
     unsigned MaxRays = options->MaxRays;
-    if (MaxRays & POL_NO_DUAL)
+    if (MaxRays & (POL_NO_DUAL | POL_INTEGER))
 	MaxRays = 0;
     return Polyhedron2Param_Domain(Din, Cin, MaxRays);
 }
@@ -106,4 +108,27 @@ Param_Domain *Param_Polyhedron_Facet(Param_Polyhedron *PP, Param_Domain *D,
     Vector_Free(row);
 
     return FD;
+}
+
+#ifndef POINTS2TRIANGS_PATH
+Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
+			  struct barvinok_options *options)
+{
+    return NULL;
+}
+#endif
+
+Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *P, Polyhedron *C,
+					      struct barvinok_options *options)
+{
+    switch(options->chambers) {
+    case BV_CHAMBERS_POLYLIB:
+	return PL_P2PP(P, C, options);
+	break;
+    case BV_CHAMBERS_TOPCOM:
+	return TC_P2PP(P, C, options);
+	break;
+    default:
+	assert(0);
+    }
 }

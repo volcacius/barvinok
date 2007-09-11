@@ -10,6 +10,9 @@ extern "C" {
 struct barvinok_stats {
     long	base_cones;
     long	volume_simplices;
+    long	topcom_empty_chambers;
+    long	topcom_chambers;
+    long	topcom_distinct_chambers;
 };
 
 void barvinok_stats_clear(struct barvinok_stats *stats);
@@ -87,6 +90,10 @@ struct barvinok_options {
     #define	BV_SUM_BARVINOK		0
     #define	BV_SUM_EULER		1
     int		summation;
+
+    #define	BV_CHAMBERS_POLYLIB	0
+    #define	BV_CHAMBERS_TOPCOM	1
+    int		chambers;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -104,7 +111,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_RECURSE		265
 #define BV_OPT_LP		266
 #define BV_OPT_SUM		267
-#define BV_OPT_LAST		267
+#define BV_OPT_CHAMBERS		268
+#define BV_OPT_LAST		268
 
 #define BV_GRP_APPROX		1
 #define BV_GRP_LAST		1
