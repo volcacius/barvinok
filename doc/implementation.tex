@@ -2023,3 +2023,461 @@ S_n(-l(\vec{\hat x})+1)
 $$
 
 \end{enumerate}
+
+\subsection{Using TOPCOM to compute Chamber Decompositions}
+
+In this section, we describe how to use the correspondence
+between the \ai{regular triangulation}s of a point set
+and the chambers of the \ai{Gale transform}
+of the point set~\shortcite{Gelfand1994}
+to compute the chamber decomposition of a parametric polytope.
+This correspondence was also used by \shortciteN{Pfeifle2003}
+\shortciteN{Eisenschmidt2007integrally}.
+
+Let us first assume that the parametric polytope can be written as
+\begin{equation}
+\label{eq:TOPCOM:polytope}
+\begin{cases}
+    \begin{aligned}
+\vec x &\ge 0
+\\
+A \, \vec x &\le \vec b(\vec p)
+,
+    \end{aligned}
+\end{cases}
+\end{equation}
+where the right hand side $\vec b(\vec p)$ is arbitrary and
+may depend on the parameters.
+The first step is to add slack variables $\vec s$ to obtain
+the \ai{vector partition} problem
+$$
+\begin{cases}
+    \begin{aligned}
+A \, \vec x + I \, \vec s & = \vec b(\vec p)
+\\
+\vec x, \vec s &\ge 0
+,
+    \end{aligned}
+\end{cases}
+$$
+with $I$ the identity matrix.
+Then we compute the (right) kernel $K$ of the matrix
+$\begin{bmatrix}
+A & I
+\end{bmatrix}$, i.e.,
+$$
+\begin{bmatrix}
+A & I
+\end{bmatrix}
+K
+=
+0
+$$
+and use \ai[\tt]{TOPCOM}'s \ai[\tt]{points2triangs} to
+compute the \ai{regular triangulation}s of the points specified
+by the rows of $K$.
+Each of the resulting triangulations corresponds to a chamber
+in the chamber complex of the above vector partition problem.
+Each simplex in a triangulation corresponds to a parametric
+vertex active on the corresponding chamber and
+each point in the simplex (i.e., a row of $K$) corresponds
+to a variable ($x_j$ or $s_j$) that is set to zero to obtain
+this parametric vertex.
+In the original formulation of the problem~\eqref{eq:TOPCOM:polytope}
+each such variable set to zero reflects the saturation of the
+corresponding constraint ($x_j = 0$ for $x_j = 0$ and
+$\sps {\vec a_j}{\vec x} = b_j(\vec p)$ for $s_j = 0$).
+A description of the chamber can then be obtained by plugging
+in the parametric vertices in the remaining constraints.
+
+\begin{example}
+Consider the parametric polytope
+$$
+P(p,q,r) = \{\,
+(i,j) \mid 0 \le i \le p \wedge
+0 \le j \le 2 i + q \wedge
+0 \le k \le i - p + r \wedge
+p \ge 0 \wedge
+q \ge 0 \wedge
+r \ge 0
+\,\}
+.
+$$
+The constraints involving the variables are
+$$
+\begin{cases}
+    \begin{aligned}
+\begin{bmatrix}
+1
+\\
+& 1
+\\
+& & 1
+\end{bmatrix}
+\begin{bmatrix}
+i \\ j \\ k
+\end{bmatrix}
+&
+\begin{matrix}
+\ge
+\\
+\ge
+\\
+\ge
+\end{matrix}
+\begin{array}{l}
+0
+\\
+0
+\\
+0
+\end{array}
+\\
+\begin{bmatrix}
+1 & 0 & 0
+\\
+-1 & 0 & 1
+\\
+-2 & 1 & 0
+\end{bmatrix}
+\begin{bmatrix}
+i \\ j \\ k
+\end{bmatrix}
+&
+\begin{matrix}
+\le
+\\
+\le
+\\
+\le
+\end{matrix}
+\begin{array}{l}
+p
+\\
+q
+\\
+-p + r
+\end{array}
+    \end{aligned}
+\end{cases}
+$$
+We have
+$$
+\begin{bmatrix}
+   1 &   0  &  0 &   1  &  0  &  0  \\
+  -1 &   0  &  1 &   0  &  1  &  0  \\
+  -2 &   1  &  0 &   0  &  0  &  1  \\
+\end{bmatrix}
+\begin{bmatrix}
+  -1  &  0 &   0  \\
+  -2  &  0 &  -1  \\
+  -1  & -1 &   0  \\
+   1  &  0 &   0  \\
+   0  &  1 &   0  \\
+   0  &  0 &   1  \\
+\end{bmatrix}
+= 0
+$$
+
+Computing the \ai{regular triangulation}s of the rows of $K$
+using \ai[\tt]{TOPCOM}, we obtain
+\begin{verbatim}
+> cat e2.topcom
+[
+[  -1    0    0 ]
+[  -2    0   -1 ]
+[  -1   -1    0 ]
+[   1    0    0 ]
+[   0    1    0 ]
+[   0    0    1 ]
+]
+> points2triangs --regular < e2.topcom 
+T[1]:={{0,1,2},{1,2,3},{0,1,4},{1,3,4},{0,2,5},{2,3,5},{0,4,5},{3,4,5}};
+T[2]:={{1,2,3},{1,3,4},{2,3,5},{3,4,5},{1,2,5},{1,4,5}};
+T[3]:={{1,2,3},{1,3,4},{2,3,5},{3,4,5},{1,2,4},{2,4,5}};
+\end{verbatim}
+
+We see that we have three chambers in the decomposition,
+one with 8 vertices and two with 6 vertices.
+Take the second vertex (``\verb+{1,2,3}+'') of the first chamber.
+This vertex corresponds
+to the saturation of the constraints $j \ge 0$, $k \ge 0$
+and $i \le p$, i.e., $(i,j,k) = (p,0,0)$.  Plugging in this
+vertex in the remaining constraints, we see that it is only valid
+in case $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$.
+For the remaining vertices of the first chamber, we similarly find
+\\
+\begin{tabular}{ccc}
+% e0
+\verb+{0,1,2}+ & $(0,0,0)$ & $p \ge 0$, $-q + r \ge 0$ and $q \ge 0$
+\\
+% 70
+\verb+{1,2,3}+ & $(p,0,0)$ & $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$
+\\
+% c8
+\verb+{0,1,4}+ & $(0,0,-p+r)$ & $-q + r \ge 0$, $p \ge 0$ and $q \ge 0$
+\\
+% 58
+\verb+{1,3,4}+ & $(p,0,r)$ & $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$
+\\
+% a4
+\verb+{0,2,5}+ & $(0,q,0)$ & $q \ge 0$, $p \ge 0$ and $-q + r \ge 0$
+\\
+% 34
+\verb+{2,3,5}+ & $(p, 2p+q, 0)$ & $p \ge 0$, $2p + q \ge 0$ and $r \ge 0$
+\\
+% 8c
+\verb+{0,4,5}+ & $(0, q, -p+r)$ & $q \ge 0$, $-q + r \ge 0$ and $p \ge 0$
+\\
+% 1c
+\verb+{3,4,5}+ & $(p, 2p+q, r)$ & $p \ge 0$, $2p + q \ge 0$ and $r \ge 0$
+\end{tabular}
+\\
+Combining these constraints with the initial constraints of the problem
+on the parameters
+$p \ge 0$, $q \ge 0$ and $r \ge 0$, we find the chamber
+$
+\{\,
+(p,q,r) \mid p \ge 0 \wedge -p + r \ge 0 \wedge q \ge 0
+\,\}
+$.
+For the second chamber, we have
+\\
+\begin{tabular}{ccc}
+% 70
+\verb+{1,2,3}+ & $(p,0,0)$ & $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$
+\\
+% 58
+\verb+{1,3,4}+ & $(p,0,r)$ & $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$
+\\
+% 34
+\verb+{2,3,5}+ & $(p, 2p+q, 0)$ & $p \ge 0$, $2p + q \ge 0$ and $r \ge 0$
+\\
+% 1c
+\verb+{3,4,5}+ & $(p, 2p+q, r)$ & $p \ge 0$, $2p + q \ge 0$ and $r \ge 0$
+\\
+% 64
+\verb+{1,2,5}+ & $(-\frac q 2,0,0)$ &
+	$-q \ge 0$, $2p + q \ge 0$ and $-2p -q+2r \ge 0$
+\\
+% 4c
+\verb+{1,4,5}+ & $(-\frac q 2,0,-p-\frac q 2+r)$ &
+	$-q \ge 0$, $-2p -q+2r \ge 0$ and $2p + q \ge 0$
+\end{tabular}
+\\
+The chamber is therefore
+$
+\{\,
+(p,q,r) \mid q = 0 \wedge p \ge 0 \wedge -p +r \ge 0
+\,\}
+$.
+Note that by intersecting with the initial constraints this chamber
+is no longer full-dimensional and can therefore be discarded.
+Finally, for the third chamber, we have
+\\
+\begin{tabular}{ccc}
+% 70
+\verb+{1,2,3}+ & $(p,0,0)$ & $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$
+\\
+% 58
+\verb+{1,3,4}+ & $(p,0,r)$ & $p \ge 0$, $r \ge 0$ and $2p + q \ge 0$
+\\
+% 34
+\verb+{2,3,5}+ & $(p, 2p+q, 0)$ & $p \ge 0$, $2p + q \ge 0$ and $r \ge 0$
+\\
+% 1c
+\verb+{3,4,5}+ & $(p, 2p+q, r)$ & $p \ge 0$, $2p + q \ge 0$ and $r \ge 0$
+\\
+% 68
+\verb+{1,2,4}+ & $(p-r,0,0)$ &
+	$p -r \ge 0$, $r \ge 0$ and $2p +q -2r \ge 0$
+\\
+% 2c
+\verb+{2,4,5}+ & $(p-r,2p+q-2r, 0)$ &
+	$p -r \ge 0$, $2p +q -2r \ge 0$ and $r \ge 0$
+\end{tabular}
+\\
+The chamber is therefore
+$
+\{\,
+(p,q,r) \mid p - r \ge 0 \wedge q \ge 0 \wedge r \ge 0
+\,\}
+$.
+\end{example}
+
+Now let us consider general parametric polytopes.
+First note that we can follow the same procedure as above
+if we replace $\vec x$ by $\vec x' - \vec c(\vec p)$
+in \eqref{eq:TOPCOM:polytope}, i.e.,
+if our problem has the form
+\begin{equation}
+\label{eq:TOPCOM:polytope:2}
+\begin{cases}
+    \begin{aligned}
+\vec x' &\ge \vec c(\vec p)
+\\
+A \, \vec x' &\le \vec b(\vec p) + A \vec c(\vec p)
+,
+    \end{aligned}
+\end{cases}
+\end{equation}
+as saturating a constraint $x_i = 0$ is equivalent
+to saturating the constraint $x_i' = c_i(\vec p)$
+and, similarly, $\sps {\vec a_j}{\vec x} = b_j(\vec p)$
+is equivalent to
+$\sps {\vec a_j}{\vec x'} = b_j(\vec p) + \sps {\vec a_j}{\vec c(\vec p)}$.
+
+In the general case, the problem has the form
+$$
+A \vec x \ge \vec b(\vec p)
+.
+$$
+Let $A'$ be a non-singular square submatrix of $A$ with the same number
+of columns and compute the (left) \indac{HNF} $H = A' U$ with $U$ unimodular
+and $H$ lower-triangular with non-positive elements below the diagonal.
+Replacing $\vec x$ by $U \vec x'$, we obtain
+$$
+\begin{cases}
+    \begin{aligned}
+H \vec x' &\ge \vec b'(\vec p)
+\\
+-A''U \, \vec x' &\le -\vec b''(\vec p)
+,
+    \end{aligned}
+\end{cases}
+$$
+with $A''$ the remaining rows of $A$ and $\vec b(\vec p)$ split
+in the same way.
+If $H$ happens to be the identity matrix, then our problem is
+of the form \eqref{eq:TOPCOM:polytope:2} and we already know how
+to solve this problem.
+Note that, again, saturating any of the transformed constraints
+in $\vec x'$ is equivalent to saturating the corresponding constraint
+in $\vec x$.  We therefore only need to compute $-A'' U$ for the
+computation of the kernel $K$.  To construct the parametric vertices
+in the original coordinate system, we can simply use the original
+constraints.
+The same reasoning holds if $H$ is any diagonal matrix, since
+we can virtually replace $H \vec x$ by $\vec x'$ without affecting
+the non-negativity of the variables.
+
+If $H$ is not diagonal, then we can introduce new constraints
+$x'_j \ge d(\vec p)$, where $d(\vec p)$ is some symbolic constant.
+These constraints do not remove any solutions
+since each row in $H$ expresses that the corresponding variable is
+greater than or equal to a non-negative combination of the
+previous variables plus some constant.
+We can then proceed as before.  However, to reduce unnecessary computations
+we may remove from $K$ the rows that correspond to these new rows.
+Any solution saturating the new constraint, would also saturate
+the corresponding constraint $\vec h_j^\T$ and all
+the constraints corresponding to the non-zero
+entries in $\vec h_j^\T$.
+If a chamber contains a vertex obtained by saturating such a new
+constraint, it would appear multiple times in the same chamber,
+each time combined with different constraints from the above set.
+Furthermore, there would also be another (as it turns out, identical)
+chamber where the vertex is only defined by the other constraints.
+
+\begin{example}
+Consider the parametric polytope
+$$
+P(n) = \{\,
+(i,j) \mid
+1 \le i \wedge 2 i \le 3 j \wedge j \le n
+\,\}
+.
+$$
+The constraints are
+$$
+\begin{bmatrix}
+1 & 0 \\
+-2 & 3 \\
+0 & -1
+\end{bmatrix}
+\begin{bmatrix}
+i \\ j
+\end{bmatrix}
+\ge
+\begin{bmatrix}
+1 \\
+0 \\
+-n
+\end{bmatrix}
+.
+$$
+The top $2 \times 2$ submatrix is already in \indac{HNF}.
+We have $3 j \ge 2i \ge 2$, so we can add a constraint
+of the form $j \ge c(n)$ and obtain
+$$
+\begin{bmatrix}
+A & I
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 & 1 & 1 & 0
+\\
+2 & -3 & 0 & 1
+\end{bmatrix}
+,
+$$
+while $K$ with $\begin{bmatrix}A & I\end{bmatrix} K = 0$ is given
+by
+$$
+\begin{bmatrix}
+0 & 1 & 1 & 0
+\\
+2 & -3 & 0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+1 & 0 \\
+0 & 1 \\
+0 & -1 \\
+-2 & 3
+\end{bmatrix}
+.
+$$
+The second row of $K$ corresponds to the second variable,
+which in turn corresponds to the newly added constraint.
+Passing all rows of $K$ to \ai[\tt]{TOPCOM} we would get
+\begin{verbatim}
+> points2triangs --regular <<EOF
+> [[1 0],[0,1],[0,-1],[-2,3]]
+> EOF
+T[1]:={{0,1},{0,2},{1,3},{2,3}};
+T[2]:={{0,2},{2,3},{0,3}};
+T[3]:={};
+\end{verbatim}
+The first vertex in the first chamber saturates the second row
+(row 1) and therefore saturates both the first (0) and fourth (3)
+and it appears a second time as \verb+{1,3}+.  Combining
+these ``two'' vertices into one as \verb+{0,3}+ results in the
+second (identical) chamber.
+Removing the row corresponding to the new constraint from $K$
+we remove the duplicates
+\begin{verbatim}
+> points2triangs --regular <<EOF
+> [[1 0],[0,-1],[-2,3]]
+> EOF
+T[1]:={{0,1},{1,2},{0,2}};
+T[2]:={};
+\end{verbatim}
+Note that in this example, we also could have interchanged
+the second and the third constraint and then have replaced $j$ by $-j'$.
+\end{example}
+
+In practice, this method of computing a \ai{chamber decomposition}
+does not seem to perform very well, mostly because
+\ai[\tt]{TOPCOM} can not exploit all available information
+about the parametric polytopes and will therefore compute
+many redundant triangulations/chambers.
+In particular, any chamber that does not intersect with
+the parameter domain of the parametric polytope, or only
+intersects in a face of this parameter domain, is completely redundant.
+Furthermore, if the parametric polytope is not simple, then many
+different combinations of the constraints will lead to the same parametric
+vertex.  Many triangulations will therefore correspond to one and the
+same chamber in the chamber complex of the parametric polytope.
+For example, for a dilated octahedron, \ai[\tt]{TOPCOM} will
+compute 150 triangulations/chambers, 104 of which are empty,
+while the remaining 46 refer to the same single chamber.
