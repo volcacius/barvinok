@@ -49,6 +49,9 @@ if HAVE_GLPK
     BR_GLPK = basis_reduction_glpk.c
     POLYSIGN_GLPK = polysign_glpk.c
 endif
+if HAVE_TOPCOM
+    TOPCOM = topcom.c topcom.h
+endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
@@ -94,6 +97,7 @@ libbarvinok_la_SOURCES = \
     scarf.cc \
     tcounter.cc \
     tcounter.h \
+    $(TOPCOM) \
     volume.c \
     volume.h \
     mat_util.cc \
@@ -111,7 +115,9 @@ EXTRA_libbarvinok_la_SOURCES = \
     polysign_cdd.cc \
     polysign.c \
     initcdd.cc \
-    initcdd.h
+    initcdd.h \
+    topcom.c \
+    topcom.h
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif

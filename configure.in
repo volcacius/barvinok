@@ -66,6 +66,10 @@ if test "${with_default_prefix+set}" = set; then
 	   -f "$with_default_prefix/include/glpk.h"; then
 		with_glpk=$with_default_prefix
 	fi
+	if test "${with_topcom+set}" != set -a \
+	   -f "$with_default_prefix/bin/points2triangs"; then
+		with_topcom=$with_default_prefix
+	fi
 fi
 
 dnl Check for GMP library
@@ -405,6 +409,25 @@ if test "$have_glpk" = "true" -o "$have_cddlib" = "true"; then
     AC_LIBOBJ(sample)
     bv_extra_programs="polyhedron_sample\$(EXEEXT) 4coins\$(EXEEXT) lexmin\$(EXEEXT) $bv_extra_programs"
 fi
+
+AC_MSG_CHECKING(location of TOPCOM)
+AC_ARG_WITH(topcom, [AS_HELP_STRING([--with-topcom=DIR],[Location of TOPCOM])],
+            [topcom_package=$withval], [topcom_package=unspecified])
+AC_MSG_RESULT($topcom_package)
+have_topcom=false
+if test "$topcom_package" != no; then
+	topcom_path="$PATH"
+	if test "$topcom_package" != unspecified; then
+		topcom_path="$topcom_package/bin"
+	fi
+	AC_PATH_PROG([POINTS2TRIANGS], [points2triangs], [], [$topcom_path])
+	if test -n "$POINTS2TRIANGS"; then
+		have_topcom=true
+		AC_DEFINE_UNQUOTED(POINTS2TRIANGS_PATH, ["$POINTS2TRIANGS"],
+				    [Path of points2triangs])
+	fi
+fi
+AM_CONDITIONAL(HAVE_TOPCOM, test x$have_topcom = xtrue)
 
 AC_SUBST(GIT_HEAD_ID)
 AC_SUBST(GIT_HEAD)
