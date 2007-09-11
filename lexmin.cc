@@ -3,6 +3,9 @@
 #include <vector>
 #include <map>
 #include <set>
+#define partition STL_PARTITION
+#include <algorithm>
+#undef partition
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>
 #include <NTL/mat_ZZ.h>
