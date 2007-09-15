@@ -415,6 +415,13 @@ static void SwapColumns(Value **V, int n, int i, int j)
 	value_swap(V[r][i], V[r][j]);
 }
 
+static int is_unit_row(Value *row, int pos, int len)
+{
+    if (!value_one_p(row[pos]) && !value_mone_p(row[pos]))
+	return 0;
+    return First_Non_Zero(row+pos+1, len-(pos+1)) == -1;
+}
+
 /* C is assumed to be the "true" context, i.e., it has been intersected
  * with the projection of P onto the parameter space.
  * Furthermore, P and C are assumed to be full-dimensional.
@@ -442,12 +449,11 @@ Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
 	index = First_Non_Zero(P->Constraint[d]+1, nvar);
 	if (index != -1) {
 	    if (index != d &&
-		(value_one_p(P->Constraint[d][1+index]) ||
-		 value_mone_p(P->Constraint[d][1+index])) &&
-		First_Non_Zero(P->Constraint[d]+1+index+1, nvar-(index+1)) == -1) {
+		is_unit_row(P->Constraint[d]+1, index, nvar)) {
 		Vector_Exchange(P->Constraint[d], P->Constraint[index],
 				P->Dimension+2);
-		--d;
+		if (index > d)
+		    --d;
 	    }
 	    continue;
 	}
