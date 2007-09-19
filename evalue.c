@@ -1639,6 +1639,18 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
     if (EVALUE_IS_ONE(*e1))
 	return;
 
+    if (EVALUE_IS_ZERO(*e1)) {
+	if (value_notzero_p(res->d)) {
+	    value_assign(res->d, e1->d);
+	    value_assign(res->x.n, e1->x.n);
+	} else {
+	    free_evalue_refs(res);
+	    value_init(res->d);
+	    evalue_set_si(res, 0, 1);
+	}
+	return;
+    }
+
     if (value_zero_p(e1->d) && e1->x.p->type == partition) {
         if (value_zero_p(res->d) && res->x.p->type == partition)
 	    emul_partitions(e1, res);
@@ -1787,7 +1799,8 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 			emul(&d, &tmp);
 			eadd(&res->x.p->arr[1], &tmp);
 			emul(&e1->x.p->arr[2], &tmp);
-			emul(&e1->x.p->arr[1], res);
+			emul(&e1->x.p->arr[1], &res->x.p->arr[1]);
+			emul(&e1->x.p->arr[1], &res->x.p->arr[2]);
 			eadd(&tmp, &res->x.p->arr[2]);
 			free_evalue_refs(&tmp);	  
 			value_clear(d.x.n);
