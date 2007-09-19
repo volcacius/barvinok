@@ -558,7 +558,7 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     Polyhedron *TC;
 
     if (options->polynomial_approximation == BV_APPROX_SIGN_NONE)
-	options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
+	return NULL;
 
     if (options->polynomial_approximation != BV_APPROX_SIGN_APPROX) {
 	int pa = options->polynomial_approximation;

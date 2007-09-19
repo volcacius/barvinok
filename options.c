@@ -220,6 +220,8 @@ static error_t approx_parse_opt(int key, char *arg, struct argp_state *state)
 	}
 	break;
     case BV_OPT_APPROX:
+	if (options->polynomial_approximation == BV_APPROX_SIGN_NONE)
+	    options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
 	if (!strcmp(arg, "scale"))
 	    options->approximation_method = BV_APPROX_SCALE;
 	else if (!strcmp(arg, "drop"))
