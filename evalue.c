@@ -1075,6 +1075,8 @@ void print_enode(FILE *DST, enode *p, const char *const *pname)
     for (i=0; i<p->size/2; i++) {
 	Print_Domain(DST, EVALUE_DOMAIN(p->arr[2*i]), names);
 	print_evalue_r(DST, &p->arr[2*i+1], names);
+	if (value_notzero_p(p->arr[2*i+1].d))
+	    fprintf(DST, "\n");
     }
 
     if (!pname || p->pos < maxdim) {
