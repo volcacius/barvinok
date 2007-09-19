@@ -1243,21 +1243,23 @@ void eadd(const evalue *e1, evalue *res)
  int i; 
     if (value_notzero_p(e1->d) && value_notzero_p(res->d)) {
          /* Add two rational numbers */
-	 Value g,m1,m2;
+	 Value g;
 	 value_init(g);
-	 value_init(m1);
-	 value_init(m2);
 
-         value_multiply(m1,e1->x.n,res->d);
-         value_multiply(m2,res->x.n,e1->d);
-         value_addto(res->x.n,m1,m2);
-         value_multiply(res->d,e1->d,res->d);
+	if (value_eq(e1->d, res->d))
+	    value_addto(res->x.n, res->x.n, e1->x.n);
+	else {
+	    value_multiply(res->x.n, res->x.n, e1->d);
+	    value_addmul(res->x.n, e1->x.n, res->d);
+	    value_multiply(res->d,e1->d,res->d);
+	}
+
          value_gcd(g, res->x.n, res->d);
          if (value_notone_p(g)) {
 	      value_division(res->d,res->d,g);
               value_division(res->x.n,res->x.n,g);
          }
-         value_clear(g); value_clear(m1); value_clear(m2);
+         value_clear(g);
          return ;
      }
      else if (value_notzero_p(e1->d) && value_zero_p(res->d)) {
