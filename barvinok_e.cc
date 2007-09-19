@@ -364,8 +364,7 @@ static evalue* enumerate_or(Polyhedron *D,
 	    barvinok_enumerate_e_with_options(D, exist, nparam, options);
 
 	eor(EN, EP);
-	free_evalue_refs(EN); 
-	free(EN);
+	evalue_free(EN);
 	Polyhedron_Free(D);
     }
 
@@ -397,8 +396,7 @@ static evalue* enumerate_sum(Polyhedron *P,
 
     evalue *sum = evalue_sum(EP, nvar, options->MaxRays);
 
-    free_evalue_refs(EP); 
-    free(EP);
+    evalue_free(EP);
     EP = sum;
 
     evalue_range_reduction(EP);
@@ -442,8 +440,7 @@ static evalue* split_sure(Polyhedron *P, Polyhedron *S,
 	T = DomainIntersection(P, Q, options->MaxRays);
 	evalue *E = barvinok_enumerate_e_with_options(T, exist, nparam, options);
 	eadd(E, EP);
-	free_evalue_refs(E); 
-	free(E);
+	evalue_free(E);
 	Polyhedron_Free(T);
 	Q->next = N;
     }
@@ -847,8 +844,7 @@ static evalue* enumerate_ray(Polyhedron *P,
     if (!emptyQ(S)) {
 	evalue *E = barvinok_enumerate_e_with_options(S, exist, nparam, options);
 	eadd(E, EP);
-	free_evalue_refs(E);
-	free(E);
+	evalue_free(E);
     }
     Polyhedron_Free(S);
 
@@ -926,8 +922,7 @@ static evalue* enumerate_vd(Polyhedron **PA,
 		evalue *E = barvinok_enumerate_e_with_options(I, exist, nparam,
 							      options);
 		eadd(E, EP);
-		free_evalue_refs(E); 
-		free(E);
+		evalue_free(E);
 	    }
 	    Polyhedron_Free(I);
 	    Polyhedron_Free(CA);
@@ -1009,15 +1004,13 @@ static evalue* enumerate_vd(Polyhedron **PA,
 			E = barvinok_enumerate_e_with_options(pos, exist, nparam,
 								options);
 			eadd(E, EP);
-			free_evalue_refs(E); 
-			free(E);
+			evalue_free(E);
 		    }
 		    if (!emptyQ(neg)) {
 			E = barvinok_enumerate_e_with_options(neg, exist, nparam,
 								options);
 			eadd(E, EP);
-			free_evalue_refs(E); 
-			free(E);
+			evalue_free(E);
 		    }
 		    Polyhedron_Free(para);
 		    Polyhedron_Free(pos);
@@ -1179,8 +1172,7 @@ evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
 	E = barvinok_enumerate_e_with_options(Q, exist, nparam, options);
 	Polyhedron_Free(Q);
 	eadd(E, EP);
-	free_evalue_refs(E); 
-	free(E);
+	evalue_free(E);
     }
 
     return EP;
@@ -1495,8 +1487,7 @@ next:
 		evalue *E = 
 		    barvinok_enumerate_e_with_options(pos, exist, nparam, options);
 		eadd(E, EP);
-		free_evalue_refs(E); 
-		free(E);
+		evalue_free(E);
 		Polyhedron_Free(neg);
 		Polyhedron_Free(pos);
 		value_clear(f);

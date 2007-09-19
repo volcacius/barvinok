@@ -788,8 +788,7 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	for (unsigned long i = 0; i < sc.det; ++i) {
 	    evalue *EV = evalue_polynomial(c, num.E[i]);
 	    eadd(EV, vE[vert]);
-	    free_evalue_refs(EV);
-	    free(EV);
+	    evalue_free(EV);
 	    free_evalue_refs(num.E[i]);
 	    delete num.E[i];
 	}
@@ -1543,8 +1542,7 @@ out:
 
 	    f = barvinok_enumerate_ev_f(Q, C, options);
 	    emul(f, eres);
-	    free_evalue_refs(f);
-	    free(f);
+	    evalue_free(f);
 
 	    Q->next = next;
 	}
@@ -1632,8 +1630,7 @@ try_again:
 		} catch (OrthogonalException &e) {
 		    FORALL_REDUCED_DOMAIN_RESET;
 		    for (; i >= 0; --i) {
-			free_evalue_refs(s[i].E);
-			free(s[i].E);
+			evalue_free(s[i].E);
 			Domain_Free(s[i].D);
 		    }
 		    goto try_again;

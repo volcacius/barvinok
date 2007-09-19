@@ -978,8 +978,7 @@ void scarf_collector_ev::add(Polyhedron *P, int sign, Polyhedron *C,
 	if (sign < 0)
 	    emul(&mone, E2);
 	eadd(E2, EP);
-	free_evalue_refs(E2);
-	free(E2);
+	evalue_free(E2);
     }
 }
 

@@ -546,10 +546,8 @@ int main(int argc, char **argv)
 
     if (gf)
 	delete gf;
-    if (EP) {
-	free_evalue_refs(EP);
-	free(EP);
-    }
+    if (EP)
+	evalue_free(EP);
 
     if (options.print_stats)
 	barvinok_stats_print(options.verify.barvinok->stats, stdout);

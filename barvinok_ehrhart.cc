@@ -88,8 +88,7 @@ int main(int argc, char **argv)
 	    evalue_mod2table(EP, C->Dimension);
 	    print_evalue(stdout, EP, param_name);
 	}
-	free_evalue_refs(EP);
-	free(EP);
+	evalue_free(EP);
     }
     Free_ParamNames(param_name, 1);
     Polyhedron_Free(A);

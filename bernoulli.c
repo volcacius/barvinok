@@ -185,15 +185,12 @@ static evalue *power_sums(struct poly_list *faulhaber, evalue *poly,
 	if (alt_neg && (i % 2))
 	    evalue_negate(term);
 	eadd(term, sum);
-	free_evalue_refs(factor);
-	free_evalue_refs(term);
-	free(factor);
-	free(term);
+	evalue_free(factor);
+	evalue_free(term);
     }
     if (neg)
 	evalue_negate(sum);
-    free_evalue_refs(base);
-    free(base);
+    evalue_free(base);
 
     return sum;
 }
@@ -421,21 +418,14 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 
 	Matrix_Free(M2);
 	Polyhedron_Free(T);
-	if (poly_l) {
-	    free_evalue_refs(poly_l);
-	    free(poly_l);
-	}
-	if (poly_u) {
-	    free_evalue_refs(poly_u);
-	    free(poly_u);
-	}
-	free_evalue_refs(linear);
-	free(linear);
+	if (poly_l)
+	    evalue_free(poly_l);
+	if (poly_u)
+	    evalue_free(poly_u);
+	evalue_free(linear);
     }
-    if (factor != data->e) {
-	free_evalue_refs(factor);
-	free(factor);
-    }
+    if (factor != data->e)
+	evalue_free(factor);
     value_clear(tmp);
     Vector_Free(row);
 }
@@ -492,13 +482,11 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 	    if (nvar > 1) {
 		evalue *res = Bernoulli_sum_evalue(tmp, nvar-1, options);
 		eadd(res, sum);
-		free_evalue_refs(res);
-		free(res);
+		evalue_free(res);
 	    } else
 		eadd(tmp, sum);
 
-	    free_evalue_refs(tmp);
-	    free(tmp);
+	    evalue_free(tmp);
 	    D->next = next;;
 	}
     }

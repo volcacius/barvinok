@@ -924,8 +924,7 @@ static void PLL_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     eadd(&data->mone, U);
     emul(&data->mone, U);
     data->s[data->nd].E = *U;
-    free_evalue_refs(L); 
-    free(L);
+    evalue_free(L);
     free(U);
     ++data->nd;
 }
@@ -1290,8 +1289,7 @@ evalue *barvinok_lexsmaller_ev(Polyhedron *P, Polyhedron *D, unsigned dim,
 	    ranking = t;
 	else {
 	    eadd(t, ranking);
-	    free_evalue_refs(t);
-	    free(t);
+	    evalue_free(t);
 	}
 
 	Q->next = next;

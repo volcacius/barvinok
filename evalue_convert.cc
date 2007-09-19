@@ -176,8 +176,7 @@ static void evalue_coset(const evalue *src, const Vector *coset, evalue *dst)
 	    evalue_coset(&src->x.p->arr[2], coset, dst);
 	else
 	    evalue_set_si(dst, 0, 1);
-	free_evalue_refs(arg);
-	free(arg);
+	evalue_free(arg);
 	return;
     }
 

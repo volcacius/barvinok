@@ -477,10 +477,8 @@ static evalue *read_periodic(struct stream *s, struct parameter **p)
     }
 
 out:
-    while (--n >= 0) {
-	free_evalue_refs(list[n]);
-	free(list[n]);
-    }
+    while (--n >= 0)
+	evalue_free(list[n]);
     free(list);
     return e;
 }
@@ -493,13 +491,11 @@ static evalue *read_factor_and_multiply(struct stream *s, struct parameter **p,
     e2 = evalue_read_factor(s, p);
     if (!e2) {
 	stream_error(s, NULL, "unexpected EOF");
-	free_evalue_refs(product);
-	free(product);
+	evalue_free(product);
 	return NULL;
     }
     emul(e2, product);
-    free_evalue_refs(e2);
-    free(e2);
+    evalue_free(e2);
     return product;
 }
 
@@ -599,8 +595,7 @@ static evalue *evalue_read_term(struct stream *s, struct parameter **p)
 	    return NULL;
 	}
 	eadd(e2, e);
-	free_evalue_refs(e2);
-	free(e2);
+	evalue_free(e2);
     } else
 	stream_push_token(s, tok);
 

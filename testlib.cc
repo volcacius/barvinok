@@ -39,9 +39,8 @@ int test_evalue(struct barvinok_options *options)
     eadd(&poly2, poly1);
     reduce_evalue(poly1);
     assert(EVALUE_IS_ZERO(*poly1));
-    free_evalue_refs(poly1);
+    evalue_free(poly1);
     free_evalue_refs(&poly2);
-    free(poly1);
 }
 
 int test_split_periods(struct barvinok_options *options)
@@ -64,8 +63,7 @@ int test_split_periods(struct barvinok_options *options)
     assert(e->x.p->arr[1].x.p->type == polynomial);
     assert(value_zero_p(e->x.p->arr[3].d));
     assert(e->x.p->arr[3].x.p->type == polynomial);
-    free_evalue_refs(e);
-    free(e);
+    evalue_free(e);
 }
 
 int test_specialization(struct barvinok_options *options)
@@ -147,8 +145,7 @@ int test_lattice_points(struct barvinok_options *options)
 
     for (int i = 0; i < 4; ++i) {
 	assert(eequal(num.E[i], point[i]));
-	free_evalue_refs(point[i]);
-	free(point[i]);
+	evalue_free(point[i]);
 	free_evalue_refs(num.E[i]);
 	delete num.E[i];
     }
@@ -242,12 +239,9 @@ int test_bernoulli(struct barvinok_options *options)
 				options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
     assert(eequal(sum1, sum2));
-    free_evalue_refs(base);
-    free_evalue_refs(sum1);
-    free_evalue_refs(sum2);
-    free(base);
-    free(sum1);
-    free(sum2);
+    evalue_free(base);
+    evalue_free(sum1);
+    evalue_free(sum2);
 }
 
 int test_bernoulli_sum(struct barvinok_options *options)
@@ -269,10 +263,8 @@ int test_bernoulli_sum(struct barvinok_options *options)
     eadd(sum2, sum1);
     reduce_evalue(sum1);
     assert(EVALUE_IS_ZERO(*sum1));
-    free_evalue_refs(e);
-    free_evalue_refs(sum1);
-    free(e);
-    free(sum1);
+    evalue_free(e);
+    evalue_free(sum1);
 
     e = evalue_read_from_str("-i + -1 >= 0\n i + n >= 0\n\n 1 + i + i^2",
 			     "i", &all_vars, &nvar, &nparam,
@@ -283,13 +275,10 @@ int test_bernoulli_sum(struct barvinok_options *options)
     eadd(sum2, sum1);
     reduce_evalue(sum1);
     assert(EVALUE_IS_ZERO(*sum1));
-    free_evalue_refs(e);
-    free_evalue_refs(sum1);
-    free(e);
-    free(sum1);
+    evalue_free(e);
+    evalue_free(sum1);
 
-    free_evalue_refs(sum2);
-    free(sum2);
+    evalue_free(sum2);
 
     e = evalue_read_from_str("i + 4 >= 0\n -i + n >= 0\n\n i",
 			     "i", &all_vars, &nvar, &nparam,
@@ -305,12 +294,9 @@ int test_bernoulli_sum(struct barvinok_options *options)
     eadd(sum2, sum1);
     reduce_evalue(sum1);
     assert(EVALUE_IS_ZERO(*sum1));
-    free_evalue_refs(e);
-    free_evalue_refs(sum1);
-    free(e);
-    free(sum1);
-    free_evalue_refs(sum2);
-    free(sum2);
+    evalue_free(e);
+    evalue_free(sum1);
+    evalue_free(sum2);
 
     e = evalue_read_from_str("i -5 >= 0\n -i + n >= 0\n j -1 >= 0\n i -j >= 0\n"
 			     "k -1 >= 0\n j -k >= 0\n\n1",
@@ -327,12 +313,9 @@ int test_bernoulli_sum(struct barvinok_options *options)
     eadd(sum2, sum1);
     reduce_evalue(sum1);
     assert(EVALUE_IS_ZERO(*sum1));
-    free_evalue_refs(e);
-    free_evalue_refs(sum1);
-    free(e);
-    free(sum1);
-    free_evalue_refs(sum2);
-    free(sum2);
+    evalue_free(e);
+    evalue_free(sum1);
+    evalue_free(sum2);
 }
 
 int main(int argc, char **argv)

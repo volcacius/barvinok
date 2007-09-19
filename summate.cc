@@ -77,8 +77,7 @@ static void sum(Polyhedron *S, int pos, const check_poly_sum_data *data,
     if (!S) {
 	evalue *e = evalue_eval(data->EP, data->z+1);
 	eadd(e, s);
-	free_evalue_refs(e);
-	free(e);
+	evalue_free(e);
     } else {
 	Value LB, UB;
 	int ok;
@@ -172,10 +171,8 @@ static int check_poly_sum(const struct check_poly_data *data,
     } else if (options->print_all)
 	printf("OK.\n");
 
-    free_evalue_refs(s);
-    free(s);
-    free_evalue_refs(e);
-    free(e);
+    evalue_free(s);
+    evalue_free(e);
 
     return ok;
 }
@@ -309,12 +306,10 @@ int main(int argc, char **argv)
 	    result = verify(EP, sum, nvar, nparam, &options.verify);
 	else
 	    print_evalue(stdout, sum, all_vars+nvar);
-	free_evalue_refs(sum);
-	free(sum);
+	evalue_free(sum);
     }
 
-    free_evalue_refs(EP);
-    free(EP);
+    evalue_free(EP);
 
     if (options.var_list)
 	free(options.var_list);

@@ -153,8 +153,7 @@ static void eval(const evalue *EP, Value *z, int sign, Value *v)
 	assert(value_one_p(res->d));
 	value_assign(*v, res->x.n);
     }
-    free_evalue_refs(res);
-    free(res);
+    evalue_free(res);
 }
 
 static int test_approx(const struct check_poly_data *data, int nparam, Value *z,
@@ -327,10 +326,8 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     for (i = 0; i < nr_methods; ++i)
 	result->size[i] = evalue_size(EP[i])/4;
     test(A, C, EP, result, options);
-    for (i = 0; i < nr_methods; ++i) {
-	free_evalue_refs(EP[i]);
-	free(EP[i]);
-    }
+    for (i = 0; i < nr_methods; ++i)
+	evalue_free(EP[i]);
 
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(A);

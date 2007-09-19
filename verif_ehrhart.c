@@ -61,8 +61,7 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
 	    mpz_fdiv_q(c, res->x.n, res->d);
 	else
 	    mpz_tdiv_q(c, res->x.n, res->d);
-	free_evalue_refs(res);
-	free(res);
+	evalue_free(res);
     }
 
     if (options->print_all) {

@@ -2097,6 +2097,12 @@ void free_evalue_refs(evalue *e) {
   return;
 } /* free_evalue_refs */
 
+void evalue_free(evalue *e)
+{
+    free_evalue_refs(e);
+    free(e);
+}
+
 static void mod2table_r(evalue *e, Vector *periods, Value m, int p, 
 			Vector * val, evalue *res)
 {
@@ -2426,14 +2432,12 @@ static evalue *eval_polynomial(const enode *p, int offset,
     for (i = p->size-1; i > offset; --i) {
 	c = evalue_eval(&p->arr[i], values);
 	eadd(c, res);
-	free_evalue_refs(c);
-	free(c);
+	evalue_free(c);
 	emul(base, res);
     }
     c = evalue_eval(&p->arr[offset], values);
     eadd(c, res);
-    free_evalue_refs(c);
-    free(c);
+    evalue_free(c);
 
     return res;
 }
@@ -2466,8 +2470,7 @@ evalue *evalue_eval(const evalue *e, Value *values)
 	mpz_fdiv_r(param2->x.n, param2->x.n, param2->d);
 
 	res = eval_polynomial(e->x.p, 1, param2, values);
-	free_evalue_refs(param2);
-	free(param2);
+	evalue_free(param2);
 	break;
     case flooring:
 	param2 = evalue_eval(&e->x.p->arr[0], values);
@@ -2475,8 +2478,7 @@ evalue *evalue_eval(const evalue *e, Value *values)
 	value_set_si(param2->d, 1);
 
 	res = eval_polynomial(e->x.p, 1, param2, values);
-	free_evalue_refs(param2);
-	free(param2);
+	evalue_free(param2);
 	break;
     case relation:
 	param2 = evalue_eval(&e->x.p->arr[0], values);
@@ -2486,8 +2488,7 @@ evalue *evalue_eval(const evalue *e, Value *values)
 	    res = evalue_eval(&e->x.p->arr[2], values);
 	else
 	    res = evalue_zero();
-	free_evalue_refs(param2);
-	free(param2);
+	evalue_free(param2);
 	break;
     case partition:
     	assert(e->x.p->pos == EVALUE_DOMAIN(e->x.p->arr[0])->Dimension);
@@ -3385,8 +3386,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 		res = t;
 	    else if (t) {
 		eadd(t, res);
-		free_evalue_refs(t);
-		free(t);
+		evalue_free(t);
 	    }
 	}
 	return res;
@@ -3515,8 +3515,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    res = t;
 	else if (t) {
 	    eadd(t, res);
-	    free_evalue_refs(t);
-	    free(t);
+	    evalue_free(t);
 	}
 	if (factor && offset+i+1 < e->x.p->size)
 	    emul(factor, &cum);
@@ -3525,9 +3524,8 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	Matrix_Free(C);
 
     if (factor) {
-	free_evalue_refs(factor);
 	free_evalue_refs(&cum);
-	free(factor);
+	evalue_free(factor);
     }
 
     if (row)
@@ -3660,8 +3658,7 @@ evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
 			     EVALUE_DOMAIN(e->x.p->arr[2*i]), signs, 0,
 			     MaxRays);
 	eadd(t, res);
-	free_evalue_refs(t);
-	free(t);
+	evalue_free(t);
     }
 
     reduce_evalue(res);
@@ -4126,8 +4123,7 @@ void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays)
 	Domain_Free(D);
 	Matrix_Free(M);
 	Matrix_Free(T);
-	free_evalue_refs(f);
-	free(f);
+	evalue_free(f);
 	free(e->x.p);
 	e->x.p = p;
 	--i;
@@ -4183,8 +4179,7 @@ evalue *affine2evalue(Value *coeff, Value denom, int nvar)
 	    continue;
 	t = term(i, coeff[i], denom);
 	eadd(t, E);
-	free_evalue_refs(t);
-	free(t);
+	evalue_free(t);
     }
     return E;
 }
@@ -4225,10 +4220,8 @@ void evalue_substitute(evalue *e, evalue **subs)
 	free_evalue_refs(&(p->arr[i]));
     }
 
-    if (p->type != polynomial) {
-	free_evalue_refs(v);
-	free(v);
-    }
+    if (p->type != polynomial)
+	evalue_free(v);
 
     value_clear(e->d);
     *e = p->arr[offset];
@@ -4269,10 +4262,8 @@ void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
     for (i = 0; i < p->size/2; ++i)
 	evalue_substitute(&p->arr[2*i+1], subs);
 
-    for (i = 0; i < nparam; ++i) {
-	free_evalue_refs(subs[i]);
-	free(subs[i]);
-    }
+    for (i = 0; i < nparam; ++i)
+	evalue_free(subs[i]);
     free(subs);
     Matrix_Free(eq);
     Matrix_Free(inv);

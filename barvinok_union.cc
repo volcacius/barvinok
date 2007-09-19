@@ -89,8 +89,7 @@ int main(int argc, char **argv)
 	evalue *EP;
 	EP = barvinok_enumerate_union(D, C, bv_options->MaxRays);
 	print_evalue(stdout, EP, param_name);
-	free_evalue_refs(EP);
-	free(EP);
+	evalue_free(EP);
     }
     Free_ParamNames(param_name, C->Dimension);
     Domain_Free(D);

@@ -191,8 +191,7 @@ int main(int argc, char **argv)
 	    arguments.verify.params = param_name;
 	    verify_results(A, EP, exist, nparam, &arguments.verify);
 	}
-	free_evalue_refs(EP);
-	free(EP);
+	evalue_free(EP);
     }
     Free_ParamNames(param_name, nparam);
     Polyhedron_Free(A);

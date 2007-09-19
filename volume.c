@@ -68,8 +68,7 @@ static evalue *determinant_cols(evalue ***matrix, int dim, int *cols)
 	    det = tmp;
 	else {
 	    eadd(tmp, det);
-	    free_evalue_refs(tmp);
-	    free(tmp);
+	    evalue_free(tmp);
 	}
     }
     free(newcols);
@@ -126,14 +125,12 @@ static evalue *evalue_substitute_new(evalue *e, evalue **subs)
     for (i = e->x.p->size-1; i > 0; --i) {
 	c = evalue_substitute_new(&e->x.p->arr[i], subs);
 	eadd(c, res);
-	free_evalue_refs(c);
-	free(c);
+	evalue_free(c);
 	emul(subs[e->x.p->pos-1], res);
     }
     c = evalue_substitute_new(&e->x.p->arr[0], subs);
     eadd(c, res);
-    free_evalue_refs(c);
-    free(c);
+    evalue_free(c);
 
     return res;
 }
@@ -177,10 +174,8 @@ void parameter_point_free(struct parameter_point *point)
     Vector_Free(point->coord);
 
     if (point->e) {
-	for (i = 0; i < nparam; ++i) {
-	    free_evalue_refs(point->e[i]);
-	    free(point->e[i]);
-	}
+	for (i = 0; i < nparam; ++i)
+	    evalue_free(point->e[i]);
 	free(point->e);
     }
     free(point);
@@ -335,8 +330,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 	    vol = tmp;
 	else {
 	    eadd(tmp, vol);
-	    free_evalue_refs(tmp);
-	    free(tmp);
+	    evalue_free(tmp);
 	}
 	Polyhedron_Free(FF);
 	Param_Domain_Free(FD);
@@ -345,10 +339,8 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
     if (options->volume_triangulate != BV_VOL_BARYCENTER)
 	Vector_Free(v);
 
-    for (j = 0; j < dim; ++j) {
-	free_evalue_refs(matrix[row][j]);
-	free(matrix[row][j]);
-    }
+    for (j = 0; j < dim; ++j)
+	evalue_free(matrix[row][j]);
 
     free_evalue_refs(&mone);
     return vol;
@@ -391,15 +383,11 @@ static evalue *volume_simplex(Param_Polyhedron *PP, Param_Domain *D,
     if (value_neg_p(val->x.n))
 	emul(&mone, vol);
 
-    free_evalue_refs(val);
-    free(val);
+    evalue_free(val);
 
-    for (i = row; i < dim+1; ++i) {
-	for (j = 0; j < dim; ++j) {
-	    free_evalue_refs(matrix[i][j]);
-	    free(matrix[i][j]);
-	}
-    }
+    for (i = row; i < dim+1; ++i)
+	for (j = 0; j < dim; ++j)
+	    evalue_free(matrix[i][j]);
 
     free_evalue_refs(&mone);
 
@@ -453,10 +441,8 @@ static evalue *volume_triangulate_lift(Param_Polyhedron *PP, Param_Domain *D,
     if (0) {
 try_again:
 	/* Usually vol should still be NULL */
-	if (vol) {
-	    free_evalue_refs(vol);
-	    free(vol);
-	}
+	if (vol)
+	    evalue_free(vol);
 	Polyhedron_Free(L);
 	++t;
     }
@@ -497,8 +483,7 @@ try_again:
 	    vol = s;
 	else {
 	    eadd(s, vol);
-	    free_evalue_refs(s);
-	    free(s);
+	    evalue_free(s);
 	}
     }
     Polyhedron_Free(L);

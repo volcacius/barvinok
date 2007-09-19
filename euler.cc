@@ -144,10 +144,8 @@ struct mu_1d {
     }
     ~mu_1d() {
 	for (int i = 0; i < max_degree+1; ++i)
-	    if (coefficients[i]) {
-		free_evalue_refs(coefficients[i]);
-		free(coefficients[i]);
-	    }
+	    if (coefficients[i])
+		evalue_free(coefficients[i]);
 	delete [] coefficients;
     }
     void compute_coefficient(unsigned n);
@@ -223,19 +221,15 @@ struct mu_2d {
     ~mu_2d() {
 	for (int i = 0; i < max_degree+1; ++i) {
 	    for (int j = 0; j < max_degree+1; ++j)
-		if (coefficients[i][j]) {
-		    free_evalue_refs(coefficients[i][j]);
-		    free(coefficients[i][j]);
-		}
+		if (coefficients[i][j])
+		    evalue_free(coefficients[i][j]);
 	    delete [] coefficients[i];
 	}
 	delete [] coefficients;
 	for (int i = 0; i < 2; ++i)
 	    for (int j = 0; j < max_degree+2; ++j)
-		if (bernoulli_t[i][j]) {
-		    free_evalue_refs(bernoulli_t[i][j]);
-		    free(bernoulli_t[i][j]);
-		}
+		if (bernoulli_t[i][j])
+		    evalue_free(bernoulli_t[i][j]);
 	for (int i = 0; i < 2; ++i)
 	    delete [] bernoulli_t[i];
 	delete power_cn;
@@ -282,8 +276,7 @@ void mu_2d::compute_coefficient(unsigned n1, unsigned n2)
 	value_oppose(neg_power, neg_power);
 	evalue_mul_div(t, neg_power, *(*power_c1d)[n1+1]);
 	eadd(t, c);
-	free_evalue_refs(t);
-	free(t);
+	evalue_free(t);
 
 	t = evalue_dup(get_bernoulli(n1+n2+2, 0));
 	value_multiply(neg_power,
@@ -291,8 +284,7 @@ void mu_2d::compute_coefficient(unsigned n1, unsigned n2)
 	value_oppose(neg_power, neg_power);
 	evalue_mul_div(t, neg_power, *(*power_c2d)[n2+1]);
 	eadd(t, c);
-	free_evalue_refs(t);
-	free(t);
+	evalue_free(t);
 
 	value_clear(neg_power);
     }
@@ -569,31 +561,24 @@ void summator_2d::handle(const signed_cone& sc, barvinok_options *options)
 		evalue *c = evalue_dup(mu.coefficient(n1, n2));
 		evalue_mul(c, factor);
 		eadd(c, cij);
-		free_evalue_refs(c);
-		free(c);
+		evalue_free(c);
 	    }
 	    evalue *d = evalue_dup(dx2);
 	    evalue_substitute(d, subs_0d);
 	    emul(cij, d);
-	    free_evalue_refs(cij);
-	    free(cij);
+	    evalue_free(cij);
 	    eadd(d, res);
-	    free_evalue_refs(d);
-	    free(d);
+	    evalue_free(d);
 	    evalue_derive(dx2, 1);
 	}
-	free_evalue_refs(dx2);
-	free(dx2);
+	evalue_free(dx2);
 	evalue_derive(dx1, 0);
     }
-    free_evalue_refs(dx1);
-    free(dx1);
+    evalue_free(dx1);
     for (int i = 0; i < 2; ++i) {
-	free_evalue_refs(subs_0d[i]);
-	free(subs_0d[i]);
+	evalue_free(subs_0d[i]);
 	subs_0d[i] = NULL;
-	free_evalue_refs(t[i]);
-	free(t[i]);
+	evalue_free(t[i]);
     }
     delete [] t;
     value_clear(factor);
@@ -604,8 +589,7 @@ void summator_2d::handle(const signed_cone& sc, barvinok_options *options)
     if (sc.sign < 0)
 	evalue_negate(res);
     eadd(res, sum);
-    free_evalue_refs(res);
-    free(res);
+    evalue_free(res);
 }
 
 evalue *summator_2d::summate_over_pdomain(Param_Polyhedron *PP,
@@ -718,25 +702,19 @@ void summator_2d::handle_facet(Param_Polyhedron *PP, Param_Domain *FD,
 		evalue *d = evalue_dup(dx2);
 		evalue_substitute(d, subs_1d);
 		emul(c, d);
-		free_evalue_refs(c);
-		free(c);
+		evalue_free(c);
 		eadd(d, res);
-		free_evalue_refs(d);
-		free(d);
+		evalue_free(d);
 	    }
 	    evalue_derive(dx2, 1);
 	}
-	free_evalue_refs(dx2);
-	free(dx2);
+	evalue_free(dx2);
 	evalue_derive(dx1, 0);
     }
-    free_evalue_refs(dx1);
-    free(dx1);
-    free_evalue_refs(t);
-    free(t);
+    evalue_free(dx1);
+    evalue_free(t);
     for (int i = 0; i < 2; ++i) {
-	free_evalue_refs(subs_1d[i]);
-	free(subs_1d[i]);
+	evalue_free(subs_1d[i]);
 	subs_1d[i] = NULL;
     }
     value_clear(factor);
@@ -767,24 +745,20 @@ void summator_2d::handle_facet(Param_Polyhedron *PP, Param_Domain *FD,
     subs_0d[1] = affine2evalue(z->p[1], z->p[1][nparam+1], nparam);
     evalue *up = evalue_dup(res);
     evalue_substitute(up, subs_0d+1);
-    free_evalue_refs(subs_0d[1]);
-    free(subs_0d[1]);
+    evalue_free(subs_0d[1]);
 
     subs_0d[1] = affine2evalue(z->p[0], z->p[0][nparam+1], nparam);
     evalue_substitute(res, subs_0d+1);
     evalue_negate(res);
     eadd(up, res);
-    free_evalue_refs(subs_0d[1]);
-    free(subs_0d[1]);
+    evalue_free(subs_0d[1]);
     subs_0d[1] = NULL;
-    free_evalue_refs(up);
-    free(up);
+    evalue_free(up);
 
     Matrix_Free(z);
 
     eadd(res, sum);
-    free_evalue_refs(res);
-    free(res);
+    evalue_free(res);
 }
 
 /* Integrate the polynomial over the whole polygon using
@@ -873,20 +847,16 @@ void summator_2d::integrate(Param_Polyhedron *PP, Param_Domain *PD)
 	evalue_substitute(d, subs_1d);
 	evalue_anti_derive(d, 0);
 
-	free_evalue_refs(subs_1d[0]);
-	free(subs_1d[0]);
-	free_evalue_refs(subs_1d[1]);
-	free(subs_1d[1]);
+	evalue_free(subs_1d[0]);
+	evalue_free(subs_1d[1]);
 
 	subs_0d[1] = top;
 	evalue_substitute(d, subs_0d+1);
 	evalue_mul(d, dir->p[1]);
-	free_evalue_refs(subs_0d[1]);
-	free(subs_0d[1]);
+	evalue_free(subs_0d[1]);
 
 	eadd(d, res);
-	free_evalue_refs(d);
-	free(d);
+	evalue_free(d);
 
 	Param_Domain_Free(FD);
     }
@@ -896,12 +866,10 @@ void summator_2d::integrate(Param_Polyhedron *PP, Param_Domain *PD)
     Vector_Free(normal);
     Vector_Free(dir);
     value_clear(tmp);
-    free_evalue_refs(I);
-    free(I);
+    evalue_free(I);
 
     eadd(res, sum);
-    free_evalue_refs(res);
-    free(res);
+    evalue_free(res);
 }
 
 evalue *summate_over_1d_pdomain(evalue *e,
@@ -969,8 +937,7 @@ evalue *summate_over_1d_pdomain(evalue *e,
     evalue_substitute(I, subs_0d);
     evalue_negate(I);
     eadd(up, I);
-    free_evalue_refs(up);
-    free(up);
+    evalue_free(up);
 
     evalue *res = I;
 
@@ -986,8 +953,7 @@ evalue *summate_over_1d_pdomain(evalue *e,
 	evalue_substitute(d, subs_0d);
 	emul(mu0.coefficient(n), d);
 	eadd(d, res);
-	free_evalue_refs(d);
-	free(d);
+	evalue_free(d);
 
 	d = evalue_dup(dx);
 	subs_0d[0] = a[1];
@@ -996,13 +962,11 @@ evalue *summate_over_1d_pdomain(evalue *e,
 	if (n % 2)
 	    evalue_negate(d);
 	eadd(d, res);
-	free_evalue_refs(d);
-	free(d);
+	evalue_free(d);
 
 	evalue_derive(dx, 0);
     }
-    free_evalue_refs(dx);
-    free(dx);
+    evalue_free(dx);
 
     for (int i = 0; i < nparam; ++i) {
 	free_evalue_refs(subs_0d[1+i]);
@@ -1010,10 +974,8 @@ evalue *summate_over_1d_pdomain(evalue *e,
     }
 
     for (int i = 0; i < 2; ++i) {
-	free_evalue_refs(a[i]);
-	free(a[i]);
-	free_evalue_refs(t[i]);
-	free(t[i]);
+	evalue_free(a[i]);
+	evalue_free(t[i]);
     }
 
     return res;
@@ -1094,8 +1056,7 @@ evalue *euler_summate(evalue *e, int nvar, struct barvinok_options *options)
 	t = summate_over_domain(&e->x.p->arr[2*i+1], nvar,
 				 EVALUE_DOMAIN(e->x.p->arr[2*i]), options);
 	eadd(t, res);
-	free_evalue_refs(t);
-	free(t);
+	evalue_free(t);
     }
 
     return res;

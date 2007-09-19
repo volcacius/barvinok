@@ -109,8 +109,7 @@ void h_star_vector(Poly& p)
 	Vector_Free(h);
 	p.take("H_STAR_VECTOR") << h_star;
     }
-    free_evalue_refs(EP);
-    free(EP);
+    evalue_free(EP);
 }
 
 } }

@@ -238,8 +238,7 @@ int main(int argc,char *argv[])
 	emul(&mone, EC);
 	eadd(EC, EP);
 	free_evalue_refs(&mone);
-	free_evalue_refs(EC);
-	free(EC);
+	evalue_free(EC);
 	reduce_evalue(EP);
     }
     if (verbose >= 1) {

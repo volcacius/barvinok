@@ -288,8 +288,7 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     value_clear(t);
 
     eadd(f, EP);
-    free_evalue_refs(f);
-    free(f);
+    evalue_free(f);
 
     /* copy EP to malloc'ed evalue */
     evalue *E = ALLOC(evalue);
@@ -492,8 +491,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	    zz2value(p[i], tmp);
 	    evalue_mul(f, tmp);
 	    eadd(f, EP);
-	    free_evalue_refs(f);
-	    free(f);
+	    evalue_free(f);
 	}
 	E[0] = EP;
     } else {
@@ -537,8 +535,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 		zz2value(p[j], tmp);
 		evalue_mul(f, tmp);
 		eadd(f, E[i]);
-		free_evalue_refs(f);
-		free(f);
+		evalue_free(f);
 	    }
 	END_FORALL_COSETS
 	Vector_Free(row);
@@ -654,10 +651,8 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 		free_evalue_refs(&cp);
 	    }
 	}
-	for (int i = 0; i < dim; ++i) {
-	    free_evalue_refs(remainders[i]); 
-	    free(remainders[i]);
-	}
+	for (int i = 0; i < dim; ++i)
+	    evalue_free(remainders[i]); 
 
 	free_evalue_refs(&f); 
 

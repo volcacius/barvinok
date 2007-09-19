@@ -153,8 +153,7 @@ int main(int argc, char **argv)
 	    EP = barvinok_enumerate_with_options(A, C, options);
 	    param_name = Read_ParamNames(stdin, C->Dimension);
 	    print_evalue(stdout, EP, (const char**)param_name);
-	    free_evalue_refs(EP);
-	    free(EP);
+	    evalue_free(EP);
 	    Polyhedron_Free(C);
 	}
 	case 9:
@@ -204,8 +203,7 @@ int main(int argc, char **argv)
 	    Domain_Free(C);
 	    value_clear(cb);
 	    value_clear(ck);
-	    free_evalue_refs(EP);
-	    free(EP);
+	    evalue_free(EP);
 	}
 	}
 	Domain_Free(A);

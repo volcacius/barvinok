@@ -493,8 +493,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		print_evalue(stdout, EP, param_names);
 		puts("");
 		delete [] param_names;
-		free_evalue_refs(EP); 
-		free(EP);
+		evalue_free(EP);
 	    }
 	    delete $2;
 	}
@@ -513,8 +512,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		print_evalue(stdout, EP, names);
 		puts("");
 		delete [] names;
-		free_evalue_refs(EP); 
-		free(EP);
+		evalue_free(EP);
 	    }
 	    delete $2;
 	}
@@ -533,8 +531,7 @@ printf("was substantially faster on the limited domain it handled.\n");
 		print_evalue(stdout, EP, names);
 		puts("");
 		delete [] names;
-		free_evalue_refs(EP); 
-		free(EP);
+		evalue_free(EP);
 	    }
 	    delete $2;
 	    delete $4;

@@ -357,8 +357,7 @@ int main(int argc, char **argv)
     else
 	result = optimize(EP, all_vars, nvar, nparam, &options);
 
-    free_evalue_refs(EP);
-    free(EP);
+    evalue_free(EP);
 
     if (options.var_list)
 	free(options.var_list);

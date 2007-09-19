@@ -819,8 +819,7 @@ gen_fun::operator evalue *() const
 	    evalue *E = barvinok_enumerate_ev(P, U, 0);
 	    Polyhedron_Free(P);
 	    if (EVALUE_IS_ZERO(*E)) {
-		free_evalue_refs(E);
-		free(E);
+		evalue_free(E);
 		continue;
 	    }
 	    zz2value((*i)->n.coeff[j].n, factor.x.n);
@@ -835,8 +834,7 @@ gen_fun::operator evalue *() const
 		EP = E;
 	    else {
 		eadd(E, EP);
-		free_evalue_refs(E);
-		free(E);
+		evalue_free(E);
 	    }
 	}
 	Matrix_Free(C);
