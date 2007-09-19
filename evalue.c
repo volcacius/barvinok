@@ -1238,6 +1238,19 @@ static void explicit_complement(evalue *res)
     res->x.p = rel;
 }
 
+static void reduce_constant(evalue *e)
+{
+    Value g;
+    value_init(g);
+
+    value_gcd(g, e->x.n, e->d);
+    if (value_notone_p(g)) {
+	value_division(e->d, e->d,g);
+	value_division(e->x.n, e->x.n,g);
+    }
+    value_clear(g);
+}
+
 void eadd(const evalue *e1, evalue *res)
 {
  int i; 
@@ -1259,9 +1272,6 @@ void eadd(const evalue *e1, evalue *res)
 
     if (value_notzero_p(e1->d) && value_notzero_p(res->d)) {
          /* Add two rational numbers */
-	 Value g;
-	 value_init(g);
-
 	if (value_eq(e1->d, res->d))
 	    value_addto(res->x.n, res->x.n, e1->x.n);
 	else {
@@ -1269,14 +1279,8 @@ void eadd(const evalue *e1, evalue *res)
 	    value_addmul(res->x.n, e1->x.n, res->d);
 	    value_multiply(res->d,e1->d,res->d);
 	}
-
-         value_gcd(g, res->x.n, res->d);
-         if (value_notone_p(g)) {
-	      value_division(res->d,res->d,g);
-              value_division(res->x.n,res->x.n,g);
-         }
-         value_clear(g);
-         return ;
+	reduce_constant(res);
+        return;
      }
      else if (value_notzero_p(e1->d) && value_zero_p(res->d)) {
 	  switch (res->x.p->type) {
@@ -1826,18 +1830,10 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
    else {
        if (value_notzero_p(e1->d)&& value_notzero_p(res->d)) {
 	   /* Product of two rational numbers */
-	
-	    Value g;
-	    value_init(g);
 	    value_multiply(res->d,e1->d,res->d);
 	    value_multiply(res->x.n,e1->x.n,res->x.n );
-	    value_gcd(g, res->x.n, res->d);
-	   if (value_notone_p(g)) {
-	       value_division(res->d,res->d,g);
-	       value_division(res->x.n,res->x.n,g);
-	   }
-	   value_clear(g);
-	   return ;
+	    reduce_constant(res);
+	    return;
        }
        else { 
 	     if(value_zero_p(e1->d)&& value_notzero_p(res->d)) { 
@@ -4311,11 +4307,18 @@ evalue *evalue_polynomial(Vector *c, const evalue* X)
     evalue *EP = ALLOC(evalue);
     int i;
 
+    value_init(EP->d);
+
+    if (EVALUE_IS_ZERO(*X) || dim == 0) {
+	evalue_set(EP, c->p[0], c->p[dim+1]);
+	reduce_constant(EP);
+	return EP;
+    }
+
+    evalue_set(EP, c->p[dim], c->p[dim+1]);
+
     value_init(EC.d);
     evalue_set(&EC, c->p[dim], c->p[dim+1]);
-
-    value_init(EP->d);
-    evalue_set(EP, c->p[dim], c->p[dim+1]);
         
     for (i = dim-1; i >= 0; --i) {
 	emul(X, EP);
