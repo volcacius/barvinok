@@ -1241,6 +1241,22 @@ static void explicit_complement(evalue *res)
 void eadd(const evalue *e1, evalue *res)
 {
  int i; 
+
+    if (EVALUE_IS_ZERO(*e1))
+	return;
+
+    if (EVALUE_IS_ZERO(*res)) {
+	if (value_notzero_p(e1->d)) {
+	    value_assign(res->d, e1->d);
+	    value_assign(res->x.n, e1->x.n);
+	} else {
+	    value_clear(res->x.n);
+	    value_set_si(res->d, 0);
+	    res->x.p = ecopy(e1->x.p);
+	}
+	return;
+    }
+
     if (value_notzero_p(e1->d) && value_notzero_p(res->d)) {
          /* Add two rational numbers */
 	 Value g;
