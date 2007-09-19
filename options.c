@@ -189,7 +189,7 @@ static struct argp_option barvinok_argp_options[] = {
 	"[default: polylib]",
 #endif
 	},
-    { "summation",	    BV_OPT_SUM,		"barvinok|euler", 0,
+    { "summation",	    BV_OPT_SUM,		"barvinok|bernoulli|euler", 0,
 	"[default: barvinok]" },
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
@@ -340,6 +340,8 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->summation = BV_SUM_BARVINOK;
 	if (!strcmp(arg, "euler"))
 	    options->summation = BV_SUM_EULER;
+	if (!strcmp(arg, "bernoulli"))
+	    options->summation = BV_SUM_BERNOULLI;
 	break;
     case BV_OPT_RECURSE:
 	if (!strcmp(arg, "none"))

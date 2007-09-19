@@ -1705,6 +1705,8 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 {
     if (options->summation == BV_SUM_EULER)
 	return euler_summate(e, nvar, options);
+    else if (options->summation == BV_SUM_BERNOULLI)
+	return Bernoulli_sum_evalue(e, nvar, options);
     else
 	return evalue_sum(e, nvar, options->MaxRays);
 }
