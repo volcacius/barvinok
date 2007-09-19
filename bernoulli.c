@@ -198,11 +198,9 @@ static evalue *power_sums(struct poly_list *faulhaber, evalue *poly,
     return sum;
 }
 
-struct section { Polyhedron *D; evalue *E; };
-
 struct Bernoulli_data {
     unsigned MaxRays;
-    struct section *s;
+    struct evalue_section *s;
     int size;
     int ns;
     evalue *e;
@@ -461,7 +459,7 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
     assert(e->x.p->type == partition);
 
     data.size = e->x.p->size * 2 + 16;
-    data.s = ALLOCN(struct section, data.size);
+    data.s = ALLOCN(struct evalue_section, data.size);
     data.MaxRays = options->MaxRays;
 
     for (i = 0; i < e->x.p->size/2; ++i) {
@@ -469,47 +467,38 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 	for (D = EVALUE_DOMAIN(e->x.p->arr[2*i]); D; D = D->next) {
 	    unsigned dim = D->Dimension - 1;
 	    Polyhedron *next = D->next;
-	    evalue tmp;
+	    evalue *tmp;
 	    D->next = NULL;
-
-	    value_init(tmp.d);
-	    value_set_si(tmp.d, 0);
 
 	    if (value_zero_p(D->Constraint[0][0]) &&
 		    value_notzero_p(D->Constraint[0][1])) {
-		tmp.x.p = new_enode(partition, 2, dim);
-		EVALUE_SET_DOMAIN(tmp.x.p->arr[0], Polyhedron_Project(D, dim));
-		evalue_copy(&tmp.x.p->arr[1], &e->x.p->arr[2*i+1]);
-		reduce_evalue_in_domain(&tmp.x.p->arr[1], D);
-		shift(&tmp.x.p->arr[1]);
+		tmp = ALLOC(evalue);
+		value_init(tmp->d);
+		value_set_si(tmp->d, 0);
+		tmp->x.p = new_enode(partition, 2, dim);
+		EVALUE_SET_DOMAIN(tmp->x.p->arr[0], Polyhedron_Project(D, dim));
+		evalue_copy(&tmp->x.p->arr[1], &e->x.p->arr[2*i+1]);
+		reduce_evalue_in_domain(&tmp->x.p->arr[1], D);
+		shift(&tmp->x.p->arr[1]);
 	    } else {
 		data.ns = 0;
 		data.e = &e->x.p->arr[2*i+1];
 
 		for_each_lower_upper_bound(D, Bernoulli_cb, &data);
 
-		if (data.ns == 0)
-		    evalue_set_si(&tmp, 0, 1);
-		else {
-		    tmp.x.p = new_enode(partition, 2*data.ns, dim);
-		    for (j = 0; j < data.ns; ++j) {
-			EVALUE_SET_DOMAIN(tmp.x.p->arr[2*j], data.s[j].D);
-			value_clear(tmp.x.p->arr[2*j+1].d);
-			tmp.x.p->arr[2*j+1] = *data.s[j].E;
-			free(data.s[j].E);
-		    }
-		}
+		tmp = evalue_from_section_array(data.s, data.ns);
 	    }
 
 	    if (nvar > 1) {
-		evalue *res = Bernoulli_sum_evalue(&tmp, nvar-1, options);
+		evalue *res = Bernoulli_sum_evalue(tmp, nvar-1, options);
 		eadd(res, sum);
 		free_evalue_refs(res);
 		free(res);
 	    } else
-		eadd(&tmp, sum);
+		eadd(tmp, sum);
 
-	    free_evalue_refs(&tmp);
+	    free_evalue_refs(tmp);
+	    free(tmp);
 	    D->next = next;;
 	}
     }
