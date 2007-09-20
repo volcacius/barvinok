@@ -1709,6 +1709,11 @@ void Polyhedron_ExchangeColumns(Polyhedron *P, int Column1, int Column2)
 {
     SwapColumns(P->Constraint, P->NbConstraints, Column1, Column2);
     SwapColumns(P->Ray, P->NbRays, Column1, Column2);
+    if (P->NbEq) {
+	Matrix M;
+	Polyhedron_Matrix_View(P, &M, P->NbConstraints);
+	Gauss(&M, P->NbEq, P->Dimension+1);
+    }
 }
 
 /* perform transposition inline; assumes M is a square matrix */
