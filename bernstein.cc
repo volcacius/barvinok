@@ -176,7 +176,7 @@ static bool evalue_is_periodic(const evalue *e, Vector *periods)
 	Value size;
 	value_init(size);
 	value_set_si(size, e->x.p->size);
-	value_lcm(periods->p[e->x.p->pos-1], size, &periods->p[e->x.p->pos-1]);
+	value_lcm(periods->p[e->x.p->pos-1], periods->p[e->x.p->pos-1], size);
 	value_clear(size);
 	is_periodic = true;
     }
@@ -565,8 +565,8 @@ static piecewise_lst *bernstein_coefficients_periodic(piecewise_lst *pl_all,
     value_set_si(T2->p[D->Dimension][D->Dimension], 1);
     for (int i = 0; i < D->Dimension; ++i) {
 	value_assign(T->p[i][i], periods->p[i]);
-	value_lcm(T2->p[D->Dimension][D->Dimension], periods->p[i],
-		  &T2->p[D->Dimension][D->Dimension]);
+	value_lcm(T2->p[D->Dimension][D->Dimension],
+		  T2->p[D->Dimension][D->Dimension], periods->p[i]);
     }
     value_set_si(T->p[D->Dimension][D->Dimension], 1);
     for (int i = 0; i < D->Dimension; ++i)

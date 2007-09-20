@@ -42,7 +42,6 @@ extern "C" {
 
 struct barvinok_options;
 
-void value_lcm(const Value i, const Value j, Value* lcm);
 int random_int(int max);
 Polyhedron *Polyhedron_Read(unsigned MaxRays);
 Polyhedron* Polyhedron_Polar(Polyhedron *P, unsigned NbMaxRays);

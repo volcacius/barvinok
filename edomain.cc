@@ -188,7 +188,7 @@ static void add_coeff(Value *cons, int len, evalue *coeff, int pos)
 
     value_init(tmp);
 
-    value_lcm(cons[0], coeff->d, &tmp);
+    value_lcm(tmp, cons[0], coeff->d);
     value_division(tmp, tmp, cons[0]);
     Vector_Scale(cons, cons, tmp, len);
     value_division(tmp, cons[0], coeff->d);

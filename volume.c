@@ -223,8 +223,8 @@ static Matrix *barycenter(Param_Polyhedron *PP, Param_Domain *D)
 	} else {
 	    for (i = 0; i < center->NbRows; ++i) {
 		value_assign(fc, center->p[i][nparam+1]);
-		value_lcm(fc, V->Vertex->p[i][nparam+1],
-			    &center->p[i][nparam+1]);
+		value_lcm(center->p[i][nparam+1],
+			    fc, V->Vertex->p[i][nparam+1]);
 		value_division(fc, center->p[i][nparam+1], fc);
 		value_division(fv, center->p[i][nparam+1],
 				V->Vertex->p[i][nparam+1]);

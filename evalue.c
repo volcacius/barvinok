@@ -304,7 +304,7 @@ static void poly_denom_not_constant(evalue **pp, Value *d)
 	assert(p->x.p->type == polynomial);
 	assert(p->x.p->size == 2);
 	assert(value_notzero_p(p->x.p->arr[1].d));
-	value_lcm(*d, p->x.p->arr[1].d, d);
+	value_lcm(*d, *d, p->x.p->arr[1].d);
 	p = &p->x.p->arr[0];
     }
     *pp = p;
@@ -313,7 +313,7 @@ static void poly_denom_not_constant(evalue **pp, Value *d)
 static void poly_denom(evalue *p, Value *d)
 {
     poly_denom_not_constant(&p, d);
-    value_lcm(*d, p->d, d);
+    value_lcm(*d, *d, p->d);
 }
 
 static void realloc_substitution(struct subst *s, int d)
@@ -620,7 +620,7 @@ you_lose:   	/* OK, lets not do it */
 		    value_decrement(f->x.n, f->x.n);
 		    mpz_fdiv_r(f->x.n, f->x.n, f->d);
 
-		    Gcd(f->d, f->x.n, &g);
+		    value_gcd(g, f->d, f->x.n);
 		    value_division(f->d, f->d, g);
 		    value_division(f->x.n, f->x.n, g);
 
@@ -677,7 +677,7 @@ you_lose:   	/* OK, lets not do it */
 		    value_assign(pp->d, m);
 		    value_assign(pp->x.n, r);
 
-		    Gcd(pp->d, pp->x.n, &r);
+		    value_gcd(r, pp->d, pp->x.n);
 		    value_division(pp->d, pp->d, r);
 		    value_division(pp->x.n, pp->x.n, r);
 
@@ -732,7 +732,7 @@ you_lose:   	/* OK, lets not do it */
 		    /* Maybe we should do this during reduction of 
 		     * the constant.
 		     */
-		    Gcd(pp->d, pp->x.n, &twice);
+		    value_gcd(twice, pp->d, pp->x.n);
 		    value_division(pp->d, pp->d, twice);
 		    value_division(pp->x.n, pp->x.n, twice);
 
@@ -1247,12 +1247,12 @@ void eadd(const evalue *e1, evalue *res)
 	 value_init(g);
 	 value_init(m1);
 	 value_init(m2);
-	     
+
          value_multiply(m1,e1->x.n,res->d);
          value_multiply(m2,res->x.n,e1->d);
          value_addto(res->x.n,m1,m2);
          value_multiply(res->d,e1->d,res->d);
-         Gcd(res->x.n,res->d,&g);
+         value_gcd(g, res->x.n, res->d);
          if (value_notone_p(g)) {
 	      value_division(res->d,res->d,g);
               value_division(res->x.n,res->x.n,g);
@@ -1800,7 +1800,7 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	    value_init(g);
 	    value_multiply(res->d,e1->d,res->d);
 	    value_multiply(res->x.n,e1->x.n,res->x.n );
-	    Gcd(res->x.n, res->d,&g);
+	    value_gcd(g, res->x.n, res->d);
 	   if (value_notone_p(g)) {
 	       value_division(res->d,res->d,g);
 	       value_division(res->x.n,res->x.n,g);
@@ -2196,9 +2196,9 @@ void evalue_mod2table(evalue *e, int nparam)
       assert(p->type == polynomial);
       assert(p->size == 2);
       value_assign(periods->p[p->pos-1], p->arr[1].d);
-      value_lcm(tmp, p->arr[1].d, &tmp);
+      value_lcm(tmp, tmp, p->arr[1].d);
     }
-    value_lcm(tmp, ev->d, &tmp);
+    value_lcm(tmp, tmp, ev->d);
     value_init(EP.d);
     mod2table_r(&p->arr[0], periods, tmp, 0, val, &EP);
 
@@ -2566,7 +2566,7 @@ static evalue *find_second(evalue *base, evalue *cst, evalue *e, Value m)
     value_init(offset.d);
     value_init(offset.x.n);
     poly_denom(&e->x.p->arr[0], &offset.d);
-    value_lcm(m, offset.d, &offset.d);
+    value_lcm(offset.d, m, offset.d);
     value_set_si(offset.x.n, 1);
 
     value_init(copy.d);
@@ -3699,7 +3699,7 @@ void evalue_denom(const evalue *e, Value *d)
     int i, offset;
 
     if (value_notzero_p(e->d)) {
-	value_lcm(*d, e->d, d);
+	value_lcm(*d, *d, e->d);
 	return;
     }
     assert(e->x.p->type == polynomial ||
@@ -3722,7 +3722,7 @@ void evalue_div(evalue *e, Value n)
 	Value gc;
 	value_init(gc);
 	value_multiply(e->d, e->d, n);
-	Gcd(e->x.n, e->d, &gc);
+	value_gcd(gc, e->x.n, e->d);
 	if (value_notone_p(gc)) {
 	    value_division(e->d, e->d, gc);
 	    value_division(e->x.n, e->x.n, gc);
@@ -3752,7 +3752,7 @@ void evalue_mul(evalue *e, Value n)
 	Value gc;
 	value_init(gc);
 	value_multiply(e->x.n, e->x.n, n);
-	Gcd(e->x.n, e->d, &gc);
+	value_gcd(gc, e->x.n, e->d);
 	if (value_notone_p(gc)) {
 	    value_division(e->d, e->d, gc);
 	    value_division(e->x.n, e->x.n, gc);
@@ -3783,7 +3783,7 @@ void evalue_mul_div(evalue *e, Value n, Value d)
 	value_init(gc);
 	value_multiply(e->x.n, e->x.n, n);
 	value_multiply(e->d, e->d, d);
-	Gcd(e->x.n, e->d, &gc);
+	value_gcd(gc, e->x.n, e->d);
 	if (value_notone_p(gc)) {
 	    value_division(e->d, e->d, gc);
 	    value_division(e->x.n, e->x.n, gc);

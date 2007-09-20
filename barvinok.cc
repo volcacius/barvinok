@@ -276,9 +276,9 @@ static void mask_table(Matrix *f, evalue *factor)
 	    continue;
 	for (int j = 0; j < np; ++j)
 	    if (value_notzero_p(f->p[n][j])) {
-		Gcd(f->p[n][j], f->p[n][nc-1], &tmp);
+		value_gcd(tmp, f->p[n][j], f->p[n][nc-1]);
 		value_division(tmp, f->p[n][nc-1], tmp);
-		value_lcm(tmp, lcm->p[j], &lcm->p[j]);
+		value_lcm(lcm->p[j], tmp, lcm->p[j]);
 	    }
     }
     evalue EP;

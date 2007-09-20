@@ -153,16 +153,6 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     return P;
 }
 
-void value_lcm(const Value i, const Value j, Value* lcm)
-{
-    Value aux;
-    value_init(aux);
-    value_multiply(aux,i,j);
-    Gcd(i,j,lcm);
-    value_division(*lcm,aux,*lcm);
-    value_clear(aux);
-}
-
 unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n)
 {
     Value lcm, tmp, tmp2;
@@ -187,7 +177,7 @@ unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n)
 	    value_assign(tmp2,  P->Constraint[i][j+1]);
 	    if (value_ne(lcm, v->Vertex->p[j][nparam+1])) {
 		value_assign(tmp, lcm);
-		value_lcm(lcm, v->Vertex->p[j][nparam+1], &lcm);
+		value_lcm(lcm, lcm, v->Vertex->p[j][nparam+1]);
 		value_division(tmp, lcm, tmp);
 		value_multiply(tmp2, tmp2, lcm);
 		value_division(tmp2, tmp2, v->Vertex->p[j][nparam+1]);

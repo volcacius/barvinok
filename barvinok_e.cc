@@ -471,7 +471,7 @@ static evalue* enumerate_sure(Polyhedron *P,
 		continue;
 	    if (value_one_p(S->Constraint[j][1+nvar+i]))
 		continue;
-	    value_lcm(lcm, S->Constraint[j][1+nvar+i], &lcm);
+	    value_lcm(lcm, lcm, S->Constraint[j][1+nvar+i]);
 	}
 
 	for (int j = 0; j < S->NbConstraints; ++j) {

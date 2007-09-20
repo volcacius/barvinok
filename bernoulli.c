@@ -64,15 +64,15 @@ struct bernoulli_coef *bernoulli_coef_compute(int n)
 	    value_addto(bernoulli_coef.num->p[i], bernoulli_coef.num->p[i], tmp);
 	}
 	mpz_mul_ui(bernoulli_coef.den->p[i], bernoulli_coef.lcm->p[i-1], i+1);
-	Gcd(bernoulli_coef.num->p[i], bernoulli_coef.den->p[i], &tmp);
+	value_gcd(tmp, bernoulli_coef.num->p[i], bernoulli_coef.den->p[i]);
 	if (value_notone_p(tmp)) {
 	    value_division(bernoulli_coef.num->p[i],
 			    bernoulli_coef.num->p[i], tmp);
 	    value_division(bernoulli_coef.den->p[i],
 			    bernoulli_coef.den->p[i], tmp);
 	}
-	value_lcm(bernoulli_coef.lcm->p[i-1], bernoulli_coef.den->p[i],
-		  &bernoulli_coef.lcm->p[i]);
+	value_lcm(bernoulli_coef.lcm->p[i],
+		  bernoulli_coef.lcm->p[i-1], bernoulli_coef.den->p[i]);
     }
     bernoulli_coef.n = n+1;
     value_clear(factor);

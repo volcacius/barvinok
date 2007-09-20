@@ -13,6 +13,9 @@ extern "C" {
 #define value_subtract	value_substract
 #endif
 
+#define	value_gcd(ref,val1,val2)	mpz_gcd(ref,val1,val2)
+#define	value_lcm(ref,val1,val2)	mpz_lcm(ref,val1,val2)
+
 #ifndef value_addmul
 #define value_addmul(ref,val1,val2)						\
 	    do {								\

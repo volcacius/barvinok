@@ -65,7 +65,7 @@ static Lattice *LatticeJoin(Lattice *X, Lattice *Y)
     value_init(tmp);
 
     M = Matrix_Alloc(dim, 2*dim);
-    value_lcm(X->p[dim][dim], Y->p[dim][dim], &lcm);
+    value_lcm(lcm, X->p[dim][dim], Y->p[dim][dim]);
 
     value_division(tmp, lcm, X->p[dim][dim]);
     for (i = 0; i < dim; ++i)
@@ -240,7 +240,7 @@ void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
   for (V = PP->V; V; V = V->next) {
     for (i = 0; i < nb_vars; i++) {
       Vector_Gcd(V->Vertex->p[i], nb_param, &tmp);
-      Gcd(tmp, V->Vertex->p[i][nb_param+1], &tmp);
+      value_gcd(tmp, tmp, V->Vertex->p[i][nb_param+1]);
       value_division(tmp, V->Vertex->p[i][nb_param+1], tmp);
       Lcm3(denoms->p[i], tmp, &denoms->p[i]);
     }

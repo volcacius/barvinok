@@ -19,7 +19,7 @@ void Param_Vertex_Common_Denominator(Param_Vertices *V)
 
     value_assign(lcm, V->Vertex->p[0][dim+1]);
     for (i = 1; i < V->Vertex->NbRows; ++i)
-	value_lcm(V->Vertex->p[i][dim+1], lcm, &lcm);
+	value_lcm(lcm, V->Vertex->p[i][dim+1], lcm);
 
     for (i = 0; i < V->Vertex->NbRows; ++i) {
 	if (value_eq(V->Vertex->p[i][dim+1], lcm))

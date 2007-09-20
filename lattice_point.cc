@@ -115,7 +115,7 @@ int normal_mod(Value *coef, int len, Value *m)
     value_init(gcd);
 
     Vector_Gcd(coef, len, &gcd);
-    Gcd(gcd, *m, &gcd);
+    value_gcd(gcd, gcd, *m);
     Vector_AntiScale(coef, coef, gcd, len);
 
     value_division(*m, *m, gcd);

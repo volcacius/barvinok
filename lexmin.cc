@@ -2357,7 +2357,7 @@ void construct_rational_vertices(Param_Polyhedron *PP, Matrix *T, unsigned dim,
 	Matrix *M = Matrix_Alloc(PV->Vertex->NbRows+nparam+1, nparam+1);
 	value_set_si(lcm, 1);
 	for (int j = 0; j < PV->Vertex->NbRows; ++j)
-	    value_lcm(lcm, PV->Vertex->p[j][nparam+1], &lcm);
+	    value_lcm(lcm, lcm, PV->Vertex->p[j][nparam+1]);
 	value_assign(M->p[M->NbRows-1][M->NbColumns-1], lcm);
 	for (int j = 0; j < PV->Vertex->NbRows; ++j) {
 	    value_division(tmp, lcm, PV->Vertex->p[j][nparam+1]);

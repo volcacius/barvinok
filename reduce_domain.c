@@ -36,7 +36,7 @@ Vector *inner_point(Polyhedron *P)
 	    value_init(fv);
 	}
 	value_assign(fc, average->p[1+dim]);
-	value_lcm(fc, P->Ray[i][1+dim], &average->p[1+dim]);
+	value_lcm(average->p[1+dim], fc, P->Ray[i][1+dim]);
 	value_division(fc, average->p[1+dim], fc);
 	value_division(fv, average->p[1+dim], P->Ray[i][1+dim]);
 	Vector_Combine(average->p+1, P->Ray[i]+1, average->p+1, fc, fv, dim);
