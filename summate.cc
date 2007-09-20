@@ -302,6 +302,7 @@ int main(int argc, char **argv)
 	print_evalue(stdout, EP, all_vars);
     else {
 	evalue *sum = barvinok_summate(EP, nvar, bv_options);
+	assert(sum);
 	if (options.verify.verify)
 	    result = verify(EP, sum, nvar, nparam, &options.verify);
 	else

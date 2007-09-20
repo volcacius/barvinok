@@ -481,6 +481,41 @@ static int find_integer_bounds(Polyhedron **P_p, evalue **E_p, unsigned nvar)
     return 1;
 }
 
+static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
+				 struct Bernoulli_data *data,
+				 struct barvinok_options *options)
+{
+    unsigned dim = P->Dimension - 1;
+    evalue *res;
+
+    if (value_zero_p(P->Constraint[0][0]) &&
+	    value_notzero_p(P->Constraint[0][1])) {
+	res = ALLOC(evalue);
+	value_init(res->d);
+	value_set_si(res->d, 0);
+	res->x.p = new_enode(partition, 2, dim);
+	EVALUE_SET_DOMAIN(res->x.p->arr[0], Polyhedron_Project(P, dim));
+	evalue_copy(&res->x.p->arr[1], E);
+	reduce_evalue_in_domain(&res->x.p->arr[1], P);
+	shift(&res->x.p->arr[1]);
+    } else {
+	data->ns = 0;
+	data->e = E;
+
+	for_each_lower_upper_bound(P, Bernoulli_cb, data);
+
+	res = evalue_from_section_array(data->s, data->ns);
+    }
+
+    if (nvar > 1) {
+	evalue *tmp = Bernoulli_sum_evalue(res, nvar-1, options);
+	evalue_free(res);
+	res = tmp;
+    }
+
+    return res;
+}
+
 evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 			     struct barvinok_options *options)
 {
@@ -508,30 +543,21 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 	for (D = EVALUE_DOMAIN(e->x.p->arr[2*i]); D; D = D->next) {
 	    evalue *E = &e->x.p->arr[2*i+1];
 	    Polyhedron *P = D;
-	    unsigned dim = D->Dimension - 1;
 	    Polyhedron *next = D->next;
 	    evalue *tmp;
+	    int integer_bounds;
+
 	    P->next = NULL;
 
-	    find_integer_bounds(&P, &E, nvar);
-
-	    if (value_zero_p(P->Constraint[0][0]) &&
-		    value_notzero_p(P->Constraint[0][1])) {
-		tmp = ALLOC(evalue);
-		value_init(tmp->d);
-		value_set_si(tmp->d, 0);
-		tmp->x.p = new_enode(partition, 2, dim);
-		EVALUE_SET_DOMAIN(tmp->x.p->arr[0], Polyhedron_Project(P, dim));
-		evalue_copy(&tmp->x.p->arr[1], E);
-		reduce_evalue_in_domain(&tmp->x.p->arr[1], P);
-		shift(&tmp->x.p->arr[1]);
+	    integer_bounds = find_integer_bounds(&P, &E, nvar);
+	    if (options->approximation_method == BV_APPROX_NONE &&
+		!integer_bounds) {
+		evalue_free(sum);
+		sum = NULL;
 	    } else {
-		data.ns = 0;
-		data.e = E;
-
-		for_each_lower_upper_bound(P, Bernoulli_cb, &data);
-
-		tmp = evalue_from_section_array(data.s, data.ns);
+		evalue *tmp = sum_over_polytope(P, E, nvar, &data, options);
+		eadd(tmp, sum);
+		evalue_free(tmp);
 	    }
 
 	    if (P != D)
@@ -539,21 +565,20 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 	    if (E != &e->x.p->arr[2*i+1])
 		evalue_free(E);
 
-	    if (nvar > 1) {
-		evalue *res = Bernoulli_sum_evalue(tmp, nvar-1, options);
-		eadd(res, sum);
-		evalue_free(res);
-	    } else
-		eadd(tmp, sum);
-
-	    evalue_free(tmp);
 	    D->next = next;;
+
+	    if (!sum)
+		break;
 	}
+
+	if (!sum)
+	    break;
     }
 
     free(data.s);
 
-    reduce_evalue(sum);
+    if (sum)
+	reduce_evalue(sum);
     return sum;
 }
 
