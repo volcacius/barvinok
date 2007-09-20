@@ -49,6 +49,21 @@ evalue* evalue_zero()
     return EP;
 }
 
+/* returns an evalue that corresponds to
+ *
+ * x_var
+ */
+evalue *evalue_var(int var)
+{
+    evalue *EP = ALLOC(evalue);
+    value_init(EP->d);
+    value_set_si(EP->d,0);
+    EP->x.p = new_enode(polynomial, 2, var + 1);
+    evalue_set_si(&EP->x.p->arr[0], 0, 1);
+    evalue_set_si(&EP->x.p->arr[1], 1, 1);
+    return EP;
+}
+
 void aep_evalue(evalue *e, int *ref) {
   
     enode *p;

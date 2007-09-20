@@ -292,21 +292,6 @@ void mu_2d::compute_coefficient(unsigned n1, unsigned n2)
     coefficients[n1][n2] = c;
 }
 
-/* returns an evalue that corresponds to
- *
- * x_param
- */
-static evalue *term(int param)
-{
-    evalue *EP = new evalue();
-    value_init(EP->d);
-    value_set_si(EP->d,0);
-    EP->x.p = new_enode(polynomial, 2, param + 1);
-    evalue_set_si(&EP->x.p->arr[0], 0, 1);
-    evalue_set_si(&EP->x.p->arr[1], 1, 1);
-    return EP;
-}
-
 /* Later: avoid recomputation of mu of faces that appear in
  * more than one domain.
  */
@@ -334,16 +319,14 @@ struct summator_2d : public signed_cone_consumer, public vertex_decomposer {
 	subs_1d[0] = NULL;
 	subs_1d[1] = NULL;
 	for (int i = 0; i < nparam; ++i) {
-	    subs_0d[2+i] = term(i);
-	    subs_1d[2+i] = term(1+i);
+	    subs_0d[2+i] = evalue_var(i);
+	    subs_1d[2+i] = evalue_var(1+i);
 	}
     }
     ~summator_2d() {
 	for (int i = 0; i < nparam; ++i) {
-	    free_evalue_refs(subs_0d[2+i]);
-	    delete subs_0d[2+i];
-	    free_evalue_refs(subs_1d[2+i]);
-	    delete subs_1d[2+i];
+	    evalue_free(subs_0d[2+i]);
+	    evalue_free(subs_1d[2+i]);
 	}
 	delete [] subs_0d;
 	delete [] subs_1d;
@@ -887,7 +870,7 @@ evalue *summate_over_1d_pdomain(evalue *e,
     unsigned degree = total_degree(e, 1);
 
     for (int i = 0; i < nparam; ++i)
-	subs_0d[1+i] = term(i);
+	subs_0d[1+i] = evalue_var(i);
 
     FORALL_PVertex_in_ParamPolyhedron(V, PD, PP)
 	vertex[nbV++] = V;
@@ -968,10 +951,8 @@ evalue *summate_over_1d_pdomain(evalue *e,
     }
     evalue_free(dx);
 
-    for (int i = 0; i < nparam; ++i) {
-	free_evalue_refs(subs_0d[1+i]);
-	delete subs_0d[1+i];
-    }
+    for (int i = 0; i < nparam; ++i)
+	evalue_free(subs_0d[1+i]);
 
     for (int i = 0; i < 2; ++i) {
 	evalue_free(a[i]);
