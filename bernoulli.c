@@ -430,6 +430,57 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     Vector_Free(row);
 }
 
+/* Looks for variable with integer bounds, i.e., with coefficients 0, 1 or -1.
+ * Returns 1 if such a variable is found and puts it in the first position,
+ * possibly changing *P_p and *E_p.
+ */
+static int find_integer_bounds(Polyhedron **P_p, evalue **E_p, unsigned nvar)
+{
+    Polyhedron *P = *P_p;
+    evalue *E = *E_p;
+    unsigned dim = P->Dimension;
+    int i, j;
+
+    for (i = 0; i < nvar; ++i) {
+	for (j = 0; j < P->NbConstraints; ++j) {
+	    if (value_zero_p(P->Constraint[j][1+i]))
+		continue;
+	    if (value_one_p(P->Constraint[j][1+i]))
+		continue;
+	    if (value_mone_p(P->Constraint[j][1+i]))
+		continue;
+	    break;
+	}
+	if (j == P->NbConstraints)
+	    break;
+    }
+    if (i == nvar)
+	return 0;
+    if (i == 0)
+	return 1;
+    P = Polyhedron_Copy(P);
+    Polyhedron_ExchangeColumns(P, 1, 1+i);
+    *P_p = P;
+
+    if (value_zero_p(E->d)) {
+	evalue **subs;
+	subs = ALLOCN(evalue *, dim);
+	for (j = 0; j < dim; ++j)
+	    subs[j] = evalue_var(j);
+	E = subs[0];
+	subs[0] = subs[i];
+	subs[i] = E;
+	E = evalue_dup(*E_p);
+	evalue_substitute(E, subs);
+	for (j = 0; j < dim; ++j)
+	    evalue_free(subs[j]);
+	free(subs);
+	*E_p = E;
+    }
+
+    return 1;
+}
+
 evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 			     struct barvinok_options *options)
 {
@@ -455,29 +506,38 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
     for (i = 0; i < e->x.p->size/2; ++i) {
 	Polyhedron *D;
 	for (D = EVALUE_DOMAIN(e->x.p->arr[2*i]); D; D = D->next) {
+	    evalue *E = &e->x.p->arr[2*i+1];
+	    Polyhedron *P = D;
 	    unsigned dim = D->Dimension - 1;
 	    Polyhedron *next = D->next;
 	    evalue *tmp;
-	    D->next = NULL;
+	    P->next = NULL;
 
-	    if (value_zero_p(D->Constraint[0][0]) &&
-		    value_notzero_p(D->Constraint[0][1])) {
+	    find_integer_bounds(&P, &E, nvar);
+
+	    if (value_zero_p(P->Constraint[0][0]) &&
+		    value_notzero_p(P->Constraint[0][1])) {
 		tmp = ALLOC(evalue);
 		value_init(tmp->d);
 		value_set_si(tmp->d, 0);
 		tmp->x.p = new_enode(partition, 2, dim);
-		EVALUE_SET_DOMAIN(tmp->x.p->arr[0], Polyhedron_Project(D, dim));
-		evalue_copy(&tmp->x.p->arr[1], &e->x.p->arr[2*i+1]);
-		reduce_evalue_in_domain(&tmp->x.p->arr[1], D);
+		EVALUE_SET_DOMAIN(tmp->x.p->arr[0], Polyhedron_Project(P, dim));
+		evalue_copy(&tmp->x.p->arr[1], E);
+		reduce_evalue_in_domain(&tmp->x.p->arr[1], P);
 		shift(&tmp->x.p->arr[1]);
 	    } else {
 		data.ns = 0;
-		data.e = &e->x.p->arr[2*i+1];
+		data.e = E;
 
-		for_each_lower_upper_bound(D, Bernoulli_cb, &data);
+		for_each_lower_upper_bound(P, Bernoulli_cb, &data);
 
 		tmp = evalue_from_section_array(data.s, data.ns);
 	    }
+
+	    if (P != D)
+		Polyhedron_Free(P);
+	    if (E != &e->x.p->arr[2*i+1])
+		evalue_free(E);
 
 	    if (nvar > 1) {
 		evalue *res = Bernoulli_sum_evalue(tmp, nvar-1, options);
