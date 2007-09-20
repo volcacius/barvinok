@@ -454,12 +454,8 @@ void EDomain::substitute(evalue **subs, Matrix *T, Matrix *Eq, unsigned MaxRays)
 
 static Matrix *remove_equalities(Polyhedron **P, unsigned nparam, unsigned MaxRays)
 {
-    /* Matrix "view" of equalities */
     Matrix M;
-    M.NbRows = (*P)->NbEq;
-    M.NbColumns = (*P)->Dimension+2;
-    M.p_Init = (*P)->p_Init;
-    M.p = (*P)->Constraint;
+    Polyhedron_Matrix_View(*P, &M, (*P)->NbEq);
 
     Matrix *T = compress_variables(&M, nparam);
 

@@ -1717,3 +1717,12 @@ void Matrix_Transposition(Matrix *M)
 	for (j = i+1; j < M->NbColumns; ++j)
 	    value_swap(M->p[i][j], M->p[j][i]);
 }
+
+/* Matrix "view" of first rows rows */
+void Polyhedron_Matrix_View(Polyhedron *P, Matrix *M, unsigned rows)
+{
+    M->NbRows = rows;
+    M->NbColumns = P->Dimension+2;
+    M->p_Init = P->p_Init;
+    M->p = P->Constraint;
+}

@@ -2,15 +2,6 @@
 #include <barvinok/util.h>
 #include "remove_equalities.h"
 
-static void Polyhedron_Equalities_View(Polyhedron *P, Matrix *M)
-{
-    /* Matrix "view" of equalities */
-    M->NbRows = P->NbEq;
-    M->NbColumns = P->Dimension+2;
-    M->p_Init = P->p_Init;
-    M->p = P->Constraint;
-}
-
 static void transform(Polyhedron **P, Polyhedron **C, Matrix *CP, int free,
 		      unsigned MaxRays)
 {
@@ -58,7 +49,7 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	return 0;
 
     if (D && D->NbEq) {
-	Polyhedron_Equalities_View(D, &M);
+	Polyhedron_Matrix_View(D, &M, D->NbEq);
 	CV = compress_variables(&M, 0);
 	transform(&Q, &D, CV, Q != *P, MaxRays);
 	nparam = CV->NbColumns-1;
@@ -103,7 +94,7 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	CP = CV;
 	CV = NULL;
     } else {
-	Polyhedron_Equalities_View(Q, &M);
+	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
 	CP = compress_parms(&M, nparam);
 
 	if (isIdentity(CP)) {
@@ -123,11 +114,7 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	    nparam = CP->NbColumns-1;
 	}
 
-	/* Matrix "view" of equalities */
-	M.NbRows = Q->NbEq;
-	M.NbColumns = Q->Dimension+2;
-	M.p_Init = Q->p_Init;
-	M.p = Q->Constraint;
+	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
 	CV = compress_variables(&M, nparam);
 	if (!CV) {
 	    if (Q != *P)

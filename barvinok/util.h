@@ -109,6 +109,8 @@ typedef void (*for_each_lower_upper_bound_fn)(Matrix *, Value *, Value *, void *
 void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
 				void *cb_data);
 
+void Polyhedron_Matrix_View(Polyhedron *P, Matrix *M, unsigned rows);
+
 const char *barvinok_version();
 
 #if defined(__cplusplus)

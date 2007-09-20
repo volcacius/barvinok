@@ -240,12 +240,8 @@ static Polyhedron *Polyhedron_RemoveFixedColumns(Polyhedron *P, Matrix **T)
 static Polyhedron *remove_all_equalities(Polyhedron *P, Matrix **T,
 					 unsigned MaxRays)
 {
-    /* Matrix "view" of equalities */
     Matrix M;
-    M.NbRows = P->NbEq;
-    M.NbColumns = P->Dimension+2;
-    M.p_Init = P->p_Init;
-    M.p = P->Constraint;
+    Polyhedron_Matrix_View(P, &M, P->NbEq);
 
     *T = compress_variables(&M, 0);
 
