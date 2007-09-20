@@ -1697,6 +1697,20 @@ int Polyhedron_is_unbounded(Polyhedron *P, unsigned nparam, unsigned MaxRays)
     return is_unbounded;
 }
 
+static void SwapColumns(Value **V, int n, int i, int j)
+{
+    int r;
+
+    for (r = 0; r < n; ++r)
+	value_swap(V[r][i], V[r][j]);
+}
+
+void Polyhedron_ExchangeColumns(Polyhedron *P, int Column1, int Column2)
+{
+    SwapColumns(P->Constraint, P->NbConstraints, Column1, Column2);
+    SwapColumns(P->Ray, P->NbRays, Column1, Column2);
+}
+
 /* perform transposition inline; assumes M is a square matrix */
 void Matrix_Transposition(Matrix *M)
 {

@@ -2204,18 +2204,6 @@ int Last_Non_Zero(Value *p, unsigned len)
     return -1;
 }
 
-static void SwapColumns(Value **V, int n, int i, int j)
-{
-    for (int r = 0; r < n; ++r)
-	value_swap(V[r][i], V[r][j]);
-}
-
-static void SwapColumns(Polyhedron *P, int i, int j)
-{
-    SwapColumns(P->Constraint, P->NbConstraints, i, j);
-    SwapColumns(P->Ray, P->NbRays, i, j);
-}
-
 Vector *max_term::eval(Value *val, unsigned MaxRays) const
 {
     if (!domain->contains(val, domain->dimension()))

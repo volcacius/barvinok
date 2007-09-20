@@ -50,18 +50,6 @@ Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
     return R;
 }
 
-static void SwapColumns(Value **V, int n, int i, int j)
-{
-    for (int r = 0; r < n; ++r)
-	value_swap(V[r][i], V[r][j]);
-}
-
-static void SwapColumns(Polyhedron *P, int i, int j)
-{
-    SwapColumns(P->Constraint, P->NbConstraints, i, j);
-    SwapColumns(P->Ray, P->NbRays, i, j);
-}
-
 /* Construct a constraint c from constraints l and u such that if
  * if constraint c holds then for each value of the other variables
  * there is at most one value of variable pos (position pos+1 in the constraints).
@@ -268,7 +256,7 @@ static bool SplitOnVar(Polyhedron *P, int i,
 	    if (SplitOnConstraint(P, i, l, u, nvar, MaxRays, row, f, pos, neg)) {
 		if (independent) {
 		    if (i != 0)
-			SwapColumns(*neg, nvar+1, nvar+1+i);
+			Polyhedron_ExchangeColumns(*neg, nvar+1, nvar+1+i);
 		}
 		return true;
 	    }
@@ -379,7 +367,7 @@ static evalue* enumerate_sum(Polyhedron *P,
     int nvar = P->Dimension - exist - nparam;
     int toswap = nvar < exist ? nvar : exist;
     for (int i = 0; i < toswap; ++i)
-	SwapColumns(P, 1 + i, nvar+exist - i);
+	Polyhedron_ExchangeColumns(P, 1 + i, nvar+exist - i);
     nparam += nvar;
 
 #ifdef DEBUG_ER
@@ -1302,7 +1290,7 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 							 options);
 	    else {
 		Polyhedron *T = Polyhedron_Copy(P);
-		SwapColumns(T, nvar+1, nvar+1+first);
+		Polyhedron_ExchangeColumns(T, nvar+1, nvar+1+first);
 		evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
 							       options);
 		Polyhedron_Free(T);
@@ -1449,7 +1437,7 @@ next:
 							 options);
 	    else {
 		Polyhedron *T = Polyhedron_Copy(P);
-		SwapColumns(T, nvar+1, nvar+1+i);
+		Polyhedron_ExchangeColumns(T, nvar+1, nvar+1+i);
 		evalue *EP = barvinok_enumerate_e_with_options(T, exist-1, nparam,
 							       options);
 		Polyhedron_Free(T);

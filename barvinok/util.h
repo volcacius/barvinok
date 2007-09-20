@@ -102,6 +102,8 @@ Matrix *left_inverse(Matrix *M, Matrix **Eq);
 int Polyhedron_has_revlex_positive_rays(Polyhedron *P, unsigned nparam);
 int Polyhedron_is_unbounded(Polyhedron *P, unsigned nparam, unsigned MaxRays);
 
+void Polyhedron_ExchangeColumns(Polyhedron *P, int Column1, int Column2);
+
 void Matrix_Transposition(Matrix *M);
 
 typedef void (*for_each_lower_upper_bound_fn)(Matrix *, Value *, Value *, void *);
