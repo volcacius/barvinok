@@ -132,7 +132,7 @@ const char *scale_opts[] = {
 
 static struct argp_option approx_argp_options[] = {
     { "polynomial-approximation", BV_OPT_POLAPPROX, "lower|upper",	1 },
-    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume|bernouilli",	0,
+    { "approximation-method", BV_OPT_APPROX,        "scale|drop|volume|bernoulli",	0,
 	"method to use in polynomial approximation [default: drop]" },
     { "scale-options",	    BV_OPT_SCALE,
 	"fast|slow,narrow|narrow2,chamber",	0 },
