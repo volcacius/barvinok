@@ -10,5 +10,7 @@ If the barvinok library is installed in a non-standard location,
 you may need to specifiy the path of the directory containing
 barvinok.pc (usually $prefix/lib/pkgconfig) in the PKG_CONFIG
 environment variable.
+If you specify the installation directory of barvinok
+with --with-barvinok=/path/to/barvinok, configure will do this for you.
 
 Sven Verdoolaege <skimo@kotnet.org>
