@@ -257,6 +257,9 @@ EXTRA_DIST = \
     polymake/README \
     polymake/autogen.sh \
     polymake/configure.in \
+    polymake/convert.cc \
+    polymake/convert.h \
+    polymake/h_star_vector.cc \
     polymake/lattice_points.cc
 
 ACLOCAL_AMFLAGS = -I m4
