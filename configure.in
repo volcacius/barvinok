@@ -440,7 +440,7 @@ PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lpolylibgmp -lpiplibMP"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_FILES(Makefile lib/Makefile doc/Makefile omega/Makefile)
+AC_CONFIG_FILES(Makefile lib/Makefile zsolve/Makefile doc/Makefile omega/Makefile)
 if test $with_polylib = bundled; then
 	AC_CONFIG_SUBDIRS(polylib)
 fi

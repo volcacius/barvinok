@@ -7,7 +7,7 @@ endif
 if BUNDLED_PIPLIB
     MAYBE_PIPLIB = piplib
 endif
-SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) lib . omega doc
+SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) lib zsolve . omega doc
 
 FORCE:
 lib/libgnu.la: FORCE
