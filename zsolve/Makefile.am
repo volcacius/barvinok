@@ -37,7 +37,7 @@ libzsolve_la_SOURCES =				\
 	cputime.c 				\
 	libzsolve.c
 
-include_HEADERS =				\
+noinst_HEADERS =				\
 	cputime.h				\
 	defs.h					\
 	indexarray.h				\
@@ -51,7 +51,7 @@ include_HEADERS =				\
 	vectorarray.h				\
 	vector.h
 
-bin_PROGRAMS = zsolve
+noinst_PROGRAMS = zsolve
 
 zsolve_SOURCES = 				\
 	solve.c					\
@@ -61,7 +61,7 @@ zsolve_LDADD = libzsolve.la
 
 # For out-of-source builds, make sure we have a copy of the script in
 # the build directory, so that the script finds the binary.
-bin_SCRIPTS = hilbert graver
+noinst_SCRIPTS = hilbert graver
 
 EXTRA_DIST = hilbert.template graver.template
 
