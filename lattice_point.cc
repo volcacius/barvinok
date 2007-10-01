@@ -397,11 +397,7 @@ void lattice_points_fixed(Value *vertex, Value *vertex_res,
     for (int i = 0; i < W->NbRows; ++i)
 	Vector_Scale(W->p[i], T->p[i], vertex[dim], W->NbColumns);
     Matrix_Free(W);
-    Value tmp;
-    value_init(tmp);
-    value_set_si(tmp, -1);
-    Vector_Scale(vertex, T->p[dim], tmp, dim);
-    value_clear(tmp);
+    Vector_Oppose(vertex, T->p[dim], dim);
     value_assign(T->p[dim][dim], vertex[dim]);
 
     Matrix *R2 = Matrix_AddRowColumn(Rays);
