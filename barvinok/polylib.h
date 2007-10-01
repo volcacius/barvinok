@@ -9,9 +9,6 @@ extern "C" {
 
 #include <polylib/polylibgmp.h>
 
-#define	value_gcd(ref,val1,val2)	mpz_gcd(ref,val1,val2)
-#define	value_lcm(ref,val1,val2)	mpz_lcm(ref,val1,val2)
-
 #undef divide
 #undef value_compare
 
