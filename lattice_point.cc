@@ -338,13 +338,18 @@ static Matrix *Matrix_AddRowColumn(Matrix *M)
 	Vector *k = Vector_Alloc(D->NbRows+1);				\
 	value_set_si(k->p[D->NbRows], 1);				\
 	for (unsigned long i = 0; i < det; ++i) {			\
-	    unsigned long _fc_val = i;					\
-	    for (int j = 0; j < D->NbRows; ++j) {			\
-		value_set_si(k->p[j], _fc_val % mpz_get_ui(D->p[j][j]));\
-		_fc_val /= mpz_get_ui(D->p[j][j]);			\
-	    }
+	    if (i)							\
+		for (int j = D->NbRows-1; j >= 0; --j) {		\
+		    value_increment(k->p[j], k->p[j]);			\
+		    if (value_eq(k->p[j], D->p[j][j]))			\
+			value_set_si(k->p[j], 0);		    	\
+		    else						\
+			break;						\
+		}							\
+	    {
 #define END_FORALL_COSETS						\
 	    }						    		\
+	}								\
 	Vector_Free(k);						    	\
     } while(0);
 
