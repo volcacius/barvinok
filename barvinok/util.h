@@ -65,6 +65,7 @@ evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C,
 			 struct barvinok_options *options);
 void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g);
 int unimodular_complete(Matrix *M, int row);
+void neg_left_hermite(Matrix *A, Matrix **H_p, Matrix **Q_p, Matrix **U_p);
 Bool isIdentity(Matrix *M);
 void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
 void Enumeration_Print(FILE *Dst, Enumeration *en, const char * const *params);

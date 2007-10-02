@@ -481,6 +481,41 @@ int unimodular_complete(Matrix *M, int row)
 }
 
 /*
+ * left_hermite may leave positive entries below the main diagonal in H.
+ * This function postprocesses the output of left_hermite to make
+ * the non-zero entries below the main diagonal negative.
+ */
+void neg_left_hermite(Matrix *A, Matrix **H_p, Matrix **Q_p, Matrix **U_p)
+{
+    int row, col, i, j;
+    Matrix *H, *U, *Q;
+
+    left_hermite(A, &H, &Q, &U);
+    *H_p = H;
+    *Q_p = Q;
+    *U_p = U;
+
+    for (row = 0, col = 0; col < H->NbColumns; ++col, ++row) {
+	while (value_zero_p(H->p[row][col]))
+	    ++row;
+	for (i = 0; i < col; ++i) {
+	    if (value_negz_p(H->p[row][i]))
+		continue;
+
+	    /* subtract column col from column i in H and U */
+	    for (j = 0; j < H->NbRows; ++j)
+		value_subtract(H->p[j][i], H->p[j][i], H->p[j][col]);
+	    for (j = 0; j < U->NbRows; ++j)
+		value_subtract(U->p[j][i], U->p[j][i], U->p[j][col]);
+
+	    /* add row i to row col in Q */
+	    for (j = 0; j < Q->NbColumns; ++j)
+		value_addto(Q->p[col][j], Q->p[col][j], Q->p[i][j]);
+	}
+    }
+}
+
+/*
  * Returns a full-dimensional polyhedron with the same number
  * of integer points as P
  */
