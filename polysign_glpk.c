@@ -9,34 +9,35 @@
 
 #define EMPTY_DOMAIN	-2
 
-static LPX *solve_lp(int dir, Polyhedron *P, Value *f, Value denom)
+static LPX *solve_lp(int dir, Matrix *C, Value *f, Value denom)
 {
     LPX *lp;
     int *ind;
     double *val;
     int j, k, l;
+    unsigned dim = C->NbColumns-2;
 
-    ind = ALLOCN(int, 1+P->Dimension);
-    val = ALLOCN(double, 1+P->Dimension);
+    ind = ALLOCN(int, 1+dim);
+    val = ALLOCN(double, 1+dim);
     lp = lpx_create_prob();
     lpx_set_obj_dir(lp, dir);
-    lpx_add_rows(lp, P->NbConstraints);
-    lpx_add_cols(lp, P->Dimension);
+    lpx_add_rows(lp, C->NbRows);
+    lpx_add_cols(lp, dim);
 
-    for (j = 0; j < P->NbConstraints; ++j) {
-	int type = j < P->NbEq ? LPX_FX : LPX_LO;
-	for (k = 0, l = 0; k < P->Dimension; ++k) {
-	    if (value_zero_p(P->Constraint[j][1+k]))
+    for (j = 0; j < C->NbRows; ++j) {
+	int type = value_zero_p(C->p[j][0]) ? LPX_FX : LPX_LO;
+	for (k = 0, l = 0; k < dim; ++k) {
+	    if (value_zero_p(C->p[j][1+k]))
 		continue;
 	    ind[1+l] = 1+k;
-	    val[1+l] = VALUE_TO_DOUBLE(P->Constraint[j][1+k]);
+	    val[1+l] = VALUE_TO_DOUBLE(C->p[j][1+k]);
 	    ++l;
 	}
 	lpx_set_mat_row(lp, 1+j, l, ind, val);
 	lpx_set_row_bnds(lp, 1+j, type,
-			 -VALUE_TO_DOUBLE(P->Constraint[j][1+P->Dimension]), 0);
+			 -VALUE_TO_DOUBLE(C->p[j][1+dim]), 0);
     }
-    for (k = 0, l = 0; k < P->Dimension; ++k) {
+    for (k = 0, l = 0; k < dim; ++k) {
 	lpx_set_col_bnds(lp, 1+k, LPX_FR, 0, 0);
     }
     free(ind);
@@ -44,10 +45,10 @@ static LPX *solve_lp(int dir, Polyhedron *P, Value *f, Value denom)
     lpx_set_int_parm(lp, LPX_K_MSGLEV, 0);
 
     /* objective function */
-    for (j = 0; j < P->Dimension; ++j)
+    for (j = 0; j < dim; ++j)
 	lpx_set_obj_coef(lp, 1+j, VALUE_TO_DOUBLE(f[j]) /
 				    VALUE_TO_DOUBLE(denom));
-    lpx_set_obj_coef(lp, 0, VALUE_TO_DOUBLE(f[P->Dimension]) /
+    lpx_set_obj_coef(lp, 0, VALUE_TO_DOUBLE(f[dim]) /
 				VALUE_TO_DOUBLE(denom));
 
     lpx_adv_basis(lp);
@@ -56,11 +57,11 @@ static LPX *solve_lp(int dir, Polyhedron *P, Value *f, Value denom)
     return lp;
 }
 
-static enum lp_result polyhedron_affine_minmax(int dir, Polyhedron *P,
+static enum lp_result constraints_affine_minmax(int dir, Matrix *C,
 					      Value *f, Value denom, Value *opt)
 {
     enum lp_result res = lp_ok;
-    LPX *lp = solve_lp(dir, P, f, denom);
+    LPX *lp = solve_lp(dir, C, f, denom);
 
     switch (lpx_get_status(lp)) {
     case LPX_OPT:
@@ -82,25 +83,26 @@ static enum lp_result polyhedron_affine_minmax(int dir, Polyhedron *P,
     return res;
 }
 
-static int polyhedron_affine_minmax_sign(int dir, Polyhedron *P, Matrix *T,
+static int constraints_affine_minmax_sign(int dir, Matrix *C, Matrix *T,
 					 int rational)
 {
     LPX *lp;
     int sign;
     double opt;
-    assert(P->Dimension == T->NbColumns-1);
+    unsigned dim = C->NbColumns-2;
+    assert(dim == T->NbColumns-1);
     assert(T->NbRows == 2);
 
-    lp = solve_lp(dir, P, T->p[0], T->p[1][P->Dimension]);
+    lp = solve_lp(dir, C, T->p[0], T->p[1][dim]);
     switch (lpx_get_status(lp)) {
     case LPX_OPT:
 	opt = lpx_get_obj_val(lp);
 	if (rational) {
 	    sign = opt < 0 ? -1 : opt > 0 ? 1 : 0;
 	} else {
-	    if (opt < -0.5/VALUE_TO_DOUBLE(T->p[1][P->Dimension]))
+	    if (opt < -0.5/VALUE_TO_DOUBLE(T->p[1][dim]))
 		sign = -1;
-	    else if (opt > 0.5/VALUE_TO_DOUBLE(T->p[1][P->Dimension]))
+	    else if (opt > 0.5/VALUE_TO_DOUBLE(T->p[1][dim]))
 		sign = 1;
 	    else
 		sign = 0;
@@ -126,16 +128,18 @@ enum order_sign glpk_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {
     int rational = !POL_ISSET(options->MaxRays, POL_INTEGER);
+    Matrix M;
 
     if (emptyQ2(D))
 	return order_undefined;
 
-    int min = polyhedron_affine_minmax_sign(LPX_MIN, D, T, rational);
+    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
+    int min = constraints_affine_minmax_sign(LPX_MIN, &M, T, rational);
     if (min == EMPTY_DOMAIN)
 	return order_undefined;
     if (min > 0)
 	return order_gt;
-    int max = polyhedron_affine_minmax_sign(LPX_MAX, D, T, rational);
+    int max = constraints_affine_minmax_sign(LPX_MAX, &M, T, rational);
     assert(max != EMPTY_DOMAIN);
     if (max < 0)
 	return order_lt;
@@ -153,13 +157,15 @@ enum lp_result glpk_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				struct barvinok_options *options)
 {
     enum lp_result res;
+    Matrix M;
 
     if (emptyQ2(D))
 	return lp_empty;
 
-    res = polyhedron_affine_minmax(LPX_MIN, D, obj, denom, min);
+    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
+    res = constraints_affine_minmax(LPX_MIN, &M, obj, denom, min);
     if (res != lp_ok)
 	return res;
-    res = polyhedron_affine_minmax(LPX_MAX, D, obj, denom, max);
+    res = constraints_affine_minmax(LPX_MAX, &M, obj, denom, max);
     return res;
 }
