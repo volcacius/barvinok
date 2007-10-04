@@ -56,7 +56,7 @@ void Param_Inner_Product(Value *constraint, Matrix *Vertex, Value *row)
 	value_assign(tmp2,  constraint[1+j]);
 	if (value_ne(row[0], Vertex->p[j][nparam+1])) {
 	    value_assign(tmp, row[0]);
-	    value_lcm(row[0], Vertex->p[j][nparam+1], &row[0]);
+	    value_lcm(row[0], row[0], Vertex->p[j][nparam+1]);
 	    value_division(tmp, row[0], tmp);
 	    value_multiply(tmp2, tmp2, row[0]);
 	    value_division(tmp2, tmp2, Vertex->p[j][nparam+1]);
