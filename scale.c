@@ -164,13 +164,18 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
 	Lattice *L2;
 	Matrix *M;
 	int i, j, n;
-	unsigned char *supporting;
+	unsigned *supporting;
+	int ix;
+	unsigned bx;
 
-	supporting = supporting_constraints(*P, V, &n);
-	M = Matrix_Alloc(n, (*P)->Dimension);
-	for (i = 0, j = 0; i < (*P)->NbConstraints; ++i)
-	    if (supporting[i])
-		Vector_Copy((*P)->Constraint[i]+1, M->p[j++], (*P)->Dimension);
+	supporting = supporting_constraints(PP->Constraints, V, &n);
+	M = Matrix_Alloc(n, PP->Constraints->NbColumns-2);
+	for (i = 0, j = 0, ix = 0, bx = MSB; i < PP->Constraints->NbRows; ++i) {
+	    if (supporting[ix] & bx)
+		Vector_Copy(PP->Constraints->p[i]+1, M->p[j++],
+			    PP->Constraints->NbColumns-2);
+	    NEXT(ix, bx);
+	}
 	free(supporting);
 	L2 = extract_lattice(M, nvar);
 	Matrix_Free(M);

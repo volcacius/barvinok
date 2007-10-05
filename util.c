@@ -153,15 +153,20 @@ Polyhedron* supporting_cone(Polyhedron *P, int v)
     return P;
 }
 
-unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n)
+#define INT_BITS (sizeof(unsigned) * 8)
+
+unsigned *supporting_constraints(Matrix *Constraints, Param_Vertices *v, int *n)
 {
     Value lcm, tmp, tmp2;
-    unsigned dim = P->Dimension + 2;
+    unsigned dim = Constraints->NbColumns;
     unsigned nparam = v->Vertex->NbColumns - 2;
     unsigned nvar = dim - nparam - 2;
-    unsigned char *supporting = (unsigned char *)malloc(P->NbConstraints);
+    int len = (Constraints->NbRows+INT_BITS-1)/INT_BITS;
+    unsigned *supporting = (unsigned *)calloc(len, sizeof(unsigned));
     int i, j;
     Vector *row;
+    int ix;
+    unsigned bx;
 
     assert(supporting);
     row = Vector_Alloc(nparam+1);
@@ -170,11 +175,11 @@ unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n)
     value_init(tmp);
     value_init(tmp2);
     value_set_si(lcm, 1);
-    for (i = 0, *n = 0; i < P->NbConstraints; ++i) {
+    for (i = 0, *n = 0, ix = 0, bx = MSB; i < Constraints->NbRows; ++i) {
 	Vector_Set(row->p, 0, nparam+1);
 	for (j = 0 ; j < nvar; ++j) {
 	    value_set_si(tmp, 1);
-	    value_assign(tmp2,  P->Constraint[i][j+1]);
+	    value_assign(tmp2,  Constraints->p[i][j+1]);
 	    if (value_ne(lcm, v->Vertex->p[j][nparam+1])) {
 		value_assign(tmp, lcm);
 		value_lcm(lcm, lcm, v->Vertex->p[j][nparam+1]);
@@ -186,12 +191,15 @@ unsigned char *supporting_constraints(Polyhedron *P, Param_Vertices *v, int *n)
 			   tmp, tmp2, nparam+1);
 	}
 	value_set_si(tmp, 1);
-	Vector_Combine(row->p, P->Constraint[i]+1+nvar, row->p, tmp, lcm, nparam+1);
+	Vector_Combine(row->p, Constraints->p[i]+1+nvar, row->p, tmp, lcm, nparam+1);
 	for (j = 0; j < nparam+1; ++j)
 	    if (value_notzero_p(row->p[j]))
 		break;
-	if ((supporting[i] = (j == nparam + 1)))
+	if (j == nparam + 1) {
+	    supporting[ix] |= bx;
 	    ++*n;
+	}
+	NEXT(ix, bx);
     }
     assert(*n >= nvar);
     value_clear(tmp);
@@ -209,16 +217,22 @@ Polyhedron* supporting_cone_p(Polyhedron *P, Param_Vertices *v)
     unsigned nparam = v->Vertex->NbColumns - 2;
     unsigned nvar = dim - nparam - 2;
     int i, n, j;
-    unsigned char *supporting;
+    int ix;
+    unsigned bx;
+    unsigned *supporting;
+    Matrix View;
 
-    supporting = supporting_constraints(P, v, &n);
+    Polyhedron_Matrix_View(P, &View, P->NbConstraints);
+    supporting = supporting_constraints(&View, v, &n);
     M = Matrix_Alloc(n, nvar+2);
     assert(M);
-    for (i = 0, j = 0; i < P->NbConstraints; ++i)
-	if (supporting[i]) {
+    for (i = 0, j = 0, ix = 0, bx = MSB; i < P->NbConstraints; ++i) {
+	if (supporting[ix] & bx) {
 	    value_set_si(M->p[j][nvar+1], 0);
 	    Vector_Copy(P->Constraint[i], M->p[j++], nvar+1);
 	}
+	NEXT(ix, bx);
+    }
     free(supporting);
     P = Constraints2Polyhedron(M, P->NbRays+1);
     assert(P);
