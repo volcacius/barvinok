@@ -35,20 +35,16 @@ void run_points2triangs(pid_t *child, int *in, int *out)
     *out = out_fd[0];
 }
 
-struct vertex {
-    Param_Vertices   vertex;
-    unsigned	    *facets;
-};
-
 struct domain {
     Param_Domain    domain;
     int		    F_len;
 };
 
-static struct vertex *construct_vertex(unsigned *vertex_facets, Polyhedron *P,
+static Param_Vertices *construct_vertex(unsigned *vertex_facets,
+				       Matrix *Constraints,
 				       int d, unsigned nparam, unsigned MaxRays)
 {
-    unsigned nvar = P->Dimension - nparam;
+    unsigned nvar = Constraints->NbColumns-2 - nparam;
     Matrix *A = Matrix_Alloc(nvar+1, nvar+1);
     Matrix *inv = Matrix_Alloc(nvar+1, nvar+1);
     Matrix *B = Matrix_Alloc(nvar, nparam+2);
@@ -58,12 +54,12 @@ static struct vertex *construct_vertex(unsigned *vertex_facets, Polyhedron *P,
     unsigned bx;
     int i, j, ix;
     int ok;
-    struct vertex *vertex;
+    Param_Vertices *vertex;
 
     for (j = 0, i = 0, ix = 0, bx = MSB; i < d; ++i) {
 	if ((vertex_facets[ix] & bx) == bx) {
-	    Vector_Copy(P->Constraint[i]+1, A->p[j], nvar);
-	    Vector_Oppose(P->Constraint[i]+1+nvar, B->p[j++], nparam+1);
+	    Vector_Copy(Constraints->p[i]+1, A->p[j], nvar);
+	    Vector_Oppose(Constraints->p[i]+1+nvar, B->p[j++], nparam+1);
 	}
 	NEXT(ix, bx);
     }
@@ -86,7 +82,7 @@ static struct vertex *construct_vertex(unsigned *vertex_facets, Polyhedron *P,
 	    NEXT(ix, bx);
 	    continue;
 	}
-	Param_Inner_Product(P->Constraint[i], V, Domain->p[j]);
+	Param_Inner_Product(Constraints->p[i], V, Domain->p[j]);
 	if (First_Non_Zero(Domain->p[j]+1, nparam+1) == -1)
 	    vertex_facets[ix] |= bx;
 	else
@@ -112,32 +108,32 @@ static struct vertex *construct_vertex(unsigned *vertex_facets, Polyhedron *P,
 	Domain = NULL;
     }
     Polyhedron_Free(AD);
-    vertex = calloc(1, sizeof(struct vertex));
-    vertex->facets = vertex_facets;
-    vertex->vertex.Vertex = V;
-    vertex->vertex.Domain = Domain;
+    vertex = calloc(1, sizeof(Param_Vertices));
+    vertex->Facets = vertex_facets;
+    vertex->Vertex = V;
+    vertex->Domain = Domain;
     return vertex;
 }
 
-static int add_vertex_to_domain(struct vertex **vertices, int words,
+static int add_vertex_to_domain(Param_Vertices **vertices, int words,
 				unsigned *vertex_facets,
-				Polyhedron *P, int d, unsigned nparam,
+				Matrix *Constraints, int d, unsigned nparam,
 				struct domain *domain,
 				unsigned MaxRays)
 {
-    struct vertex *vertex;
+    Param_Vertices *vertex;
     unsigned vbx;
     int vi, vix;
 
     for (vi = 0, vix = 0, vbx = MSB;
 	    *vertices;
-	    vertices = (struct vertex **)&(*vertices)->vertex.next, ++vi) {
+	    vertices = &(*vertices)->next, ++vi) {
 	int i;
 	for (i = 0; i < words; ++i)
-	    if (((*vertices)->facets[i] & vertex_facets[i]) != vertex_facets[i])
+	    if (((*vertices)->Facets[i] & vertex_facets[i]) != vertex_facets[i])
 		break;
 	if (i >= words) {
-	    if (!(*vertices)->vertex.Domain)
+	    if (!(*vertices)->Domain)
 		domain->F_len = 0;
 	    else
 		domain->domain.F[vix] |= vbx;
@@ -152,12 +148,12 @@ static int add_vertex_to_domain(struct vertex **vertices, int words,
 				   domain->F_len * sizeof(unsigned));
 	domain->domain.F[domain->F_len-1] = 0;
     }
-    vertex = construct_vertex(vertex_facets, P, d, nparam, MaxRays);
-    if (!vertex->vertex.Domain)
+    vertex = construct_vertex(vertex_facets, Constraints, d, nparam, MaxRays);
+    if (!vertex->Domain)
 	domain->F_len = 0;
     else
 	domain->domain.F[vix] |= vbx;
-    vertex->vertex.next = &(*vertices)->vertex;
+    vertex->next = *vertices;
     *vertices = vertex;
     return 1;
 }
@@ -177,21 +173,21 @@ static int bit_count(unsigned *F, int F_len)
     return count;
 }
 
-static void compute_domain(struct domain *domain, struct vertex *vertices,
+static void compute_domain(struct domain *domain, Param_Vertices *vertices,
 			   Polyhedron *C, unsigned MaxRays)
 {
     unsigned bx;
     int i, ix, j;
     int nbV = bit_count(domain->domain.F, domain->F_len);
-    unsigned cols = vertices->vertex.Domain->NbColumns;
-    unsigned rows = vertices->vertex.Domain->NbRows;
+    unsigned cols = vertices->Domain->NbColumns;
+    unsigned rows = vertices->Domain->NbRows;
     Matrix *Constraints = Matrix_Alloc(nbV * rows + C->NbConstraints, cols);
 
     for (i = 0, j = 0, ix = 0, bx = MSB;
 	    vertices;
-	    vertices = (struct vertex *)vertices->vertex.next, ++i) {
+	    vertices = vertices->next, ++i) {
 	if ((domain->domain.F[ix] & bx) == bx)
-	    Vector_Copy(vertices->vertex.Domain->p[0],
+	    Vector_Copy(vertices->Domain->p[0],
 			Constraints->p[(j++)*rows], rows * cols);
 	NEXT(ix, bx);
     }
@@ -201,7 +197,7 @@ static void compute_domain(struct domain *domain, struct vertex *vertices,
 }
 
 static void add_domain(struct domain **domains, struct domain *domain,
-		       struct vertex *vertices, Polyhedron *C,
+		       Param_Vertices *vertices, Polyhedron *C,
 		       struct barvinok_options *options)
 {
     options->stats->topcom_chambers++;
@@ -263,16 +259,6 @@ static void remove_empty_chambers(Param_Domain **PD, unsigned vertex_words)
     }
 }
 
-/* Clean up memory in struct vertex not in Param_Vertices.
- * We could also remove the vertices we don't need, but
- * then we'd have to fix up the vertex masks in the domains.
- */
-static void clean_up_vertices(Param_Vertices *V)
-{
-    for (; V; V = V->next)
-	free(((struct vertex *)V)->facets);
-}
-
 static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
 					struct barvinok_options *options)
 {
@@ -282,13 +268,14 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
     FILE *fin, *fout;
     int d = K->NbRows;
     int words = (d+INT_BITS-1)/INT_BITS;
-    struct vertex *vertices = NULL;
+    Param_Vertices *vertices = NULL;
     struct domain *domains = NULL;
     int vertex_words = 1;
     Param_Polyhedron *PP = ALLOC(Param_Polyhedron);
     unsigned MaxRays = options->MaxRays;
 
     PP->nbV = 0;
+    PP->Constraints = Polyhedron2Constraints(P);
     /* We need the exact facets, because we may make some of them open later */
     POL_UNSET(options->MaxRays, POL_INTEGER);
 
@@ -325,8 +312,9 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
 	    }
 	    if (!domain->F_len)
 		free(F);
-	    else if (add_vertex_to_domain(&vertices, words, F, P, d, C->Dimension,
-					 domain, options->MaxRays))
+	    else if (add_vertex_to_domain(&vertices, words, F, PP->Constraints,
+					  d, C->Dimension,
+					  domain, options->MaxRays))
 		++PP->nbV;
 	    if ((c = fgetc(fout)) != ',')	/* , or } */
 		ungetc(c, fout);
@@ -344,11 +332,10 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
     }
     fclose(fout);
 
-    PP->V = &vertices->vertex;
+    PP->V = vertices;
     PP->D = &domains->domain;
 
     remove_empty_chambers(&PP->D, vertex_words);
-    clean_up_vertices(PP->V);
 
     options->MaxRays = MaxRays;
 

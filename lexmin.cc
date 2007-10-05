@@ -500,15 +500,15 @@ struct indicator_constructor : public signed_cone_consumer,
     vec_ZZ vertex;
     vector<indicator_term*> *terms;
     Matrix *T;	/* Transformation to original space */
-    Param_Polyhedron *PP;
+    int nbV;
     int pos;
     int n;
 
     indicator_constructor(Polyhedron *P, unsigned dim, Param_Polyhedron *PP,
 			  Matrix *T) :
-		vertex_decomposer(P, PP->nbV, *this), T(T), PP(PP) {
+		vertex_decomposer(PP, *this), T(T), nbV(PP->nbV) {
 	vertex.SetLength(dim);
-	terms = new vector<indicator_term*>[nbV];
+	terms = new vector<indicator_term*>[PP->nbV];
     }
     ~indicator_constructor() {
 	for (int i = 0; i < nbV; ++i)
@@ -580,7 +580,7 @@ void indicator_constructor::handle(const signed_cone& sc, barvinok_options *opti
 
 void indicator_constructor::print(ostream& os, char **p)
 {
-    for (int i = 0; i < nbV; ++i)
+    for (int i = 0; i < PP->nbV; ++i)
 	for (int j = 0; j < terms[i].size(); ++j) {
 	    os << "i: " << i << ", j: " << j << endl;
 	    terms[i][j]->print(os, p);
@@ -590,7 +590,7 @@ void indicator_constructor::print(ostream& os, char **p)
 
 void indicator_constructor::normalize()
 {
-    for (int i = 0; i < nbV; ++i)
+    for (int i = 0; i < PP->nbV; ++i)
 	for (int j = 0; j < terms[i].size(); ++j) {
 	    vec_ZZ vertex;
 	    vertex.SetLength(terms[i][j]->den.NumCols());
@@ -1211,7 +1211,7 @@ struct indicator {
 	if (this->D)
 	    delete this->D;
 	this->D = D;
-	int nparam = ic.P->Dimension - ic.vertex.length();
+	int nparam = ic.PP->Constraints->NbColumns-2 - ic.vertex.length();
 	if (options->reduce) {
 	    Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
 	    Q = DomainConstraintSimplify(Q, options->verify.barvinok->MaxRays);
@@ -1302,7 +1302,7 @@ void partial_order::sanity_check() const
 max_term* indicator::create_max_term(const indicator_term *it)
 {
     int dim = it->den.NumCols();
-    int nparam = ic.P->Dimension - ic.vertex.length();
+    int nparam = ic.PP->Constraints->NbColumns-2 - ic.vertex.length();
     max_term *maximum = new max_term;
     maximum->domain = new EDomain(D);
     for (int j = 0; j < dim; ++j) {

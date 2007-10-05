@@ -7,6 +7,7 @@
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "decomposer.h"
+#include "param_util.h"
 #include "reduce_domain.h"
 
 #ifdef NTL_STD_CXX
@@ -338,6 +339,7 @@ static void primal_decompose(Polyhedron *cone, signed_cone_consumer& scc,
 void barvinok_decompose(Polyhedron *C, signed_cone_consumer& scc,
 			barvinok_options *options)
 {
+    POL_ENSURE_VERTICES(C);
     if (options->primal)
 	primal_decompose(C, scc, options);
     else
@@ -347,7 +349,7 @@ void barvinok_decompose(Polyhedron *C, signed_cone_consumer& scc,
 void vertex_decomposer::decompose_at_vertex(Param_Vertices *V, int _i, 
 					    barvinok_options *options)
 {
-    Polyhedron *C = supporting_cone_p(P, V);
+    Polyhedron *C = Param_Vertex_Cone(PP, V, options);
     vert = _i;
     this->V = V;
 

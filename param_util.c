@@ -132,3 +132,61 @@ Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *P, Polyhedron *C,
 	assert(0);
     }
 }
+
+#define INT_BITS (sizeof(unsigned) * 8)
+
+static int bit_count(unsigned *F, int F_len)
+{
+    int i;
+    int count = 0;
+
+    for (i = 0; i < F_len; ++i) {
+	unsigned v = F[i];
+	while (v) {
+	    v &= v-1;
+	    ++count;
+	}
+    }
+    return count;
+}
+
+Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
+			      struct barvinok_options *options)
+{
+    int i, j, ix;
+    unsigned bx;
+    int len = (PP->Constraints->NbRows+INT_BITS-1)/INT_BITS;
+    int n;
+    Matrix *M;
+    Polyhedron *C;
+    unsigned nvar = V->Vertex->NbRows;
+    unsigned nparam = V->Vertex->NbColumns - 2;
+
+    if (!V->Facets) {
+	int i, ix;
+	unsigned bx;
+	Vector *row = Vector_Alloc(1 + nparam + 1);
+
+	V->Facets = (unsigned *)calloc(len, sizeof(unsigned));
+	for (i = 0, ix = 0, bx = MSB; i < PP->Constraints->NbRows; ++i) {
+	    Param_Inner_Product(PP->Constraints->p[i], V->Vertex, row->p);
+	    if (First_Non_Zero(row->p+1, nparam+1) == -1)
+		V->Facets[ix] |= bx;
+	    NEXT(ix, bx);
+	}
+	Vector_Free(row);
+    }
+    n = bit_count(V->Facets, len);
+
+    M = Matrix_Alloc(n, 1+nvar+1);
+    assert(M);
+    for (i = 0, j = 0, ix = 0, bx = MSB; i < PP->Constraints->NbRows; ++i) {
+	if (V->Facets[ix] & bx)
+	    Vector_Copy(PP->Constraints->p[i], M->p[j++], 1+nvar);
+	NEXT(ix, bx);
+    }
+    C = Constraints2Polyhedron(M, options->MaxRays);
+    assert(C);
+    Matrix_Free(M);
+    return C;
+}

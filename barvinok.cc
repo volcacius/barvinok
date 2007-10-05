@@ -696,8 +696,8 @@ struct enumerator_base {
 	this->dim = dim;
 	this->vpd = vpd;
 
-	vE = new evalue_p[vpd->nbV];
-	for (int j = 0; j < vpd->nbV; ++j)
+	vE = new evalue_p[vpd->PP->nbV];
+	for (int j = 0; j < vpd->PP->nbV; ++j)
 	    vE[j] = 0;
 
 	value_init(mone.d);
@@ -715,7 +715,7 @@ struct enumerator_base {
     }
 
     virtual ~enumerator_base() {
-    	for (int j = 0; j < vpd->nbV; ++j)
+	for (int j = 0; j < vpd->PP->nbV; ++j)
 	    if (vE[j]) {
 		free_evalue_refs(vE[j]);
 		delete vE[j];
@@ -725,7 +725,8 @@ struct enumerator_base {
 	free_evalue_refs(&mone);
     }
 
-    static enumerator_base *create(Polyhedron *P, unsigned dim, unsigned nbV,
+    static enumerator_base *create(Polyhedron *P, unsigned dim,
+				     Param_Polyhedron *PP,
 				     barvinok_options *options);
 };
 
@@ -738,10 +739,8 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
     mpq_t count;
     Value tz;
 
-    enumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
-		vertex_decomposer(P, nbV, *this), enumerator_base(dim, this) {
-	this->P = P;
-	this->nbV = nbV;
+    enumerator(Polyhedron *P, unsigned dim, Param_Polyhedron *PP) :
+		vertex_decomposer(PP, *this), enumerator_base(dim, this) {
 	randomvector(P, lambda, dim);
 	den.SetLength(dim);
 	c = Vector_Alloc(dim+2);
@@ -962,8 +961,8 @@ struct ienumerator : public signed_cone_consumer, public vertex_decomposer,
     mpq_t tcount;
     Value tz;
 
-    ienumerator(Polyhedron *P, unsigned dim, unsigned nbV) :
-		vertex_decomposer(P, nbV, *this), ienumerator_base(dim, this) {
+    ienumerator(Polyhedron *P, unsigned dim, Param_Polyhedron *PP) :
+		vertex_decomposer(PP, *this), ienumerator_base(dim, this) {
 	vertex.SetDims(1, dim);
 
 	den.SetDims(dim, dim);
@@ -1202,8 +1201,8 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 		      public ienumerator_base {
     evalue *factor;
 
-    bfenumerator(Polyhedron *P, unsigned dim, unsigned nbV) : 
-		    vertex_decomposer(P, nbV, *this),
+    bfenumerator(Polyhedron *P, unsigned dim, Param_Polyhedron *PP) :
+		    vertex_decomposer(PP, *this),
 		    bf_base(dim), ienumerator_base(dim, this) {
 	lower = 0;
 	factor = NULL;
@@ -1299,17 +1298,18 @@ struct bfenumerator : public vertex_decomposer, public bf_base,
 		     barvinok_options *options);
 };
 
-enumerator_base *enumerator_base::create(Polyhedron *P, unsigned dim, unsigned nbV,
+enumerator_base *enumerator_base::create(Polyhedron *P, unsigned dim,
+					 Param_Polyhedron *PP,
 					 barvinok_options *options)
 {
     enumerator_base *eb;
 
     if (options->incremental_specialization == BV_SPECIALIZATION_BF)
-	eb = new bfenumerator(P, dim, nbV);
+	eb = new bfenumerator(P, dim, PP);
     else if (options->incremental_specialization == BV_SPECIALIZATION_DF)
-	eb = new ienumerator(P, dim, nbV);
+	eb = new ienumerator(P, dim, PP);
     else
-	eb = new enumerator(P, dim, nbV);
+	eb = new enumerator(P, dim, PP);
 
     return eb;
 }
@@ -1614,7 +1614,7 @@ try_again:
     if (et)
 	delete et;
 
-    et = enumerator_base::create(P, dim, PP->nbV, options);
+    et = enumerator_base::create(P, dim, PP, options);
 
     Polyhedron *TC = true_context(P, C, options->MaxRays);
     FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, D, rVD)

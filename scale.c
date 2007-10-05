@@ -108,6 +108,25 @@ static void Param_Vertex_Image(Param_Vertices *V, Matrix *T)
     V->Vertex = Vertex;
 }
 
+static void apply_expansion(Param_Polyhedron *PP, Polyhedron **P,
+			    Matrix *expansion, unsigned MaxRays)
+{
+    int i;
+    unsigned nparam = PP->V->Vertex->NbColumns - 2;
+    unsigned nvar = PP->V->Vertex->NbRows;
+    Vector *constraint;
+
+    constraint = Vector_Alloc(nvar+nparam+1);
+    for (i = 0; i < PP->Constraints->NbRows; ++i) {
+	Vector_Matrix_Product(PP->Constraints->p[i]+1, expansion, constraint->p);
+	Vector_Copy(constraint->p, PP->Constraints->p[i]+1, nvar+nparam+1);
+	Vector_Normalize(PP->Constraints->p[i]+1, nvar+nparam+1);
+    }
+    Vector_Free(constraint);
+    if (P)
+	*P = Polyhedron_Preimage(*P, expansion, MaxRays);
+}
+
 /* Scales the parametric polyhedron with constraints *P and vertices PP
  * such that the number of integer points can be represented by a polynomial.
  * Both *P and P->Vertex are adapted according to the scaling.
@@ -176,7 +195,7 @@ void Param_Polyhedron_Scale_Integer_Slow(Param_Polyhedron *PP, Polyhedron **P,
     for (i = nvar; i < nvar+nparam+1; ++i)
 	value_assign(expansion->p[i][i], L->p[nvar][nvar]);
 
-    *P = Polyhedron_Preimage(*P, expansion, MaxRays);
+    apply_expansion(PP, P, expansion, MaxRays);
     Matrix_Free(expansion);
 
     /* apply the variable expansion to the parametric vertices */
@@ -274,8 +293,7 @@ void Param_Polyhedron_Scale_Integer_Fast(Param_Polyhedron *PP, Polyhedron **P,
     value_assign(expansion->p[i][i], global_var_lcm);
 
   /* d- apply the variable expansion to the polyhedron */
-  if (P)
-    *P = Polyhedron_Preimage(*P, expansion, MaxRays);
+  apply_expansion(PP, P, expansion, MaxRays);
 
   if (Lat) {
     Lattice *L = Matrix_Alloc(nb_vars+1, nb_vars+1);
@@ -555,6 +573,8 @@ static evalue *PP_enumerate_narrow_flated(Param_Polyhedron *PP,
     return eres;
 }
 
+#define INT_BITS (sizeof(unsigned) * 8)
+
 static Param_Polyhedron *Param_Polyhedron_Domain(Param_Polyhedron *PP,
 						 Param_Domain *D,
 						 Polyhedron *rVD)
@@ -564,12 +584,14 @@ static Param_Polyhedron *Param_Polyhedron_Domain(Param_Polyhedron *PP,
     int i, ix;
     unsigned bx;
     Param_Vertices **next, *V;
+    int facet_len = (PP->Constraints->NbRows+INT_BITS-1)/INT_BITS;
 
     PP_D = ALLOC(Param_Polyhedron);
     PP_D->D = ALLOC(Param_Domain);
     PP_D->D->next = NULL;
     PP_D->D->Domain = Domain_Copy(rVD);
     PP_D->V = NULL;
+    PP_D->Constraints = Matrix_Copy(PP->Constraints);
 
     nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
     PP_D->D->F = ALLOCN(unsigned, nv);
@@ -584,6 +606,8 @@ static Param_Polyhedron *Param_Polyhedron_Domain(Param_Polyhedron *PP,
 	V2->Vertex = Matrix_Copy(V->Vertex);
 	V2->Domain = NULL;
 	V2->next = NULL;
+	V2->Facets = ALLOCN(unsigned, facet_len);
+	memcpy(V2->Facets, V->Facets, facet_len * sizeof(unsigned));
 	*next = V2;
 	next = &V2->next;
 	PP_D->D->F[ix] |= bx;

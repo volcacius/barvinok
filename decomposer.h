@@ -28,14 +28,13 @@ struct signed_cone_consumer {
 };
 
 struct vertex_decomposer {
-    Polyhedron *P;
-    unsigned nbV;	// number of vertices
+    Param_Polyhedron *PP;
     Param_Vertices *V;	// current vertex
     int vert;		// current vertex index
     signed_cone_consumer& scc;
 
-    vertex_decomposer(Polyhedron *P, unsigned nbV, signed_cone_consumer& scc) :
-			P(P), nbV(nbV), scc(scc) {}
+    vertex_decomposer(Param_Polyhedron *PP, signed_cone_consumer& scc) :
+			PP(PP), scc(scc) {}
     void decompose_at_vertex(Param_Vertices *V, int _i, barvinok_options *options);
 };
 

@@ -306,9 +306,9 @@ struct summator_2d : public signed_cone_consumer, public vertex_decomposer {
     evalue **subs_1d;
     evalue *sum;
 
-    summator_2d(evalue *e, Polyhedron *P, unsigned nbV, Value *inner,
+    summator_2d(evalue *e, Param_Polyhedron *PP, Value *inner,
 		unsigned nparam) :
-		polynomial(e), vertex_decomposer(P, nbV, *this),
+		polynomial(e), vertex_decomposer(PP, *this),
 		inner(inner), nparam(nparam) {
 	sum = evalue_zero();
 
@@ -331,11 +331,11 @@ struct summator_2d : public signed_cone_consumer, public vertex_decomposer {
 	delete [] subs_0d;
 	delete [] subs_1d;
     }
-    evalue *summate_over_pdomain(Param_Polyhedron *PP,
+    evalue *summate_over_pdomain(Polyhedron *P,
 				    Param_Domain *PD,
 				    struct barvinok_options *options);
     void handle_facet(Param_Polyhedron *PP, Param_Domain *FD, Value *normal);
-    void integrate(Param_Polyhedron *PP, Param_Domain *PD);
+    void integrate(Polyhedron *P, Param_Domain *PD);
     virtual void handle(const signed_cone& sc, barvinok_options *options);
 };
 
@@ -575,7 +575,7 @@ void summator_2d::handle(const signed_cone& sc, barvinok_options *options)
     evalue_free(res);
 }
 
-evalue *summator_2d::summate_over_pdomain(Param_Polyhedron *PP,
+evalue *summator_2d::summate_over_pdomain(Polyhedron *P,
 					Param_Domain *PD,
 					struct barvinok_options *options)
 {
@@ -602,7 +602,7 @@ evalue *summator_2d::summate_over_pdomain(Param_Polyhedron *PP,
     }
     Vector_Free(normal);
 
-    integrate(PP, PD);
+    integrate(P, PD);
 
     return sum;
 }
@@ -747,7 +747,7 @@ void summator_2d::handle_facet(Param_Polyhedron *PP, Param_Domain *FD,
 /* Integrate the polynomial over the whole polygon using
  * the Green-Stokes theorem.
  */
-void summator_2d::integrate(Param_Polyhedron *PP, Param_Domain *PD)
+void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
 {
     Value tmp;
     evalue *res = evalue_zero();
@@ -996,9 +996,9 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 	if (nvar == 1) {
 	    s[i].E = summate_over_1d_pdomain(e, PP, PD, F, inner->p+1, options);
 	} else if (nvar == 2) {
-	    summator_2d s2d(e, F, PP->nbV, inner->p+1, rVD->Dimension);
+	    summator_2d s2d(e, PP, inner->p+1, rVD->Dimension);
 
-	    s[i].E = s2d.summate_over_pdomain(PP, PD, options);
+	    s[i].E = s2d.summate_over_pdomain(F, PD, options);
 
 	}
 	Polyhedron_Free(F);
