@@ -190,3 +190,19 @@ Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
     Matrix_Free(M);
     return C;
 }
+
+/* Compute activity domain of a parametric vertex. */
+void Param_Vertex_Domain(Param_Vertices *V, Polyhedron *P)
+{
+    int i;
+    unsigned nparam = V->Vertex->NbColumns-2;
+
+    if (V->Domain)
+	return;
+
+    V->Domain = Matrix_Alloc(P->NbConstraints, 1+nparam+1);
+    for (i = 0; i < P->NbConstraints; ++i) {
+	Param_Inner_Product(P->Constraint[i], V->Vertex, V->Domain->p[i]);
+	value_assign(V->Domain->p[i][0], P->Constraint[i][0]);
+    }
+}
