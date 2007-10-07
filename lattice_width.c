@@ -4,6 +4,7 @@
 #include "hilbert.h"
 #include "lattice_width.h"
 #include "param_util.h"
+#include "reduce_domain.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
@@ -262,6 +263,7 @@ Polyhedron_Lattice_Width_Directions(Polyhedron *P, Polyhedron *C,
     int i, j, k;
     struct width_direction_array *width_dirs;
     Polyhedron *TC;
+    Vector *inner;
 
     assert(P->NbEq == 0);
     assert(C->NbEq == 0);
@@ -270,6 +272,7 @@ Polyhedron_Lattice_Width_Directions(Polyhedron *P, Polyhedron *C,
      * for every point in the context.
      */
     TC = true_context(P, C, options->MaxRays);
+    inner = inner_point(TC);
 
     /* This is overkill, as we discard the computed chambers. */
     PP = Polyhedron2Param_Polyhedron(P, TC, options);
@@ -313,7 +316,7 @@ Polyhedron_Lattice_Width_Directions(Polyhedron *P, Polyhedron *C,
 			    M->p[pos]+1, M->p[pos], nparam+1);
 	    value_set_si(M->p[pos][0], 1);
 	    Vector_Normalize(M->p[pos]+1, nparam+1);
-	    if (j < i)
+	    if (!is_internal(inner, M->p[pos]))
 		value_decrement(M->p[pos][nparam+1], M->p[pos][nparam+1]);
 	}
 	width_dirs->wd[i].domain = Constraints2Polyhedron(M, options->MaxRays);
@@ -324,6 +327,7 @@ Polyhedron_Lattice_Width_Directions(Polyhedron *P, Polyhedron *C,
 	Matrix_Free(M);
     }
     width_dirs->n = k;
+    Vector_Free(inner);
     Polyhedron_Free(TC);
 
     return width_dirs;
