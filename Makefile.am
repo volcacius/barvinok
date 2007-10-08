@@ -121,6 +121,8 @@ libbarvinok_la_SOURCES = \
     volume.h \
     mat_util.cc \
     mat_util.h \
+    matrix_read.cc \
+    matrix_read.h \
     barvinok.cc \
     barvinok_e.cc \
     $(BERNSTEIN_CC) \
