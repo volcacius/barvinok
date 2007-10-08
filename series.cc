@@ -60,13 +60,17 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
 	gf = new gen_fun(c);
 	value_clear(c);
     } else {
-	gf_base *red;
-	red = gf_base::create(Polyhedron_Project(P, nparam),
-			      P->Dimension, nparam, options);
 	POL_ENSURE_VERTICES(P);
-	red->start_gf(P, options);
-	gf = red->gf;
-	delete red;
+	if (P->NbEq)
+	    gf = series(Polyhedron_Copy(P), nparam, options);
+	else {
+	    gf_base *red;
+	    red = gf_base::create(Polyhedron_Project(P, nparam),
+				  P->Dimension, nparam, options);
+	    red->start_gf(P, options);
+	    gf = red->gf;
+	    delete red;
+	}
     }
     if (CP) {
 	gf->substitute(CP);

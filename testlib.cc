@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <sstream>
+#include <barvinok/barvinok.h>
 #include <barvinok/set.h>
 #include <barvinok/options.h>
 #include <barvinok/evalue.h>
@@ -10,6 +11,7 @@
 #include "lattice_point.h"
 #include "tcounter.h"
 #include "bernoulli.h"
+#include "matrix_read.h"
 
 using std::cout;
 using std::cerr;
@@ -150,6 +152,39 @@ int test_lattice_points(struct barvinok_options *options)
 	delete num.E[i];
     }
     delete [] num.E; 
+}
+
+static Matrix *matrix_read_from_str(const char *s)
+{
+    std::istringstream str(s);
+    return Matrix_Read(str);
+}
+
+static int test_series(struct barvinok_options *options)
+{
+    Matrix *M = matrix_read_from_str(
+	"12 11\n"
+	"   0    1    0    0    0    0    0    1    0    0    3 \n"
+	"   0    0    1    0    0    0    0   -1    1    0   -5 \n"
+	"   0    0    0    1    0    0    0    0   -2   -1    6 \n"
+	"   0    0    0    0    1    0    0    1    1    0    5 \n"
+	"   0    0    0    0    0    1    0    0   -1    0    0 \n"
+	"   0    0    0    0    0    0    1   -2    0   -1   -3 \n"
+	"   1    0    0    0    0    0    0    2    0    1    3 \n"
+	"   1    0    0    0    0    0    0    1   -1    0    5 \n"
+	"   1    0    0    0    0    0    0   -1   -1    0   -5 \n"
+	"   1    0    0    0    0    0    0   -1    0    0   -3 \n"
+	"   1    0    0    0    0    0    0    0    2    1   -6 \n"
+	"   1    0    0    0    0    0    0    0    1    0    0 \n");
+    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    Polyhedron *C = Universe_Polyhedron(3);
+    gen_fun *gf = barvinok_series_with_options(P, C, options);
+    Polyhedron_Free(P);
+    Polyhedron_Free(C);
+    delete gf;
+
+    return 0;
 }
 
 int test_todd(struct barvinok_options *options)
@@ -325,6 +360,7 @@ int main(int argc, char **argv)
     test_split_periods(options);
     test_specialization(options);
     test_lattice_points(options);
+    test_series(options);
     test_todd(options);
     test_bernoulli(options);
     test_bernoulli_sum(options);
