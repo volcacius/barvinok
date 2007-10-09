@@ -47,7 +47,6 @@ struct counter : public counter_base {
 	mpq_set_si(count, 0, 0);
     }
 
-    void add_falling_powers(dpoly& n, Value c);
     virtual void add_lattice_points(int sign);
 };
 

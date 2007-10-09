@@ -36,7 +36,7 @@ void counter_base::handle(const mat_ZZ& rays, Value *V, const QQ& c,
     add_lattice_points(sign);
 }
 
-void counter::add_falling_powers(dpoly& n, Value degree)
+static void add_falling_powers(dpoly& n, Value degree)
 {
     value_increment(n.coeff->p[0], n.coeff->p[0]);
     if (n.coeff->Size == 1)
