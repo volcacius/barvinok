@@ -425,73 +425,85 @@ void split_one(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
 
 void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
-    int r;
-    unsigned len = den_f.NumRows();  // number of factors in den
-    vec_ZZ den_s;
-    den_s.SetLength(len);
-    assert(num.length() == 1);
-    ZZ num_s = num[0];
-    for (r = 0; r < len; ++r)
-	den_s[r] = den_f[r][0];
-    int sign = (len % 2) ? -1 : 1;
-
-    zz2value(num_s, tz);
-    dpoly n(len, tz);
-    zz2value(den_s[0], tz);
-    dpoly D(len, tz, 1);
-    for (int k = 1; k < len; ++k) {
-	zz2value(den_s[k], tz);
-	dpoly fact(len, tz, 1);
-	D *= fact;
-    }
-    mpq_set_si(tcount, 0, 1);
-    n.div(D, tcount, 1);
     zz2value(c.n, tn);
-    if (sign == -1)
-	value_oppose(tn, tn);
     zz2value(c.d, td);
-    mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
-    mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
-    mpq_canonicalize(tcount);
+
+    unsigned len = den_f.NumRows();  // number of factors in den
+
+    if (len > 0) {
+	int r;
+	vec_ZZ den_s;
+	den_s.SetLength(len);
+	assert(num.length() == 1);
+	ZZ num_s = num[0];
+	for (r = 0; r < len; ++r)
+	    den_s[r] = den_f[r][0];
+	int sign = (len % 2) ? -1 : 1;
+
+	zz2value(num_s, tz);
+	dpoly n(len, tz);
+	zz2value(den_s[0], tz);
+	dpoly D(len, tz, 1);
+	for (int k = 1; k < len; ++k) {
+	    zz2value(den_s[k], tz);
+	    dpoly fact(len, tz, 1);
+	    D *= fact;
+	}
+	mpq_set_si(tcount, 0, 1);
+	n.div(D, tcount, 1);
+	if (sign == -1)
+	    value_oppose(tn, tn);
+
+	mpz_mul(mpq_numref(tcount), mpq_numref(tcount), tn);
+	mpz_mul(mpq_denref(tcount), mpq_denref(tcount), td);
+	mpq_canonicalize(tcount);
+    } else {
+	value_assign(mpq_numref(tcount), tn);
+	value_assign(mpq_denref(tcount), td);
+    }
     mpq_add(count, count, tcount);
 }
 
 void infinite_icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
-    int r;
-    unsigned len = den_f.NumRows();  // number of factors in den
-    vec_ZZ den_s;
-    den_s.SetLength(len);
-    assert(num.length() == 1);
-    ZZ num_s = num[0];
-
-    for (r = 0; r < len; ++r)
-	den_s[r] = den_f[r][0];
-    int sign = (len % 2) ? -1 : 1;
-
-    zz2value(num_s, tz);
-    dpoly n(len, tz);
-    zz2value(den_s[0], tz);
-    dpoly D(len, tz, 1);
-    for (int k = 1; k < len; ++k) {
-	zz2value(den_s[k], tz);
-	dpoly fact(len, tz, 1);
-	D *= fact;
-    }
-
     Value tmp;
     mpq_t factor;
     mpq_init(factor);
     value_init(tmp);
     zz2value(c.n, tmp);
-    if (sign == -1)
-	value_oppose(tmp, tmp);
     value_assign(mpq_numref(factor), tmp);
     zz2value(c.d, tmp);
     value_assign(mpq_denref(factor), tmp);
-
-    n.div(D, count, factor);
-
     value_clear(tmp);
+
+    unsigned len = den_f.NumRows();  // number of factors in den
+
+    if (len > 0) {
+	int r;
+	vec_ZZ den_s;
+	den_s.SetLength(len);
+	assert(num.length() == 1);
+	ZZ num_s = num[0];
+
+	for (r = 0; r < len; ++r)
+	    den_s[r] = den_f[r][0];
+	int sign = (len % 2) ? -1 : 1;
+
+	zz2value(num_s, tz);
+	dpoly n(len, tz);
+	zz2value(den_s[0], tz);
+	dpoly D(len, tz, 1);
+	for (int k = 1; k < len; ++k) {
+	    zz2value(den_s[k], tz);
+	    dpoly fact(len, tz, 1);
+	    D *= fact;
+	}
+
+	if (sign == -1)
+	    value_oppose(mpq_numref(factor), mpq_numref(factor));
+	n.div(D, count, factor);
+    } else
+	mpq_add(count[0], count[0], factor);
+
     mpq_clear(factor);
 }

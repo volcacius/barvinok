@@ -154,6 +154,20 @@ int test_lattice_points(struct barvinok_options *options)
     delete [] num.E; 
 }
 
+static int test_icounter(struct barvinok_options *options)
+{
+    icounter cnt(2);
+    vec_QQ n_coeff;
+    mat_ZZ n_power;
+    mat_ZZ d_power;
+    set_from_string(n_coeff, "[-2/1 1/1]");
+    set_from_string(n_power, "[[2 6][3 6]]");
+    d_power.SetDims(0, 2);
+    cnt.reduce(n_coeff, n_power, d_power);
+    assert(value_cmp_si(mpq_numref(cnt.count), -1) == 0);
+    assert(value_cmp_si(mpq_denref(cnt.count), 1) == 0);
+}
+
 static Matrix *matrix_read_from_str(const char *s)
 {
     std::istringstream str(s);
@@ -377,6 +391,7 @@ int main(int argc, char **argv)
     test_split_periods(options);
     test_specialization(options);
     test_lattice_points(options);
+    test_icounter(options);
     test_series(options);
     test_todd(options);
     test_bernoulli(options);
