@@ -127,8 +127,6 @@ struct icounter : public ireducer {
     }
 };
 
-void normalize(ZZ& sign, ZZ& num, vec_ZZ& den);
-
 /* An incremental counter for possibly infinite sets.
  * Rather than just keeping track of the constant term
  * of the Laurent expansions, we also keep track of the

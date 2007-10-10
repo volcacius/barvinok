@@ -67,6 +67,12 @@ Vector *dpoly::div(const dpoly& d)
     Vector *denom = Vector_Alloc(len);
     Value tmp;
     value_init(tmp);
+
+    /* Make sure denominators are positive */
+    if (value_neg_p(d.coeff->p[0])) {
+	Vector_Oppose(d.coeff->p, d.coeff->p, d.coeff->Size);
+	Vector_Oppose(coeff->p, coeff->p, coeff->Size);
+    }
     value_assign(denom->p[0], d.coeff->p[0]);
     for (int i = 1; i < len; ++i) {
 	value_multiply(denom->p[i], denom->p[i-1], denom->p[0]);

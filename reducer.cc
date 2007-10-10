@@ -423,24 +423,6 @@ void split_one(const mat_ZZ& num, vec_ZZ& num_s, mat_ZZ& num_p,
     }
 }
 
-void normalize(ZZ& sign, ZZ& num, vec_ZZ& den)
-{
-    unsigned dim = den.length();
-
-    int change = 0;
-
-    for (int j = 0; j < den.length(); ++j) {
-	if (den[j] > 0)
-	    change ^= 1;
-	else {
-	    den[j] = abs(den[j]);
-	    num += den[j];
-	}
-    }
-    if (change)
-	sign = -sign;
-}
-
 void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
 {
     int r;
@@ -451,8 +433,7 @@ void icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f)
     ZZ num_s = num[0];
     for (r = 0; r < len; ++r)
 	den_s[r] = den_f[r][0];
-    ZZ sign = ZZ(INIT_VAL, 1);
-    normalize(sign, num_s, den_s);
+    int sign = (len % 2) ? -1 : 1;
 
     zz2value(num_s, tz);
     dpoly n(len, tz);
@@ -486,8 +467,7 @@ void infinite_icounter::base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f
 
     for (r = 0; r < len; ++r)
 	den_s[r] = den_f[r][0];
-    ZZ sign = ZZ(INIT_VAL, 1);
-    normalize(sign, num_s, den_s);
+    int sign = (len % 2) ? -1 : 1;
 
     zz2value(num_s, tz);
     dpoly n(len, tz);
