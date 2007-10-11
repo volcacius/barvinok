@@ -35,7 +35,7 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
 {
     int k;
     int ok;
-    Value c, tmp;
+    Value c, tmp, one;
     int pa = options->barvinok->polynomial_approximation;
     struct check_poly_EP_data* EP_data = (struct check_poly_EP_data*) data;
     const evalue *EP = EP_data->EP;
@@ -44,6 +44,8 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
 
     value_init(c);
     value_init(tmp);
+    value_init(one);
+    value_set_si(one, 1);
   
     /* Computes the ehrhart polynomial */
     if (!options->exact) {
@@ -64,28 +66,11 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
 	evalue_free(res);
     }
 
-    if (options->print_all) {
-	printf("EP(");
-	value_print(stdout, VALUE_FMT, z[0]);
-	for (k = 1; k < nparam; ++k) {
-	    printf(", ");
-	    value_print(stdout, VALUE_FMT, z[k]);
-	}
-	printf(") = ");
-	value_print(stdout, VALUE_FMT, c);
-    }
-
     /* Manually count the number of points */
     if (exist)
 	count_points_e(1, S, exist, nparam, data->z, &tmp);
     else
 	count_points(1, S, data->z, &tmp);
-
-    if (options->print_all) {
-	printf(", count = ");
-	value_print(stdout, VALUE_FMT, tmp);
-	printf(". ");
-    }
 
     if (pa == BV_APPROX_SIGN_APPROX)
 	/* just accept everything */
@@ -97,21 +82,10 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
     else
 	ok = value_eq(c, tmp);
 
+    check_poly_print(ok, nparam, z, tmp, one, c, one,
+		     "EP", "count", "EP eval", options);
+
     if (!ok) {
-	printf("\n"); 
-	fflush(stdout);
-	fprintf(stderr, "Error !\n");
-	fprintf(stderr, "EP(");
-	value_print(stderr, VALUE_FMT, z[0]);
-	for (k = 1; k < nparam; ++k) {
-	    fprintf(stderr,", ");
-	    value_print(stderr, VALUE_FMT, z[k]);
-	}
-	fprintf(stderr, ") should be ");
-	value_print(stderr, VALUE_FMT, tmp);
-	fprintf(stderr, ", while EP eval gives ");
-	value_print(stderr, VALUE_FMT, c);
-	fprintf(stderr, ".\n");
 	print_evalue(stderr, EP, options->params);
 	if (value_zero_p(EP->d) && EP->x.p->type == partition)
 	    for (k = 0; k < EP->x.p->size/2; ++k) {
@@ -121,11 +95,11 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
 		    print_evalue(stderr, &EP->x.p->arr[2*k+1], options->params);
 		}
 	}
-    } else if (options->print_all)
-	printf("OK.\n");
+    }
 
     value_clear(c);
     value_clear(tmp);
+    value_clear(one);
 
     return ok;
 }

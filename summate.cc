@@ -116,60 +116,12 @@ static int check_poly_sum(const struct check_poly_data *data,
     int ok;
 
     e = evalue_eval(sum_data->sum, z);
-    if (options->print_all) {
-	printf("sum(");
-	value_print(stdout, VALUE_FMT, z[0]);
-	for (k = 1; k < nparam; ++k) {
-	    printf(", ");
-	    value_print(stdout, VALUE_FMT, z[k]);
-	}
-	printf(") = ");
-	value_print(stdout, VALUE_FMT, e->x.n);
-	if (value_notone_p(e->d)) {
-	    printf("/");
-	    value_print(stdout, VALUE_FMT, e->d);
-	}
-    }
-
     s = sum(sum_data, options);
-
-    if (options->print_all) {
-	printf(", sum(EP) = ");
-	value_print(stdout, VALUE_FMT, s->x.n);
-	if (value_notone_p(s->d)) {
-	    printf("/");
-	    value_print(stdout, VALUE_FMT, s->d);
-	}
-	printf(". ");
-    }
 
     ok = eequal(e, s);
 
-    if (!ok) {
-	printf("\n"); 
-	fflush(stdout);
-	fprintf(stderr,"Error !\n");
-	fprintf(stderr,"sum( ");
-	value_print(stderr, VALUE_FMT, z[0]);
-	for (k = 1; k < nparam; ++k) {
-	    fprintf(stderr, ", ");
-	    value_print(stderr, VALUE_FMT, z[k]);
-	}
-	fprintf(stderr," ) should be ");
-	value_print(stderr, VALUE_FMT, s->x.n);
-	if (value_notone_p(s->d)) {
-	    fprintf(stderr, "/");
-	    value_print(stderr, VALUE_FMT, s->d);
-	}
-	fprintf(stderr,", while summation gives ");
-	value_print(stderr, VALUE_FMT, e->x.n);
-	if (value_notone_p(e->d)) {
-	    fprintf(stderr, "/");
-	    value_print(stderr, VALUE_FMT, e->d);
-	}
-	fprintf(stderr, ".\n");
-    } else if (options->print_all)
-	printf("OK.\n");
+    check_poly_print(ok, nparam, z, s->x.n, s->d, e->x.n, e->d,
+		     "sum", "sum(EP)", "summation", options);
 
     evalue_free(s);
     evalue_free(e);

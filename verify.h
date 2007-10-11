@@ -29,6 +29,12 @@ Polyhedron *check_poly_context_scan(Polyhedron *P, Polyhedron **C,
 				    unsigned nparam,
 				    const struct verify_options *options);
 void check_poly_init(Polyhedron *C, struct verify_options *options);
+void check_poly_print(int ok, int nparam, Value *z,
+		      Value want_n, Value want_d,
+		      Value got_n, Value got_d,
+		      const char *op, const char *check,
+		      const char *long_op,
+		      const struct verify_options *options);
 
 struct check_poly_data;
 typedef int (*check_poly_fun)(const struct check_poly_data *data,

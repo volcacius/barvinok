@@ -180,13 +180,15 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 			int nparam, int pos, Value *z, verify_options *options)
 {
     int k;
-    Value c, tmp;
+    Value c, tmp, one;
     Value LB, UB;
 
     value_init(c);
     value_init(tmp);
     value_init(LB);
     value_init(UB);
+    value_init(one);
+    value_set_si(one, 1);
 
     if (pos == nparam) {
 	/* Computes the coefficient */
@@ -195,47 +197,19 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 	/* if c=0 we may be out of context. */
 	/* scanning is useless in this case*/
 
-	if (options->print_all) {
-	    printf("EP( ");
-	    value_print(stdout,VALUE_FMT,z[S->Dimension-nparam+1]);
-	    for(k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-		printf(", ");
-		value_print(stdout,VALUE_FMT,z[k]);
-	    }
-	    printf(" ) = ");
-	    value_print(stdout,VALUE_FMT,c);
-	    printf(" ");
-	}
-
 	/* Manually count the number of points */
 	count_points(1,S,z,&tmp);
-	if (options->print_all) {
-	    printf(", count = ");
-	    value_print(stdout, P_VALUE_FMT, tmp);
-	    printf(". ");
-	}
+
+	check_poly_print(value_eq(tmp, c), nparam, z+1+S->Dimension-nparam,
+		 	 tmp, one, c, one,
+			 "EP", "count", "EP eval", options);
 
 	if (value_ne(tmp,c)) {
-	    printf("\n"); 
-	    fflush(stdout);
-	    fprintf(stderr,"Error !\n");
-	    fprintf(stderr,"EP( ");
-	    value_print(stderr,VALUE_FMT,z[S->Dimension-nparam+1]);
-	    for (k=S->Dimension-nparam+2;k<=S->Dimension;++k) {
-		fprintf(stderr,", ");
-		value_print(stderr,VALUE_FMT,z[k]);
-	    }
-	    fprintf(stderr," ) should be ");
-	    value_print(stderr,VALUE_FMT,tmp);
-	    fprintf(stderr,", while EP eval gives ");
-	    value_print(stderr,VALUE_FMT,c);
-	    fprintf(stderr,".\n");
 	    if (!options->continue_on_error) {
 		value_clear(c); value_clear(tmp);
 		return 0;
 	    }
-	} else if (options->print_all)
-	    printf("OK.\n");
+	}
     } else {
         int ok = 
 	  !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
@@ -261,6 +235,7 @@ static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
 
     value_clear(c);
     value_clear(tmp);
+    value_clear(one);
     value_clear(LB);
     value_clear(UB);
     return 1;

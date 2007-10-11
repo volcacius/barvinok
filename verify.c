@@ -166,6 +166,57 @@ void check_poly_init(Polyhedron *C, struct verify_options *options)
     fflush(stdout);
 }
 
+static void print_rational(FILE *out, Value n, Value d)
+{
+    value_print(out, VALUE_FMT, n);
+    if (value_notone_p(d)) {
+	fprintf(out, "/");
+	value_print(out, VALUE_FMT, d);
+    }
+}
+
+void check_poly_print(int ok, int nparam, Value *z,
+		      Value want_n, Value want_d,
+		      Value got_n, Value got_d,
+		      const char *op, const char *check,
+		      const char *long_op,
+		      const struct verify_options *options)
+{
+    int k;
+
+    if (options->print_all) {
+	printf("%s(", op);
+	value_print(stdout, VALUE_FMT, z[0]);
+	for (k = 1; k < nparam; ++k) {
+	    printf(", ");
+	    value_print(stdout, VALUE_FMT, z[k]);
+	}
+	printf(") = ");
+	print_rational(stdout, got_n, got_d);
+	printf(", %s = ", check);
+	print_rational(stdout, want_n, want_d);
+	printf(". ");
+    }
+
+    if (!ok) {
+	printf("\n");
+	fflush(stdout);
+	fprintf(stderr, "Error !\n");
+	fprintf(stderr, "%s(", op);
+	value_print(stderr, VALUE_FMT, z[0]);
+	for (k = 1; k < nparam; ++k) {
+	    fprintf(stderr,", ");
+	    value_print(stderr, VALUE_FMT, z[k]);
+	}
+	fprintf(stderr, ") should be ");
+	print_rational(stderr, want_n, want_d);
+	fprintf(stderr, ", while %s gives ", long_op);
+	print_rational(stderr, got_n, got_d);
+	fprintf(stderr, ".\n");
+    } else if (options->print_all)
+	printf("OK.\n");
+}
+
 /****************************************************/
 /* function check_poly :                            */
 /* scans the parameter space from Min to Max (all   */
