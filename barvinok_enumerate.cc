@@ -8,9 +8,11 @@
 #include "progname.h"
 #include "verify.h"
 #include "verif_ehrhart.h"
+#include "verify_series.h"
 #include "remove_equalities.h"
 #include "evalue_convert.h"
 #include "conversion.h"
+#include "skewed_genfun.h"
 
 #undef CS   /* for Solaris 10 */
 
@@ -81,166 +83,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-struct skewed_gen_fun {
-    gen_fun *gf;
-    /* maps original space to space in which gf is defined */
-    Matrix  *T;
-    /* equalities in the original space that need to be satisfied for
-     * gf to be valid
-     */
-    Matrix  *eq;
-    /* divisibilities in the original space that need to be satisfied for
-     * gf to be valid
-     */
-    Matrix  *div;
-
-    skewed_gen_fun(gen_fun *gf, Matrix *T, Matrix *eq, Matrix *div) :
-		    gf(gf), T(T), eq(eq), div(div) {}
-    ~skewed_gen_fun() {
-	if (T)
-	    Matrix_Free(T);
-	if (eq)
-	    Matrix_Free(eq);
-	if (div)
-	    Matrix_Free(div);
-	delete gf;
-    }
-
-    void print(std::ostream& os, unsigned int nparam, char **param_name) const;
-    operator evalue *() const {
-	assert(T == NULL && eq == NULL); /* other cases not supported for now */
-	return *gf;
-    }
-    void coefficient(Value* params, Value* c, barvinok_options *options) const;
-};
-
-void skewed_gen_fun::print(std::ostream& os, unsigned int nparam,
-			    char **param_name) const
-{
-    mat_ZZ m;
-    if (T) {
-	os << "T:" << endl;
-	matrix2zz(T, m, T->NbRows, T->NbColumns);
-	os << m << endl;
-    }
-    if (eq) {
-	os << "eq:" << endl;
-	matrix2zz(eq, m, eq->NbRows, eq->NbColumns);
-	os << m << endl;
-    }
-    if (div) {
-	os << "div:" << endl;
-	matrix2zz(div, m, div->NbRows, div->NbColumns);
-	os << m << endl;
-    }
-    gf->print(os, nparam, param_name);
-}
-
-void skewed_gen_fun::coefficient(Value* params, Value* c,
-				 barvinok_options *options) const
-{
-    if (eq) {
-	for (int i = 0; i < eq->NbRows; ++i) {
-	    Inner_Product(eq->p[i]+1, params, eq->NbColumns-2, eq->p[i]);
-	    if (value_notzero_p(eq->p[i][0])) {
-		value_set_si(*c, 0);
-		return;
-	    }
-	}
-    }
-    if (div) {
-	Value tmp;
-	value_init(tmp);
-	for (int i = 0; i < div->NbRows; ++i) {
-	    Inner_Product(div->p[i], params, div->NbColumns-1, &tmp);
-	    if (!mpz_divisible_p(tmp, div->p[i][div->NbColumns-1])) {
-		value_set_si(*c, 0);
-		return;
-	    }
-	}
-	value_clear(tmp);
-    }
-
-    ZZ coeff;
-    if (!T)
-	coeff = gf->coefficient(params, options);
-    else {
-	Vector *p2 = Vector_Alloc(T->NbRows);
-	Matrix_Vector_Product(T, params, p2->p);
-	if (value_notone_p(p2->p[T->NbRows-1]))
-	    Vector_AntiScale(p2->p, p2->p, p2->p[T->NbRows-1], T->NbRows);
-	coeff = gf->coefficient(p2->p, options);
-	Vector_Free(p2);
-    }
-
-    zz2value(coeff, *c);
-}
-
-static int check_series(Polyhedron *S, Polyhedron *CS, skewed_gen_fun *gf,
-			int nparam, int pos, Value *z, verify_options *options)
-{
-    int k;
-    Value c, tmp, one;
-    Value LB, UB;
-
-    value_init(c);
-    value_init(tmp);
-    value_init(LB);
-    value_init(UB);
-    value_init(one);
-    value_set_si(one, 1);
-
-    if (pos == nparam) {
-	/* Computes the coefficient */
-	gf->coefficient(&z[S->Dimension-nparam+1], &c, options->barvinok);
-
-	/* if c=0 we may be out of context. */
-	/* scanning is useless in this case*/
-
-	/* Manually count the number of points */
-	count_points(1,S,z,&tmp);
-
-	check_poly_print(value_eq(tmp, c), nparam, z+1+S->Dimension-nparam,
-		 	 tmp, one, c, one,
-			 "EP", "count", "EP eval", options);
-
-	if (value_ne(tmp,c)) {
-	    if (!options->continue_on_error) {
-		value_clear(c); value_clear(tmp);
-		return 0;
-	    }
-	}
-    } else {
-        int ok = 
-	  !(lower_upper_bounds(1+pos, CS, &z[S->Dimension-nparam], &LB, &UB));
-        assert(ok);
-	for (value_assign(tmp,LB); value_le(tmp,UB); value_increment(tmp,tmp)) {
-	    if (!options->print_all) {
-		k = VALUE_TO_INT(tmp);
-		if(!pos && !(k % options->st)) {
-		    printf("o");
-		    fflush(stdout);
-		}
-	    }
-	    value_assign(z[pos+S->Dimension-nparam+1],tmp);
-	    if (!check_series(S, CS->next, gf, nparam, pos+1, z, options)) {
-		value_clear(c); value_clear(tmp);
-		value_clear(LB);
-		value_clear(UB);
-		return(0);
-	    }
-	}
-	value_set_si(z[pos+S->Dimension-nparam+1],0);
-    }
-
-    value_clear(c);
-    value_clear(tmp);
-    value_clear(one);
-    value_clear(LB);
-    value_clear(UB);
-    return 1;
-}
-
 static int verify(Polyhedron *P, Polyhedron *C, evalue *EP, skewed_gen_fun *gf,
 		   arguments *options)
 {
@@ -265,7 +107,8 @@ static int verify(Polyhedron *P, Polyhedron *C, evalue *EP, skewed_gen_fun *gf,
 				&options->verify))
 		result = -1;
 	} else {
-	    if (!check_series(S, CS, gf, C->Dimension, 0, p->p, &options->verify))
+	    if (!check_poly_gf(S, CS, gf, 0, C->Dimension, 0, p->p,
+				&options->verify))
 		result = -1;
 	}
 	Domain_Free(S);
