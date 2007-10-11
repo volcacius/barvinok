@@ -27,6 +27,8 @@ struct argp_option argp_options[] = {
     { "omega",      	    'o',    0,      0 },
     { "pip",   	    	    'p',    0,      0 },
     { "series",     	    's',    0,	    0 },
+    { "series",		    's', 0, 0, "compute rational generating function" },
+    { "explicit",	    'e', 0, 0, "convert rgf to psp" },
     { "scarf",      	    'S',    0,	    0 },
     { "verbose",    	    'v' },
     { 0 }
@@ -40,6 +42,7 @@ struct arguments {
     int scarf;
     int series;
     int verbose;
+    int function;
 };
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -52,6 +55,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[1] = &arguments->verify;
 	state->child_inputs[2] = &arguments->convert;
 	break;
+    case 'e':
+	arguments->function = 1;
+	/* fall through */
     case 's':
 	arguments->series = 1;
 	break;
@@ -106,7 +112,7 @@ int main(int argc, char **argv)
     char **param_name;
     int exist, nparam, nvar;
     char s[128];
-    evalue *EP;
+    evalue *EP = NULL;
     int print_solution = 1;
     struct arguments arguments;
     static struct argp_child argp_children[] = {
@@ -123,6 +129,7 @@ int main(int argc, char **argv)
     arguments.pip = 0;
     arguments.scarf = 0;
     arguments.series = 0;
+    arguments.function = 0;
     arguments.verbose = 0;
 
     set_program_name(argv[0]);
@@ -173,6 +180,11 @@ int main(int argc, char **argv)
 	    gf->print(std::cout, nparam, param_name);
 	    puts("");
 	}
+	if (arguments.function) {
+	    EP = *gf;
+	    if (print_solution)
+		print_evalue(stdout, EP, param_name);
+	}
 	delete gf;
     } else {
 	if (arguments.scarf)
@@ -187,12 +199,13 @@ int main(int argc, char **argv)
 	    print_solution = 0;
 	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
-	if (arguments.verify.verify) {
-	    arguments.verify.params = param_name;
-	    verify_results(A, EP, exist, nparam, &arguments.verify);
-	}
-	evalue_free(EP);
     }
+    if (EP && arguments.verify.verify) {
+	arguments.verify.params = param_name;
+	verify_results(A, EP, exist, nparam, &arguments.verify);
+    }
+    if (EP)
+	evalue_free(EP);
     Free_ParamNames(param_name, nparam);
     Polyhedron_Free(A);
     barvinok_options_free(options);
