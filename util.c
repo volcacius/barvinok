@@ -1146,6 +1146,11 @@ void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
 	return;
     }
 
+    if (!exist) {
+	count_points(pos, P, context, res);
+	return;
+    }
+
     value_init(LB); value_init(UB); value_init(k);
     value_set_si(LB,0);
     value_set_si(UB,0);

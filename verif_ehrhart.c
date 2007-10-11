@@ -67,10 +67,7 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
     }
 
     /* Manually count the number of points */
-    if (exist)
-	count_points_e(1, S, exist, nparam, data->z, &tmp);
-    else
-	count_points(1, S, data->z, &tmp);
+    count_points_e(1, S, exist, nparam, data->z, &tmp);
 
     if (pa == BV_APPROX_SIGN_APPROX)
 	/* just accept everything */
