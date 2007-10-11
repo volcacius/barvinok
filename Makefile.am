@@ -302,6 +302,7 @@ check-approx: test_approx$(EXEEXT)
 check-evalue: @bv_barvinok_maximize@ barvinok_summate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
+		echo $$i; \
 		if test -n "@bv_barvinok_maximize@"; then \
 		    ./barvinok_maximize$(EXEEXT) -T < $$i || exit; \
 		fi; \
