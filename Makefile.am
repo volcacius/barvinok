@@ -189,10 +189,14 @@ barvinok_enumerate_e_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
 	$(FDSTREAM) \
+	skewed_genfun.cc \
+	skewed_genfun.h \
 	verify.h \
 	verify.c \
 	verif_ehrhart.h \
 	verif_ehrhart.c \
+	verify_series.h \
+	verify_series.cc \
 	$(BEEO_SOURCES)
 EXTRA_barvinok_enumerate_e_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)

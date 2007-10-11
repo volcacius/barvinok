@@ -10,8 +10,10 @@
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
 #endif
+#include "skewed_genfun.h"
 #include "verify.h"
 #include "verif_ehrhart.h"
+#include "verify_series.h"
 #include "evalue_convert.h"
 
 /* The input of this example program is a polytope in combined
@@ -102,8 +104,9 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 }
 #endif
 
-static void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
-			   verify_options *options);
+static void verify_results(Polyhedron *P, evalue *EP, gen_fun *gf,
+			   int exist, int nparam,
+			   arguments *options);
 
 int main(int argc, char **argv)
 {
@@ -113,6 +116,7 @@ int main(int argc, char **argv)
     int exist, nparam, nvar;
     char s[128];
     evalue *EP = NULL;
+    gen_fun *gf = NULL;
     int print_solution = 1;
     struct arguments arguments;
     static struct argp_child argp_children[] = {
@@ -173,7 +177,6 @@ int main(int argc, char **argv)
 	exist = A->Dimension - nvar - nparam;
     }
     if (arguments.series) {
-	gen_fun *gf;
 	assert(arguments.scarf);
 	gf = barvinok_enumerate_scarf_series(A, exist, nparam, options);
 	if (print_solution) {
@@ -185,7 +188,6 @@ int main(int argc, char **argv)
 	    if (print_solution)
 		print_evalue(stdout, EP, param_name);
 	}
-	delete gf;
     } else {
 	if (arguments.scarf)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
@@ -200,10 +202,12 @@ int main(int argc, char **argv)
 	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
     }
-    if (EP && arguments.verify.verify) {
+    if (arguments.verify.verify) {
 	arguments.verify.params = param_name;
-	verify_results(A, EP, exist, nparam, &arguments.verify);
+	verify_results(A, EP, gf, exist, nparam, &arguments);
     }
+    if (gf)
+	delete gf;
     if (EP)
 	evalue_free(EP);
     Free_ParamNames(param_name, nparam);
@@ -212,45 +216,48 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void verify_results(Polyhedron *P, evalue *EP, int exist, int nparam,
-		    verify_options *options)
+void verify_results(Polyhedron *P, evalue *EP, gen_fun *gf,
+		       int exist, int nparam,
+		       arguments *options)
 {
     int i;
-    int res;
-    Value *p, tmp;
+    int res = 0;
+    Vector *p;
+    Value tmp;
     Polyhedron *S, *CS;
-    unsigned MaxRays = options->barvinok->MaxRays;
+    unsigned MaxRays = options->verify.barvinok->MaxRays;
     Polyhedron *C = NULL;
     value_init(tmp);
 
-    p = (Value *)malloc(sizeof(Value) * (P->Dimension+2));
-    for(i=0;i<=P->Dimension;i++) {
-      value_init(p[i]);
-      value_set_si(p[i],0);
-    }
-    value_init(p[i]);
-    value_set_si(p[i],1);
+    p = Vector_Alloc(P->Dimension+2);
+    value_set_si(p->p[P->Dimension+1], 1);
 
-    CS = check_poly_context_scan(P, &C, nparam, options);
+    CS = check_poly_context_scan(P, &C, nparam, &options->verify);
 
     /* S = scanning list of polyhedra */
     S = Polyhedron_Scan(P, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
 
-    check_poly_init(C, options);
+    check_poly_init(C, &options->verify);
 
     /******* CHECK NOW *********/
-    res = 0;
-    if (S && !check_poly_EP(S, CS, EP, exist, nparam, 0, p, options)) {
-      fprintf(stderr,"Check failed !\n");
-      res = -1;
+    if (S) {
+	if (!options->series || options->function) {
+	    if (!check_poly_EP(S, CS, EP, exist, nparam, 0, p->p,
+				&options->verify))
+		res = -1;
+	} else {
+	    skewed_gen_fun *sgf = new skewed_gen_fun(new gen_fun(gf));
+	    if (!check_poly_gf(S, CS, sgf, exist, nparam, 0, p->p,
+				&options->verify))
+		res = -1;
+	    delete sgf;
+	}
     }
       
-    if (!options->print_all)
+    if (!options->verify.print_all)
 	printf( "\n" );
     
-    for(i=0;i<=(P->Dimension+1);i++) 
-      value_clear(p[i]);
-    free(p);
+    Vector_Free(p);
     value_clear(tmp);
     Domain_Free(S);
     Polyhedron_Free(C);

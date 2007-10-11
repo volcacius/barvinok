@@ -16,7 +16,8 @@ struct skewed_gen_fun {
      */
     Matrix  *div;
 
-    skewed_gen_fun(gen_fun *gf, Matrix *T, Matrix *eq, Matrix *div) :
+    skewed_gen_fun(gen_fun *gf, Matrix *T = NULL, Matrix *eq = NULL,
+		   Matrix *div = NULL) :
 		    gf(gf), T(T), eq(eq), div(div) {}
     ~skewed_gen_fun() {
 	if (T)
