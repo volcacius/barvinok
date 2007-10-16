@@ -662,7 +662,7 @@ static void print_power(std::ostream& os, const QQ& c, const vec_ZZ& p,
 	    else if (c.n != 1 || c.d != 1) {
 		os << c.n;
 		if (c.d != 1)
-		    os << " / " << c.d;
+		    os << "/" << c.d;
 		os << "*";
 	    }
 	    first = false;
@@ -682,7 +682,7 @@ static void print_power(std::ostream& os, const QQ& c, const vec_ZZ& p,
     if (first) {
 	os << c.n;
 	if (c.d != 1)
-	    os << " / " << c.d;
+	    os << "/" << c.d;
     }
 }
 
