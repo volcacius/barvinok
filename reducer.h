@@ -127,36 +127,4 @@ struct icounter : public ireducer {
     }
 };
 
-/* An incremental counter for possibly infinite sets.
- * Rather than just keeping track of the constant term
- * of the Laurent expansions, we also keep track of the
- * coefficients of negative powers.
- * If any of these is non-zero, then the counted set is infinite.
- */
-struct infinite_icounter : public ireducer {
-    /* an array of coefficients; count[i] is the coeffient of
-     * the term with power -i.
-     */
-    mpq_t *count;
-    unsigned len;
-    Value tz;
-
-    infinite_icounter(unsigned dim, unsigned maxlen) : ireducer(dim), len(maxlen+1) {
-	/* Not sure whether it works for dim != 1 */
-	assert(dim == 1);
-	count = new mpq_t[len];
-	for (int i = 0; i < len; ++i)
-	    mpq_init(count[i]);
-	lower = 1;
-	value_init(tz);
-    }
-    ~infinite_icounter() {
-	for (int i = 0; i < len; ++i)
-	    mpq_clear(count[i]);
-	delete [] count;
-	value_clear(tz);
-    }
-    virtual void base(const QQ& c, const vec_ZZ& num, const mat_ZZ& den_f);
-};
-
 #endif

@@ -154,3 +154,139 @@ void tcounter::add_lattice_points(int sign)
     else
 	mpq_add(count, count, tcount);
 }
+
+
+/*
+ * Set lambda to a random vector that has a positive inner product
+ * with all the rays of the context { x | A x + b >= 0 }.
+ *
+ * To do so, we take d rows A' from the constraint matrix A.
+ * For every ray, we have
+ *		A' r >= 0
+ * We compute a random positive row vector x' and set x = x' A'.
+ * We then have, for each ray r,
+ *		x r = x' A' r >= 0
+ * Although we can take any d rows from A, we choose linearly
+ * independent rows from A to avoid the elements of the transformed
+ * random vector to have simple linear relations, which would
+ * increase the risk of the vector being orthogonal to one of
+ * powers in the denominator of one of the terms in the generating
+ * function.
+ */
+void infinite_counter::init(Polyhedron *context)
+{
+    Matrix *M, *H, *Q, *U;
+    mat_ZZ A;
+
+    randomvector(context, lambda, context->Dimension);
+
+    M = Matrix_Alloc(context->NbConstraints, context->Dimension);
+    for (int i = 0; i < context->NbConstraints; ++i)
+	Vector_Copy(context->Constraint[i]+1, M->p[i], context->Dimension);
+    left_hermite(M, &H, &Q, &U);
+    Matrix_Free(Q);
+    Matrix_Free(U);
+
+    for (int col = 0, row = 0; col < H->NbColumns; ++col, ++row) {
+	for (; row < H->NbRows; ++row)
+	    if (value_notzero_p(H->p[row][col]))
+		break;
+	assert(row < H->NbRows);
+	Vector_Copy(M->p[row], M->p[col], M->NbColumns);
+    }
+    matrix2zz(M, A, context->Dimension, context->Dimension);
+    Matrix_Free(H);
+    Matrix_Free(M);
+
+    for (int i = 0; i < lambda.length(); ++i)
+	lambda[i] = abs(lambda[i]);
+    lambda = lambda * A;
+}
+
+static ZZ LCM(const ZZ& a, const ZZ& b)
+{
+    return a * b / GCD(a, b);
+}
+
+/* Normalize the powers in the denominator to be positive
+ * and return -1 is the sign has to be changed.
+ */
+static int normalized_sign(vec_ZZ& num, vec_ZZ& den)
+{
+    int change = 0;
+
+    for (int j = 0; j < den.length(); ++j) {
+	if (den[j] > 0)
+	    change ^= 1;
+	else {
+	    den[j] = abs(den[j]);
+	    for (int k = 0; k < num.length(); ++k)
+		num[k] += den[j];
+	}
+    }
+    return change ? -1 : 1;
+}
+
+void infinite_counter::reduce(const vec_QQ& c, const mat_ZZ& num,
+			      const mat_ZZ& den_f)
+{
+    mpq_t factor;
+    mpq_init(factor);
+    unsigned len = den_f.NumRows();
+
+    ZZ lcm = c[0].d;
+    for (int i = 1; i < c.length(); ++i)
+	lcm = LCM(lcm, c[i].d);
+
+    vec_ZZ coeff;
+    coeff.SetLength(c.length());
+    for (int i = 0; i < c.length(); ++i)
+	coeff[i] = c[i].n * lcm/c[i].d;
+
+    if (len == 0) {
+	for (int i = 0; i < c.length(); ++i) {
+	    zz2value(coeff[i], tz);
+	    value_addto(mpq_numref(factor), mpq_numref(factor), tz);
+	}
+	zz2value(lcm, tz);
+	value_assign(mpq_denref(factor), tz);
+	mpq_add(count[0], count[0], factor);
+	mpq_clear(factor);
+	return;
+    }
+
+    vec_ZZ num_s = num * lambda;
+    vec_ZZ den_s = den_f * lambda;
+    for (int i = 0; i < den_s.length(); ++i)
+	assert(den_s[i] != 0);
+    int sign = normalized_sign(num_s, den_s);
+    if (sign < 0)
+	coeff = -coeff;
+
+    dpoly n(len);
+    zz2value(num_s[0], tz);
+    add_falling_powers(n, tz);
+    zz2value(coeff[0], tz);
+    n *= tz;
+    for (int i = 1; i < c.length(); ++i) {
+	dpoly t(len);
+	zz2value(num_s[i], tz);
+	add_falling_powers(t, tz);
+	zz2value(coeff[i], tz);
+	t *= tz;
+	n += t;
+    }
+    zz2value(den_s[0], tz);
+    dpoly d(len, tz, 1);
+    for (int i = 1; i < len; ++i) {
+	zz2value(den_s[i], tz);
+	dpoly fact(len, tz, 1);
+	d *= fact;
+    }
+    value_set_si(mpq_numref(factor), 1);
+    zz2value(lcm, tz);
+    value_assign(mpq_denref(factor), tz);
+    n.div(d, count, factor);
+
+    mpq_clear(factor);
+}

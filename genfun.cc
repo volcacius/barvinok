@@ -5,6 +5,7 @@
 #include <barvinok/genfun.h>
 #include <barvinok/barvinok.h>
 #include "conversion.h"
+#include "counter.h"
 #include "genfun_constructor.h"
 #include "mat_util.h"
 #include "matrix_read.h"
@@ -899,7 +900,8 @@ bool gen_fun::summate(Value *sum) const
 	if ((*i)->d.power.NumRows() > maxlen)
 	    maxlen = (*i)->d.power.NumRows();
 
-    infinite_icounter cnt((*term.begin())->d.power.NumCols(), maxlen);
+    infinite_counter cnt((*term.begin())->d.power.NumCols(), maxlen);
+    cnt.init(context);
     for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
 	cnt.reduce((*i)->n.coeff, (*i)->n.power, (*i)->d.power);
 

@@ -174,6 +174,77 @@ static Matrix *matrix_read_from_str(const char *s)
     return Matrix_Read(str);
 }
 
+static int test_infinite_counter(struct barvinok_options *options)
+{
+    Matrix *M = matrix_read_from_str("1 3\n	1 1 0\n");
+    Polyhedron *ctx = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    /* (1 -1/2 x^5 - 1/2 x^7)/(1-x) */
+    infinite_counter *cnt = new infinite_counter(1, 1);
+    cnt->init(ctx);
+    vec_QQ n_coeff;
+    mat_ZZ n_power;
+    mat_ZZ d_power;
+    set_from_string(n_coeff, "[1/1 -1/2 -1/2]");
+    set_from_string(n_power, "[[0][5][7]]");
+    set_from_string(d_power, "[[1]]");
+    cnt->reduce(n_coeff, n_power, d_power);
+    assert(value_cmp_si(mpq_numref(cnt->count[0]), 6) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[0]), 1) == 0);
+    assert(value_cmp_si(mpq_numref(cnt->count[1]), 0) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[1]), 1) == 0);
+    delete cnt;
+    Polyhedron_Free(ctx);
+
+    M = matrix_read_from_str("2 4\n	1 1 0 0\n   1 0 1 0\n");
+    ctx = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    /* (1 - xy)/((1-x)(1-xy)) */
+    cnt = new infinite_counter(2, 3);
+    cnt->init(ctx);
+    set_from_string(n_coeff, "[1/1 -1/1]");
+    set_from_string(n_power, "[[0 0][1 1]]");
+    set_from_string(d_power, "[[1 0][1 1]]");
+    cnt->reduce(n_coeff, n_power, d_power);
+    assert(value_cmp_si(mpq_numref(cnt->count[1]), 0) != 0);
+    assert(value_cmp_si(mpq_numref(cnt->count[2]), 0) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[2]), 1) == 0);
+    assert(value_cmp_si(mpq_numref(cnt->count[3]), 0) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[3]), 1) == 0);
+    delete cnt;
+
+    cnt = new infinite_counter(2, 2);
+    cnt->init(ctx);
+    set_from_string(n_coeff, "[-1/2 1/1 -1/3]");
+    set_from_string(n_power, "[[2 6][3 6]]");
+    d_power.SetDims(0, 2);
+    cnt->reduce(n_coeff, n_power, d_power);
+    assert(value_cmp_si(mpq_numref(cnt->count[0]), 1) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[0]), 6) == 0);
+    assert(value_cmp_si(mpq_numref(cnt->count[1]), 0) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[1]), 1) == 0);
+    assert(value_cmp_si(mpq_numref(cnt->count[2]), 0) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[2]), 1) == 0);
+    delete cnt;
+
+    cnt = new infinite_counter(2, 2);
+    cnt->init(ctx);
+    set_from_string(n_coeff, "[1/1]");
+    set_from_string(n_power, "[[0 11]]");
+    set_from_string(d_power, "[[0 1]]");
+    cnt->reduce(n_coeff, n_power, d_power);
+    assert(value_cmp_si(mpq_numref(cnt->count[1]), 0) != 0);
+    assert(value_cmp_si(mpq_numref(cnt->count[2]), 0) == 0);
+    assert(value_cmp_si(mpq_denref(cnt->count[2]), 1) == 0);
+    delete cnt;
+
+    Polyhedron_Free(ctx);
+
+    return 0;
+}
+
 static int test_series(struct barvinok_options *options)
 {
     Matrix *M = matrix_read_from_str(
@@ -392,6 +463,7 @@ int main(int argc, char **argv)
     test_specialization(options);
     test_lattice_points(options);
     test_icounter(options);
+    test_infinite_counter(options);
     test_series(options);
     test_todd(options);
     test_bernoulli(options);

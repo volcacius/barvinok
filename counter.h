@@ -76,3 +76,37 @@ struct tcounter : public counter_base {
 
     virtual void add_lattice_points(int sign);
 };
+
+/* A counter for possibly infinite sets.
+ * Rather than just keeping track of the constant term
+ * of the Laurent expansions, we also keep track of the
+ * coefficients of negative powers.
+ * If any of these is non-zero, then the counted set is infinite.
+ */
+struct infinite_counter {
+    /* an array of coefficients; count[i] is the coeffient of
+     * the term with power -i.
+     */
+    vec_ZZ lambda;
+    mpq_t *count;
+    unsigned maxlen;
+    Value tz;
+
+    infinite_counter(unsigned dim, unsigned maxlen) : maxlen(maxlen) {
+	count = new mpq_t[maxlen+1];
+	for (int i = 0; i <= maxlen; ++i)
+	    mpq_init(count[i]);
+	value_init(tz);
+    }
+
+    void init(Polyhedron *context);
+
+    void reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);
+
+    ~infinite_counter() {
+	for (int i = 0; i <= maxlen; ++i)
+	    mpq_clear(count[i]);
+	delete [] count;
+	value_clear(tz);
+    }
+};

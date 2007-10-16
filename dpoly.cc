@@ -119,6 +119,7 @@ void dpoly::div(const dpoly& d, mpq_t *count, const mpq_t& factor)
 	value_multiply(mpq_numref(tmp), coeff->p[len-1 - i], mpq_numref(factor));
 	value_multiply(mpq_denref(tmp), denom->p[len-1 - i], mpq_denref(factor));
 	mpq_add(count[i], count[i], tmp);
+	mpq_canonicalize(count[i]);
     }
 
     mpq_clear(tmp);
