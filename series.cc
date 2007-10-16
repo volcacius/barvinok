@@ -2,7 +2,11 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include "genfun_constructor.h"
+#include "lattice_width.h"
 #include "remove_equalities.h"
+
+using std::cerr;
+using std::endl;
 
 /* Check whether all rays point in the positive directions
  * for the parameters
@@ -203,5 +207,209 @@ gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C,
     options->MaxRays = MaxRays;
     gf = barvinok_enumerate_union_series_with_options(D, C, options);
     barvinok_options_free(options);
+    return gf;
+}
+
+/* Unimodularly transform the polyhedron P, such that
+ * the direction specified by dir corresponds to the last
+ * variable in the transformed polyhedron.
+ * The number of variables is given by the length of dir.
+ */
+static Polyhedron *put_direction_last(Polyhedron *P, Vector *dir,
+				      unsigned MaxRays)
+{
+    Polyhedron *R;
+    Matrix *T;
+    int n = dir->Size;
+
+    T = Matrix_Alloc(P->Dimension+1, P->Dimension+1);
+    T->NbColumns = T->NbRows = n;
+    Vector_Copy(dir->p, T->p[0], n);
+    unimodular_complete(T, 1);
+    Vector_Exchange(T->p[0], T->p[n-1], n);
+    T->NbColumns = T->NbRows = P->Dimension+1;
+    for (int j = n; j < P->Dimension+1; ++j)
+	value_set_si(T->p[j][j], 1);
+
+    R = Polyhedron_Image(P, T, MaxRays);
+    Matrix_Free(T);
+
+    return R;
+}
+
+/* Do we need to continue shifting and subtracting?
+ * i is the number of times we shifted so far
+ * n is the number of coordinates projected out
+ */
+static bool more_shifts_needed(int j, int n,
+				gen_fun *S, gen_fun *S_divide, const vec_ZZ& up,
+				barvinok_options *options)
+{
+    bool empty;
+    gen_fun *hp;
+    Value c;
+
+    /* For the 2-dimensional case, we need to subtract at most once */
+    if (n == 2 && j > 0)
+	return false;
+
+    S_divide->shift(up);
+
+    /* Assume that we have to subtract at least once */
+    if (j == 0)
+	return true;
+
+    hp = S->Hadamard_product(S_divide, options);
+
+    value_init(c);
+
+    empty = hp->summate(&c) && value_zero_p(c);
+    delete hp;
+
+    value_clear(c);
+
+    return !empty;
+}
+
+/* Return gf of P projected on last dim(P)-n coordinates, i.e.,
+ * project out the first n coordinates.
+ */
+gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
+{
+    QQ one(1, 1);
+    QQ mone(-1, 1);
+    vec_ZZ up;
+    gen_fun *gf = NULL;
+    struct width_direction_array *dirs;
+    Polyhedron *U;
+
+    up.SetLength(P->Dimension - (n-1));
+    up[0] = 1;
+    for (int i = 1; i < P->Dimension - (n-1); ++i)
+	up[i] = 0;
+
+    if (n == 1) {
+	gen_fun *S, *S_shift, *hp;
+
+	S = series(Polyhedron_Copy(P), P->Dimension, options);
+	S_shift = new gen_fun(S);
+	S_shift->shift(up);
+	hp = S->Hadamard_product(S_shift, options);
+	S->add(mone, hp, options);
+	delete S_shift;
+	delete hp;
+
+	gf = S->summate(1, options);
+	delete S;
+
+	return gf;
+    }
+
+    U = Universe_Polyhedron(P->Dimension - n);
+    dirs = Polyhedron_Lattice_Width_Directions(P, U, options);
+    Polyhedron_Free(U);
+
+    for (int i = 0; i < dirs->n; ++i) {
+	Polyhedron *Pi, *R;
+	Polyhedron *CA;
+	gen_fun *S, *S_shift, *S_divide, *sum;
+
+	CA = align_context(dirs->wd[i].domain, P->Dimension, options->MaxRays);
+	R = DomainIntersection(P, CA, options->MaxRays);
+	Polyhedron_Free(CA);
+	assert(dirs->wd[i].dir->Size == n);
+	Pi = put_direction_last(R, dirs->wd[i].dir, options->MaxRays);
+	Polyhedron_Free(R);
+
+	S = project(Pi, n-1, options);
+	Polyhedron_Free(Pi);
+
+	S_shift = new gen_fun(S);
+	S_divide = new gen_fun(S);
+	S_divide->divide(up);
+
+	for (int j = 0; more_shifts_needed(j, n, S, S_divide, up, options); ++j) {
+	    gen_fun *hp;
+
+	    S_shift->shift(up);
+	    hp = S->Hadamard_product(S_shift, options);
+	    S->add(mone, hp, options);
+
+	    delete hp;
+	}
+
+	sum = S->summate(1, options);
+
+	delete S_shift;
+	delete S_divide;
+	delete S;
+
+	if (!gf)
+	    gf = sum;
+	else {
+	    gf->add(one, sum, options);
+	    delete sum;
+	}
+    }
+    free_width_direction_array(dirs);
+
+    return gf;
+}
+
+gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
+		  unsigned exist, unsigned nparam, barvinok_options *options)
+{
+    Matrix *CP = NULL;
+    Polyhedron *P_orig = P;
+    gen_fun *gf, *proj;
+    unsigned nvar = P->Dimension - exist - nparam;
+
+    if (exist == 0)
+	return series(Polyhedron_Copy(P), nparam, options);
+
+    if (emptyQ(P))
+	return new gen_fun(Empty_Polyhedron(nparam));
+
+    assert(!Polyhedron_is_unbounded(P, nparam, options->MaxRays));
+    assert(P->NbBid == 0);
+    assert(Polyhedron_has_revlex_positive_rays(P, nparam));
+
+    /* Move existentially quantified variables to the front.*/
+    if (nvar) {
+	Matrix *T;
+	T = Matrix_Alloc(exist+nvar+nparam+1, nvar+exist+nparam+1);
+	for (int i = 0; i < exist; ++i)
+	    value_set_si(T->p[i][nvar+i], 1);
+	for (int i = 0; i < nvar; ++i)
+	    value_set_si(T->p[exist+i][i], 1);
+	for (int i = 0; i < nparam+1; ++i)
+	    value_set_si(T->p[exist+nvar+i][nvar+exist+i], 1);
+	P = Polyhedron_Image(P, T, options->MaxRays);
+	Matrix_Free(T);
+    }
+    if (P->NbEq != 0) {
+	Polyhedron *Q = P;
+	remove_all_equalities(&P, NULL, &CP, NULL, nvar+nparam,
+				options->MaxRays);
+	exist = P->Dimension - (CP->NbColumns-1);
+	if (Q != P_orig)
+	    Polyhedron_Free(Q);
+    }
+
+    proj = project(P, exist, options);
+    if (CP) {
+	proj->substitute(CP);
+	Matrix_Free(CP);
+    }
+
+    if (P != P_orig)
+	Polyhedron_Free(P);
+
+    if (!nvar)
+	gf = proj;
+    else {
+	gf = proj->summate(nvar, options);
+	delete proj;
+    }
     return gf;
 }

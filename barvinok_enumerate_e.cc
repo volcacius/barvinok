@@ -133,12 +133,6 @@ int main(int argc, char **argv)
     set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    if (arguments.series && !arguments.scarf) {
-	fprintf(stderr, 
-		"--series currently only available if --scarf is specified\n");
-	exit(1);
-    }
-
     MA = Matrix_Read();
     A = Constraints2Polyhedron(MA, options->MaxRays);
     Matrix_Free(MA);
@@ -171,8 +165,10 @@ int main(int argc, char **argv)
 	exist = A->Dimension - nvar - nparam;
     }
     if (arguments.series) {
-	assert(arguments.scarf);
-	gf = barvinok_enumerate_scarf_series(A, exist, nparam, options);
+	if (arguments.scarf)
+	    gf = barvinok_enumerate_scarf_series(A, exist, nparam, options);
+	else
+	    gf = barvinok_enumerate_e_series(A, exist, nparam, options);
 	if (print_solution) {
 	    gf->print(std::cout, nparam, param_name);
 	    puts("");

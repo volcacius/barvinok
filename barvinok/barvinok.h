@@ -53,6 +53,8 @@ gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
 gen_fun *barvinok_enumerate_scarf_series(Polyhedron *P,
 			  unsigned exist, unsigned nparam,
 			  barvinok_options *options);
+gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
+		  unsigned exist, unsigned nparam, barvinok_options *options);
 gen_fun* barvinok_enumerate_union_series(Polyhedron *D, Polyhedron* C, 
 					 unsigned MaxRays);
 gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron* C, 
