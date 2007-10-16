@@ -59,7 +59,7 @@ bool is_indicator(gen_fun *gf, barvinok_options *options)
     QQ mone(-1, 1);
 
     test = gf->Hadamard_product(gf, options);
-    test->add(mone, gf);
+    test->add(mone, gf, options);
 
     test->print(std::cerr, 0, NULL);
     cerr << endl;
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     do {
 	S_shift->shift(up);
 	hp = S->Hadamard_product(S_shift, options);
-	S->add(mone, hp);
+	S->add(mone, hp, options);
 	delete hp;
 
 	S_divide->shift(up);

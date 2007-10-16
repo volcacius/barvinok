@@ -47,7 +47,7 @@ struct gen_fun {
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
     void add(short_rat *r);
     /* add c times gf */
-    void add(const QQ& c, const gen_fun *gf);
+    void add(const QQ& c, const gen_fun *gf, barvinok_options *options);
     void substitute(Matrix *CP);
     gen_fun *Hadamard_product(const gen_fun *gf, barvinok_options *options);
     void add_union(gen_fun *gf, barvinok_options *options);
@@ -77,6 +77,8 @@ struct gen_fun {
 	Polyhedron_Free(context);
 	clear_terms();
     }
+private:
+    void add(const QQ& c, const gen_fun *gf);
 };
 
 std::ostream & operator<< (std::ostream & os, const gen_fun& gf);

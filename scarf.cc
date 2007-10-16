@@ -939,7 +939,7 @@ void scarf_collector_gf::add(Polyhedron *P, int sign, Polyhedron *C,
 	gen_fun *gf2;
 	c.n = sign;
 	gf2 = barvinok_series_with_options(P, C, options);
-	gf->add(c, gf2);
+	gf->add(c, gf2, options);
 	delete gf2;
     }
 }

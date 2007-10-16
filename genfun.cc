@@ -248,6 +248,17 @@ void gen_fun::add(short_rat *r)
     term.insert(r);
 }
 
+void gen_fun::add(const QQ& c, const gen_fun *gf, barvinok_options *options)
+{
+    Polyhedron *U = DomainUnion(context, gf->context, options->MaxRays);
+    Polyhedron *C = DomainConvex(U, options->MaxRays);
+    Domain_Free(U);
+    Domain_Free(context);
+    context = C;
+
+    add(c, gf);
+}
+
 void gen_fun::add(const QQ& c, const gen_fun *gf)
 {
     QQ p;
