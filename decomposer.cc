@@ -225,7 +225,13 @@ struct polar_signed_cone_consumer : public signed_cone_consumer {
 	}
 	Polyhedron_Polarize(C);
 	rays(C, r);
-	scc.handle(signed_cone(C, r, sc.sign, sc.det), options);
+	try {
+	    scc.handle(signed_cone(C, r, sc.sign, sc.det), options);
+	} catch (...) {
+	    if (!sc.C)
+		Polyhedron_Free(C);
+	    throw;
+	}
 	if (!sc.C)
 	    Polyhedron_Free(C);
     }
