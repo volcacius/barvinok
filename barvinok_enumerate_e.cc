@@ -245,6 +245,8 @@ void verify_results(Polyhedron *P, evalue *EP, gen_fun *gf,
     value_set_si(p->p[P->Dimension+1], 1);
 
     CS = check_poly_context_scan(P, &C, nparam, &options->verify);
+    if (!C)
+	C = Universe_Polyhedron(nparam);
 
     /* S = scanning list of polyhedra */
     S = Polyhedron_Scan(P, C, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
