@@ -286,6 +286,20 @@ static int test_series(struct barvinok_options *options)
     Polyhedron_Free(C);
     delete gf;
 
+    M = matrix_read_from_str(
+	"2 3\n"
+	"1  1  0\n"
+	"1 -1 10\n");
+    P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    C = Universe_Polyhedron(1);
+    gf = barvinok_series_with_options(P, C, options);
+    Polyhedron_Free(P);
+    Polyhedron_Free(C);
+    gen_fun *sum = gf->summate(1, options);
+    delete gf;
+    delete sum;
+
     return 0;
 }
 

@@ -868,6 +868,17 @@ gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const
     reducer *red;
     gen_fun *gf;
 
+    if (nparam == 0) {
+	bool finite;
+	Value c;
+	value_init(c);
+	finite = summate(&c);
+	assert(finite);
+	gf = new gen_fun(c);
+	value_clear(c);
+	return gf;
+    }
+
     if (options->incremental_specialization == 1) {
     	red = new partial_ireducer(Polyhedron_Project(context, nparam), dim, nparam);
     } else
