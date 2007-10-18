@@ -169,6 +169,28 @@ private:
     ZZ tmp;
 };
 
+void reducer::reduce_canonical(const vec_QQ& c, const mat_ZZ& num,
+				const mat_ZZ& den_f)
+{
+    vec_QQ c2 = c;
+    mat_ZZ num2 = num;
+
+    for (int i = 0; i < c2.length(); ++i) {
+	c2[i].canonicalize();
+	if (c2[i].n != 0)
+	    continue;
+
+	if (i < c2.length()-1) {
+	    num2[i] = num2[c2.length()-1];
+	    c2[i] = c2[c2.length()-1];
+	}
+	num2.SetDims(num2.NumRows()-1, num2.NumCols());
+	c2.SetLength(c2.length()-1);
+	--i;
+    }
+    reduce(c2, num2, den_f);
+}
+
 void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 {
     assert(c.length() == num.NumRows());
@@ -338,11 +360,16 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 			pden[rows+l] = den_r[k];
 		    rows += n;
 		}
+		/* The denominators in factor are kept constant
+		 * over all iterations of the enclosing while loop.
+		 * The rational numbers in factor may therefore not be
+		 * canonicalized.  Some may even be zero.
+		 */
 		for (int i = 0; i < num_s.length(); ++i) {
 		    factor[i].n = c2[i].n;
 		    factor[i].n *= scanner.coeff[i];
 		}
-		reduce(factor, num_p, pden);
+		reduce_canonical(factor, num_p, pden);
 	    }
 
 	    delete rc;
