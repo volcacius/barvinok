@@ -691,7 +691,7 @@ void short_rat::print(std::ostream& os, unsigned int nparam, char **param_name) 
     QQ mone(-1, 1);
     os << "(";
     for (int j = 0; j < n.coeff.length(); ++j) {
-	if (j != 0 && n.coeff[j].n > 0)
+	if (j != 0 && n.coeff[j].n >= 0)
 	    os << "+";
 	print_power(os, n.coeff[j], n.power[j], nparam, param_name);
     }
