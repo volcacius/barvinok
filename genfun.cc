@@ -821,11 +821,6 @@ gen_fun::operator evalue *() const
 	    zz2value((*i)->n.coeff[j].n, factor.x.n);
 	    zz2value((*i)->n.coeff[j].d, factor.d);
 	    emul(&factor, E);
-	    /*
-	    Matrix_Print(stdout, P_VALUE_FMT, C);
-	    char *test[] = { "A", "B", "C", "D", "E", "F", "G" };
-	    print_evalue(stdout, E, test);
-	    */
 	    if (!EP)
 		EP = E;
 	    else {
