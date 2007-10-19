@@ -2626,38 +2626,13 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
     return maxima;
 }
 
-static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
-				lexmin_options *options)
+static void lexmin_base(Polyhedron *P, Polyhedron *C,
+			Matrix *CP, Matrix *T,
+			vector<max_term*>& all_max,
+			lexmin_options *options)
 {
     unsigned nparam = C->Dimension;
     Param_Polyhedron *PP = NULL;
-    Matrix *T = NULL, *CP = NULL;
-    Polyhedron *Porig = P;
-    Polyhedron *Corig = C;
-    vector<max_term*> all_max;
-    Polyhedron *Q;
-
-    if (emptyQ2(P))
-	return all_max;
-
-    POL_ENSURE_VERTICES(P);
-
-    if (emptyQ2(P))
-	return all_max;
-
-    assert(P->NbBid == 0);
-
-    if (P->NbEq > 0) {
-	remove_all_equalities(&P, &C, &CP, &T, nparam,
-			      options->verify.barvinok->MaxRays);
-	if (CP)
-	    nparam = CP->NbColumns-1;
-	if (!P) {
-	    if (C != Corig)
-		Polyhedron_Free(C);
-	    return all_max;
-	}
-    }
 
     PP = Polyhedron2Param_Polyhedron(P, C, options->verify.barvinok);
 
@@ -2696,11 +2671,38 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
     Polyhedron_Free(TC);
     for (int i = 0; i < all_vertices.size(); ++i)
 	delete all_vertices[i];
+    Param_Polyhedron_Free(PP);
+}
+
+static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
+				lexmin_options *options)
+{
+    unsigned nparam = C->Dimension;
+    Matrix *T = NULL, *CP = NULL;
+    Polyhedron *Porig = P;
+    Polyhedron *Corig = C;
+    vector<max_term*> all_max;
+
+    if (emptyQ2(P))
+	return all_max;
+
+    POL_ENSURE_VERTICES(P);
+
+    if (emptyQ2(P))
+	return all_max;
+
+    assert(P->NbBid == 0);
+
+    if (P->NbEq > 0)
+	remove_all_equalities(&P, &C, &CP, &T, nparam,
+			      options->verify.barvinok->MaxRays);
+    if (!emptyQ2(P))
+	lexmin_base(P, C, CP, T, all_max, options);
+done:
     if (CP)
 	Matrix_Free(CP);
     if (T)
 	Matrix_Free(T);
-    Param_Polyhedron_Free(PP);
     if (C != Corig)
 	Polyhedron_Free(C);
     if (P != Porig)

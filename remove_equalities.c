@@ -42,6 +42,8 @@ static Matrix *compose_transformations(Matrix *first, Matrix *second)
  * by CVP (unless NULL).
  * Each of these transformation matrices maps the new parameters/variables
  * back to the original ones.
+ * If it can be shown that there is no integer point in P, then
+ * an empty polyhedron will be returned.
  */
 int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix **CVP,
 			  unsigned nparam, unsigned MaxRays)
@@ -52,6 +54,7 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
     Polyhedron *D = NULL;
     Polyhedron *R;
     int i;
+    int changed;
     Matrix M;
 
     if (C) {
@@ -98,34 +101,32 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	CP = compose_transformations(CP, T);
     }
 
-    if (emptyQ2(Q)) {
-	if (CP)
-	    Matrix_Free(CP);
-	*P = Q;
-	if (C)
-	    *C = D;
-	return 0;
-    }
-
-    if (Q->NbEq) {
+    if (!emptyQ2(Q) && Q->NbEq) {
 	Matrix *T;
 	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
 	T = compress_parms(&M, nparam);
-
-	if (isIdentity(T)) {
+	if (!T) {
+	    unsigned dim = Q->Dimension;
+	    if (Q != *P)
+		Polyhedron_Free(Q);
+	    Q = Empty_Polyhedron(dim);
+	} else if (isIdentity(T)) {
 	    Matrix_Free(T);
 	} else {
 	    transform(&Q, &D, T, Q != *P, MaxRays);
 	    CP = compose_transformations(CP, T);
 	    nparam = CP->NbColumns-1;
 	}
+    }
 
+    if (!emptyQ2(Q) && Q->NbEq) {
 	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
 	CV = compress_variables(&M, nparam);
 	if (!CV) {
+	    unsigned dim = Q->Dimension;
 	    if (Q != *P)
 		Polyhedron_Free(Q);
-	    Q = NULL;
+	    Q = Empty_Polyhedron(dim);
 	} else if (isIdentity(CV)) {
 	    Matrix_Free(CV);
 	    CV = NULL;
@@ -137,6 +138,7 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	}
     }
 
+    changed = *P != Q;
     *P = Q;
     if (C)
 	*C = D;
@@ -148,5 +150,5 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
 	*CVP = CV;
     else if (CV)
 	Matrix_Free(CV);
-    return 1;
+    return changed;
 }

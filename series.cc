@@ -49,7 +49,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
     assert(Polyhedron_has_revlex_positive_rays(P, nparam));
     if (P->NbEq != 0)
 	P = remove_more_equalities(P, nparam, &CP, options->MaxRays);
-    assert(P->NbEq == 0);
+    assert(emptyQ2(P) || P->NbEq == 0);
     if (CP)
 	nparam = CP->NbColumns-1;
 
