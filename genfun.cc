@@ -832,7 +832,7 @@ gen_fun::operator evalue *() const
     }
     value_clear(factor.d);
     value_clear(factor.x.n);
-    return EP;
+    return EP ? EP : evalue_zero();
 }
 
 ZZ gen_fun::coefficient(Value* params, barvinok_options *options) const
