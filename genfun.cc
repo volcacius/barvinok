@@ -9,6 +9,7 @@
 #include "genfun_constructor.h"
 #include "mat_util.h"
 #include "matrix_read.h"
+#include "remove_equalities.h"
 
 using std::cout;
 using std::cerr;
@@ -333,12 +334,43 @@ void gen_fun::substitute(Matrix *CP)
     term.swap(new_term);
 }
 
+static int Matrix_Equal(Matrix *M1, Matrix *M2)
+{
+    int i, j;
+
+    if (M1->NbRows != M2->NbRows)
+	return 0;
+    if (M1->NbColumns != M2->NbColumns)
+	return 0;
+    for (i = 0; i < M1->NbRows; ++i)
+	for (j = 0; j < M1->NbColumns; ++j)
+	    if (value_ne(M1->p[i][j], M2->p[i][j]))
+		return 0;
+
+    return 1;
+}
+
 struct parallel_cones {
     int	    *pos;
     vector<pair<Vector *, QQ> >	    vertices;
     parallel_cones(int *pos) : pos(pos) {}
 };
 
+/* This structure helps in computing the generating functions
+ * of polytopes with pairwise parallel hyperplanes more efficiently.
+ * These occur when computing hadamard products of pairs of generating
+ * functions with the same denominators.
+ * If there are many such pairs then the same vertex cone
+ * may appear more than once.  We therefore keep a list of all
+ * vertex cones and only compute the corresponding generating function
+ * once.
+ * However, even HPs of generating functions with the same denominators
+ * can result in polytopes of different "shapes", making them incomparable.
+ * In particular, they can have different equalities among the parameters
+ * and the variables.  In such cases, only polytopes of the first "shape"
+ * that is encountered are kept in this way.  The others are handled
+ * in the usual, non-optimized way.
+ */
 struct parallel_polytopes {
     gf_base *red;
     Polyhedron *context;
@@ -346,6 +378,7 @@ struct parallel_polytopes {
     Matrix *CP, *T;
     int dim;
     int nparam;
+    unsigned reduced_nparam;
     vector<parallel_cones>    cones;
     barvinok_options	*options;
 
@@ -377,34 +410,65 @@ struct parallel_polytopes {
 	}
 
 	if (Q->NbEq != 0) {
-	    Polyhedron *R;
-	    if (!CP) {
-		Matrix *M;
-		M = Matrix_Alloc(Q->NbEq, Q->Dimension+2);
-		Vector_Copy(Q->Constraint[0], M->p[0], Q->NbEq * (Q->Dimension+2));
-		CP = compress_parms(M, nparam);
-		T = align_matrix(CP, Q->Dimension+1);
-		Matrix_Free(M);
+	    Matrix *Q_CP;
+	    Polyhedron *R = Q;
+
+	    remove_all_equalities(&Q, NULL, &Q_CP, NULL, nparam,
+				  options->MaxRays);
+
+	    POL_ENSURE_VERTICES(Q);
+	    if (emptyQ(Q) || Q->NbEq > 0) {
+		if (Q_CP)
+		    Matrix_Free(Q_CP);
+		Polyhedron_Free(R);
+		Polyhedron_Free(Q);
+		return emptyQ(Q);
 	    }
-	    R = Polyhedron_Preimage(Q, T, options->MaxRays);
-	    Polyhedron_Free(Q);
-	    Q = remove_equalities_p(R, R->Dimension-nparam, NULL,
-				    options->MaxRays);
+
+	    if (red) {
+		if ((!CP ^ !Q_CP) || (CP && !Matrix_Equal(CP, Q_CP))) {
+		    Matrix_Free(Q_CP);
+		    Polyhedron_Free(R);
+		    Polyhedron_Free(Q);
+		    return false;
+		}
+		Matrix_Free(Q_CP);
+	    } else {
+		CP = Q_CP;
+		T = align_matrix(CP, R->Dimension+1);
+	    }
+
+	    reduced_nparam = CP->NbColumns-1;
+	    Polyhedron_Free(R);
+	} else {
+	    if (red && CP) {
+		Polyhedron_Free(Q);
+		return false;
+	    }
+	    reduced_nparam = nparam;
 	}
-	assert(Q->NbEq == 0);
 
 	if (First_Non_Zero(Q->Constraint[Q->NbConstraints-1]+1, Q->Dimension) == -1)
 	    Q->NbConstraints--;
 
 	if (!Constraints) {
+	    Polyhedron *reduced_context;
 	    dim = Q->Dimension;
-	    red = gf_base::create(Polyhedron_Copy(context), dim, nparam, options);
+	    if (CP)
+		reduced_context = Polyhedron_Preimage(context, CP, options->MaxRays);
+	    else
+		reduced_context = Polyhedron_Copy(context);
+	    red = gf_base::create(reduced_context, dim, reduced_nparam, options);
 	    red->base->init(Q);
 	    Constraints = Matrix_Alloc(Q->NbConstraints, Q->Dimension);
 	    for (int i = 0; i < Q->NbConstraints; ++i) {
 		Vector_Copy(Q->Constraint[i]+1, Constraints->p[i], Q->Dimension);
 	    }
 	} else {
+	    if (Q->Dimension != dim) {
+		Polyhedron_Free(Q);
+		return false;
+	    }
 	    assert(Q->Dimension == dim);
 	    for (int i = 0; i < Q->NbConstraints; ++i) {
 		int j;
@@ -412,7 +476,12 @@ struct parallel_polytopes {
 		    if (Vector_Equal(Q->Constraint[i]+1, Constraints->p[j],
 					Q->Dimension))
 			break;
-		assert(j < Constraints->NbRows);
+		if (j >= Constraints->NbRows) {
+		    Matrix_Extend(Constraints, Constraints->NbRows+1);
+		    Vector_Copy(Q->Constraint[i]+1,
+				Constraints->p[Constraints->NbRows-1],
+				Q->Dimension);
+		}
 	    }
 	}
 
@@ -427,7 +496,6 @@ struct parallel_polytopes {
 		C->NbConstraints--;
 
 	    int *pos = new int[1+C->NbConstraints];
-	    pos[0] = C->NbConstraints;
 	    int l = 0;
 	    for (int k = 0; k < Constraints->NbRows; ++k) {
 		for (int j = 0; j < C->NbConstraints; ++j) {
@@ -438,7 +506,7 @@ struct parallel_polytopes {
 		    }
 		}
 	    }
-	    assert(l == C->NbConstraints);
+	    pos[0] = l;
 
 	    int j;
 	    for (j = 0; j < cones.size(); ++j)
