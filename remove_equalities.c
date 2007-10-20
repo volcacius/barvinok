@@ -35,6 +35,60 @@ static Matrix *compose_transformations(Matrix *first, Matrix *second)
     return combined;
 }
 
+static Polyhedron *replace_by_empty_polyhedron(Polyhedron *Q, int free)
+{
+    unsigned dim = Q->Dimension;
+    if (free)
+	Polyhedron_Free(Q);
+    return Empty_Polyhedron(dim);
+}
+
+static int first_parameter_equality(Polyhedron *Q, unsigned nparam)
+{
+    int i;
+
+    for (i = 0; i < Q->NbEq; ++i)
+	if (First_Non_Zero(Q->Constraint[i]+1, Q->Dimension-nparam) == -1)
+	    break;
+
+    return i;
+}
+
+static void remove_parameter_equalities(Polyhedron **Q, Polyhedron **D,
+					Matrix **CP, unsigned *nparam,
+					int free, unsigned MaxRays)
+{
+    int i;
+
+    /* We need to loop until we can't find any more equalities
+     * because the transformation may enable a simplification of the
+     * constraints resulting in new implicit equalities.
+     */
+    while ((i = first_parameter_equality(*Q, *nparam)) < (*Q)->NbEq) {
+	Matrix *M = Matrix_Alloc((*Q)->NbEq, 1+*nparam+1);
+	Matrix *T;
+	int n = 0;
+
+	for (; i < (*Q)->NbEq; ++i) {
+	    if (First_Non_Zero((*Q)->Constraint[i]+1, (*Q)->Dimension-*nparam) == -1)
+		Vector_Copy((*Q)->Constraint[i]+1+(*Q)->Dimension-*nparam,
+			    M->p[n++]+1, *nparam+1);
+	}
+	M->NbRows = n;
+	T = compress_variables(M, 0);
+	Matrix_Free(M);
+	if (!T) {
+	    *Q = replace_by_empty_polyhedron(*Q, free);
+	    break;
+	} else {
+	    transform(Q, D, T, free, MaxRays);
+	    *nparam = T->NbColumns-1;
+	    *CP = compose_transformations(*CP, T);
+	    free = 1;
+	}
+    }
+}
+
 /* Remove all equalities in P and the context C (if not NULL).
  * Does not destroy P (or C).
  * Returns transformation on the parameters in the Matrix pointed to by CPP
@@ -53,7 +107,6 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
     Polyhedron *Q = *P;
     Polyhedron *D = NULL;
     Polyhedron *R;
-    int i;
     int changed;
     Matrix M;
 
@@ -73,65 +126,39 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
     }
 
     /* compress_parms doesn't like equalities that only involve parameters */
-    for (i = 0; i < Q->NbEq; ++i)
-	if (First_Non_Zero(Q->Constraint[i]+1, Q->Dimension-nparam) == -1)
-	    break;
-
-    /* If we already compressed the parameters, then there should be
-     * no such equalities left.
-     */
-    if (CV)
-	assert(i >= Q->NbEq);
-
-    if (i < Q->NbEq) {
-	Matrix *M = Matrix_Alloc(Q->NbEq, 1+nparam+1);
-	Matrix *T;
-	int n = 0;
-
-	for (; i < Q->NbEq; ++i) {
-	    if (First_Non_Zero(Q->Constraint[i]+1, Q->Dimension-nparam) == -1)
-		Vector_Copy(Q->Constraint[i]+1+Q->Dimension-nparam,
-			    M->p[n++]+1, nparam+1);
-	}
-	M->NbRows = n;
-	T = compress_variables(M, 0);
-	Matrix_Free(M);
-	transform(&Q, &D, T, Q != *P, MaxRays);
-	nparam = T->NbColumns-1;
-	CP = compose_transformations(CP, T);
-    }
+    remove_parameter_equalities(&Q, &D, &CP, &nparam, Q != *P, MaxRays);
 
     if (!emptyQ2(Q) && Q->NbEq) {
 	Matrix *T;
 	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
 	T = compress_parms(&M, nparam);
 	if (!T) {
-	    unsigned dim = Q->Dimension;
-	    if (Q != *P)
-		Polyhedron_Free(Q);
-	    Q = Empty_Polyhedron(dim);
+	    Q = replace_by_empty_polyhedron(Q, Q != *P);
 	} else if (isIdentity(T)) {
 	    Matrix_Free(T);
 	} else {
 	    transform(&Q, &D, T, Q != *P, MaxRays);
 	    CP = compose_transformations(CP, T);
 	    nparam = CP->NbColumns-1;
+	    remove_parameter_equalities(&Q, &D, &CP, &nparam, Q != *P, MaxRays);
 	}
     }
 
-    if (!emptyQ2(Q) && Q->NbEq) {
+    /* We need to loop until we can't find any more equalities
+     * because the transformation may enable a simplification of the
+     * constraints resulting in new implicit equalities.
+     */
+    while (!emptyQ2(Q) && Q->NbEq) {
+	Matrix *T;
 	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
-	CV = compress_variables(&M, nparam);
-	if (!CV) {
-	    unsigned dim = Q->Dimension;
-	    if (Q != *P)
-		Polyhedron_Free(Q);
-	    Q = Empty_Polyhedron(dim);
-	} else if (isIdentity(CV)) {
-	    Matrix_Free(CV);
-	    CV = NULL;
+	T = compress_variables(&M, nparam);
+	if (!T) {
+	    Q = replace_by_empty_polyhedron(Q, Q != *P);
+	} else if (isIdentity(T)) {
+	    Matrix_Free(T);
 	} else {
-	    R = Polyhedron_Preimage(Q, CV, MaxRays);
+	    R = Polyhedron_Preimage(Q, T, MaxRays);
+	    CV = compose_transformations(CV, T);
 	    if (Q != *P)
 		Polyhedron_Free(Q);
 	    Q = R;
