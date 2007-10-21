@@ -9,10 +9,8 @@
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 struct argp_option argp_options[] = {
-#if defined(HAVE_LIBCDDGMP) || defined(HAVE_LIBGLPK)
     { "direct",		'd',  0,	0,
 	"don't apply generalized basis reduction first" },
-#endif
     { 0 }
 };
 
@@ -28,11 +26,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = options->barvinok;
-#if defined(HAVE_LIBCDDGMP) || defined(HAVE_LIBGLPK)
 	options->direct = 0;
-#else
-	options->direct = 1;
-#endif
 	break;
     case 'd':
 	options->direct = 1;
