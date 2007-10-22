@@ -113,6 +113,13 @@ int CDD_LP::solve()
     dd_ErrorType err = dd_NoError;
     dd_LPSolve(lp, dd_DualSimplex, &err);
     assert(err == dd_NoError);
+    /* We only call this function on a polytope that is known
+     * to be (rationally) non-empty.
+     * A bug in cddlib 0.94d can sometimes make cddlib claim
+     * that the polytope is empty.  We can't continue if we
+     * hit this bug.
+     */
+    assert(lp->LPS != dd_Inconsistent);
 
     return lp->LPS == dd_DualInconsistent;
 }
