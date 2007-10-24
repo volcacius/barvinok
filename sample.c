@@ -362,12 +362,8 @@ unbounded:
 	Polyhedron_Free(Q);
 	return sample;
     }
-    if (res == lp_empty) {
-	value_clear(min);
-	value_clear(max);
-	Vector_Free(obj);
-	return NULL;
-    }
+    if (res == lp_empty)
+	goto out;
     assert(res == lp_ok);
 
     if (value_eq(min, max)) {
@@ -393,9 +389,11 @@ unbounded:
 
 	Q = Polyhedron_Image(P, T, options->MaxRays);
 	res = polyhedron_range(Q, obj->p, obj->p[0], &min, &max, options);
-	assert(res == lp_ok);
 
 	Matrix_Free(T);
+	if (res == lp_empty)
+	    goto out;
+	assert(res == lp_ok);
     }
 
     value_init(tmp);
@@ -437,18 +435,19 @@ unbounded:
 	}
 	Matrix_Free(T);
     }
+    value_clear(tmp);
 
-    if (obj)
-	Vector_Free(obj);
+    Vector_Free(v);
+
+out:
     if (inv)
 	Matrix_Free(inv);
     if (P != Q)
 	Polyhedron_Free(Q);
-    Vector_Free(v);
-
+    if (obj)
+	Vector_Free(obj);
     value_clear(min);
     value_clear(max);
-    value_clear(tmp);
 
     return sample;
 }
