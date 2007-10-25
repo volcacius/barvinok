@@ -9,7 +9,7 @@
 #include "evalue_read.h"
 #include "dpoly.h"
 #include "lattice_point.h"
-#include "tcounter.h"
+#include "counter.h"
 #include "bernoulli.h"
 #include "matrix_read.h"
 

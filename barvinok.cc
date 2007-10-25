@@ -17,7 +17,6 @@
 #include "bfcounter.h"
 #include "conversion.h"
 #include "counter.h"
-#include "tcounter.h"
 #include "decomposer.h"
 #include "euler.h"
 #include "lattice_point.h"

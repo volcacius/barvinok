@@ -114,8 +114,6 @@ libbarvinok_la_SOURCES = \
     scale.h \
     scarf.cc \
     series.cc \
-    tcounter.cc \
-    tcounter.h \
     $(TOPCOM) \
     volume.c \
     volume.h \
