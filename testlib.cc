@@ -184,6 +184,23 @@ static int test_series(struct barvinok_options *options)
     Polyhedron_Free(C);
     delete gf;
 
+    M = matrix_read_from_str(
+	"7 8\n"
+	"   0    1    1    0    0    1    0    2 \n"
+	"   0    0    0    1    0   -2    0    6 \n"
+	"   0    0    0    0    1   -1    0   -1 \n"
+	"   0    0    0    0    0    0    1    0 \n"
+	"   1    0    1    0    0    0    0    0 \n"
+	"   1    0   -1    0    0   -1    0   -2 \n"
+	"   1    0    0    0    0    1    0   -3 \n");
+    P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    C = Universe_Polyhedron(2);
+    gf = barvinok_series_with_options(P, C, options);
+    Polyhedron_Free(P);
+    Polyhedron_Free(C);
+    delete gf;
+
     return 0;
 }
 

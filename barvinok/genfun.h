@@ -67,15 +67,14 @@ struct gen_fun {
 	add(one, gf);
     }
     gen_fun(Value c);
-    gen_fun(Polyhedron *C = NULL) : context(C) {}
+    gen_fun(Polyhedron *C) : context(C) {}
     void clear_terms() {
 	for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
 	    delete *i;
 	term.clear();
     }
     ~gen_fun() {
-	if (context)
-	    Polyhedron_Free(context);
+	Polyhedron_Free(context);
 	clear_terms();
     }
 };

@@ -783,7 +783,7 @@ gen_fun::operator evalue *() const
 	unsigned nparam = (*i)->d.power.NumCols();
 	Matrix *C = Matrix_Alloc(nparam + nvar, 1 + nvar + nparam + 1); 
 	mat_ZZ& d = (*i)->d.power;
-	Polyhedron *U = context ? context : Universe_Polyhedron(nparam);
+	Polyhedron *U = context;
 
 	for (int j = 0; j < (*i)->n.coeff.length(); ++j) {
 	    for (int r = 0; r < nparam; ++r) {
@@ -823,8 +823,6 @@ gen_fun::operator evalue *() const
 	    }
 	}
 	Matrix_Free(C);
-	if (!context)
-	    Polyhedron_Free(U);
     }
     value_clear(factor.d);
     value_clear(factor.x.n);
@@ -833,7 +831,7 @@ gen_fun::operator evalue *() const
 
 ZZ gen_fun::coefficient(Value* params, barvinok_options *options) const
 {
-    if (context && !in_domain(context, params))
+    if (!in_domain(context, params))
 	return ZZ::zero();
 
     QQ sum(0, 1);

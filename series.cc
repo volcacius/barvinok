@@ -41,7 +41,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
 
     if (emptyQ2(P)) {
 	Polyhedron_Free(P);
-	return new gen_fun;
+	return new gen_fun(Empty_Polyhedron(nparam));
     }
 
     assert(!Polyhedron_is_unbounded(P, nparam, options->MaxRays));
