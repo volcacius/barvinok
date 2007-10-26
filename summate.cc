@@ -20,7 +20,6 @@ using std::endl;
 struct argp_option argp_options[] = {
     { "variables",	    OPT_VARS,  	"list",	0,
 	"comma separated list of variables over which to sum" },
-    { "verbose",	    'v',  	0,	0, },
     { 0 }
 };
 
@@ -28,7 +27,6 @@ struct options {
     struct convert_options   convert;
     struct verify_options    verify;
     char* var_list;
-    int verbose;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -41,10 +39,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[1] = &options->verify;
 	state->child_inputs[2] = options->verify.barvinok;
 	options->var_list = NULL;
-	options->verbose = 0;
-	break;
-    case 'v':
-	options->verbose = 1;
 	break;
     case OPT_VARS:
 	options->var_list = strdup(arg);
@@ -248,7 +242,7 @@ int main(int argc, char **argv)
     if (options.verify.verify)
 	verify_options_set_range(&options.verify, nvar+nparam);
 
-    evalue_convert(EP, &options.convert, options.verbose, nparam, all_vars);
+    evalue_convert(EP, &options.convert, bv_options->verbose, nparam, all_vars);
 
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);

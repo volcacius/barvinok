@@ -28,7 +28,6 @@ struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
     { "variables",	    OPT_VARS,  	"list",	0,
 	"comma separated list of variables over which to maximize" },
-    { "verbose",	    'v',  	0,	0, },
     { "minimize",	    OPT_MIN,  	0, 0,	"minimize instead of maximize"},
     { 0 }
 };
@@ -37,7 +36,6 @@ struct options {
     struct convert_options   convert;
     struct verify_options    verify;
     char* var_list;
-    int verbose;
     int split;
     int minimize;
 };
@@ -52,12 +50,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[1] = &options->verify;
 	state->child_inputs[2] = options->verify.barvinok;
 	options->var_list = NULL;
-	options->verbose = 0;
 	options->split = 0;
 	options->minimize = 0;
-	break;
-    case 'v':
-	options->verbose = 1;
 	break;
     case OPT_VARS:
 	options->var_list = strdup(arg);
@@ -296,7 +290,7 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 
     if (options->verify.verify) {
 	verify_options_set_range(&options->verify, nvar+nparam);
-	if (!options->verbose)
+	if (!options->verify.barvinok->verbose)
 	    print_solution = 0;
     }
 
@@ -350,7 +344,7 @@ int main(int argc, char **argv)
     if (options.split)
 	evalue_split_periods(EP, options.split, bv_options->MaxRays);
 
-    evalue_convert(EP, &options.convert, options.verbose, nparam, all_vars);
+    evalue_convert(EP, &options.convert, bv_options->verbose, nparam, all_vars);
 
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);

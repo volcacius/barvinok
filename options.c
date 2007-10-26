@@ -93,6 +93,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->bernstein_recurse = BV_BERNSTEIN_FACTORS;
 
+    options->verbose = 0;
+
     return options;
 }
 
@@ -185,6 +187,7 @@ static struct argp_option barvinok_argp_options[] = {
     { "recurse",	    BV_OPT_RECURSE,    	    "",
 	OPTION_ALIAS | OPTION_HIDDEN },
     { "version",	    'V',		    0,			0 },
+    { "verbose",    	    'v' },
     { 0 }
 };
 
@@ -277,6 +280,9 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = options;
+	break;
+    case 'v':
+	options->verbose = 1;
 	break;
     case 'V':
 	printf(barvinok_version());

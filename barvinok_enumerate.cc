@@ -32,7 +32,6 @@ struct argp_option argp_options[] = {
     { "size",      'S' },
     { "series",    's', 0, 0, "compute rational generating function" },
     { "explicit",  'e', 0, 0, "convert rgf to psp" },
-    { "verbose",    'v' },
     { "print-stats",	    PRINT_STATS,  0,	0 },
     { 0 }
 };
@@ -41,7 +40,6 @@ struct arguments {
     int size;
     int series;
     int function;
-    int verbose;
     int print_stats;
     struct verify_options    verify;
     struct convert_options   convert;
@@ -59,7 +57,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->size = 0;
 	options->series = 0;
 	options->function = 0;
-	options->verbose = 0;
 	options->print_stats = 0;
 	break;
     case PRINT_STATS:
@@ -73,9 +70,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	/* fall through */
     case 's':
 	options->series = 1;
-	break;
-    case 'v':
-	options->verbose = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -326,11 +320,11 @@ int main(int argc, char **argv)
 
     if (options.verify.verify) {
 	verify_options_set_range(&options.verify, A->Dimension);
-	if (!options.verbose)
+	if (!bv_options->verbose)
 	    print_solution = 0;
     }
 
-    if (print_solution && options.verbose) {
+    if (print_solution && bv_options->verbose) {
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	Polyhedron_Print(stdout, P_VALUE_FMT, C);
     }
@@ -348,8 +342,8 @@ int main(int argc, char **argv)
 	}
     } else {
 	EP = barvinok_enumerate_with_options(A, C, bv_options);
-	if (evalue_convert(EP, &options.convert, options.verbose, C->Dimension,
-			   param_name))
+	if (evalue_convert(EP, &options.convert, bv_options->verbose,
+			   C->Dimension, param_name))
 	    print_solution = 0;
 	if (options.size)
 	    printf("\nSize: %d\n", evalue_size(EP));

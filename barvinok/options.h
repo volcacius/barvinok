@@ -95,6 +95,8 @@ struct barvinok_options {
     #define	BV_CHAMBERS_POLYLIB	0
     #define	BV_CHAMBERS_TOPCOM	1
     int		chambers;
+
+    int		verbose;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();

@@ -34,7 +34,6 @@ struct argp_option argp_options[] = {
     { "series",		    's', 0, 0, "compute rational generating function" },
     { "explicit",	    'e', 0, 0, "convert rgf to psp" },
     { "scarf",      	    'S',    0,	    0 },
-    { "verbose",    	    'v' },
     { "print-stats",	    PRINT_STATS,  0,	0 },
     { 0 }
 };
@@ -46,7 +45,6 @@ struct arguments {
     int pip;
     int scarf;
     int series;
-    int verbose;
     int function;
     int print_stats;
 };
@@ -82,9 +80,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case 'p':
 	arguments->pip = 1;
-	break;
-    case 'v':
-	arguments->verbose = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -141,7 +136,6 @@ int main(int argc, char **argv)
     arguments.scarf = 0;
     arguments.series = 0;
     arguments.function = 0;
-    arguments.verbose = 0;
     arguments.print_stats = 0;
 
     set_program_name(argv[0]);
@@ -169,11 +163,11 @@ int main(int argc, char **argv)
 
     if (arguments.verify.verify) {
 	verify_options_set_range(&arguments.verify, A->Dimension);
-	if (!arguments.verbose)
+	if (!options->verbose)
 	    print_solution = 0;
     }
 
-    if (print_solution && arguments.verbose) {
+    if (print_solution && options->verbose) {
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	printf("exist: %d, nparam: %d\n", exist, nparam);
     }
@@ -204,7 +198,7 @@ int main(int argc, char **argv)
 	else
 	    EP = barvinok_enumerate_e_with_options(A, exist, nparam, options);
 	reduce_evalue(EP);
-	if (evalue_convert(EP, &arguments.convert, arguments.verbose, nparam,
+	if (evalue_convert(EP, &arguments.convert, options->verbose, nparam,
 			   param_name))
 	    print_solution = 0;
 	if (print_solution)
