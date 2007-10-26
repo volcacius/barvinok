@@ -309,6 +309,7 @@ ZSolveContext createZSolveContextFromSystem(LinearSystem initialsystem, FILE *lo
 		exit(1);
 	}
 
+	ctx->BackupTime = 0;
 	ctx->Verbosity = verbosity;
 	ctx->LogLevel = loglevel;
 	ctx->LogFile = logfile;
@@ -377,6 +378,7 @@ ZSolveContext createZSolveContextFromLattice(VectorArray lattice, FILE *logfile,
 		exit(1);
 	}
 
+	ctx->BackupTime = 0;
 	ctx->Verbosity = verbosity;
 	ctx->LogLevel = loglevel;
 	ctx->LogFile = logfile;
