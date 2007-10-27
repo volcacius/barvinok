@@ -98,6 +98,8 @@ enum lp_result constraints_opt(Matrix *C, Value *obj, Value denom,
 	return cdd_constraints_opt(C, obj, denom, dir, opt);
     else if (options->lp_solver == BV_LP_CDDF)
 	return cddf_constraints_opt(C, obj, denom, dir, opt);
+    else if (options->lp_solver == BV_LP_PIP)
+	return pip_constraints_opt(C, obj, denom, dir, opt);
     else
 	assert(0);
 }
@@ -133,6 +135,8 @@ enum lp_result polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 	return cdd_polyhedron_range(D, obj, denom, min, max, options);
     else if (options->lp_solver == BV_LP_CDDF)
 	return cddf_polyhedron_range(D, obj, denom, min, max, options);
+    else if (options->lp_solver == BV_LP_PIP)
+	return pip_polyhedron_range(D, obj, denom, min, max, options);
     else
 	assert(0);
 }

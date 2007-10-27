@@ -106,6 +106,7 @@ libbarvinok_la_SOURCES = \
     $(POLYSIGN_CDD) \
     $(POLYSIGN_GLPK) \
     polysign.c \
+    polysign_pip.c \
     polysign_polylib.c \
     polysign.h \
     reduce_domain.c \

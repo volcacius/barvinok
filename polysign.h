@@ -34,6 +34,8 @@ enum lp_result cdd_constraints_opt(Matrix *C, Value *obj, Value denom,
 				enum lp_dir dir, Value *opt);
 enum lp_result cddf_constraints_opt(Matrix *C, Value *obj, Value denom,
 				enum lp_dir dir, Value *opt);
+enum lp_result pip_constraints_opt(Matrix *C, Value *obj, Value denom,
+				enum lp_dir dir, Value *opt);
 
 enum lp_result polyhedron_opt(Polyhedron *P, Value *obj, Value denom,
 				enum lp_dir dir, Value *opt,
@@ -58,6 +60,9 @@ enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options);
 enum lp_result cddf_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options);
+enum lp_result pip_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options);
 #if defined(__cplusplus)

@@ -84,7 +84,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 #elif defined HAVE_LIBCDDGMP
     options->lp_solver = BV_LP_CDD;
 #else
-    options->lp_solver = BV_LP_POLYLIB;
+    options->lp_solver = BV_LP_PIP;
 #endif
 
     options->summation = BV_SUM_BARVINOK;
@@ -163,13 +163,13 @@ static struct argp_option barvinok_argp_options[] = {
 	},
     { "lp",		    BV_OPT_LP,
 #if defined(HAVE_LIBGLPK) && defined(HAVE_LIBCDDGMP)
-	"cdd|cddf|glpk|polylib",
+	"cdd|cddf|glpk|pip|polylib",
 #elif defined(HAVE_LIBGLPK)
-	"glpk|polylib",
+	"glpk|pip|polylib",
 #elif defined(HAVE_LIBCDDGMP)
-	"cdd|cddf|polylib",
+	"cdd|cddf|pip|polylib",
 #else
-	"polylib",
+	"pip|polylib",
 #endif
 	0,	"lp solver to use "
 #if defined(HAVE_LIBGLPK)
@@ -177,7 +177,7 @@ static struct argp_option barvinok_argp_options[] = {
 #elif defined(HAVE_LIBCDDGMP)
 	"[default: cdd]",
 #else
-	"[default: polylib]",
+	"[default: pip]",
 #endif
 	},
     { "summation",	    BV_OPT_SUM,		"barvinok|bernoulli|euler", 0,
@@ -326,6 +326,8 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->lp_solver = BV_LP_CDDF;
 	if (!strcmp(arg, "glpk"))
 	    options->lp_solver = BV_LP_GLPK;
+	if (!strcmp(arg, "pip"))
+	    options->lp_solver = BV_LP_PIP;
 	if (!strcmp(arg, "polylib"))
 	    options->lp_solver = BV_LP_POLYLIB;
 	break;
