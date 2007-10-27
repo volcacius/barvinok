@@ -8,35 +8,41 @@
 
 #define EMPTY_DOMAIN	-2
 
-static DD_LPType *solve_lp(DD_LPObjectiveType obj, Polyhedron *P,
+static DD_LPType *solve_lp(DD_LPObjectiveType obj, Matrix *C,
 			   Value *f)
 {
+    unsigned dim = C->NbColumns - 2;
     DD_LPType *lp;
-    DD_rowrange irev = P->NbConstraints;
-    DD_rowrange rows = irev + P->NbEq + 1;
-    DD_colrange cols = 1 + P->Dimension;
+    DD_rowrange irev = C->NbRows;
+    DD_rowrange rows, cols;
+    unsigned NbEq = 0;
+
+    for (int i = 0; i < C->NbRows; ++i)
+	if (value_zero_p(C->p[i][0]))
+	    NbEq++;
+
+    rows = irev + NbEq + 1;
+    cols = 1 + dim;
     lp = DD_CreateLPData(obj, DD_Rational, rows, cols);
     lp->Homogeneous = DD_FALSE;
     lp->objective = obj;
 
-    for (DD_rowrange j = 0; j < P->NbConstraints; ++j) {
-	for (DD_colrange k = 0; k < P->Dimension; ++k) {
-	    DD_set_si(lp->A[j][1+k], 5);
-	    DD_set_z(lp->A[j][1+k], P->Constraint[j][1+k]);
-	}
-	DD_set_z(lp->A[j][0], P->Constraint[j][1+P->Dimension]);
-	if (j < P->NbEq) {
+    for (DD_rowrange j = 0; j < C->NbRows; ++j) {
+	for (DD_colrange k = 0; k < dim; ++k)
+	    DD_set_z(lp->A[j][1+k], C->p[j][1+k]);
+	DD_set_z(lp->A[j][0], C->p[j][1+dim]);
+	if (value_zero_p(C->p[j][0])) {
 	    set_addelem(lp->equalityset, j+1);
-	    for (DD_colrange k = 0; k < P->Dimension; ++k)
+	    for (DD_colrange k = 0; k < dim; ++k)
 		DD_neg(lp->A[irev][1+k], lp->A[j][1+k]);
 	    DD_neg(lp->A[irev][0], lp->A[j][0]);
 	    ++irev;
 	}
     }
     /* objective function */
-    for (DD_colrange k = 0; k < P->Dimension; ++k)
+    for (DD_colrange k = 0; k < dim; ++k)
 	DD_set_z(lp->A[rows-1][1+k], f[k]);
-    DD_set_z(lp->A[rows-1][0], f[P->Dimension]); 
+    DD_set_z(lp->A[rows-1][0], f[dim]); 
 
     DD_ErrorType err = DD_NoError;
     DD_LPSolve(lp, DD_DualSimplex, &err);
@@ -45,11 +51,11 @@ static DD_LPType *solve_lp(DD_LPObjectiveType obj, Polyhedron *P,
     return lp;
 }
 
-static lp_result polyhedron_affine_minmax(DD_LPObjectiveType obj, Polyhedron *P,
+static lp_result constraints_affine_minmax(DD_LPObjectiveType obj, Matrix *C,
 					  Value *f, Value denom, Value *opt)
 {
     lp_result res = lp_ok;
-    DD_LPType *lp = solve_lp(obj, P, f);
+    DD_LPType *lp = solve_lp(obj, C, f);
     assert(value_one_p(denom));
 
     switch(lp->LPS) {
@@ -72,12 +78,13 @@ static lp_result polyhedron_affine_minmax(DD_LPObjectiveType obj, Polyhedron *P,
     return res;
 }
 
-static int polyhedron_affine_minmax_sign(DD_LPObjectiveType obj, Polyhedron *P,
+static int constraints_affine_minmax_sign(DD_LPObjectiveType obj, Matrix *C,
 					 Matrix *T, bool rational)
 {
-    assert(P->Dimension == T->NbColumns-1);
+    unsigned dim = C->NbColumns-2;
+    assert(dim == T->NbColumns-1);
     assert(T->NbRows == 2);
-    DD_LPType *lp = solve_lp(obj, P, T->p[0]);
+    DD_LPType *lp = solve_lp(obj, C, T->p[0]);
 
     int sign;
     if (lp->LPS == DD_Optimal) {
@@ -105,17 +112,20 @@ static int polyhedron_affine_minmax_sign(DD_LPObjectiveType obj, Polyhedron *P,
 enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {
+    Matrix M;
+
     if (emptyQ2(D))
 	return order_undefined;
 
     INIT_CDD;
     bool rational = !POL_ISSET(options->MaxRays, POL_INTEGER);
-    int min = polyhedron_affine_minmax_sign(DD_LPmin, D, T, rational);
+    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
+    int min = constraints_affine_minmax_sign(DD_LPmin, &M, T, rational);
     if (min == EMPTY_DOMAIN)
 	return order_undefined;
     if (min > 0)
 	return order_gt;
-    int max = polyhedron_affine_minmax_sign(DD_LPmax, D, T, rational);
+    int max = constraints_affine_minmax_sign(DD_LPmax, &M, T, rational);
     assert(max != EMPTY_DOMAIN);
     if (max < 0)
 	return order_lt;
@@ -133,14 +143,16 @@ enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				struct barvinok_options *options)
 {
     lp_result res;
+    Matrix M;
 
     if (emptyQ2(D))
 	return lp_empty;
 
     INIT_CDD;
-    res = polyhedron_affine_minmax(DD_LPmin, D, obj, denom, min);
+    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
+    res = constraints_affine_minmax(DD_LPmin, &M, obj, denom, min);
     if (res != lp_ok)
 	return res;
-    res = polyhedron_affine_minmax(DD_LPmax, D, obj, denom, max);
+    res = constraints_affine_minmax(DD_LPmax, &M, obj, denom, max);
     return res;
 }
