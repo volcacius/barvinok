@@ -52,6 +52,62 @@ enum order_sign PL_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
     return sign;
 }
 
+enum lp_result PL_constraints_opt(Matrix *C, Value *obj, Value denom,
+				    enum lp_dir dir, Value *opt,
+				    unsigned MaxRays)
+{
+    enum lp_result res;
+    Polyhedron *P = Constraints2Polyhedron(C, MaxRays);
+    res = PL_polyhedron_opt(P, obj, denom, dir, opt);
+    Polyhedron_Free(P);
+    return res;
+}
+
+enum lp_result PL_polyhedron_opt(Polyhedron *P, Value *obj, Value denom,
+				enum lp_dir dir, Value *opt)
+{
+    int i;
+    int first = 1;
+    Value val, d;
+    enum lp_result res = lp_empty;
+
+    POL_ENSURE_VERTICES(P);
+    if (emptyQ(P))
+	return res;
+
+    value_init(val);
+    value_init(d);
+    for (i = 0; i < P->NbRays; ++ i) {
+	Inner_Product(P->Ray[i]+1, obj, P->Dimension+1, &val);
+	if (value_zero_p(P->Ray[i][0]) && value_notzero_p(val)) {
+	    res = lp_unbounded;
+	    break;
+	}
+	if (value_zero_p(P->Ray[i][1+P->Dimension])) {
+	    if ((dir == lp_min && value_neg_p(val)) ||
+		(dir == lp_max && value_pos_p(val))) {
+		res = lp_unbounded;
+		break;
+	    }
+	} else {
+	    res = lp_ok;
+	    value_multiply(d, denom, P->Ray[i][1+P->Dimension]);
+	    if (dir == lp_min)
+		mpz_cdiv_q(val, val, d);
+	    else
+		mpz_fdiv_q(val, val, d);
+	    if (first || (dir == lp_min ? value_lt(val, *opt) :
+				          value_gt(val, *opt)))
+		value_assign(*opt, val);
+	    first = 0;
+	}
+    }
+    value_clear(d);
+    value_clear(val);
+
+    return res;
+}
+
 enum lp_result PL_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options)

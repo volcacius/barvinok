@@ -152,6 +152,13 @@ enum order_sign glpk_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
     return order_unknown;
 }
 
+enum lp_result glpk_constraints_opt(Matrix *C, Value *obj, Value denom,
+				    enum lp_dir dir, Value *opt)
+{
+    int glpk_dir = dir == lp_min ? LPX_MIN : LPX_MAX;
+    return constraints_affine_minmax(glpk_dir, C, obj, denom, opt);
+}
+
 enum lp_result glpk_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options)

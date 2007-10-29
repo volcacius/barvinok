@@ -138,6 +138,15 @@ enum order_sign cdd_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
     return order_unknown;
 }
 
+enum lp_result cdd_constraints_opt(Matrix *C, Value *obj, Value denom,
+				    enum lp_dir dir, Value *opt)
+{
+    DD_LPObjectiveType cdd_dir = dir == lp_min ? DD_LPmin : DD_LPmax;
+
+    INIT_CDD;
+    return constraints_affine_minmax(cdd_dir, C, obj, denom, opt);
+}
+
 enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 				Value *min, Value *max,
 				struct barvinok_options *options)
