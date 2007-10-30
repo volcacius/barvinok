@@ -15,6 +15,8 @@ Param_Domain *Param_Polyhedron_Facet(Param_Polyhedron *PP, Param_Domain *D,
 Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
 			      struct barvinok_options *options);
 
+int bit_vector_count(unsigned *F, int F_len);
+
 #if defined(__cplusplus)
 }
 #endif

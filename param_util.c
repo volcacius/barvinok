@@ -135,7 +135,8 @@ Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *P, Polyhedron *C,
 
 #define INT_BITS (sizeof(unsigned) * 8)
 
-static int bit_count(unsigned *F, int F_len)
+/* Wegner's method for counting the number of ones in a bit vector */
+int bit_vector_count(unsigned *F, int F_len)
 {
     int i;
     int count = 0;
@@ -176,7 +177,7 @@ Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
 	}
 	Vector_Free(row);
     }
-    n = bit_count(V->Facets, len);
+    n = bit_vector_count(V->Facets, len);
 
     M = Matrix_Alloc(n, 1+nvar+1);
     assert(M);

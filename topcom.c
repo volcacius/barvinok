@@ -158,27 +158,12 @@ static int add_vertex_to_domain(Param_Vertices **vertices, int words,
     return 1;
 }
 
-static int bit_count(unsigned *F, int F_len)
-{
-    int i;
-    int count = 0;
-
-    for (i = 0; i < F_len; ++i) {
-	unsigned v = F[i];
-	while (v) {
-	    v &= v-1;
-	    ++count;
-	}
-    }
-    return count;
-}
-
 static void compute_domain(struct domain *domain, Param_Vertices *vertices,
 			   Polyhedron *C, unsigned MaxRays)
 {
     unsigned bx;
     int i, ix, j;
-    int nbV = bit_count(domain->domain.F, domain->F_len);
+    int nbV = bit_vector_count(domain->domain.F, domain->F_len);
     unsigned cols = vertices->Domain->NbColumns;
     unsigned rows = vertices->Domain->NbRows;
     Matrix *Constraints = Matrix_Alloc(nbV * rows + C->NbConstraints, cols);
@@ -323,7 +308,7 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
 	    vertex_words = domain->F_len;
 	fgetc(fout); /* ; */
 	fgetc(fout); /* \n */
-	if (bit_count(domain->domain.F, domain->F_len) > 0)
+	if (bit_vector_count(domain->domain.F, domain->F_len) > 0)
 	    add_domain(&domains, domain, vertices, C, options);
 	else {
 	    options->stats->topcom_empty_chambers++;
