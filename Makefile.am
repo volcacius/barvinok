@@ -18,6 +18,8 @@ polylib/libpolylibgmp.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C polylib libpolylibgmp.la
 piplib/libpiplibMP.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C piplib libpiplibMP.la
+zsolve/libzsolve.la: FORCE
+	$(MAKE) $(AM_MAKEFLAGS) -C zsolve libzsolve.la
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @GINACLIB_CPPFLAGS@
@@ -30,7 +32,8 @@ noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate verify_lexsmaller piptest \
-		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@
+		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@ \
+		  cone_hilbert_basis
 EXTRA_PROGRAMS = barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
@@ -91,6 +94,8 @@ libbarvinok_la_SOURCES = \
     euler.h \
     genfun_constructor.cc \
     genfun_constructor.h \
+    hilbert.c \
+    hilbert.h \
     lattice_point.cc \
     lattice_point.h \
     options.c \
@@ -148,7 +153,7 @@ if BUNDLED_PIPLIB
 endif
 libbarvinok_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			$(PIPLIB_LA) @PIPLIB_LIBS@ $(BERNSTEIN_LA) \
-			lib/libgnu.la
+			zsolve/libzsolve.la lib/libgnu.la
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 LDADD = libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 

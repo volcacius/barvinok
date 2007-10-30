@@ -11,6 +11,7 @@
 #include "lattice_point.h"
 #include "counter.h"
 #include "bernoulli.h"
+#include "hilbert.h"
 #include "matrix_read.h"
 
 using std::cout;
@@ -469,6 +470,22 @@ int test_bernoulli_sum(struct barvinok_options *options)
     evalue_free(sum2);
 }
 
+int test_hilbert(struct barvinok_options *options)
+{
+    Matrix *M = matrix_read_from_str(
+	"2 4\n"
+	"   1    4   -3    0 \n"
+	"   1    3    2    0 \n");
+    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    M = Cone_Hilbert_Basis(P, options->MaxRays);
+    Polyhedron_Free(P);
+    assert(M->NbRows = 5);
+    assert(M->NbColumns = 3);
+    Matrix_Free(M);
+}
+
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -482,5 +499,6 @@ int main(int argc, char **argv)
     test_todd(options);
     test_bernoulli(options);
     test_bernoulli_sum(options);
+    test_hilbert(options);
     barvinok_options_free(options);
 }
