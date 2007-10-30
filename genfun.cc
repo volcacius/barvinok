@@ -537,13 +537,21 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
     Polyhedron *C = DomainIntersection(context, gf->context, options->MaxRays);
     Polyhedron *U = Universe_Polyhedron(C->Dimension);
     gen_fun *sum = new gen_fun(C);
-    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
-	for (short_rat_list::iterator i2 = gf->term.begin(); i2 != gf->term.end();
-							     ++i2) {
+
+    int j = 0;
+    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i, j++) {
+	int k = 0;
+	for (short_rat_list::iterator i2 = gf->term.begin();
+		i2 != gf->term.end();
+		++i2, k++) {
 	    int d = (*i)->d.power.NumCols();
 	    int k1 = (*i)->d.power.NumRows();
 	    int k2 = (*i2)->d.power.NumRows();
 	    assert((*i)->d.power.NumCols() == (*i2)->d.power.NumCols());
+
+	    if (options->verbose)
+		fprintf(stderr, "HP: %d/%d %d/%d \r",
+				    j, term.size(), k, gf->term.size());
 
 	    parallel_polytopes pp((*i)->n.power.NumRows() *
 				  (*i2)->n.power.NumRows(),
