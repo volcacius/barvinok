@@ -4,6 +4,7 @@
 #undef Vector
 #undef Matrix
 #include "hilbert.h"
+#include "topcom.h"
 
 static ZSolveMatrix Matrix2zsolve(Matrix *M)
 {
@@ -50,30 +51,50 @@ static void Polyhedron_Remove_Positivity_Constraint(Polyhedron *P)
     }
 }
 
-static Matrix *Polyhedron2standard_form(Polyhedron *P, Matrix **T)
+/* Return
+ *             T 0
+ *             0 1
+ */
+static Matrix *homogenize(Matrix *T)
 {
     int i;
+    Matrix *H = Matrix_Alloc(T->NbRows+1, T->NbColumns+1);
+
+    for (i = 0; i < T->NbRows; ++i)
+	Vector_Copy(T->p[i], H->p[i], T->NbColumns);
+    value_set_si(H->p[T->NbRows][T->NbColumns], 1);
+    return H;
+}
+
+static Matrix *Polyhedron2standard_form(Polyhedron *P, Matrix **T)
+{
+    int i, j;
+    int rows;
     unsigned dim = P->Dimension;
-    Matrix *M2 = Matrix_Alloc(P->NbConstraints+1, dim+1);
-    Matrix *H, *Q;
+    Matrix *M2;
+    Matrix *H, *U;
 
+    assert(P->NbEq == 0);
     Polyhedron_Remove_Positivity_Constraint(P);
-    for (i = 0; i < P->NbConstraints; ++i) {
+    for (i = 0; i < P->NbConstraints; ++i)
 	assert(value_zero_p(P->Constraint[i][1+dim]));
-	Vector_Copy(P->Constraint[i]+1, M2->p[i], dim);
+
+    H = standard_constraints(P, 0, &rows, &U);
+    *T = homogenize(U);
+    Matrix_Free(U);
+
+    M2 = Matrix_Alloc(rows, 2+dim+rows);
+
+    for (i = dim; i < H->NbRows; ++i) {
+	Vector_Copy(H->p[i], M2->p[i-dim]+1, dim);
+	value_set_si(M2->p[i-dim][1+i], -1);
     }
-    value_set_si(M2->p[P->NbConstraints][dim], 1);
-    neg_left_hermite(M2, &H, &Q, T);
-    Matrix_Free(Q);
-    Matrix_Free(M2);
-
-    M2 = Matrix_Alloc(P->NbConstraints, 2+dim+(P->NbConstraints-P->NbEq));
-
-    for (i = 0; i < P->NbEq; ++i)
-	Vector_Copy(H->p[i], M2->p[i]+1, dim);
-    for (i = P->NbEq; i < P->NbConstraints; ++i) {
-	Vector_Copy(H->p[i], M2->p[i]+1, dim);
-	value_set_si(M2->p[i][1+dim+i-P->NbEq], -1);
+    for (i = 0, j = H->NbRows-dim; i < dim; ++i) {
+	if (First_Non_Zero(H->p[i], i) == -1)
+	    continue;
+	Vector_Oppose(H->p[i], M2->p[j]+1, dim);
+	value_set_si(M2->p[j][1+j+dim], 1);
+	++j;
     }
     Matrix_Free(H);
     return M2;

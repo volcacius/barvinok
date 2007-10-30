@@ -369,9 +369,12 @@ static int is_unit_row(Value *row, int pos, int len)
  * that are not positive multiples of unit vectors
  * (since those correspond to D x' >= -b(p)).
  * The number of rows in H' is returned in *rows_p.
+ * Optionally returns the matrix that maps the new variables
+ * back to the old variables x = U x'.
  * Note that the rows of H (and P) may be reordered by this function.
  */
-Matrix *standard_constraints(Polyhedron *P, unsigned nparam, int *rows_p)
+Matrix *standard_constraints(Polyhedron *P, unsigned nparam, int *rows_p,
+			     Matrix **T)
 {
     unsigned nvar = P->Dimension - nparam;
     int i, j, d;
@@ -410,7 +413,10 @@ Matrix *standard_constraints(Polyhedron *P, unsigned nparam, int *rows_p)
     neg_left_hermite(M, &H, &Q, &U);
     Matrix_Free(M);
     Matrix_Free(Q);
-    Matrix_Free(U);
+    if (T)
+	*T = U;
+    else
+	Matrix_Free(U);
 
     /* Rearrange rows such that top of H is lower diagonal and
      * compute the number of non (multiple of) unit-vector rows.
@@ -450,7 +456,7 @@ Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
 
     assert(C->NbEq == 0);
 
-    H = standard_constraints(P, nparam, &rows);
+    H = standard_constraints(P, nparam, &rows, NULL);
 
     A = Matrix_Alloc(rows, nvar+rows);
     for (i = nvar; i < H->NbRows; ++i) {
