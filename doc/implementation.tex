@@ -3250,6 +3250,153 @@ the integer points of $P(n)$}
 
 \end{example}
 
+
+\subsection{Conversion to ``standard form''}
+\label{s:standard}
+
+Some algorithms or tools expect a polyhedron to be
+specified in ``\ai{standard form}'', i.e.,
+\begin{equation}
+\label{eq:standard}
+\begin{cases}
+    \begin{aligned}
+A \vec x & = \vec b \\
+\vec x & \ge \vec 0
+.
+    \end{aligned}
+\end{cases}
+\end{equation}
+Given an arbitrary (parametric) polyhedron
+\begin{equation}
+\label{eq:non-standard}
+\{\,
+\vec x \mid
+A \vec x + \vec b(\vec p) \ge 0
+\,\}
+,
+\end{equation}
+a conversion to standard form requires the introduction
+of \ai{slack variable}s and a way of dealing with variables
+of \ai{unrestricted sign}.
+In this section we will be satisfied with a reduction
+to the form
+\begin{equation}
+\label{eq:standard:2}
+\begin{cases}
+    \begin{aligned}
+A \vec x & = \vec b \\
+D \vec x & \ge \vec c
+,
+    \end{aligned}
+\end{cases}
+\end{equation}
+with $D$ a diagonal matrix with positive entries.
+That is, we do not necessarily make all variables non-negative,
+but we do ensure that they have a lower bound.
+If needed, a subsequent reduction can then be performed.
+
+The standard way of dealing with variables of unrestricted
+sign is to replace a variable $x$ of unknown sign by the
+difference ($x = x' - x''$) of two non-negative variables
+($x', x'' \ge 0$).
+However, some algorithms are somewhat sensitive with respect
+to the number of variables and so we would prefer to introduce
+as few extra variables as possible.
+We will therefore apply a \ai{unimodular transformation}
+on the variables such that all transformed variables are known
+to be non-negative.
+
+The first step is to compute the \indac{HNF} of A,
+i.e., a matrix $H = A U$, with $U$ unimodular,
+in column echelon form such that the
+first entry in each column is positive and the other entries
+on the corresponding row are non-negative and strictly smaller
+than this first entry.
+By reordering the rows we may assume that the top square part
+of $H$ is lower-triangular.
+By a further unimodular transformation, the entries
+below the diagonal can be made non-positive and strictly
+smaller (in absolute value) than the diagonal entry of the same row.
+
+For each of the new variables, we can take a positive
+combination of the corresponding row and the previous rows
+to obtain a positive multiple of the corresponding unit vector,
+implying that the variable has a lower bound.
+A slack variable can then be introduced for each of the
+rows in the top square part of $H'$ that is not already
+a positive multiple of a unit vector and for each of
+the rows below the top square part of $H'$.
+
+\begin{example}
+Consider the cone
+$$
+\left\{\,
+\vec x \mid
+\begin{bmatrix}
+67 & -13 \\
+-52 & 53
+\end{bmatrix}
+\vec x
+\ge
+\vec 0
+\,\right\}
+.
+$$
+This cone is already situated in the first quadrant,
+but this may not be obvious from the constraints.
+Furthermore, directly adding slack variables would
+lead to a total of 4 variables, whereas we can also
+represent this cone in standard form with only 3 variables.
+We have
+$$
+H' =
+\begin{bmatrix}
+1 & 0 \\
+-1331 & 2875
+\end{bmatrix}
+=
+\begin{bmatrix}
+67 & -13 \\
+-52 & 53
+\end{bmatrix}
+\begin{bmatrix}
+-6 & 13 \\
+-31 & 57
+\end{bmatrix}
+= A U'
+.
+$$
+Adding a slack variable for the second row of $H'$, we
+obtain the equivalent problem
+$$
+\begin{cases}
+\begin{aligned}
+\begin{bmatrix}
+-1331 & 2875 & -1
+\end{bmatrix}
+\vec x'
+& =
+\vec 0
+\\
+\vec x' & \ge \vec 0
+\end{aligned}
+\end{cases}
+$$
+with
+$$
+\vec x =
+\begin{bmatrix}
+-6 & 13 & 0 \\
+-31 & 57 & 0
+\end{bmatrix}
+\vec x'
+.
+$$
+\end{example}
+
+A similar construction was used by \shortciteN[Lemma~3.10]{Eisenbrand2000PhD}
+and \shortciteN{Hung1990}.
+
 \subsection{Using TOPCOM to compute Chamber Decompositions}
 
 In this section, we describe how to use the correspondence
@@ -3556,8 +3703,8 @@ $\sps {\vec a_j}{\vec x'} = b_j(\vec p) + \sps {\vec a_j}{\vec c(\vec p)}$.
 In the general case, the problem has the form
 $$
 A \vec x \ge \vec b(\vec p)
-.
 $$
+and then we apply the technique of \autoref{s:standard}.
 Let $A'$ be a non-singular square submatrix of $A$ with the same number
 of columns and compute the (left) \indac{HNF} $H = A' U$ with $U$ unimodular
 and $H$ lower-triangular with non-positive elements below the diagonal.
@@ -3707,3 +3854,16 @@ same chamber in the chamber complex of the parametric polytope.
 For example, for a dilated octahedron, \ai[\tt]{TOPCOM} will
 compute 150 triangulations/chambers, 104 of which are empty,
 while the remaining 46 refer to the same single chamber.
+
+
+\subsection{Computing the Hilbert basis of a cone}
+
+To compute the \ai{Hilbert basis} of a cone, we use
+the \ai[\tt]{zsolve} library from \ai[\tt]{4ti2} \shortcite{4ti2},
+which implements the technique of \shortciteN{Hemmecke2002Hilbert}.
+We first remove all equalities from the cone through unimodular
+transformations and then apply the technique of \autoref{s:standard}
+to put the cone in ``standard form''.  Note that for a (non-parametric)
+cone the constant term $\vec b$ in \eqref{eq:non-standard} is $\vec 0$.
+The constraints $D \vec x \ge \vec c = \vec 0$ of \eqref{eq:standard:2}
+are therefore equivalent to $\vec x \ge \vec 0$.
