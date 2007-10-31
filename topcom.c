@@ -374,25 +374,28 @@ static int is_unit_row(Value *row, int pos, int len)
     return First_Non_Zero(row+pos+1, len-(pos+1)) == -1;
 }
 
-/* C is assumed to be the "true" context, i.e., it has been intersected
- * with the projection of P onto the parameter space.
- * Furthermore, P and C are assumed to be full-dimensional.
+/* Transform the constraints of P to "standard form".
+ * In particular, if P is described by
+ *		A x + b(p) >= 0
+ * then this function returns a matrix H = A U, A = H Q, such
+ * that D x' = D Q x >= -b(p), with D a diagonal matrix with
+ * positive entries.  The calling function can then construct
+ * the standard form H' x' - I s + b(p) = 0, with H' the rows of H
+ * that are not positive multiples of unit vectors
+ * (since those correspond to D x' >= -b(p)).
+ * The number of rows in H' is returned in *rows_p.
+ * Note that the rows of H (and P) may be reordered by this function.
  */
-Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
-			  struct barvinok_options *options)
+Matrix *standard_constraints(Polyhedron *P, unsigned nparam, int *rows_p)
 {
-    unsigned nparam = C->Dimension;
-    unsigned nvar = P->Dimension - C->Dimension;
-    Matrix *M;
+    unsigned nvar = P->Dimension - nparam;
     int i, j, d;
-    Matrix *H, *U, *Q;
-    Matrix *A;
-    Matrix *K;
     int rows;
-    Param_Polyhedron *PP;
+    Matrix *M;
+    Matrix *H, *U, *Q;
 
     assert(P->NbEq == 0);
-    assert(C->NbEq == 0);
+
     /* move constraints only involving parameters down
      * and move unit vectors (if there are any) to the right place.
      */
@@ -415,7 +418,7 @@ Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
 	    break;
 	Vector_Exchange(P->Constraint[d], P->Constraint[j], P->Dimension+2);
     }
-    M = Matrix_Alloc(d+nvar, nvar);
+    M = Matrix_Alloc(d, nvar);
     for (j = 0; j < d; ++j)
 	Vector_Copy(P->Constraint[j]+1, M->p[j], nvar);
 
@@ -423,12 +426,11 @@ Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
     Matrix_Free(M);
     Matrix_Free(Q);
     Matrix_Free(U);
-    H->NbRows -= nvar;
 
     /* Rearrange rows such that top of H is lower diagonal and
-     * add extra unit vector rows that are positive linear
-     * combinations of two or more of the top rows.
+     * compute the number of non (multiple of) unit-vector rows.
      */
+    rows = H->NbRows-nvar;
     for (i = 0; i < H->NbColumns; ++i) {
 	for (j = i; j < H->NbRows; ++j)
 	    if (value_notzero_p(H->p[j][i]))
@@ -438,27 +440,51 @@ Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
 	    Vector_Exchange(H->p[i], H->p[j], H->NbColumns);
 	}
 	if (First_Non_Zero(H->p[i], i) != -1)
-	    value_set_si(H->p[H->NbRows++][i], 1);
+	    rows++;
     }
+    *rows_p = rows;
 
-    rows = H->NbRows-nvar;
+    return H;
+}
+
+/* C is assumed to be the "true" context, i.e., it has been intersected
+ * with the projection of P onto the parameter space.
+ * Furthermore, P and C are assumed to be full-dimensional.
+ */
+Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
+			  struct barvinok_options *options)
+{
+    unsigned nparam = C->Dimension;
+    unsigned nvar = P->Dimension - C->Dimension;
+    int i, j;
+    Matrix *H;
+    Matrix *A;
+    Matrix *K;
+    int rows;
+    Param_Polyhedron *PP;
+
+    assert(C->NbEq == 0);
+
+    H = standard_constraints(P, nparam, &rows);
+
     A = Matrix_Alloc(rows, nvar+rows);
-    for (i = nvar; i < d; ++i) {
+    for (i = nvar; i < H->NbRows; ++i) {
 	Vector_Oppose(H->p[i], A->p[i-nvar], H->NbColumns);
 	value_set_si(A->p[i-nvar][i], 1);
     }
-    for (; i < H->NbRows; ++i) {
-	j = First_Non_Zero(H->p[i], nvar);
-	assert(j != -1);
-	Vector_Oppose(H->p[j], A->p[i-nvar], H->NbColumns);
-	value_set_si(A->p[i-nvar][i], 1);
-	SwapColumns(A->p, A->NbRows, i, j);
+    for (i = 0, j = H->NbRows-nvar; i < nvar; ++i) {
+	if (First_Non_Zero(H->p[i], i) == -1)
+	    continue;
+	Vector_Oppose(H->p[i], A->p[j], H->NbColumns);
+	value_set_si(A->p[j][j+nvar], 1);
+	SwapColumns(A->p, A->NbRows, j+nvar, i);
+	++j;
     }
-    Matrix_Free(H);
     K = null_space(A);
     Matrix_Free(A);
     /* Ignore extra constraints */
-    K->NbRows = d;
+    K->NbRows = H->NbRows;
+    Matrix_Free(H);
     PP = points2triangs(K, P, C, options);
     Matrix_Free(K);
     return PP;
