@@ -480,10 +480,16 @@ int test_hilbert(struct barvinok_options *options)
     Matrix_Free(M);
 
     M = Cone_Hilbert_Basis(P, options->MaxRays);
-    Polyhedron_Free(P);
     assert(M->NbRows = 5);
     assert(M->NbColumns = 3);
     Matrix_Free(M);
+
+    M = Cone_Integer_Hull(P, options);
+    assert(M->NbRows = 4);
+    assert(M->NbColumns = 3);
+    Matrix_Free(M);
+
+    Polyhedron_Free(P);
 }
 
 int main(int argc, char **argv)

@@ -1,9 +1,13 @@
+#include <stdlib.h>
 #define Vector ZSolveVector
 #define Matrix ZSolveMatrix
 #include "zsolve/libzsolve.h"
 #undef Vector
 #undef Matrix
+#include <barvinok/options.h>
+#include <barvinok/util.h>
 #include "hilbert.h"
+#include "polysign.h"
 #include "topcom.h"
 
 static ZSolveMatrix Matrix2zsolve(Matrix *M)
@@ -164,4 +168,128 @@ Matrix *Cone_Hilbert_Basis(Polyhedron *C, unsigned MaxRays)
     }
 
     return M3;
+}
+
+/* Assumes no two arrays of values are the same, so we can just
+ * look for the first different elements, without knowing the
+ * length of the arrays.
+ */
+static int lex_cmp(const void *va, const void *vb)
+{
+    int i;
+    const Value *a = *(const Value **)va;
+    const Value *b = *(const Value **)vb;
+
+    for (i = 0; ; ++i) {
+	int sign = mpz_cmp(a[i], b[i]);
+	if (sign)
+	    return sign;
+    }
+}
+
+/* Compute integer hull of truncated linear cone C, i.e., of C with
+ * the origin removed.
+ * Here, we do this by first computing the Hilbert basis of C
+ * and then discarding elements from this basis that are rational
+ * overconvex combinations of other elements in the basis.
+ */
+Matrix *Cone_Integer_Hull(Polyhedron *C, struct barvinok_options *options)
+{
+    int i, j, k;
+    Matrix *hilbert = Cone_Hilbert_Basis(C, options->MaxRays);
+    Matrix *rays, *hull;
+    unsigned dim = C->Dimension;
+    Value tmp;
+    unsigned MaxRays = options->MaxRays;
+
+    /* When checking for redundant points below, we want to
+     * check if there are any _rational_ solutions.
+     */
+    POL_UNSET(options->MaxRays, POL_INTEGER);
+
+    POL_ENSURE_VERTICES(C);
+    rays = Matrix_Alloc(C->NbRays-1, C->Dimension);
+    for (i = 0, j = 0; i < C->NbRays; ++i) {
+	if (value_notzero_p(C->Ray[i][1+C->Dimension]))
+	    continue;
+	Vector_Copy(C->Ray[i]+1, rays->p[j++], C->Dimension);
+    }
+
+    /* We only sort the pointers into the big Value array */
+    qsort(rays->p, rays->NbRows, sizeof(Value *), lex_cmp);
+    qsort(hilbert->p, hilbert->NbRows, sizeof(Value *), lex_cmp);
+
+    /* Remove rays from Hilbert basis */
+    for (i = 0, j = 0, k = 0; i < hilbert->NbRows && j < rays->NbRows; ++i) {
+	if (Vector_Equal(hilbert->p[i], rays->p[j], C->Dimension))
+	    ++j;
+	else
+	    hilbert->p[k++] = hilbert->p[i];
+    }
+    hilbert->NbRows = k;
+
+    /* Now remove points that are overconvex combinations of other points */
+    value_init(tmp);
+    for (i = 0; hilbert->NbRows > 1 && i < hilbert->NbRows; ++i) {
+	Matrix *LP;
+	Vector *obj;
+	int nray = rays->NbRows;
+	int npoint = hilbert->NbRows;
+	enum lp_result result;
+
+	LP = Matrix_Alloc(dim + 1 + nray + (npoint-1), 2 + nray + (npoint-1));
+	for (j = 0; j < dim; ++j) {
+	    for (k = 0; k < nray; ++k)
+		value_assign(LP->p[j][k+1], rays->p[k][j]);
+	    for (k = 0; k < npoint; ++k) {
+		if (k == i)
+		    value_oppose(LP->p[j][1+nray+npoint-1], hilbert->p[k][j]);
+		else
+		    value_assign(LP->p[j][1+nray+k-(k>i)], hilbert->p[k][j]);
+	    }
+	}
+	value_set_si(LP->p[dim][0], 1);
+	for (k = 0; k < nray+npoint-1; ++k)
+	    value_set_si(LP->p[dim][1+k], 1);
+	value_set_si(LP->p[dim][LP->NbColumns-1], -1);
+	for (k = 0; k < LP->NbColumns-2; ++k) {
+	    value_set_si(LP->p[dim+1+k][0], 1);
+	    value_set_si(LP->p[dim+1+k][1+k], 1);
+	}
+
+	/* Somewhat arbitrary objective function. */
+	obj = Vector_Alloc(LP->NbColumns-1);
+	value_set_si(obj->p[0], 1);
+	value_set_si(obj->p[obj->Size-1], 1);
+
+	result = constraints_opt(LP, obj->p, obj->p[0], lp_min, &tmp,
+				 options);
+
+	/* If the LP is not empty, the point can be discarded */
+	if (result != lp_empty) {
+	    hilbert->NbRows--;
+	    if (i < hilbert->NbRows)
+		hilbert->p[i] = hilbert->p[hilbert->NbRows];
+	    --i;
+	}
+
+	Matrix_Free(LP);
+	Vector_Free(obj);
+    }
+    value_clear(tmp);
+
+    hull = Matrix_Alloc(rays->NbRows + hilbert->NbRows, dim+1);
+    for (i = 0; i < rays->NbRows; ++i) {
+	Vector_Copy(rays->p[i], hull->p[i], dim);
+	value_set_si(hull->p[i][dim], 1);
+    }
+    for (i = 0; i < hilbert->NbRows; ++i) {
+	Vector_Copy(hilbert->p[i], hull->p[rays->NbRows+i], dim);
+	value_set_si(hull->p[rays->NbRows+i][dim], 1);
+    }
+    Matrix_Free(rays);
+    Matrix_Free(hilbert);
+
+    options->MaxRays = MaxRays;
+    return hull;
 }

@@ -33,7 +33,7 @@ noinst_PROGRAMS = test testlib randomtest \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate verify_lexsmaller piptest \
 		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@ \
-		  cone_hilbert_basis
+		  cone_hilbert_basis cone_integer_hull
 EXTRA_PROGRAMS = barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
