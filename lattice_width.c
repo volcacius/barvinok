@@ -2,6 +2,7 @@
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "hilbert.h"
+#include "hull.h"
 #include "lattice_width.h"
 #include "param_util.h"
 #include "reduce_domain.h"

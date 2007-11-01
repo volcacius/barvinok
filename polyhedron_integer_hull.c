@@ -17,15 +17,12 @@ int main(int argc, char **argv)
     C = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
 
-    M = Cone_Integer_Hull(C, options);
+    M = Polyhedron_Integer_Hull(C, options);
 
     Polyhedron_Free(C);
 
     Matrix_Print(stdout, P_VALUE_FMT, M);
     Matrix_Free(M);
-
-    if (options->print_stats)
-	barvinok_stats_print(options->stats, stdout);
 
     barvinok_options_free(options);
     return 0;

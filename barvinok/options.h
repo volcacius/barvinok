@@ -98,6 +98,10 @@ struct barvinok_options {
     #define	BV_CHAMBERS_TOPCOM	1
     int		chambers;
 
+    #define	BV_HULL_GBR		0
+    #define	BV_HULL_HILBERT		1
+    int		integer_hull;
+
     int		verbose;
 
     int		print_stats;
@@ -121,6 +125,7 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_LP		266
 #define BV_OPT_SUM		267
 #define BV_OPT_CHAMBERS		268
+#define BV_OPT_HULL		269
 #define BV_OPT_PRINT_STATS	270
 #define BV_OPT_LAST		270
 

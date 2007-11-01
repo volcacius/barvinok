@@ -193,7 +193,8 @@ static int lex_cmp(const void *va, const void *vb)
  * and then discarding elements from this basis that are rational
  * overconvex combinations of other elements in the basis.
  */
-Matrix *Cone_Integer_Hull(Polyhedron *C, struct barvinok_options *options)
+Matrix *Cone_Hilbert_Integer_Hull(Polyhedron *C,
+				  struct barvinok_options *options)
 {
     int i, j, k;
     Matrix *hilbert = Cone_Hilbert_Basis(C, options->MaxRays);

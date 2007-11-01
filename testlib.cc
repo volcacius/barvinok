@@ -12,6 +12,7 @@
 #include "counter.h"
 #include "bernoulli.h"
 #include "hilbert.h"
+#include "hull.h"
 #include "ilp.h"
 #include "matrix_read.h"
 
@@ -524,6 +525,55 @@ int test_ilp(struct barvinok_options *options)
     Polyhedron_Free(P);
 }
 
+int test_hull(struct barvinok_options *options)
+{
+    Matrix *M = matrix_read_from_str(
+	"4 4\n"
+	"1  32  -20    7\n"
+	"1   8  -44  187\n"
+	"1 -48   -4  285\n"
+	"1   8   68 -199\n");
+    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    Matrix *hull = Polyhedron_Integer_Hull(P, options);
+    Polyhedron_Free(P);
+    assert(hull->NbRows == 4);
+    M = Matrix_Alloc(hull->NbRows, 1+hull->NbColumns);
+    for (int i = 0; i < hull->NbRows; ++i) {
+	value_set_si(M->p[i][0], 1);
+	Vector_Copy(hull->p[i], M->p[i]+1, hull->NbColumns);
+    }
+    Matrix_Free(hull);
+    Polyhedron *H = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    M = matrix_read_from_str(
+	"4 4\n"
+	"1    2    3    1 \n"
+	"1    3    4    1 \n"
+	"1    5    3    1 \n"
+	"1    5    5    1 \n");
+    P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    assert(PolyhedronIncludes(P, H) && PolyhedronIncludes(H, P));
+    Polyhedron_Free(P);
+    Polyhedron_Free(H);
+
+    M = matrix_read_from_str(
+	"3 4\n"
+	"1   2    6   -3 \n"
+	"1   2   -6    3 \n"
+	"1  -2    0    3 \n");
+    P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    assert(!emptyQ(P));
+    hull = Polyhedron_Integer_Hull(P, options);
+    Polyhedron_Free(P);
+    assert(hull->NbRows == 0);
+    Matrix_Free(hull);
+}
+
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -539,5 +589,6 @@ int main(int argc, char **argv)
     test_bernoulli_sum(options);
     test_hilbert(options);
     test_ilp(options);
+    test_hull(options);
     barvinok_options_free(options);
 }
