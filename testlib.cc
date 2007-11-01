@@ -12,6 +12,7 @@
 #include "counter.h"
 #include "bernoulli.h"
 #include "hilbert.h"
+#include "ilp.h"
 #include "matrix_read.h"
 
 using std::cout;
@@ -492,6 +493,37 @@ int test_hilbert(struct barvinok_options *options)
     Polyhedron_Free(P);
 }
 
+int test_ilp(struct barvinok_options *options)
+{
+    Matrix *M = matrix_read_from_str(
+	"2 4\n"
+	"   1    4   -3    0 \n"
+	"   1    3    2    0 \n");
+    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    Vector *obj = Vector_Alloc(2);
+    value_set_si(obj->p[0], 7);
+    value_set_si(obj->p[1], -1);
+    Value min, max;
+    value_init(min);
+    value_init(max);
+
+    value_set_si(min, 1);
+    value_set_si(max, 17);
+    Vector *opt = Polyhedron_Integer_Minimum(P, obj->p, min, max,
+					     NULL, 0, options);
+    assert(opt);
+    assert(value_cmp_si(opt->p[0], 1) == 0);
+    assert(value_cmp_si(opt->p[1], 1) == 0);
+    assert(value_cmp_si(opt->p[2], 1) == 0);
+    Vector_Free(opt);
+
+    value_clear(min);
+    value_clear(max);
+    Vector_Free(obj);
+    Polyhedron_Free(P);
+}
+
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -506,5 +538,6 @@ int main(int argc, char **argv)
     test_bernoulli(options);
     test_bernoulli_sum(options);
     test_hilbert(options);
+    test_ilp(options);
     barvinok_options_free(options);
 }

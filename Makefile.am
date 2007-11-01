@@ -34,7 +34,7 @@ noinst_PROGRAMS = test testlib randomtest \
 		  barvinok_summate verify_lexsmaller piptest \
 		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@ \
 		  cone_hilbert_basis cone_integer_hull \
-		  polytope_lattice_width
+		  polytope_lattice_width polytope_minimize
 EXTRA_PROGRAMS = barvinok_maximize
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
@@ -97,6 +97,8 @@ libbarvinok_la_SOURCES = \
     genfun_constructor.h \
     hilbert.c \
     hilbert.h \
+    ilp.c \
+    ilp.h \
     lattice_point.cc \
     lattice_point.h \
     lattice_width.c \
