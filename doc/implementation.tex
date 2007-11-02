@@ -920,6 +920,12 @@ original cone, i.e., such that the half-open simple cones do not intersect at th
 facets.
 Again, we apply Proposition~\ref{p:inclusion-exclusion} with $\vec y$
 an interior point of the cone (Section~\ref{s:interior}).
+Note that the interior point $\vec y$ may still intersect
+some of the internal facets, so we may need to perturb it slightly.
+In practice, we apply a lexicographical rule: for such (internal)
+facets, which always appear in pairs, we close the one with
+a lexico-positive normal and open the one with a lexico-negative
+normal.
 
 \subsection{Multivariate quasi-polynomials as lists of polynomials}
 
@@ -3857,6 +3863,7 @@ while the remaining 46 refer to the same single chamber.
 
 
 \subsection{Computing the Hilbert basis of a cone}
+\label{s:hilbert}
 
 To compute the \ai{Hilbert basis} of a cone, we use
 the \ai[\tt]{zsolve} library from \ai[\tt]{4ti2} \shortcite{4ti2},
@@ -3867,3 +3874,501 @@ to put the cone in ``standard form''.  Note that for a (non-parametric)
 cone the constant term $\vec b$ in \eqref{eq:non-standard} is $\vec 0$.
 The constraints $D \vec x \ge \vec c = \vec 0$ of \eqref{eq:standard:2}
 are therefore equivalent to $\vec x \ge \vec 0$.
+
+
+\subsection{Computing the integer hull of a truncated cone}
+\label{s:hull:cone}
+
+In \autoref{s:width} we will need to compute the \ai{integer hull}
+of a cone with the origin removed ($C \setminus \{ \vec 0 \}$).
+
+As proposed by \shortciteN{Koeppe2007personal},
+one way of computing this integer hull is to first compute
+the \ai{Hilbert basis} of $C$ (see \autoref{s:hilbert})
+and to then remove from that Hilbert basis the points that
+are not vertices of the integer hull of $C \setminus \{ \vec 0 \}$.
+The Hilbert basis of $C$ is the minimal set of points
+$\vec b_i \in C \cap \ZZ^d$ such that every integer point
+$\vec x \in C \cap \ZZ^d$ can be written as a non-negative
+{\em integer} combination of the $\vec b_i$.
+The vertices $\vec v_j$ of the integer hull of $C \setminus \{ \vec 0 \}$
+are such that every integer point
+$\vec x \in (C \cap \ZZ^d) \setminus \{ \vec 0 \}$ can
+be written as s non-negative {\em rational} combination of $\vec v_j$.
+Clearly, any $\vec v_j$ is also a $\vec b_i$ since $\vec v_j$ can
+not be written as the sum of a (rational) convex combination of
+other integer points in $(C \cap \ZZ^d) \setminus \{ \vec 0 \}$
+and a non-negative combination of the extremal rays $\vec r_k$ of $C$.
+A fortiori, it can therefore not be written as an integer combination
+of other integer points in $C$.
+To obtain the $\vec v_j$ from the $\vec b_i$ we therefore simply
+need to remove first $(0,0)$ and then those $\vec b_i$ that are
+not an extremal ray and that {\em can} be written as a combination
+$$
+\vec b_i = \sum_{j \ne i} \vec \alpha_j \vec b_j + \sum_k \beta_k \vec r_k
+\qquad\text{with $\alpha_j, \beta_k \ge 0$ and $\sum_{j \ne i} \alpha_j = 1$}
+.
+$$
+Since the $\vec r_k$ are also among the $\vec b_j$, this can
+be simplified to checking whether there exist a rational
+solution for $\vec \alpha_j$ to
+$$
+\vec b_i = \sum_{j \ne i} \vec \alpha_j \vec b_j
+\qquad\text{with $\alpha_j \ge 0$ and $\sum_{j \ne i} \alpha_j \ge 1$}
+.
+$$
+
+\begin{figure}
+\intercol=1.1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS@i@={(3,-4.5),(2,-3),(1,-1),(1,1),(3,4),(4.125,5.5),(5.5,5.5),(5.5,-4.5)},{0*[grey]\xypolyline{*}}
+\def\latticebody{\POS="c"+(0,-4.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-0}{5}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-4}5}%
+\POS0\ar(2,-3)
+\POS0\ar(3,4)
+\POS(2,-3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(1,1)*{\bullet}
+\POS(1,-1)*{\bullet}
+\POS(1,0)*{\bullet}
+\POS(2,-3)*{\times}
+\POS(3,4)*{\times}
+\POS(1,1)*{\times}
+\POS(1,-1)*{\times}
+\end{xy}
+\caption{The Hilbert basis and the integer hull of a truncated cone}
+\label{f:hilbert:hull}
+\end{figure}
+
+\begin{example}
+Consider the cone
+$$
+C = \poshull \,\{(2,-3), (3,4)\}
+,
+$$
+shown in Figure~\ref{f:hilbert:hull}.
+The Hilbert basis of this cone is
+$$\{(0,0),(2,-3),(3,4),(1,1),(1,-1),(1,0)\}.$$
+We have $(1,0) = \frac 1 2 (1,1) + \frac 1 2 (1,-1)$,
+while $(1,1)$ and $(1,-1)$ can not be written as
+overconvex combinations of the other $\vec b_i \ne \vec 0$.
+The vertices of the integer hull of $C \setminus \{ \vec 0 \}$
+are therefore
+$$\{(2,-3),(3,4),(1,1),(1,-1)\}.$$
+\end{example}
+
+
+\subsection{Computing the lattice width of a parametric polytope}
+\label{s:width}
+
+To compute the \ai{lattice width} of a \ai{parametric polytope},
+we essentially use the technique of \shortciteN{Eisenbrand2007parameterised},
+which improves upon the technique of \shortciteN{Kannan1992}.
+Given a parametric polytope
+$$
+P(\vec p) = \{\, \vec x \mid A \vec x + \vec b(\vec p) \ge \vec 0 \,\}
+,
+$$
+the width along a direction $\vec c$ is defined as
+\begin{equation}
+\label{eq:width}
+\width_{\vec c} P(\vec p)
+=
+\max \{\, \sp c x \mid \vec x \in P(\vec p) \,\}
+-
+\min \{\, \sp c x \mid \vec x \in P(\vec p) \,\}
+.
+\end{equation}
+The \defindex{lattice width} is the minimum width over all
+non-zero integer directions:
+$$
+\width P(\vec p) =
+\min_{\vec c \in \ZZ^d \setminus \{ \vec 0 \} } \width_{\vec c} P(\vec p)
+.
+$$
+We assume that the parameter domain $Q$ of $P(\vec p)$, i.e., the
+set of parameter values for which $P(\vec p) \ne \emptyset$,
+is full-dimensional and that for each $\vec p$ from the interior
+of $Q$, $P(\vec p)$ is also full-dimensional.
+
+Clearly, for any given direction $\vec c$, the minimum and
+maximum in \eqref{eq:width} are attained at (different)
+vertices of $P(\vec p)$.
+The idea of the algorithm is then to consider all pairs
+of parametric vertices of $P(\vec p)$, to compute all candidate
+integer directions for a given pair of vertices and then to
+compute the minimum width over all candidate integer directions
+found.
+
+For any given parametric vertex $\vec v(\vec p)$, the (rational)
+directions for which this vertex is minimal can be found as follows.
+Let $\vec v(\vec p) + C$ be the \ai{vertex cone} of $\vec v(\vec p)$.
+If $\vec v(\vec p)$ is minimal for $\vec c$, then all other points
+in the vertex cone must yield a bigger or equal value, i.e.,
+$\sp y c \ge 0$ for all $\vec y \in C$.
+The set of directions is therefore the \ai{polar cone} $C^*$ of $C$.
+Note that, in principle, we should only do this for pairs
+of vertices that have a common activity domain, where the
+activity domains have been partially opened using the
+technique of \autoref{p:inclusion-exclusion} to avoid
+multiple vertices that coincide on a lower-dimensional
+chamber to all be considered on this intersection.
+However, this optimization has currently not been implemented.
+
+Given a pair of vertices $\vec v_1(\vec p)$ and $\vec v_2(\vec p)$,
+we may assume that $\vec v_1(\vec p)$ attains the minimum and
+$\vec v_2(\vec p)$ attains the maximum.
+If $\vec v_1(\vec p) + C_1$ and $\vec v_2(\vec p) + C_2$ are the
+corresponding vertex cones, then the set of (rational) directions for this
+pair of vertices is
+$$
+C_{1,2} = \left( C_1^* \cap -C_2^* \right) \setminus \{ \vec 0 \}
+.
+$$
+The set of candidate integer directions are therefore
+the vertices of the integer hull of $C_{1,2}$, which
+can be computed as explained in \autoref{s:hull:cone}.
+To see this, note that by construction
+$\sps {\vec c}{\vec v_1(\vec p)} \le \sps {\vec c}{\vec v_2(\vec p)}$
+and so
+$$
+w_{\vec c}(\vec p) = \width_{\vec c} P(\vec p)
+= \sps {\vec c}{\vec v_2(\vec p)-\vec v_1(\vec p)} \ge 0
+.
+$$
+Any integer direction in $C_{1,2}$ will therefore yield
+a width that is at least as large as that of one
+of the vertices of the integer hull.
+
+After computing a list of all possible candidate width directions
+$\vec c_i$ and the corresponding widths $w_{\vec c_i}(\vec p)$,
+we keep only a single direction of all those that yield
+the same width (as an affine function of the parameters).
+Then we construct the chambers where each of the widths is minimal,
+i.e.,
+$$
+C_i = \{\, \vec p \in Q \mid \forall j :
+	w_{\vec c_i}(\vec p) \le w_{\vec c_j}(\vec p) \,\}
+.
+$$
+Note that many of the $C_i$ may be empty or of lower dimension
+than Q and that the other $C_i$ will intersect in common facets.
+To obtain a partition of partially-open full-dimensional chambers, we proceed
+as in \autoref{s:triangulation}.
+
+\begin{figure}
+\intercol=1.1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-0.5)\ar@{--}"c"+(0,7.5)}%
+\POS0,{\xylattice{-0}{10}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(10.5,0)}%
+\POS0,{\xylattice00{-0}7}%
+\POS@i@={(0,0),(5,3),(9,6),(5,4),(0,0)},{0*[|(2)]\xypolyline{}}
+\POS(0,0)*{\bullet}
+\POS(5,3)*{\bullet}
+\POS(5,4)*{\bullet}
+\POS(9,6)*{\bullet}
+\POS(3,2)*{\bullet}
+\POS(4,3)*{\bullet}
+\POS(6,4)*{\bullet}
+\POS(7,5)*{\bullet}
+\POS(9,6);(8.7,6.4)**{}?(0)/1.1cm/="a"\POS(9,6)\ar"a"
+\POS(9,6);(9.1,5.8)**{}?(0)/1.1cm/="a"\POS(9,6)\ar"a"
+\POS(5,4);(5.4,3.5)**{}?(0)/1.1cm/="a"\POS(5,4)\ar"a"
+\POS(5,4);(5.1,3.8)**{}?(0)/1.1cm/="a"\POS(5,4)\ar"a"
+\POS(0,0);(0.4,-0.5)**{}?(0)/1.1cm/="a"\POS(0,0)\ar"a"
+\POS(0,0);(-0.3,0.5)**{}?(0)/1.1cm/="a"\POS(0,0)\ar"a"
+\POS(5,3);(4.7,3.5)**{}?(0)/1.1cm/="a"\POS(5,3)\ar"a"
+\POS(5,3);(4.7,3.4)**{}?(0)/1.1cm/="a"\POS(5,3)\ar"a"
+\POS(9,6)*+!DL{\vec v_1}
+\POS(0,0)*+!UR{\vec v_3}
+\POS(5,3)*+!UL{\vec v_2}
+\POS(5,4)*+!DR{\vec v_4}
+\end{xy}
+\caption{A polytope and its candidate width directions}
+\label{f:width}
+\end{figure}
+
+\begin{example}
+Consider the (non-parametric) polytope
+$$
+P = \left\{\,
+\vec x \mid
+\begin{aligned}
+-3 x_1 +5 x_2 &\ge 0 \\
+4 x_1 -5 x_2 &\ge 0 \\
+ x_1 -2 x_2 + 3 &\ge 0 \\
+-3 x_1 +4 x_2 + 3 &\ge 0
+\end{aligned}
+\,\right\}
+$$
+shown in \autoref{f:width}.  The polytope has four vertices
+$$
+\begin{aligned}
+\vec v_1 & = (9,6) \\
+\vec v_2 & = (5,4) \\
+\vec v_3 & = (0,0) \\
+\vec v_4 & = (5,3)
+.
+\end{aligned}
+$$
+The corresponding cones of directions (for
+the given vertex to attain the minimum), also shown
+in \autoref{f:width} are
+$$
+\begin{aligned}
+C^*_1 & = \poshull \,\{ (-3,4), (1,-2) \} \\
+C^*_2 & = \poshull \,\{ (4,-5), (1,-2) \} \\
+C^*_3 & = \poshull \,\{ (4,-5), (-3,5) \} \\
+C^*_4 & = \poshull \,\{ (-3,5), (-3,4) \}
+.
+\end{aligned}
+$$
+
+\begin{figure}
+\intercol=0.8cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-6.5)\ar@{--}"c"+(0,2.5)}%
+\POS0,{\xylattice{-1}{5}00}%
+\def\latticebody{\POS="c"+(-1.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-6}2}%
+\POS0\ar@{->}(3,-4)\POS?!{(0,-6.5);(1,-6.5)}="a"
+\POS0\ar@{->}(-1,2)
+\POS0\ar@{->}(4,-5)\POS?!{(0,-6.5);(1,-6.5)}="b"
+\POS0\ar@{->}(1,-2)
+\POS@i@={"a",(3,-4),(4,-5),"b"},{0*[grey]\xypolyline{*}}
+\POS0,{\ellipse(1.1)(*0;(4,3)*),^,(*0;(-2,-1)*){-}}
+\POS0,{\ellipse(1)(*0;(2,1)*),^,(*0;(5,4)*){-}}
+\POS0\ar@{->}(3,-4)\POS?!{(0,-6.5);(1,-6.5)}="a"
+\POS0\ar@{->}(4,-5)\POS?!{(0,-6.5);(1,-6.5)}="b"
+\POS(4,-5)*{\bullet}
+\POS(3,-4)*{\bullet}
+\end{xy}
+\caption{The cone of directions $C_{2,1}$}
+\label{f:C:2:1}
+\end{figure}
+
+\begin{figure}
+\intercol=0.8cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-6.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-3}{5}00}%
+\def\latticebody{\POS="c"+(-3.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-6}5}%
+\POS0\ar@{->}(3,-4)
+\POS0\ar@{->}(-1,2)\POS?!{(0,5.5);(1,5.5)}="a"
+\POS0\ar@{->}(4,-5)\POS?!{(0,-6.5);(1,-6.5)}="b"
+\POS0\ar@{->}(-3,5)
+\POS@i@={"b",(4,-5),(1,-1),(-1,2),"a",(5.5,5.5),(5.5,-6.5)},{0*[grey]\xypolyline{*}}
+\POS0\ar@{->}(-1,2)\POS?!{(0,5.5);(1,5.5)}="a"
+\POS0\ar@{->}(4,-5)\POS?!{(0,-6.5);(1,-6.5)}="b"
+\POS0,{\ellipse(1.1)(*0;(4,3)*),^,(*0;(-2,-1)*){-}}
+\POS0,{\ellipse(1)(*0;(5,4)*),^,(*0;(-5,-3)*){-}}
+\POS(1,-1)*{\bullet}
+\POS(4,-5)*{\bullet}
+\POS(-1,2)*{\bullet}
+\end{xy}
+\caption{The cone of directions $C_{3,1}$}
+\label{f:C:3:1}
+\end{figure}
+
+\begin{figure}
+\intercol=0.8cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-4.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-3}{3}00}%
+\def\latticebody{\POS="c"+(-3.5,0)\ar@{--}"c"+(3.5,0)}%
+\POS0,{\xylattice00{-4}5}%
+\POS0\ar@{->}(3,-4)
+\POS0\ar@{->}(-1,2)
+\POS0,{\ellipse(1.1)(*0;(4,3)*),^,(*0;(-2,-1)*){-}}
+\POS0\ar@{->}(-3,5)
+\POS0\ar@{->}(-3,4)
+\POS0,{\ellipse(1)(*0;(-5,-3)*),^,(*0;(-4,-3)*){-}}
+\end{xy}
+\caption{The cone of directions $C_{4,1}$}
+\label{f:C:4:1}
+\end{figure}
+
+Let us now consider the directions in which
+$\vec v_2$ is minimal while $\vec v_1$ is maximal.
+We find
+$$
+C_{2,1} = \poshull \,\{ (4,-5), (3,-4) \} \setminus \{ \vec 0 \}
+,
+$$
+as shown in \autoref{f:C:2:1}.
+The vertices of the integer hull of $C_{2,1}$ are $(4,-5)$
+and $(3,-4)$.
+The corresponding width are
+$$
+\begin{aligned}
+\vec c_1 &= (4,-5) & w_{\vec c_1} &= 6 \\
+\vec c_2 &= (3,-4) & w_{\vec c_2} &= 4
+.
+\end{aligned}
+$$
+We similarly find
+$$
+C_{3,1} = \poshull \,\{ (4,-5), (-1,2) \} \setminus \{ \vec 0 \}
+,
+$$
+with integer hull
+$\poshull \,\{ (4,-5), (-1,2), (1,-1) \}$, shown
+in \autoref{f:C:3:1}, yielding
+$$
+\begin{aligned}
+\vec c_3 &= (4,-5) & w_{\vec c_3} &= 6 \\
+\vec c_4 &= (-1,2) & w_{\vec c_4} &= 3 \\
+\vec c_5 &= (1,-1) & w_{\vec c_5} &= 3
+.
+\end{aligned}
+$$
+On the other hand,
+$$
+C_{4,1} = \emptyset
+,
+$$
+as shown in \autoref{f:C:4:1} and so this combination
+does not yield any width direction candidates.
+The other pairs of vertices further yield
+$$
+\begin{aligned}
+\vec c_6 &= (-1,2) & w_{\vec c_6} &= 3 \\
+\vec c_7 &= (-3,5) & w_{\vec c_7} &= 5 \\
+\vec c_8 &= (-3,4) & w_{\vec c_8} &= 4 \\
+\vec c_9 &= (-3,5) & w_{\vec c_9} &= 5 \\
+\vec c_{10} &= (-2,3) & w_{\vec c_{10}} &= 3
+.
+\end{aligned}
+$$
+Since the polytope under consideration is not parametric,
+there is only one (non-empty, $0$-dimensional) chamber and 
+it corresponds to one of the directions, say $\vec c_4 = (-1,2)$,
+with width $3$ (the other directions with the same width
+having been removed).
+
+\begin{figure}
+\intercol=1.1cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-0.5)\ar@{--}"c"+(0,7.5)}%
+\POS0,{\xylattice{-0}{10}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(10.5,0)}%
+\POS0,{\xylattice00{-0}7}%
+\POS@i@={(0,0),(5,3),(9,6),(5,4),(0,0)},{0*[|(2)]\xypolyline{}}
+\POS(-0.5,-0.5)\ar@{.}(7.5,7.5)
+\POS(0.5,-0.5)\ar@{.}(8.5,7.5)
+\POS(1.5,-0.5)\ar@{.}(9.5,7.5)
+\POS(2.5,-0.5)\ar@{.}(10.5,7.5)
+\POS(-0.5,-0.25)\ar@{-}(10.5,5.25)
+\POS(-0.5,0.25)\ar@{-}(10.5,5.75)
+\POS(-0.5,0.75)\ar@{-}(10.5,6.25)
+\POS(-0.5,1.25)\ar@{-}(10.5,6.75)
+\POS(-0.25,-0.5)\ar@{--}(10.5,6.666)
+\POS(-0.5,-0.333)\ar@{--}(10.5,7)
+\POS(-0.5,0)\ar@{--}(10.5,7.333)
+\POS(-0.5,0.333)\ar@{--}(10.25,7.5)
+\POS(0,0)*{\bullet}
+\POS(5,3)*{\bullet}
+\POS(5,4)*{\bullet}
+\POS(9,6)*{\bullet}
+\POS(3,2)*{\bullet}
+\POS(4,3)*{\bullet}
+\POS(6,4)*{\bullet}
+\POS(7,5)*{\bullet}
+\end{xy}
+\caption{A polytope and its lattice width directions}
+\label{f:width:2}
+\end{figure}
+
+Each of the three directions that yield the minimal
+width of 3 is shown in \autoref{f:width:2}.
+\end{example}
+
+\begin{example}
+Consider the polytope
+$$
+P(p) = \left\{\,
+\vec x \mid
+\begin{aligned}
+-2 x_1 + p + 5 &\ge 0 \\
+2 x_1 + p + 5 &\ge 0 \\
+-2 x_2 - p + 5 &\ge 0 \\
+2 x_2 - p + 5 &\ge 0
+\end{aligned}
+\,\right\}
+$$
+from \shortciteN[Example~2.1.7]{Woods2004PhD}.
+The parametric vertices are
+$$
+\begin{aligned}
+\vec v_1(p) & = \left(\frac{p+5}2, \frac{-p+5}2\right) \\
+\vec v_2(p) & = \left(\frac{p+5}2, \frac{p-5}2\right) \\
+\vec v_3(p) & = \left(\frac{-p-5}2, \frac{-p+5}2\right) \\
+\vec v_4(p) & = \left(\frac{-p-5}2, \frac{p-5}2\right)
+.
+\end{aligned}
+$$
+We find two essentially different candidate width directions
+$$
+\begin{aligned}
+\vec c_1 &= (0,1) & w_{\vec c_1}(p) &= 5-p \\
+\vec c_2 &= (1,0) & w_{\vec c_2}(p) &= 5+p
+.
+\end{aligned}
+$$
+The first direction can be found by combining, say,
+$\vec v_1(p)$ and $\vec v_2(p)$, while the second direction can be
+found by combining, say, $\vec v_1(p)$ and $\vec v_3(p)$.
+The parameter domain for the parametric polytope $P(p)$ is
+$$
+Q = \{\, p \mid -5 \le p \le 5 \,\}
+.
+$$
+The two (closed) chambers are therefore
+$$
+\begin{aligned}
+C_1 &= \{\, p \in Q \mid 5 - p \le 5+p \,\} \\
+C_2 &= \{\, p \in Q \mid 5 + p \le 5-p \,\}
+.
+\end{aligned}
+$$
+To obtain a partition, \autoref{s:interior} gives
+the internal point $(0,0)$, which happens to meet
+the facets $p \ge 0$ and $-p \ge 0$.  We therefore
+keep the facet with positive (inner) normal closed
+and open up the other facet.  The result is
+$$
+\begin{aligned}
+\hat C_1 &= \{\, p \mid 0 \le p \le 5 \,\} \\
+\hat C_2 &= \{\, p \mid -5 \le p < 0 \,\}
+.
+\end{aligned}
+$$
+Since we are usually only interested in integer parameter
+values, the latter chamber would become
+$\hat C_2 = \{\, p \mid -5 \le p \le -1 \,\}$.
+\end{example}
+
+Our description differs slightly from that of
+of \shortciteN{Eisenbrand2007parameterised}.
+First, they consider all pairs of basic solutions instead
+of all pairs of vertices, which means that they may
+consider basic solutions that are never feasible and that,
+in case of a non-simple polytope,
+they may consider the same parametric vertex more than once.
+The set of integer
+directions for a pair of vertices is the intersection of
+the sets of integer directions they obtain for each of
+the corresponding basic solutions.
+Second, they use a different method of creating a partition
+of partially-open chambers, which may lead to some lower-dimensional
+chambers surviving and hence to a larger total number of chambers.

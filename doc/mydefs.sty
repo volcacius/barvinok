@@ -72,6 +72,11 @@
 \newtheorem{example}[theorem]{Example}
 \numberwithin{theorem}{section}
 
+\let\c@equation\c@theorem
+\let\c@figure\c@theorem
+\renewcommand{\theequation}{\arabic{section}.\arabic{equation}}
+\renewcommand{\thefigure}{\arabic{section}.\arabic{figure}}
+
 \def\NN{\mathbb{N}}
 \def\ZZ{\mathbb{Z}}
 \def\QQ{\mathbb{Q}}
@@ -85,6 +90,7 @@
 \def\affhull{\mathop{\rm aff}\nolimits}
 \def\linhull{\mathop{\rm lin}\nolimits}
 \def\poshull{\mathop{\rm pos}\nolimits}
+\def\inthull{\mathop{\rm int.hull}\nolimits}
 \def\lexmin{\mathop{\rm lexmin}}
 \def\lexmax{\mathop{\rm lexmax}}
 \def\dcone{\mathop{\rm dcone}\nolimits}
@@ -107,6 +113,7 @@
 \DeclareMathOperator{\sgn}{sgn}
 \DeclareMathOperator{\vol}{vol}
 \DeclareMathOperator{\todd}{td}
+\DeclareMathOperator{\width}{width}
 
 \def\sm#1{
     \left[
