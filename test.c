@@ -7,6 +7,8 @@
 #include "argp.h"
 #include "progname.h"
 #include "config.h"
+#include "evalue_read.h"
+#include "lattice_width.h"
 
 #ifdef HAVE_SYS_TIMES_H
 
@@ -204,6 +206,26 @@ int main(int argc, char **argv)
 	    value_clear(cb);
 	    value_clear(ck);
 	    evalue_free(EP);
+	    break;
+	}
+	case 11: {
+	    evalue *expected, *computed;
+	    unsigned nvar, nparam;
+	    char **pp;
+
+	    expected = evalue_read_from_file(stdin, NULL, &pp, &nvar, &nparam,
+					     options->MaxRays);
+	    C = Universe_Polyhedron(0);
+	    computed = Polyhedron_Lattice_Width(A, C, options);
+	    assert(value_zero_p(computed->d));
+	    assert(computed->x.p->type == partition);
+	    if (!eequal(expected, &computed->x.p->arr[1]))
+		return -1;
+	    free(pp);
+	    Domain_Free(C);
+	    evalue_free(computed);
+	    evalue_free(expected);
+	    break;
 	}
 	}
 	Domain_Free(A);

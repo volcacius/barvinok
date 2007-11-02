@@ -161,7 +161,10 @@ libbarvinok_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 LDADD = libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 
-test_SOURCES = test.c
+test_SOURCES = \
+	evalue_read.c \
+	evalue_read.h \
+	test.c
 testlib_SOURCES = \
 	evalue_read.c \
 	evalue_read.h \
@@ -305,7 +308,7 @@ dist-git: dist
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
-	check-lexmin check-approx check-evalue check-euler
+	check-lexmin check-approx check-evalue check-euler check-lw
 check-testlib: testlib$(EXEEXT)
 	./testlib$(EXEEXT)
 check-approx: test_approx$(EXEEXT)
@@ -381,6 +384,14 @@ check-test: test$(EXEEXT)
 			echo " ok"; \
 		    done \
 		done \
+	    fi \
+	done
+check-lw: test$(EXEEXT)
+	@for i in $(top_srcdir)/tests/lattice_width/*; do \
+	    if test -f $$i; then \
+		echo -n $$i; \
+		./test$(EXEEXT) < $$i || echo -n " NOT"; \
+		echo " ok"; \
 	    fi \
 	done
 if HAVE_GLPK
