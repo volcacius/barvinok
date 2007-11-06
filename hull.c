@@ -129,6 +129,44 @@ static Matrix *Polyhedron_Vertices(Polyhedron *P)
     return M;
 }
 
+/* Set INCLUDE_KNOWN_FACETS_IN_LP to 1 to compute a lower bound for
+ * the minimal value wrt a facet based on the facets that have
+ * already been determined to be facets of the integer hull,
+ * rather than simply setting the lower bound to 0 or 1.
+ * This does not appear to be profitable, probably because
+ * the lower bound is recomputed every time we optimize
+ * wrt a facet.  If we were to cache the lower bounds for
+ * facets that do not change when a new vertex is added,
+ * this may still turn out to be useful.
+ */
+#define INCLUDE_KNOWN_FACETS_IN_LP	0
+/* Set INCLUDE_KNOWN_FACETS_IN_ILP to 1 to take into account the
+ * facets that have already been determined to be facets
+ * of the integer hull while optimizing wrt some other
+ * facet.  The idea is that the polytope over which to
+ * optimize could be flatter.  However, in practice, adding
+ * these constraints seems to slow down the computation
+ * (on at least one example).
+ */
+#define INCLUDE_KNOWN_FACETS_IN_ILP	0
+
+Polyhedron *add_facets(Polyhedron *P, Matrix *facets, int n,
+			struct barvinok_options *options)
+{
+    int i;
+    Polyhedron *R;
+    Matrix *M;
+
+    M = Matrix_Alloc(P->NbConstraints + n, facets->NbColumns);
+    for (i = 0; i < n; ++i)
+	Vector_Copy(facets->p[i], M->p[i], facets->NbColumns);
+    for (i = 0; i < P->NbConstraints; ++i)
+	Vector_Copy(P->Constraint[i], M->p[n + i], M->NbColumns);
+    R = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    return R;
+}
+
 /* Extends an initial approximation hull->init of the integer hull
  * of hull->P using generalized basis reduction.
  * In particular, it considers each facet of the current
@@ -170,10 +208,17 @@ static Matrix *gbr_hull_extend(struct integer_hull *hull,
 	if (i_min == -1)
 	    break;
 
-	opt = Polyhedron_Integer_Minimum(hull->P, Q->Constraint[i_min]+1,
+	if (INCLUDE_KNOWN_FACETS_IN_ILP)
+	    R = add_facets(hull->P, hull->F, hull->n_F, options);
+	else
+	    R = hull->P;
+
+	opt = Polyhedron_Integer_Minimum(R, Q->Constraint[i_min]+1,
 					 min, max, candidates, &n_candidates,
 					 options);
 	candidates->NbRows = n_candidates;
+	if (INCLUDE_KNOWN_FACETS_IN_ILP)
+	    Polyhedron_Free(R);
 
 	hull->n_F = matrix_add(hull->F, hull->n_F, Q->Constraint[i_min]);
 
@@ -264,6 +309,28 @@ static Matrix *transform_list_of_vertices(Matrix *list, Matrix *CV)
 static void set_to_one(struct integer_hull *hull, Value *obj,
 		       Value *lower, struct barvinok_options *options)
 {
+    if (INCLUDE_KNOWN_FACETS_IN_LP) {
+	int i;
+	enum lp_result res;
+	Value one;
+
+	if (hull->F->NbRows < hull->n_F+hull->P->NbConstraints)
+	    Matrix_Extend(hull->F, hull->n_F+hull->P->NbConstraints);
+	for (i = 0; i < hull->P->NbConstraints; ++i)
+	    Vector_Copy(hull->P->Constraint[i], hull->F->p[hull->n_F+i],
+			hull->F->NbColumns);
+
+	value_init(one);
+	value_set_si(one, 1);
+
+	res = constraints_opt(hull->F, obj, one, lp_min, lower, options);
+	value_subtract(*lower, *lower, obj[hull->P->Dimension]);
+	assert(res == lp_ok);
+
+	if (value_notzero_p(*lower))
+	    return;
+    }
+
     if (value_zero_p(obj[hull->P->Dimension]))
 	value_set_si(*lower, 0);
     else
