@@ -108,6 +108,14 @@ static int solve_lp(struct pip_lp *lp)
 
     pip_options_free(options);
 
+    /* We only call this function on a polytope that is known
+     * to be (rationally) non-empty.
+     * However, if the test for rational emptiness was inaccurate
+     * (e.g., when using GLPK with big coefficients), the input
+     * polytope may be empty.  It's better to just abort here
+     * so the user can select a different linear solver.
+     */
+    assert(lp->sol->list);
     return value_zero_p(lp->sol->list->vector->the_deno[0]);
 }
 
