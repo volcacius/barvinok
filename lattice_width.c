@@ -198,6 +198,12 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    unsigned V_max_n = vertex_dirs[V_max_i]->NbRows;
 	    unsigned V_min_n = vertex_dirs[V_min_i]->NbRows;
 
+	    if (options->verbose)
+		fprintf(stderr, "%d/%d %d/%d %d \r",
+				    V_max_i, PP->nbV,
+				    V_min_i, PP->nbV,
+				    width_dirs->n);
+
 	    M = Matrix_Alloc(V_max_n+V_min_n, 1+nvar+1);
 	    for (i = 0; i < V_max_n; ++i) {
 		value_set_si(M->p[i][0], 1);
