@@ -25,7 +25,7 @@ EXTRA_DIST = examples
 
 check:
 	@for i in $(top_srcdir)/examples/*.matrix; do \
-	    if ./bernstein < $$i | diff -u $${i%.matrix}.out -; then \
+	    if ./bernstein -T < $$i > /dev/null ; then \
 		echo "$$i passed"; \
 	    else \
 		echo "$$i failed"; \

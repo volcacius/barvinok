@@ -4,6 +4,13 @@ The input of the bernstein executable consists of
 - a list of the names of the variables and the parameters
 - the parametric polynomial in GiNac notation
 
+For verification, each of the examples also includes the expected solution,
+consisting of the number of domains and for each domain
+- the constraints in PolyLib notation
+- a list of all corresponding coefficients
+- a list of minimal coefficients
+- a list of maximal coefficients
+
 ---------------------------------------------------------------------------
 Brief description of examples:
 

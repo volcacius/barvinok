@@ -1,5 +1,7 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <ginac/ginac.h>
 #include <gmp.h>
@@ -7,6 +9,7 @@
 
 #include <bernstein/bernstein.h>
 #include <bernstein/maximize.h>
+#include <bernstein/piecewise_lst.h>
 
 #define MAXRAYS 1000
 
@@ -18,18 +21,85 @@ static ex readPolynomial(const exvector& vars, const exvector& params);
 static void printCoefficients(lst coeffs);
 static int printMaxMinCoefficient(Polyhedron *VD, lst coeffs, const exvector& Params);
 
+static char *readLine(void)
+{
+	static char buffer[1024];
+	char *s;
+
+	do 
+		s = fgets(buffer, 1024, stdin);
+	while (s && (s[0] == '#' || s[0] == '\n'));
+
+	return s;
+}
+
+static void readExpected(const exvector& vars, const exvector& params,
+			 piecewise_lst **exp_all,
+			 piecewise_lst **exp_min,
+			 piecewise_lst **exp_max)
+{
+	int n = 0;
+	char *s;
+	piecewise_lst *pl_all, *pl_min, *pl_max;
+
+	pl_all = new piecewise_lst(params);
+	pl_min = new piecewise_lst(params);
+	pl_max = new piecewise_lst(params);
+
+	s = readLine();
+	assert(s);
+
+	sscanf(s, "%d", &n);
+
+	for (int i = 0 ; i < n ; ++i) {
+		ex all, min, max;
+		Polyhedron *D;
+		Matrix *M = Matrix_Read();
+
+		D = Constraints2Polyhedron(M, MAXRAYS);
+		Matrix_Free(M);
+
+		all = readPolynomial(vars, params);
+		min = readPolynomial(vars, params);
+		max = readPolynomial(vars, params);
+		assert(is_a<lst>(all));
+		assert(is_a<lst>(min));
+		assert(is_a<lst>(max));
+		pl_all->add_guarded_lst(Polyhedron_Copy(D), ex_to<lst>(all));
+		pl_min->add_guarded_lst(Polyhedron_Copy(D), ex_to<lst>(min));
+		pl_max->add_guarded_lst(D, ex_to<lst>(max));
+	}
+	*exp_all = pl_all;
+	*exp_min = pl_min;
+	*exp_max = pl_max;
+}
+
 /* main function */
-int main(void) {
+int main(int argc, char *argv[])
+{
 	Matrix *a, *b;
 	Polyhedron *A, *B;		// initial matrices
 	char **param_name;	// name of the parameters
 	exvector params, vars;
 	ex polynomial;
+	piecewise_lst *exp_all, *exp_min, *exp_max;
+	piecewise_lst *got_all, *got_min, *got_max;
 
 	Param_Polyhedron *PP;
 	Param_Domain   *Q;
 
 	unsigned int nb_param, nb_var;
+
+	int c;
+	int verify = 0;
+
+	while ((c = getopt(argc, argv, "T")) != -1) {
+		switch(c) {
+		case 'T':
+			verify = 1;
+			break;
+		}
+	}
 
 	printf("\n===============================================\n");
 
@@ -50,6 +120,13 @@ int main(void) {
 
 	polynomial = readPolynomial(vars, params);
 
+	if (verify) {
+		readExpected(vars, params, &exp_all, &exp_min, &exp_max);
+		got_all = new piecewise_lst(params);
+		got_min = new piecewise_lst(params);
+		got_max = new piecewise_lst(params);
+	}
+
 	Matrix_Free(a);
 	Matrix_Free(b);
 
@@ -68,12 +145,52 @@ int main(void) {
 		printMaxMinCoefficient(Q->Domain, coeffs, params);
 		Domain_Free(VD);
 		printf("\n\n===============================================\n");
+
+		if (!verify)
+			continue;
+
+		got_all->add_guarded_lst(Polyhedron_Copy(Q->Domain), coeffs);
+		got_min->add_guarded_lst(Polyhedron_Copy(Q->Domain),
+					 minimize(Q->Domain, coeffs, params));
+		got_max->add_guarded_lst(Polyhedron_Copy(Q->Domain),
+					 maximize(Q->Domain, coeffs, params));
 	}
 
 	Domain_Free(A);
 	Domain_Free(B);
 	Param_Polyhedron_Free(PP);
 	free(param_name);
+
+	if (verify) {
+		if (!got_all->is_equal(*exp_all)) {
+			cerr << "expected:" << endl;
+			cerr << *exp_all << endl;
+			cerr << "got:" << endl;
+			cerr << *got_all << endl;
+			return 1;
+		}
+		if (!got_min->is_equal(*exp_min)) {
+			cerr << "expected:" << endl;
+			cerr << *exp_min << endl;
+			cerr << "got:" << endl;
+			cerr << *got_min << endl;
+			return 1;
+		}
+		if (!got_max->is_equal(*exp_max)) {
+			cerr << "expected:" << endl;
+			cerr << *exp_max << endl;
+			cerr << "got:" << endl;
+			cerr << *got_max << endl;
+			return 1;
+		}
+
+		delete exp_all;
+		delete exp_max;
+		delete exp_min;
+		delete got_all;
+		delete got_max;
+		delete got_min;
+	}
 
 	return 0;
 } /* main */
@@ -92,7 +209,7 @@ void printCoefficients(lst coeffs)
 /* Reads the polynomial matrix, converts it to long long precision and calls ginac functions */
 ex readPolynomial(const exvector& vars, const exvector& params)
 {
-	char buffer[1024], *s;
+	char *s;
 	lst allvars;
 	ex p;
 
@@ -101,10 +218,7 @@ ex readPolynomial(const exvector& vars, const exvector& params)
 	for (int i = 0; i < params.size(); ++i)
 		allvars.append(params[i]);
 
-	do 
-		s = fgets(buffer, 1024, stdin);
-	while (s && (s[0] == '#' || s[0] == '\n'));
-
+	s = readLine();
 	if (!s)
 		return 0;
 

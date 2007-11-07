@@ -11,3 +11,24 @@
 n m P Q
 
 n
+
+# the expected solution for verification
+2
+
+3 4
+   1    1   -1    0 
+   1    0    1   -1 
+   1    0    0    1 
+
+{1,Q}
+{1}
+{Q}
+
+3 4
+   1   -1    1    0 
+   1    1    0   -1 
+   1    0    0    1 
+
+{1,P}
+{1}
+{P}
