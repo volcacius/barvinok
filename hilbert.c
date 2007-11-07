@@ -8,7 +8,6 @@
 #include <barvinok/util.h>
 #include "hilbert.h"
 #include "polysign.h"
-#include "topcom.h"
 
 static ZSolveMatrix Matrix2zsolve(Matrix *M)
 {

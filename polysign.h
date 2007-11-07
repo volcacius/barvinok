@@ -6,6 +6,9 @@ extern "C" {
 
 struct barvinok_options;
 
+Matrix *standard_constraints(Polyhedron *P, unsigned nparam, int *rows_p,
+			     Matrix **T);
+
 enum order_sign { order_lt, order_le, order_eq, order_ge, order_gt, order_unknown,
 		  order_undefined };
 
