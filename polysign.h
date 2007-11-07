@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "lexmin.h"
+struct barvinok_options;
 
 enum order_sign { order_lt, order_le, order_eq, order_ge, order_gt, order_unknown,
 		  order_undefined };
