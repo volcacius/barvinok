@@ -249,4 +249,32 @@ void piecewise_lst::add(const GiNaC::ex& poly)
     }
 }
 
+int piecewise_lst::is_equal(const piecewise_lst& other) const
+{
+    if (list.size() != other.list.size())
+	return 0;
+
+    for (int i = 0; i < list.size(); ++i) {
+	int j;
+	lst l1, l2;
+	for (j = 0; j < other.list.size(); ++j) {
+	    if (!PolyhedronIncludes(list[i].first, other.list[j].first))
+		continue;
+	    if (!PolyhedronIncludes(other.list[j].first, list[i].first))
+		continue;
+	    break;
+	}
+	if (j >= other.list.size())
+	    return 0;
+	l1 = list[i].second;
+	l2 = other.list[j].second;
+	l1.sort();
+	l2.sort();
+	if (!l1.is_equal(l2))
+	    return 0;
+    }
+
+    return 1;
+}
+
 }

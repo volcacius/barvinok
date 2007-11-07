@@ -33,6 +33,7 @@ struct piecewise_lst {
     void evaluate(int n, Value *v, Value *n, Value *d);
     GiNaC::numeric evaluate(const GiNaC::exvector& values, int n, Value *v);
     void add(const GiNaC::ex& poly);
+    int is_equal(const piecewise_lst& other) const;
 
     ~piecewise_lst() {
 	free_list_domains();
