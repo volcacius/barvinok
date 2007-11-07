@@ -15,6 +15,10 @@ if test "${with_default_prefix+set}" = set; then
 	   -f "$with_default_prefix/include/gmp.h"; then
 		with_libgmp=$with_default_prefix
 	fi
+	if test "${with_ginac_prefix+set}" != set -a \
+	   -f "$with_default_prefix/lib/pkgconfig/ginac.pc"; then
+		with_ginac_prefix=$with_default_prefix
+	fi
 fi
 
 dnl Check for GMP library
@@ -89,11 +93,13 @@ else
 	])
 fi
 
-AC_LANG_PUSH(C++)
-AM_PATH_GINAC(1.3.3, [], [
-    AC_MSG_ERROR(Need GiNaC)
-])
-AC_LANG_POP
+
+AC_ARG_WITH(ginac_prefix,
+	[AS_HELP_STRING([--with-ginac-prefix=DIR],[Installation prefix of GiNaC])])
+if test "x$with_ginac_prefix" != "x"; then
+	export PKG_CONFIG_PATH=$with_ginac_prefix/lib/pkgconfig:$PKG_CONFIG_PATH
+fi
+PKG_CHECK_MODULES(ginac, ginac)
 
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT(Makefile)

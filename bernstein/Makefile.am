@@ -5,7 +5,7 @@ pkginclude_HEADERS = \
 	include/bernstein/maximize.h \
 	include/bernstein/piecewise_lst.h
 
-AM_CPPFLAGS = -I$(srcdir)/include @GINACLIB_CPPFLAGS@ @POLYLIB_CPPFLAGS@
+AM_CPPFLAGS = -I$(srcdir)/include @POLYLIB_CPPFLAGS@ @ginac_CFLAGS@
 AM_LDFLAGS = @POLYLIB_LDFLAGS@
 
 libbernstein_la_SOURCES = \
@@ -15,15 +15,13 @@ libbernstein_la_SOURCES = \
     src/polylib++.h \
     src/polynomial.cpp \
     src/polynomial.h
-libbernstein_la_LIBADD = @GINACLIB_LIBS@ @POLYLIB_LIBS@
+libbernstein_la_LIBADD = @POLYLIB_LIBS@ @ginac_LIBS@
 libbernstein_la_LDFLAGS = -version-info @versioninfo@ @POLYLIB_LDFLAGS@
 LDADD = libbernstein.la
 
 bernstein_SOURCES = src/main.cpp
 
 EXTRA_DIST = examples
-
-ACLOCAL_AMFLAGS = -I m4
 
 check:
 	@for i in $(top_srcdir)/examples/*.matrix; do \

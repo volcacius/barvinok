@@ -26,6 +26,8 @@ AC_PROG_LIBTOOL
 gl_MODULES(argp progname)
 gl_INIT
 
+PKG_PROG_PKG_CONFIG
+
 AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(sys/times.h)
 
@@ -34,8 +36,7 @@ AC_ARG_WITH(default-prefix,
 	    [Default installation prefix of optional packages]))
 if test "${with_default_prefix+set}" = set; then
 	if test "${with_ginac_prefix+set}" != set -a \
-	   "${with_ginac_exec_prefix+set}" != set -a \
-	   -f "$with_default_prefix/bin/ginac-config"; then
+	   -f "$with_default_prefix/lib/pkgconfig/ginac.pc"; then
 		with_ginac_prefix=$with_default_prefix
 	fi
 	if test "${with_libgmp+set}" != set -a \
@@ -268,17 +269,22 @@ AC_ARG_WITH(bernstein,
             [ with_bernstein=$withval],  [ with_bernstein=yes ])
 AC_MSG_RESULT($with_bernstein)
 
+AC_ARG_WITH(ginac_prefix,
+	[AS_HELP_STRING([--with-ginac-prefix=DIR],[Installation prefix of GiNaC])])
+if test "x$with_ginac_prefix" != "x"; then
+	export PKG_CONFIG_PATH=$with_ginac_prefix/lib/pkgconfig:$PKG_CONFIG_PATH
+fi
+
 AC_SUBST(bv_barvinok_maximize)
 have_ginac=false
 if test "$with_bernstein" != "no"; then
-	AC_LANG_PUSH(C++)
-	AM_PATH_GINAC(1.3.3, [
+	PKG_CHECK_EXISTS([ginac], [
+		PKG_CHECK_MODULES(ginac, ginac)
 		have_ginac=true
 		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
 		EXTRA_PACKAGE_LIBS="-lbernstein $EXTRA_PACKAGE_LIBS"
 		bv_barvinok_maximize="barvinok_maximize\$(EXEEXT)"
 	])
-	AC_LANG_POP
 fi
 AM_CONDITIONAL(HAVE_GINAC, test x$have_ginac = xtrue)
 

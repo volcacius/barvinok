@@ -22,7 +22,7 @@ zsolve/libzsolve.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C zsolve libzsolve.la
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
-	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @GINACLIB_CPPFLAGS@
+	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@
 AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@
 
 lib_LTLIBRARIES = libbarvinok.la
