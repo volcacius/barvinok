@@ -38,6 +38,7 @@ libzsolve_la_SOURCES =				\
 	libzsolve.c
 
 noinst_HEADERS =				\
+	banner.h				\
 	cputime.h				\
 	defs.h					\
 	indexarray.h				\
