@@ -39,6 +39,11 @@ const char *barvinok_version(void)
 #else
 	" -GINAC"
 #endif
+#ifdef POINTS2TRIANGS_PATH
+	" +TOPCOM"
+#else
+	" -TOPCOM"
+#endif
     "\n"
     ;
 }
