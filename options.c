@@ -99,6 +99,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->print_stats = 0;
 
+    options->gbr_only_first = 0;
+
     return options;
 }
 

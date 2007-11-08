@@ -370,7 +370,11 @@ unbounded:
 	Q = P;
     } else {
 	Matrix *M, *T;
-	Matrix *basis = Polyhedron_Reduced_Basis(P, options);
+	Matrix *basis;
+
+	options->gbr_only_first = 1;
+	basis = Polyhedron_Reduced_Basis(P, options);
+	options->gbr_only_first = 0;
 
 	if (!basis)
 	    goto unbounded;

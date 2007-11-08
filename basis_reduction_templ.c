@@ -15,6 +15,13 @@ static void save_alpha(GBR_LP *lp, int first, int n, GBR_type *alpha)
  * "An Implementation of the Generalized Basis Reduction Algorithm
  *  for Integer Programming" of Cook el al. to compute a reduced basis.
  * We use \epsilon = 1/4.
+ *
+ * If options->gbr_only_first is set, the user is only interested
+ * in the first direction.  In this case we stop the basis reduction when
+ *	- the width in the first direction becomes smaller than 2
+ * or
+ *	- we have moved forward all the way to the last direction
+ *	  and then back again all the way to the first direction.
  */
 Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
 				 struct barvinok_options *options)
@@ -34,6 +41,8 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
     int use_saved = 0;
     Value mu[2];
     GBR_type mu_F[2];
+    GBR_type two;
+    int end = 0;
 
     if (P->Dimension == 1)
 	return basis;
@@ -62,6 +71,9 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
     GBR_init(F_saved);
     GBR_init(mu_F[0]);
     GBR_init(mu_F[1]);
+    GBR_init(two);
+
+    GBR_set_ui(two, 2);
 
     lp = GBR_lp_init(P);
 
@@ -135,15 +147,24 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
 	GBR_set_ui(mu_F[1], 3);
 	GBR_mul(mu_F[1], mu_F[1], F_old);
 	if (GBR_lt(mu_F[0], mu_F[1])) {
+	    if (i == dim-2)
+		end = 1;
 	    Vector_Exchange(basis->p[i], basis->p[i+1], dim);
 	    if (i > 0) {
 		use_saved = 1;
 		GBR_set(F_saved, F_new);
 		GBR_lp_del_row(lp);
 		--i;
-	    } else
+	    } else {
 		GBR_set(F[0], F_new);
+		if (options->gbr_only_first && end)
+		    break;
+		if (options->gbr_only_first && GBR_lt(F[0], two))
+		    break;
+	    }
 	} else {
+	    if (options->gbr_only_first && i == 0 && end)
+		break;
 	    GBR_lp_add_row(lp, basis->p[i], dim);
 	    ++i;
 	}
@@ -174,6 +195,7 @@ unbounded:
     GBR_clear(F_saved);
     GBR_clear(mu_F[0]);
     GBR_clear(mu_F[1]);
+    GBR_clear(two);
 
     GBR_lp_delete(lp);
 

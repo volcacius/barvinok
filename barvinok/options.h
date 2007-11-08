@@ -101,6 +101,8 @@ struct barvinok_options {
     int		verbose;
 
     int		print_stats;
+
+    int		gbr_only_first;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
