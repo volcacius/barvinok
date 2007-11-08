@@ -43,14 +43,6 @@ if test "${with_default_prefix+set}" = set; then
 	   -f "$with_default_prefix/include/gmp.h"; then
 		with_libgmp=$with_default_prefix
 	fi
-	if test "${with_polylib_prefix+set}" != set -a \
-	   -f "$with_default_prefix/include/polylib/polylibgmp.h"; then
-		with_polylib_prefix=$with_default_prefix
-	fi
-	if test "${with_piplib+set}" != set -a \
-	   -f "$with_default_prefix/include/piplib/piplibMP.h"; then
-		with_piplib=$with_default_prefix
-	fi
 	if test "${with_ntl+set}" != set -a \
 	   -f "$with_default_prefix/include/NTL/ZZ.h"; then
 		with_ntl=$with_default_prefix
