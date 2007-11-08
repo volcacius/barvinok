@@ -26,6 +26,8 @@ void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
 	fprintf(out, "TOPCOM distinct chambers: %d\n",
 		stats->topcom_distinct_chambers);
     }
+    if (stats->gbr_solved_lps)
+	fprintf(out, "LPs solved during GBR: %d\n", stats->gbr_solved_lps);
 }
 
 struct barvinok_options *barvinok_options_new_with_defaults()

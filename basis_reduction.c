@@ -4,14 +4,16 @@
 #include "config.h"
 
 #ifndef HAVE_LIBGLPK
-Matrix *glpk_Polyhedron_Reduced_Basis(Polyhedron *P)
+Matrix *glpk_Polyhedron_Reduced_Basis(Polyhedron *P,
+				     struct barvinok_options *options)
 {
     assert(0);
 }
 #endif
 
 #ifndef HAVE_LIBCDDGMP
-Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P)
+Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P,
+				     struct barvinok_options *options)
 {
     assert(0);
 }
@@ -20,13 +22,13 @@ Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P)
 Matrix *Polyhedron_Reduced_Basis(Polyhedron *P, struct barvinok_options *options)
 {
     if (options->gbr_lp_solver == BV_GBR_GLPK)
-	return glpk_Polyhedron_Reduced_Basis(P);
+	return glpk_Polyhedron_Reduced_Basis(P, options);
     else if (options->gbr_lp_solver == BV_GBR_CDD)
-	return cdd_Polyhedron_Reduced_Basis(P);
+	return cdd_Polyhedron_Reduced_Basis(P, options);
     else if (options->gbr_lp_solver == BV_GBR_PIP)
-	return pip_Polyhedron_Reduced_Basis(P);
+	return pip_Polyhedron_Reduced_Basis(P, options);
     else if (options->gbr_lp_solver == BV_GBR_PIP_DUAL)
-	return pip_dual_Polyhedron_Reduced_Basis(P);
+	return pip_dual_Polyhedron_Reduced_Basis(P, options);
     else
 	assert(0);
 }

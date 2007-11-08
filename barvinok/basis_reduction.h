@@ -9,12 +9,17 @@ extern "C" {
 
 struct barvinok_options;
 
-Matrix *Polyhedron_Reduced_Basis(Polyhedron *P, struct barvinok_options *options);
+Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
+					struct barvinok_options *options);
 
-Matrix *glpk_Polyhedron_Reduced_Basis(Polyhedron *P);
-Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P);
-Matrix *pip_Polyhedron_Reduced_Basis(Polyhedron *P);
-Matrix *pip_dual_Polyhedron_Reduced_Basis(Polyhedron *P);
+Matrix *glpk_Polyhedron_Reduced_Basis(Polyhedron *P,
+					struct barvinok_options *options);
+Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P,
+					struct barvinok_options *options);
+Matrix *pip_Polyhedron_Reduced_Basis(Polyhedron *P,
+					struct barvinok_options *options);
+Matrix *pip_dual_Polyhedron_Reduced_Basis(Polyhedron *P,
+					struct barvinok_options *options);
 
 #if defined(__cplusplus)
 }

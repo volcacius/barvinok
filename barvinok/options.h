@@ -13,6 +13,7 @@ struct barvinok_stats {
     long	topcom_empty_chambers;
     long	topcom_chambers;
     long	topcom_distinct_chambers;
+    long	gbr_solved_lps;
 };
 
 void barvinok_stats_clear(struct barvinok_stats *stats);

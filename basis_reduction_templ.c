@@ -1,4 +1,5 @@
 #include <barvinok/basis_reduction.h>
+#include <barvinok/options.h>
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -15,7 +16,8 @@ static void save_alpha(GBR_LP *lp, int first, int n, GBR_type *alpha)
  *  for Integer Programming" of Cook el al. to compute a reduced basis.
  * We use \epsilon = 1/4.
  */
-Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
+Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
+				 struct barvinok_options *options)
 {
     int dim = P->Dimension;
     int i;
@@ -66,6 +68,7 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
     i = 0;
 
     GBR_lp_set_obj(lp, basis->p[0], dim);
+    options->stats->gbr_solved_lps++;
     if (GBR_lp_solve(lp))
 	goto unbounded;
     GBR_lp_get_obj_val(lp, &F[0]);
@@ -78,6 +81,7 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
 	} else {
 	    row = GBR_lp_add_row(lp, basis->p[i], dim);
 	    GBR_lp_set_obj(lp, basis->p[i+1], dim);
+	    options->stats->gbr_solved_lps++;
 	    if (GBR_lp_solve(lp))
 		goto unbounded;
 	    GBR_lp_get_obj_val(lp, &F_new);
@@ -103,6 +107,7 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P)
 		value_assign(tmp, mu[j]);
 		Vector_Combine(basis->p[i+1], basis->p[i], b_tmp->p, one, tmp, dim);
 		GBR_lp_set_obj(lp, b_tmp->p, dim);
+		options->stats->gbr_solved_lps++;
 		if (GBR_lp_solve(lp))
 		    goto unbounded;
 		GBR_lp_get_obj_val(lp, &mu_F[j]);
