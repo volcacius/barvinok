@@ -25,8 +25,6 @@
  * The polytope is in PolyLib notation.
  */
 
-#define PRINT_STATS  	    (BV_OPT_LAST+1)
-
 struct argp_option argp_options[] = {
     { "omega",      	    'o',    0,      0 },
     { "pip",   	    	    'p',    0,      0 },
@@ -34,7 +32,6 @@ struct argp_option argp_options[] = {
     { "series",		    's', 0, 0, "compute rational generating function" },
     { "explicit",	    'e', 0, 0, "convert rgf to psp" },
     { "scarf",      	    'S',    0,	    0 },
-    { "print-stats",	    PRINT_STATS,  0,	0 },
     { 0 }
 };
 
@@ -46,7 +43,6 @@ struct arguments {
     int scarf;
     int series;
     int function;
-    int print_stats;
 };
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -58,9 +54,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[0] = arguments->verify.barvinok;
 	state->child_inputs[1] = &arguments->verify;
 	state->child_inputs[2] = &arguments->convert;
-	break;
-    case PRINT_STATS:
-	arguments->print_stats = 1;
 	break;
     case 'e':
 	arguments->function = 1;
@@ -136,7 +129,6 @@ int main(int argc, char **argv)
     arguments.scarf = 0;
     arguments.series = 0;
     arguments.function = 0;
-    arguments.print_stats = 0;
 
     set_program_name(argv[0]);
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
@@ -213,7 +205,7 @@ int main(int argc, char **argv)
     if (EP)
 	evalue_free(EP);
 
-    if (arguments.print_stats)
+    if (options->print_stats)
 	barvinok_stats_print(options->stats, stdout);
 
     Free_ParamNames(param_name, nparam);

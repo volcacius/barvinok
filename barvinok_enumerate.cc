@@ -26,13 +26,10 @@ using std::endl;
  * Both polytopes are in PolyLib notation.
  */
 
-#define PRINT_STATS  	    (BV_OPT_LAST+1)
-
 struct argp_option argp_options[] = {
     { "size",      'S' },
     { "series",    's', 0, 0, "compute rational generating function" },
     { "explicit",  'e', 0, 0, "convert rgf to psp" },
-    { "print-stats",	    PRINT_STATS,  0,	0 },
     { 0 }
 };
 
@@ -40,7 +37,6 @@ struct arguments {
     int size;
     int series;
     int function;
-    int print_stats;
     struct verify_options    verify;
     struct convert_options   convert;
 };
@@ -57,10 +53,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->size = 0;
 	options->series = 0;
 	options->function = 0;
-	options->print_stats = 0;
-	break;
-    case PRINT_STATS:
-	options->print_stats = 1;
 	break;
     case 'S':
 	options->size = 1;
@@ -361,7 +353,7 @@ int main(int argc, char **argv)
     if (EP)
 	evalue_free(EP);
 
-    if (options.print_stats)
+    if (options.verify.barvinok->print_stats)
 	barvinok_stats_print(options.verify.barvinok->stats, stdout);
 
     Free_ParamNames(param_name, C->Dimension);

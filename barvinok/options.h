@@ -98,6 +98,8 @@ struct barvinok_options {
     int		chambers;
 
     int		verbose;
+
+    int		print_stats;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -116,7 +118,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_LP		266
 #define BV_OPT_SUM		267
 #define BV_OPT_CHAMBERS		268
-#define BV_OPT_LAST		268
+#define BV_OPT_PRINT_STATS	270
+#define BV_OPT_LAST		270
 
 #define BV_GRP_APPROX		1
 #define BV_GRP_LAST		1

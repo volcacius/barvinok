@@ -95,6 +95,8 @@ struct barvinok_options *barvinok_options_new_with_defaults()
 
     options->verbose = 0;
 
+    options->print_stats = 0;
+
     return options;
 }
 
@@ -188,6 +190,7 @@ static struct argp_option barvinok_argp_options[] = {
 	OPTION_ALIAS | OPTION_HIDDEN },
     { "version",	    'V',		    0,			0 },
     { "verbose",    	    'v' },
+    { "print-stats",	    BV_OPT_PRINT_STATS,	0,	0 },
     { 0 }
 };
 
@@ -352,6 +355,9 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	else if (!strcmp(arg, "full"))
 	    options->bernstein_recurse =
 		    BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS;
+	break;
+    case BV_OPT_PRINT_STATS:
+	options->print_stats = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
