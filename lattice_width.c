@@ -166,12 +166,20 @@ static int Vector_Compare(Value *p1, Value *p2, unsigned len)
     return 0;
 }
 
-static int width_direction_lex_cmp(const void *va, const void *vb)
+static int wd_width_lex_cmp(const void *va, const void *vb)
 {
     const struct width_direction *a = (const struct width_direction *)va;
     const struct width_direction *b = (const struct width_direction *)vb;
 
     return Vector_Compare(a->width->p, b->width->p, a->width->Size);
+}
+
+static int wd_dir_lex_cmp(const void *va, const void *vb)
+{
+    const struct width_direction *a = (const struct width_direction *)va;
+    const struct width_direction *b = (const struct width_direction *)vb;
+
+    return Vector_Compare(a->dir->p, b->dir->p, a->dir->Size);
 }
 
 static struct width_direction_array *
@@ -197,6 +205,7 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    Polyhedron *C;
 	    unsigned V_max_n = vertex_dirs[V_max_i]->NbRows;
 	    unsigned V_min_n = vertex_dirs[V_min_i]->NbRows;
+	    int sorted_n;
 
 	    if (options->verbose)
 		fprintf(stderr, "%d/%d %d/%d %d \r",
@@ -217,10 +226,25 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    Matrix_Free(M);
 	    basis = Cone_Integer_Hull(C, options);
 	    grow_width_direction_array(width_dirs, basis->NbRows);
-	    for (i = 0; i < basis->NbRows; ++i)
+	    qsort(width_dirs->wd, width_dirs->n, sizeof(struct width_direction),
+		    wd_dir_lex_cmp);
+	    sorted_n = width_dirs->n;
+	    for (i = 0; i < basis->NbRows; ++i) {
+		Vector v;
+		struct width_direction wd;
+
+		v.Size = nvar;
+		v.p = basis->p[i];
+		wd.dir = &v;
+		if (bsearch(&wd, width_dirs->wd, sorted_n,
+			    sizeof(struct width_direction),
+			    wd_dir_lex_cmp))
+		    continue;
+
 		compute_width_direction(V_min->Vertex, V_max->Vertex,
 					basis->p[i],
 					&width_dirs->wd[width_dirs->n++]);
+	    }
 	    Matrix_Free(basis);
 	    Polyhedron_Free(C);
 	}
@@ -287,7 +311,7 @@ Polyhedron_Lattice_Width_Directions(Polyhedron *P, Polyhedron *C,
     Param_Polyhedron_Free(PP);
 
     qsort(width_dirs->wd, width_dirs->n, sizeof(struct width_direction),
-	    width_direction_lex_cmp);
+	    wd_width_lex_cmp);
 
     for (i = 1, j = 1; i < width_dirs->n; ++i) {
 	/* We could also weed out width_directions that differ by a
