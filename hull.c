@@ -323,7 +323,25 @@ static void set_to_one(struct integer_hull *hull, Value *obj,
 	value_set_si(*lower, 1);
 }
 
-static Matrix *gbr_hull(Polyhedron *C, struct barvinok_options *options)
+/* Add to Q those points that the calling function already knows about,
+ * replacing (and destroying) the original Q.
+ */
+static Polyhedron *add_known_points(Polyhedron *Q,
+					Matrix *c, int n_c, unsigned MaxRays)
+{
+    Polyhedron *R;
+
+    R = AddRays(c->p[0], n_c, Q, MaxRays);
+    Polyhedron_Free(Q);
+    return R;
+}
+
+/* Computes the integer hull of the (truncated) cone C
+ * using generalized basis reduction, where c contains a list
+ * of vertices that are known to be part of this integer hull.
+ */
+static Matrix *gbr_cone_hull(Polyhedron *C, Matrix *c, int n_c,
+				struct barvinok_options *options)
 {
     Matrix *vertices;
     Matrix *CV = NULL;
@@ -337,6 +355,8 @@ static Matrix *gbr_hull(Polyhedron *C, struct barvinok_options *options)
     hull.P = C;
     hull.init = truncate_cone(C, options);
     hull.set_lower_bound = set_to_one;
+    if (!CV && c && n_c)
+	hull.init = add_known_points(hull.init, c, n_c, options->MaxRays);
     vertices = gbr_hull_extend(&hull, options);
 
     if (CV) {
@@ -347,11 +367,13 @@ static Matrix *gbr_hull(Polyhedron *C, struct barvinok_options *options)
     return vertices;
 }
 
-Matrix *Cone_Integer_Hull(Polyhedron *C, struct barvinok_options *options)
+/* Computes the integer hull of the cone C with the origin removed. */
+Matrix *Cone_Integer_Hull(Polyhedron *C, Matrix *candidates,
+			  int n_candidates, struct barvinok_options *options)
 {
     switch(options->integer_hull) {
     case BV_HULL_GBR:
-	return gbr_hull(C, options);
+	return gbr_cone_hull(C, candidates, n_candidates, options);
     case BV_HULL_HILBERT:
 	return Cone_Hilbert_Integer_Hull(C, options);
     default:

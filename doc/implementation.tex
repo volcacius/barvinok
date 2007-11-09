@@ -4281,6 +4281,7 @@ $$\{(2,-3),(3,4),(1,1),(1,-1)\}.$$
 \end{example}
 
 \subsubsection{Using generalized basis reduction}
+\label{s:hull:cone:gbr}
 
 Another way of computing the integer hull of a truncated cone is to apply
 the method of \autoref{s:integer:hull}.
@@ -4468,6 +4469,11 @@ $$
 Any integer direction in $C_{1,2}$ will therefore yield
 a width that is at least as large as that of one
 of the vertices of the integer hull.
+Note that when using generalized basis reduction
+to compute the integer hull of these cones as in \autoref{s:hull:cone:gbr},
+it can be helpful to use as vertices for the initial approximation
+not only the extremal rays of the cone, but also those vertices
+of previously computed integer hulls that are elements of the current cone.
 
 After computing a list of all possible candidate width directions
 $\vec c_i$ and the corresponding widths $w_{\vec c_i}(\vec p)$,

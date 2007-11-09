@@ -6,7 +6,8 @@ extern "C" {
 
 struct barvinok_options;
 
-Matrix *Cone_Integer_Hull(Polyhedron *C, struct barvinok_options *options);
+Matrix *Cone_Integer_Hull(Polyhedron *C, Matrix *candidates,
+			  int n_candidates, struct barvinok_options *options);
 Matrix *Polyhedron_Integer_Hull(Polyhedron *P,
 				struct barvinok_options *options);
 

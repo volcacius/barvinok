@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
@@ -183,6 +184,44 @@ static int wd_dir_lex_cmp(const void *va, const void *vb)
     return Vector_Compare(a->dir->p, b->dir->p, a->dir->Size);
 }
 
+static int add_vertex(Matrix *M, int n, Value *v)
+{
+    if (n >= M->NbRows)
+	Matrix_Extend(M, 3*(M->NbRows+10)/2);
+    value_set_si(M->p[n][0], 1);
+    Vector_Copy(v, M->p[n]+1, M->NbColumns-2);
+    value_set_si(M->p[n][M->NbColumns-1], 1);
+    return n+1;
+}
+
+/* Puts the points in v that lie in P in front of the list
+ * and returns their number.
+ */
+static int valid_vertices(Polyhedron *P, Matrix *v, int n_v)
+{
+    int i, j, k;
+    Value tmp;
+
+    assert(v->NbColumns == P->Dimension+2);
+    value_init(tmp);
+
+    for (j = 0, k = 0; j < n_v; ++j) {
+	for (i = 0; i < P->NbConstraints; ++i) {
+	    Inner_Product(v->p[j]+1, P->Constraint[i]+1, P->Dimension+1, &tmp);
+	    if (value_neg_p(tmp))
+		break;
+	}
+	if (i < P->NbConstraints)
+	    continue;
+	if (j != k)
+	    Vector_Exchange(v->p[j]+1, v->p[k]+1, P->Dimension);
+	++k;
+    }
+
+    value_clear(tmp);
+    return k;
+}
+
 static struct width_direction_array *
 compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 {
@@ -191,6 +230,8 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
     int i, V_max_i, V_min_i;
     unsigned nvar = PP->V->Vertex->NbRows;
     struct width_direction_array *width_dirs = new_width_direction_array();
+    Matrix *all_vertices = Matrix_Alloc(nvar, 1+nvar+1);
+    int n_vertices = 0;
 
     vertex_dirs = compute_vertex_dirs(PP);
 
@@ -207,6 +248,7 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    unsigned V_max_n = vertex_dirs[V_max_i]->NbRows;
 	    unsigned V_min_n = vertex_dirs[V_min_i]->NbRows;
 	    int sorted_n;
+	    int n_valid;
 
 	    if (options->verbose)
 		fprintf(stderr, "%d/%d %d/%d %d \r",
@@ -225,7 +267,8 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    }
 	    C = Constraints2Polyhedron(M, options->MaxRays);
 	    Matrix_Free(M);
-	    basis = Cone_Integer_Hull(C, options);
+	    n_valid = valid_vertices(C, all_vertices, n_vertices);
+	    basis = Cone_Integer_Hull(C, all_vertices, n_valid, options);
 	    grow_width_direction_array(width_dirs, basis->NbRows);
 	    qsort(width_dirs->wd, width_dirs->n, sizeof(struct width_direction),
 		    wd_dir_lex_cmp);
@@ -242,6 +285,7 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 			    wd_dir_lex_cmp))
 		    continue;
 
+		n_vertices = add_vertex(all_vertices, n_vertices, basis->p[i]);
 		compute_width_direction(V_min->Vertex, V_max->Vertex,
 					basis->p[i],
 					&width_dirs->wd[width_dirs->n++]);
@@ -250,6 +294,7 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    Polyhedron_Free(C);
 	}
     }
+    Matrix_Free(all_vertices);
 
     for (i = 0; i < PP->nbV; ++i)
 	Matrix_Free(vertex_dirs[i]);

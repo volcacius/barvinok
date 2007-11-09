@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     C = Constraints2Polyhedron(M, options->MaxRays);
     Matrix_Free(M);
 
-    M = Cone_Integer_Hull(C, options);
+    M = Cone_Integer_Hull(C, NULL, 0, options);
 
     Polyhedron_Free(C);
 

@@ -486,7 +486,7 @@ int test_hilbert(struct barvinok_options *options)
     assert(M->NbColumns = 3);
     Matrix_Free(M);
 
-    M = Cone_Integer_Hull(P, options);
+    M = Cone_Integer_Hull(P, NULL, 0, options);
     assert(M->NbRows = 4);
     assert(M->NbColumns = 3);
     Matrix_Free(M);
