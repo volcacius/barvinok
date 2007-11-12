@@ -42,7 +42,6 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
     Value mu[2];
     GBR_type mu_F[2];
     GBR_type two;
-    int end = 0;
 
     if (P->Dimension == 1)
 	return basis;
@@ -147,8 +146,6 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
 	GBR_set_ui(mu_F[1], 3);
 	GBR_mul(mu_F[1], mu_F[1], F_old);
 	if (GBR_lt(mu_F[0], mu_F[1])) {
-	    if (i == dim-2)
-		end = 1;
 	    Vector_Exchange(basis->p[i], basis->p[i+1], dim);
 	    if (i > 0) {
 		use_saved = 1;
@@ -157,14 +154,10 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
 		--i;
 	    } else {
 		GBR_set(F[0], F_new);
-		if (options->gbr_only_first && end)
-		    break;
 		if (options->gbr_only_first && GBR_lt(F[0], two))
 		    break;
 	    }
 	} else {
-	    if (options->gbr_only_first && i == 0 && end)
-		break;
 	    GBR_lp_add_row(lp, basis->p[i], dim);
 	    ++i;
 	}
