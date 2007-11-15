@@ -22,7 +22,7 @@
 LIBS =
 AM_CFLAGS = -DNDEBUG
 
-lib_LTLIBRARIES = libzsolve.la
+noinst_LTLIBRARIES = libzsolve.la
 
 libzsolve_la_SOURCES =				\
 	defs.c 					\
