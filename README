@@ -51,7 +51,8 @@ Configure this library using
 
 ./configure --prefix=/opt --with-libgmp=/path/to/gmp  --with-ntl=/opt
 
-If you want shared libraries, then configure with the --enable-shared option.
+If you want shared libraries, then configure with the
+--enable-shared-barvinok option.
 Note that this doesn't work on some systems because we link in libntl, which
 is only available as a static library.
 Also note that if you have previously installed a shared library of an older
