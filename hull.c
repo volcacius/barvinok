@@ -30,16 +30,20 @@ static int matrix_add(Matrix *M, int n, Value *v)
     return n+1;
 }
 
+/* Select "best" constraint from P over which to optimize,
+ * where P is the current approximation of the integer hull
+ * and where a constraint is better if the difference between
+ * the value at the constraint and the lower bound (based on
+ * the original polytope (the linear relaxation) is smaller.
+ */
 static int select_best(struct integer_hull *hull,
-		       Polyhedron *P, Matrix *candidates,
-		       int *n_candidates, int *candidate,
+		       Polyhedron *P,
 		       Value *min, Value *max,
 		       struct barvinok_options *options)
 {
     int i, j, k;
-    Matrix *M = candidates;
     Vector *lower = Vector_Alloc(P->NbConstraints);
-    Vector *upper = Vector_Alloc(P->NbConstraints+2);
+    Vector *upper = Vector_Alloc(P->NbConstraints);
     Vector *distances = Vector_Alloc(P->NbConstraints);
     int i_min;
     int non_zero = 0;
@@ -62,47 +66,11 @@ static int select_best(struct integer_hull *hull,
 	    i_min = i;
 	non_zero++;
     }
-    if (i_min == -1) {
-	Vector_Free(lower);
-	Vector_Free(upper);
-	Vector_Free(distances);
-	return -1;
-    }
 
-    *candidate = -1;
-    for (j = 0, k = 0; j < *n_candidates; ++j) {
-	int keep = 0;
-	for (i = 0; i < P->NbConstraints; ++i) {
-	    if (value_zero_p(distances->p[i]))
-		continue;
-	    Inner_Product(M->p[j], P->Constraint[i]+1, P->Dimension,
-			  &upper->p[P->NbConstraints]);
-	    value_addto(upper->p[P->NbConstraints+1],
-			upper->p[P->NbConstraints],
-			P->Constraint[i][1+P->Dimension]);
-	    if (value_neg_p(upper->p[P->NbConstraints+1]))
-		keep = 1;
-	    if (value_lt(upper->p[P->NbConstraints], upper->p[i])) {
-		value_assign(upper->p[i], upper->p[P->NbConstraints]);
-		value_subtract(distances->p[i], upper->p[i], lower->p[i]);
-		if (i_min == i)
-		    *candidate = k;
-		else if (value_lt(distances->p[i], distances->p[i_min])) {
-		    i_min = i;
-		    *candidate = k;
-		}
-	    }
-	}
-	if (keep) {
-	    if (k != j)
-		Vector_Exchange(M->p[j], M->p[k], M->NbColumns);
-	    ++k;
-	}
+    if (i_min != -1) {
+	value_decrement(*max, upper->p[i_min]);
+	value_assign(*min, lower->p[i_min]);
     }
-    *n_candidates = k;
-
-    value_decrement(*max, upper->p[i_min]);
-    value_assign(*min, lower->p[i_min]);
 
     Vector_Free(lower);
     Vector_Free(upper);
@@ -167,6 +135,37 @@ Polyhedron *add_facets(Polyhedron *P, Matrix *facets, int n,
     return R;
 }
 
+/* Add optimal and suboptimal points found by Polyhedron_Integer_Minimum
+ * to Q, replacing (and destroying) the old Q.
+ * rays is a temporary array for use in AddRays that can be reused
+ * over multiple calls and that is extended as needed.
+ */
+Polyhedron *add_points(Polyhedron *Q, Vector *opt, Matrix *subopt,
+			int n_subopt, Matrix *rays,
+			struct barvinok_options *options)
+{
+    int i;
+    Polyhedron *R;
+
+    if (1 + n_subopt > rays->NbRows) {
+	int n = rays->NbRows;
+	Matrix_Extend(rays, 1+n_subopt);
+	for (i = n; i < rays->NbRows; ++i) {
+	    value_set_si(rays->p[i][0], 1);
+	    value_set_si(rays->p[i][1+Q->Dimension], 1);
+	}
+    }
+
+    Vector_Copy(opt->p, rays->p[0]+1, Q->Dimension);
+    for (i = 0; i < n_subopt; ++i)
+	Vector_Copy(subopt->p[i], rays->p[1+i]+1, Q->Dimension);
+
+    R = AddRays(rays->p[0], 1+n_subopt, Q, options->MaxRays);
+    Polyhedron_Free(Q);
+
+    return R;
+}
+
 /* Extends an initial approximation hull->init of the integer hull
  * of hull->P using generalized basis reduction.
  * In particular, it considers each facet of the current
@@ -181,10 +180,11 @@ static Matrix *gbr_hull_extend(struct integer_hull *hull,
 {
     Value min, max;
     Polyhedron *Q = hull->init;
-    Vector *ray = Vector_Alloc(2+Q->Dimension);
+    Matrix *rays = Matrix_Alloc(1, 2+Q->Dimension);
     Matrix *candidates;
     int n_candidates = 0;
     Matrix *vertices;
+    int i_min;
 
     hull->F= Matrix_Alloc(Q->NbConstraints, 2+Q->Dimension);
     hull->n_F = 0;
@@ -194,25 +194,20 @@ static Matrix *gbr_hull_extend(struct integer_hull *hull,
     value_init(min);
     value_init(max);
 
-    value_set_si(ray->p[0], 1);
-    value_set_si(ray->p[1+Q->Dimension], 1);
+    value_set_si(rays->p[0][0], 1);
+    value_set_si(rays->p[0][1+Q->Dimension], 1);
 
-    for (;;) {
+    while ((i_min = select_best(hull, Q, &min, &max, options)) != -1) {
 	Polyhedron *R;
-	int i, i_min, candidate;
+	int i;
 	Vector *opt;
-	Value *vertex = NULL;
-
-	i_min = select_best(hull, Q, candidates, &n_candidates, &candidate,
-				&min, &max, options);
-	if (i_min == -1)
-	    break;
 
 	if (INCLUDE_KNOWN_FACETS_IN_ILP)
 	    R = add_facets(hull->P, hull->F, hull->n_F, options);
 	else
 	    R = hull->P;
 
+	n_candidates = 0;
 	opt = Polyhedron_Integer_Minimum(R, Q->Constraint[i_min]+1,
 					 min, max, candidates, &n_candidates,
 					 options);
@@ -222,26 +217,17 @@ static Matrix *gbr_hull_extend(struct integer_hull *hull,
 
 	hull->n_F = matrix_add(hull->F, hull->n_F, Q->Constraint[i_min]);
 
-	if (opt)
-	    vertex = opt->p;
-	else if (candidate != -1)
-	    vertex = candidates->p[candidate];
-
-	if (!vertex)
+	if (!opt)
 	    continue;
 
-	Inner_Product(hull->F->p[hull->n_F-1]+1, vertex, Q->Dimension,
+	Inner_Product(hull->F->p[hull->n_F-1]+1, opt->p, Q->Dimension,
 		      &hull->F->p[hull->n_F-1][1+Q->Dimension]);
 	value_oppose(hull->F->p[hull->n_F-1][1+Q->Dimension],
 		     hull->F->p[hull->n_F-1][1+Q->Dimension]);
 
-	Vector_Copy(vertex, ray->p+1, Q->Dimension);
-	R = AddRays(ray->p, 1, Q, options->MaxRays);
-	Polyhedron_Free(Q);
-	Q = R;
+	Q = add_points(Q, opt, candidates, n_candidates, rays, options);
 
-	if (opt)
-	    Vector_Free(opt);
+	Vector_Free(opt);
     }
 
     vertices = Polyhedron_Vertices(Q);
@@ -252,7 +238,7 @@ static Matrix *gbr_hull_extend(struct integer_hull *hull,
     value_clear(min);
     value_clear(max);
 
-    Vector_Free(ray);
+    Matrix_Free(rays);
     Matrix_Free(hull->F);
     hull->F = NULL;
     Matrix_Free(candidates);
