@@ -1,3 +1,4 @@
+#include <assert.h>
 #define GMPRATIONAL
 #include <setoper.h>
 #include <cdd.h>

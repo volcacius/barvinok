@@ -3,6 +3,7 @@
  * Euler-Maclaurin formula by Berline and Vergne.
  */
 
+#include <assert.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "bernoulli.h"

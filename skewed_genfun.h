@@ -1,6 +1,7 @@
 #ifndef SKEWED_GENFUN_H
 #define SKEWED_GENFUN_H
 
+#include <assert.h>
 #include <barvinok/barvinok.h>
 
 struct skewed_gen_fun {

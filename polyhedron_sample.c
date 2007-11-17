@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <barvinok/options.h>
 #include <barvinok/sample.h>
 #include "config.h"

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #define Vector ZSolveVector
 #define Matrix ZSolveMatrix

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <barvinok/polylib.h>
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>

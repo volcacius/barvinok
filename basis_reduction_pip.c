@@ -1,4 +1,4 @@
-#include <stdio.h>  /* needed for piplib ! */
+#include <assert.h>
 #include <piplib/piplibMP.h>
 #include <barvinok/basis_reduction.h>
 

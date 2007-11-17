@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <barvinok/options.h>
 #include "param_util.h"
 #include "topcom.h"
