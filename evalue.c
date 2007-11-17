@@ -8,6 +8,7 @@
 /*       (see file : LICENSE).                                         */
 /***********************************************************************/
 
+#include <alloca.h>
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
