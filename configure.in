@@ -87,6 +87,7 @@ else
 	if test "x$gmp_package" = "xyes"; then
 		bv_configure_args="$bv_configure_args --with-libgmp --with-gmp"
 	else
+	    bv_configure_args="$bv_configure_args --with-libgmp=$gmp_package"
 	    bv_configure_args="$bv_configure_args --with-gmp=$gmp_package"
 	    GMP_DIR=$gmp_package
 	    if test ! -d "$GMP_DIR"; then
