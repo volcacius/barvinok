@@ -3876,6 +3876,108 @@ The constraints $D \vec x \ge \vec c = \vec 0$ of \eqref{eq:standard:2}
 are therefore equivalent to $\vec x \ge \vec 0$.
 
 
+\subsection{Integer Feasibility}
+\label{s:feasibility}
+
+For testing whether a polytope $P \subset \QQ^d$ contains any integer points,
+we use the technique of~\shortciteN{Cook1993implementation},
+based on \ai{generalized basis reduction}.
+
+The technique basically looks for a ``short vector'' $\vec c$ in the
+lattice $\ZZ^d$, where shortness is measured in terms of
+the \ai{width} of the polytope $P$ along that direction,
+\begin{align*}
+\width_{\vec c} P
+& =
+\max \{\, \sp c x \mid \vec x \in P \,\}
+-
+\min \{\, \sp c x \mid \vec x \in P \,\}
+\\
+& =
+\max \{\, \sps {\vec c} {\vec x - \vec y} \mid \vec x, \vec y \in P \,\}
+.
+\end{align*}
+The \defindex{lattice width} is the minimum width over all
+non-zero integer directions:
+$$
+\width P =
+\min_{\vec c \in \ZZ^d \setminus \{ \vec 0 \} } \width_{\vec c} P
+.
+$$
+If the dimension $d$ is fixed then
+the lattice width of any polytope $P \subset \QQ^d$
+containing no integer points is bounded by a constant%
+~\shortcite{Lagarias90,Barvinok02}.
+If we slice the polytope using hyperplanes orthogonal
+to a short direction, i.e., a direction where the width
+is small, we will therefore only need to inspect
+``few'' of them before either finding one with an integer point,
+or running out of hyperplanes, meaning that the
+polytope did not contain any integer points.
+Each slice is checked for integer points by applying
+the above method recursively.
+
+A nice feature of this technique is that it will
+not only tell you if there is any integer point
+in the given polytope, but it will actually compute
+one if there is any.
+
+The short vector is obtained as the first vector
+of a ``reduced basis'' of the lattice $\ZZ^d$ with respect
+to the polytope.
+In particular, the first vector $\vec b_1$ of this reduced basis
+will satisfy
+$$
+\width_{\vec b_1} P
+\le
+\frac{\width P}
+{\left(\frac 1 2 - \varepsilon\right)^{d-1}}
+,
+$$
+with $0 < \varepsilon < 1/2$ a fixed constant.
+That is, the width in direction $\vec b_1$ is no more than a constant
+factor bigger than the lattice width.
+See~\shortcite{Cook1993implementation} for details.
+In our implementation we use $\varepsilon = 1/4$.
+When used in the above integer feasibility testing algorithm,
+we will also terminate the reduced basis computation
+as soon as the width along the first basis vector is smaller than 2.
+This means that there will be at most 2 slices orthogonal to the chosen
+direction.
+
+The computation of the above reduced basis requires the solution
+of many linear programs, for which we use any of the following
+external solvers:
+\begin{itemize}
+\item \ai[\tt]{GLPK}~\shortcite{GLPK}
+
+This solver is based on double precision floating point arithmetic and
+may therefore not be suitable if the coefficients of the constraints
+describing the polytope are large.
+
+\item \ai[\tt]{cdd}~\shortcite{cdd}
+
+This solver is based on exact integer arithmetic.
+However, versions up to and including \verb+cddlib 0.94d+ have
+a bug that may sometimes result in a polytope being
+reported as (rationally) empty even though it is not.
+
+\item \piplib/~\shortcite{Feautrier:PIP}
+
+This solver is also based on exact integer arithmetic
+and uses the \ai{dual simplex} method to solve a linear program.
+Two versions are available, \ai[\tt]{pip} will present the
+original program to \piplib/, while \ai[\tt]{pip-dual} will present
+the dual program to \piplib/, effectively having it apply the primal
+simplex method to the original problem.
+The latter may seem more appropriate since the computation
+of the reduced basis only requires the dual solution of
+any linear program.  However, in practice, it appears
+that \ai[\tt]{pip} is often faster than \ai[\tt]{pip-dual}.
+\end{itemize}
+The LP solver to use can be selected with the \ai[\tt]{--gbr} option.
+
+
 \subsection{Computing the integer hull of a truncated cone}
 \label{s:hull:cone}
 
@@ -3972,7 +4074,8 @@ $$
 P(\vec p) = \{\, \vec x \mid A \vec x + \vec b(\vec p) \ge \vec 0 \,\}
 ,
 $$
-the width along a direction $\vec c$ is defined as
+the width along a direction $\vec c$ is defined in the same
+way as for non-parametric polytopes (see \autoref{s:feasibility}),
 \begin{equation}
 \label{eq:width}
 \width_{\vec c} P(\vec p)

@@ -1053,10 +1053,8 @@ Matrix *Polyhedron_Reduced_Basis(Polyhedron *P,
 a \ai{generalized reduced basis} of {\tt P}, which
 is assumed to be a polytope, using the algorithm
 of~\shortciteN{Cook1993implementation}.
+See \autoref{s:feasibility} for more information.
 The basis vectors are stored in the rows of the matrix returned.
-This function currently uses \ai[\tt]{GLPK}~\shortcite{GLPK}
-to perform the linear optimizations and so is only available
-if you have \ai[\tt]{GLPK}.
 
 \begin{verbatim}
 Vector *Polyhedron_Sample(Polyhedron *P,
@@ -1066,8 +1064,8 @@ Vector *Polyhedron_Sample(Polyhedron *P,
 or {\tt NULL} if {\tt P} contains no integer points.
 The integer point is found using the algorithm
 of~\shortciteN{Cook1993implementation} and uses
-\ai[\tt]{Polyhedron\_Reduced\_Basis} to compute the reduced bases
-and therefore also requires \ai[\tt]{GLPK}.
+\ai[\tt]{Polyhedron\_Reduced\_Basis} to compute the reduced bases.
+See \autoref{s:feasibility} for more information.
 
 \subsection{\protect\ai[\tt]{bernstein} Data Structures and Functions}
 
