@@ -3978,11 +3978,229 @@ that \ai[\tt]{pip} is often faster than \ai[\tt]{pip-dual}.
 The LP solver to use can be selected with the \ai[\tt]{--gbr} option.
 
 
+\subsection{Computing the integer hull of a polyhedron}
+\label{s:integer:hull}
+
+For computing the \ai{integer hull} of a polyhedron,
+we first describe how to compute the convex hull of a set
+given as an oracle for optimizing a linear objective
+function over the set and then
+we explain how to optimize a linear objective function over
+the integer points of a polyhedron.
+Applying the first with the second as \ai{optimization oracle}
+yields a method for computing the requested integer hull.
+
+\subsubsection{Computing the convex hull based on an optimization oracle}
+
+The algorithm described below is presented by
+\shortciteN[Remark~2.5]{Cook1992} as an extension of the
+algorithm by \shortciteN[Section~3]{Edmonds82} for computing
+the {\em dimension} of a polytope for which only an optimization oracle
+is available.  The algorithm is described in a bit more detail
+by \shortciteN{Eisenbrand2000PhD} and reportedly stems from
+\shortciteN{Hartmann1989PhD}.
+Essentially the same algorithm has also been implemented
+by \shortciteN{Huggins06}, citing
+\ai{beneath/beyond}~\shortcite{Preparata1985} as his inspiration.
+
+The algorithm start out from an initial set of points from
+the set $S$.  After computing the convex hull of this set
+of points, we take one of its bounding constraints and use
+the optimization oracle
+to compute an optimal point in $S$ (but on the other side
+of the bounding hyperplane) along the
+outer normal of this bounding constraint.
+If a new point is found, it is added to the set of points
+and a new convex hull is computed, or the old one is adapted
+in a beneath/beyond fashion.  Otherwise, the chosen bounding constraint
+is also a bounding constraint of $S$ and need not be considered anymore.
+The process continues until all bounding constraints in the
+description of the current convex hull have been considered.
+
+In principle, the initial set of points in the above algorithm
+may be empty, with a ``convex hull'' described by a set of
+conflicting constraints and each equality in the description of any
+intermediate lower-dimensional convex hull being considered
+as a pair of bounding constraints with opposite outer normals.
+However, in our implementation, we have chosen to first compute
+a maximal set of affinely independent points by first taking any
+point from $S$ and then adding points from $S$ not on one of
+the equalities satisfied by all points found so far.
+This allows us to not have to worry about equalities in the
+main algorithm.
+In the case of the computation of the integer hull, finding
+these affinely independent points can be accomplished using the technique of
+\autoref{s:feasibility}.
+
+\begin{figure}
+\intercol=0.58cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(-1,0)*\xybox{
+\def\latticebody{\POS="c"+(0,0.5)\ar@{--}"c"+(0,6.5)}%
+\POS0,{\xylattice{1}{6}00}%
+\def\latticebody{\POS="c"+(0.5,0)\ar@{--}"c"+(6.5,0)}%
+\POS0,{\xylattice00{1}6}%
+\POS@i@={(1.5,2.75),(5.75,2.25),(5.5,5.25),(2.75,4.75),(1.5,2.75)},
+{0*\xypolyline{}}
+\POS@i@={(2,3),(3,3),(3,4),(2,3)},{0*[|(3)]\xypolyline{}}
+\POS(2,3)*{\bullet}
+\POS(3,3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(3,3.5)\ar(3.5,3.5)
+\POS(5,3)*{\circ}
+\POS(5,4)*{\circ}
+\POS(5,5)*{\circ}
+}
+\POS(6,0)*\xybox{
+\def\latticebody{\POS="c"+(0,0.5)\ar@{--}"c"+(0,6.5)}%
+\POS0,{\xylattice{1}{6}00}%
+\def\latticebody{\POS="c"+(0.5,0)\ar@{--}"c"+(6.5,0)}%
+\POS0,{\xylattice00{1}6}%
+\POS@i@={(1.5,2.75),(5.75,2.25),(5.5,5.25),(2.75,4.75),(1.5,2.75)},
+{0*\xypolyline{}}
+\POS@i@={(2,3),(5,3),(3,4),(2,3)},{0*[|(3)]\xypolyline{}}
+\POS(2,3)*{\bullet}
+\POS(5,3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(4,3.5)\ar(4.25,4)
+\POS(5,5)*{\circ}
+}
+\POS(13,0)*\xybox{
+\def\latticebody{\POS="c"+(0,0.5)\ar@{--}"c"+(0,6.5)}%
+\POS0,{\xylattice{1}{6}00}%
+\def\latticebody{\POS="c"+(0.5,0)\ar@{--}"c"+(6.5,0)}%
+\POS0,{\xylattice00{1}6}%
+\POS@i@={(1.5,2.75),(5.75,2.25),(5.5,5.25),(2.75,4.75),(1.5,2.75)},
+{0*\xypolyline{}}
+\POS@i@={(2,3),(5,3),(5,5),(3,4),(2,3)},{0*[|(3)]\xypolyline{}}
+\POS(2,3)*{\bullet}
+\POS(5,3)*{\bullet}
+\POS(5,5)*{\bullet}
+\POS(3,4)*{\bullet}
+}
+\end{xy}
+\caption{The integer hull of a polytope}
+\label{f:integer:hull}
+\end{figure}
+
+\begin{example}
+Assume we want to compute the integer hull of the polytope in the left part
+of \autoref{f:integer:hull}.
+We first compute a set of three affinely independent points,
+shown in the same part of the figure.
+Of the three facets of the corresponding convex hull,
+optimization along the outer normal (depicted by an arrow in the figure)
+of only one facet will yield any additional points.  The other two
+are therefore facets of the integer hull.
+Optimization along the above outer normal may yield any of the
+points marked by a $\circ$.
+Assuming it is the bottom one, we end up with the updated
+convex hull in the middle of the figure.  This convex hull
+has only one new facet.  Adding the point found by optimizing
+over this facet's outer normal, we obtain the convex hull
+on the right of the figure.
+There are two new facets, but neither of them yields any
+further points.  We have therefore found the integer hull
+of the polytope.
+\end{example}
+
+\subsubsection{Optimization over the integer points of a polyhedron}
+
+We assume that we want to find the {\em minimum} of
+some linear objective function.  When used in the computation
+of the integer hull of some polytope, the objective function
+will therefore correspond to the inner normal of some facet.
+
+During our search for an optimal integer point with respect
+to some objective function, we will keep track of the best
+point so far as well as a lower bound $l$
+and an upper bound $u$ such that the value at the optimal point
+(if it is better than the current best) lies between those
+two bounds.
+Initially, there is no best point yet and values for $l$ and $u$
+may be obtained from optimization over the linear relaxation.
+When used in the computation of the integer hull of some polytope,
+the upper bound $u$ is one less than the value attained on
+the given facet of the current approximation.
+
+As long as $l \le u$, we perform the following steps
+\begin{itemize}
+\item use the integer feasibility technique of \autoref{s:feasibility}
+to test whether there is any integer point with value in
+$[l,u']$, where $u'$ is
+\begin{itemize}
+\item $u$ if the previous test for an integer point did not produce a point
+\item $l+\floor{\frac{u-l-1}2}$
+ if the previous test for an integer point {\em did\/} produce a point
+\end{itemize}
+\item if a point is found, then remember it as the current best
+and replace $u$ by the value at this point minus one,
+\item otherwise, replace $l$ by $u'+1$.
+\end{itemize}
+When used in the computation of the integer hull of some polytope,
+it is useful to not only keep track of the best point so far,
+but of all points found.
+These points will all lie outside of the current approximation
+of the integer hull and adding them all instead of just one,
+will typically get us to the complete integer hull quicker.
+
+\begin{figure}
+\intercol=0.7cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0.5,0)\ar@{-}(16.5,0)
+\def\latticebody{\POS="c"+(0,-0.2)\ar@{--}"c"+(0,0.2)\POS"c"*++!D{\the\latticeA}}%
+\POS0,{\xylattice{1}{16}00}%
+\POS(6,0)*!C{\bullet}
+\POS(7,0)*{\bullet}
+\POS(8,0)*{\bullet}
+\POS(12,0)*{\bullet}
+\POS(13,0)*{\bullet}
+\POS(14,0)*{\bullet}
+\POS(15,0)*{\bullet}
+\POS(16,0)*{\bullet}
+\POS(1,-1)\ar@{-}(16,-1)
+\POS(8,-1)*{\bullet}
+\POS(1,-2)\ar@{-}(4,-2)
+\POS(5,-3)\ar@{-}(7,-3)
+\POS(6,-3)*{\bullet}
+\POS(4.9,-4)\ar@{-}(5.1,-4)
+\end{xy}
+\caption{The integer points of a polytope projected on an objective function}
+\label{f:hull:projected}
+\end{figure}
+
+\begin{example}
+\label{ex:hull:projected}
+Assume that the values of some objective function attained
+by the integer points of some polytope are as shown in
+\autoref{f:hull:projected} and assume we know that the optimal
+value lies between 1 and 16.
+In the first step we would look for a point attaining a value
+in the interval $[1,16]$.  Suppose this yields a point attaining
+the value $8$ (second line of the figure).  We record this point
+as the current best and update the search interval to $[1,7]$.
+In the second step, we look for a point attaining a value
+in the interval $[1,4]$, but find nothing and set the search interval
+to $[5,7]$.
+In the third step, we consider the interval $[5,7]$ and find
+a point attaining the value 6.  We update the current best value
+and set the search interval to $[5,5]$.
+In the fourth step, we consider the interval $[5,5]$, find no
+points and update the interval to ``$[6,5]$''.
+Since the lower bound is now larger than the upper bound, the
+algorithm terminates, returning the best or all point(s) found.
+\end{example}
+
+
 \subsection{Computing the integer hull of a truncated cone}
 \label{s:hull:cone}
 
 In \autoref{s:width} we will need to compute the \ai{integer hull}
 of a cone with the origin removed ($C \setminus \{ \vec 0 \}$).
+
+\subsubsection{Using the Hilbert basis of the cone}
 
 As proposed by \shortciteN{Koeppe2007personal},
 one way of computing this integer hull is to first compute
@@ -4012,7 +4230,7 @@ $$
 .
 $$
 Since the $\vec r_k$ are also among the $\vec b_j$, this can
-be simplified to checking whether there exist a rational
+be simplified to checking whether there exists a rational
 solution for $\vec \alpha_j$ to
 $$
 \vec b_i = \sum_{j \ne i} \vec \alpha_j \vec b_j
@@ -4045,7 +4263,7 @@ $$
 \label{f:hilbert:hull}
 \end{figure}
 
-\begin{example}
+\begin{example} \label{ex:hilbert:hull}
 Consider the cone
 $$
 C = \poshull \,\{(2,-3), (3,4)\}
@@ -4060,6 +4278,111 @@ overconvex combinations of the other $\vec b_i \ne \vec 0$.
 The vertices of the integer hull of $C \setminus \{ \vec 0 \}$
 are therefore
 $$\{(2,-3),(3,4),(1,1),(1,-1)\}.$$
+\end{example}
+
+\subsubsection{Using generalized basis reduction}
+
+Another way of computing the integer hull of a truncated cone is to apply
+the method of \autoref{s:integer:hull}.
+In this case, the initial set of points will consist
+of (the smallest integer representatives of) the extremal rays
+of the cone, together with the extremal rays themselves.
+That is, if $C = \poshull \, \{ \vec r_j \}$ with
+$\vec r_j \in \ZZ^d$, then our initial approximation of the
+integer hull of $C \setminus \{ \vec 0 \}$ is
+$$
+\convhull \, \{ \vec r_j \} + \poshull \, \{ \vec r_j \}
+.
+$$
+Furthermore, we need never consider any
+of the bounding constraints that are also bounding constraints
+of the original cone.
+When optimizing along the normal of any of the other facets, we can
+take the lower bound to be $1$.  This will ensure that
+the origin is excluded, without excluding any other integer points.
+
+\begin{figure}
+\intercol=0.5cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\POS(0,0)*\xybox{
+\POS@i@={(3,-4.5),(2,-3),(3,4),(4.125,5.5),(5.5,5.5),(5.5,-4.5)},{0*[grey]\xypolyline{*}}
+\def\latticebody{\POS="c"+(0,-4.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-0}{5}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-4}5}%
+\POS0\ar(2,-3)
+\POS0\ar(3,4)
+\POS(2,-3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(1,1)*{\circ}
+}
+\POS(8,0)*\xybox{
+\POS@i@={(3,-4.5),(2,-3),(1,1),(3,4),(4.125,5.5),(5.5,5.5),(5.5,-4.5)},{0*[grey]\xypolyline{*}}
+\def\latticebody{\POS="c"+(0,-4.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-0}{5}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-4}5}%
+\POS0\ar(2,-3)
+\POS0\ar(3,4)
+\POS(2,-3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(1,1)*{\bullet}
+\POS(1,-1)*{\circ}
+}
+\POS(16,0)*\xybox{
+\POS@i@={(3,-4.5),(2,-3),(1,-1),(1,1),(3,4),(4.125,5.5),(5.5,5.5),(5.5,-4.5)},{0*[grey]\xypolyline{*}}
+\def\latticebody{\POS="c"+(0,-4.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-0}{5}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-4}5}%
+\POS0\ar(2,-3)
+\POS0\ar(3,4)
+\POS(2,-3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(1,1)*{\bullet}
+\POS(1,-1)*{\bullet}
+}
+\end{xy}
+\caption{The integer hull of a truncated cone}
+\label{f:integer:hull}
+\end{figure}
+
+\begin{example}
+Consider once more the cone
+$$
+C = \poshull \,\{(2,-3), (3,4)\}
+$$
+from Example~\ref{ex:hilbert:hull}.
+The initial approximation is
+$$
+C = \convhull \,\{(2,-3), (3,4)\} + \poshull \,\{(2,-3), (3,4)\}
+,
+$$
+which is shown on the left of \autoref{f:integer:hull}.
+The only bounding constraint that does not correspond to a
+bounding constraint of $C$ is $7 x - y \ge 17$.
+In the first step, we will therefore look for a point
+minimizing $7 x - y$ with values in the interval $[1,16]$.
+All values of this objective function in the given interval
+attained by points in $C$ are shown in \autoref{f:hull:projected}.
+From Example~\ref{ex:hull:projected}, we know that the optimal
+value is $6$ and this corresponds to the point $(1,1)$.
+Adding this point to our hull, we obtain the approximation
+in the middle of \autoref{f:integer:hull}.
+This approximation has two new facets.
+The bounding constraint $3x - 2 y \ge 1$ will not produce
+any new points since we would be looking for one in the
+interval ``$[1,0]$''.
+The other new bounding constraint is $4x + y \ge 5$.
+Minimizing $4 x+ y$ with values in the interval $[1,4]$,
+we find the minimal value $3$ corresponding to the point $(1,-1)$.
+Adding this point, we obtain the complete integer hull
+shown on the right of \autoref{f:integer:hull}.
+Note that if in the first step we would have added not only
+the point corresponding to the optimal value, but instead
+all points found in Example~\ref{ex:hull:projected},
+then we would have obtained the complete integer hull directly.
 \end{example}
 
 
