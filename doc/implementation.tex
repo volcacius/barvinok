@@ -1480,15 +1480,20 @@ $$
 
 This section draws heavily from \shortciteN{Koeppe2006experiments}.
 
-After computing the \rgf/ of a polytope,
+We define a ``short'' \defindex{\rgf/} to be a function of the form
 \begin{equation}
 \label{eq:rgf}
 f(\vec x)=
 \sum_{i\in I}\alpha_i
     \frac{\sum_{k=1}^{r} \vec x^{\vec w_{ik} }}
-	 {\prod_{j=1}^{d}\left(1-\vec x^{\vec b_{ij}}\right)}
+	 {\prod_{j=1}^{k_i}\left(1-\vec x^{\vec b_{ij}}\right)}
 ,
 \end{equation}
+with $\vec x \in \CC^d$, $\alpha_i \in \QQ$,
+$\vec w_{i k} \in \ZZ^d$ and $\vec b_{i j} \in \ZZ^d \setminus \{\vec 0\}$.
+
+After computing the \rgf/~\eqref{eq:rgf} of a polytope
+(with $k_i = d$ for all $i$),
 the number of lattice points in the polytope can be obtained
 by evaluating $f(\vec 1)$.  Since $\vec 1$ is a pole of each
 term, we need to compute the constant term in the Laurent expansions
@@ -4804,3 +4809,118 @@ the corresponding basic solutions.
 Second, they use a different method of creating a partition
 of partially-open chambers, which may lead to some lower-dimensional
 chambers surviving and hence to a larger total number of chambers.
+
+
+\subsection{Testing whether a set has an infinite number of points}
+
+In some situation we are given the generating function of
+some integer set and we would like to know if the set is
+infinite or not.  Typically, we want to know if the set
+is empty or not, but we cannot simply count the number of elements
+in the standard way since we may not have any guarantee that
+the set has only a finite number of elements.
+We will consider the slightly more general case where we are
+given a rational generating function $f(\vec x)$ of the form~\eqref{eq:rgf}
+such that
+\begin{equation}
+\label{eq:rgf:psp}
+f(\vec x) = \sum_{\vec s \in Q \cap \ZZ^d} c(\vec s)\, \vec x^{\vec s}
+\end{equation}
+converges on some nonempty open subset of $\CC^d$, $Q$ is a pointed
+polyhedron and $c(\vec s) \ge 0$,
+and we want to compute
+\begin{equation}
+\label{eq:psp:sum}
+S = \sum_{\vec s \in Q \cap \ZZ^d} c(\vec s)
+,
+\end{equation}
+where the sum may diverge, i.e., ``$S = \infty$''.
+The following proposition shows that we can determine $S$
+in polynomial time.
+For a sketch of an alternative technique, see
+\shortciteN[Proof of Lemma~16]{Woods2005period}.
+
+\begin{proposition}
+Fix $d$ and $k$.
+Given a \rgf/ of the form~\eqref{eq:rgf} with $k_i \le k$
+and a pointed polyhedron $Q \subset \QQ^d$, then there is a
+polynomial time algorithm that determines for the corresponding
+function $c(\vec s)$~\eqref{eq:rgf:psp} whether the sum~\eqref{eq:psp:sum}
+diverges and computes the value of $S$~\eqref{eq:psp:sum} if it does not.
+\end{proposition}
+\begin{proof}
+Since $Q$ is pointed, the series~\eqref{eq:rgf:psp} converges on a neighborhood
+of $e^{\vec \ell} = (e^{\ell_1}, \ldots, e^{\ell_d})$ for any $\vec \ell$
+such that $\sps {\vec r_k} {\vec \ell} < 0$ for
+any (extremal) ray $\vec r_k$ of $Q$ and
+such that $\sps {\vec b_{i j}} {\vec \ell} \ne 0$ for any
+$\vec b_{i j}$ in~\eqref{eq:rgf}.
+Let $\vec \alpha = - \vec \ell$ and perform the substitution
+$\vec x = t^{\vec \alpha}$.  The function $g(t) = f(t^{\vec \alpha})$
+is then also a (short) \rgf/ and
+$$
+g(t) = \sum_{k \in \sps {\vec\alpha} Q \cap \ZZ}
+	\left(
+		\sum_{\shortstack{$\scriptstyle \vec s \in Q \cap \ZZ^d$\\
+				  $\scriptstyle \sp \alpha s = k$}} c(\vec s)
+	\right) t^k
+=: \sum_{k \in \sps {\vec\alpha} Q \cap \ZZ} d(k) \, t^k
+,
+$$
+with $\sps {\vec\alpha} Q = \{ \sp \alpha x \mid \vec x \in Q \}$,
+converges in a neighborhood of $e^{-1}$, while
+$$
+S = \sum_{k \in \sps {\vec\alpha} Q \cap \ZZ} d(k)
+.
+$$
+Since $c(\vec s) \ge 0$, we have $d(k) \ge 0$
+and the above sum diverges iff any of the coefficients of the
+negative powers of $t$ in the Laurent expansion of $g(t)$ is non-zero.
+If the sum converges, then the sum is simply the coefficient
+of the constant term in this expansion.
+
+It only remains to show now that we can compute a suitable $\vec \alpha$
+in polynomial time, i.e., an $\vec \alpha$ such that
+$\sps {\vec r_k} {\vec \alpha} > 0$ for any (extremal) ray $\vec r_k$ of $Q$ and
+$\sps {\vec b_{i j}} {\vec \alpha} \ne 0$ for any
+$\vec b_{i j}$ in~\eqref{eq:rgf}.
+By adding the $\vec r_k$ to the list of $\vec b_{i j}$ if needed, we can relax
+the first set of constraints to $\sps {\vec r_k} {\vec \alpha} \ge 0$.
+Let $Q$ be described by the constraints $A \vec x + \vec c \ge \vec 0$
+and let $B$ be $d \times d$ non-singular submatrix of $A$, obtained
+by removing some of the rows of $A$.  Such a $B$ exists since
+$Q$ does not contain any straight line.
+Clearly, $B \vec r \ge \vec 0$ for any ray $\vec r$ of $Q$.
+Let $\vec b'_{i j} = B \vec b_{i j}$, then since $\vec b_{i j} \ne \vec 0$
+and B is non-singular, we have $\vec b'_{i j} \ne \vec 0$.
+We may therefore find in polynomial time a point $\vec \alpha' \ge \vec 0$
+on the ``\ai{moment curve}'' such that
+$\sps {\vec b'_{i j}} {\vec \alpha'} \ne 0$
+\shortcite[Algorithm~5.2]{Barvinok1999}.
+Let $\vec \alpha = B^\T \vec \alpha'$.
+Then
+$
+\sps {\vec b_{i j}} {\vec \alpha}
+=
+\sps {\vec b_{i j}} {B^\T \vec \alpha'}
+=
+\sps {B \vec b_{i j}} {\vec \alpha'}
+=
+\sps {\vec b'_{i j}} {\vec \alpha'}
+\ne 0
+$
+and
+$
+\sps {\vec r_k} {\vec \alpha}
+=
+\sps {\vec r_k} {B^\T \vec \alpha'}
+=
+\sps {B \vec r_k} {\vec \alpha'}
+\ge 0
+,
+$
+as required.
+Note that in practice, we would, as usual, first try a
+fixed number of random vectors $\vec \alpha' \ge \vec 0$
+before resorting to looking for a point on the moment curve.
+\end{proof}
