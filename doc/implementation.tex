@@ -4346,7 +4346,7 @@ the origin is excluded, without excluding any other integer points.
 }
 \end{xy}
 \caption{The integer hull of a truncated cone}
-\label{f:integer:hull}
+\label{f:cone:integer:hull}
 \end{figure}
 
 \begin{example}
@@ -4360,7 +4360,7 @@ $$
 C = \convhull \,\{(2,-3), (3,4)\} + \poshull \,\{(2,-3), (3,4)\}
 ,
 $$
-which is shown on the left of \autoref{f:integer:hull}.
+which is shown on the left of \autoref{f:cone:integer:hull}.
 The only bounding constraint that does not correspond to a
 bounding constraint of $C$ is $7 x - y \ge 17$.
 In the first step, we will therefore look for a point
@@ -4370,7 +4370,7 @@ attained by points in $C$ are shown in \autoref{f:hull:projected}.
 From Example~\ref{ex:hull:projected}, we know that the optimal
 value is $6$ and this corresponds to the point $(1,1)$.
 Adding this point to our hull, we obtain the approximation
-in the middle of \autoref{f:integer:hull}.
+in the middle of \autoref{f:cone:integer:hull}.
 This approximation has two new facets.
 The bounding constraint $3x - 2 y \ge 1$ will not produce
 any new points since we would be looking for one in the
@@ -4379,7 +4379,7 @@ The other new bounding constraint is $4x + y \ge 5$.
 Minimizing $4 x+ y$ with values in the interval $[1,4]$,
 we find the minimal value $3$ corresponding to the point $(1,-1)$.
 Adding this point, we obtain the complete integer hull
-shown on the right of \autoref{f:integer:hull}.
+shown on the right of \autoref{f:cone:integer:hull}.
 Note that if in the first step we would have added not only
 the point corresponding to the optimal value, but instead
 all points found in Example~\ref{ex:hull:projected},
