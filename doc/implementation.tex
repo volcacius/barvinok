@@ -3912,7 +3912,7 @@ $$
 If the dimension $d$ is fixed then
 the lattice width of any polytope $P \subset \QQ^d$
 containing no integer points is bounded by a constant%
-~\shortcite{Lagarias90,Barvinok02}.
+~\shortcite{Lagarias90,Barvinok02,Banaszczyk1999flatness}.
 If we slice the polytope using hyperplanes orthogonal
 to a short direction, i.e., a direction where the width
 is small, we will therefore only need to inspect
@@ -4523,14 +4523,14 @@ as in \autoref{s:triangulation}.
 \POS(5,3);(4.7,3.4)**{}?(0)/1.1cm/="a"\POS(5,3)\ar"a"
 \POS(9,6)*+!DL{\vec v_1}
 \POS(0,0)*+!UR{\vec v_3}
-\POS(5,3)*+!UL{\vec v_2}
-\POS(5,4)*+!DR{\vec v_4}
+\POS(5,3)*+!UL{\vec v_4}
+\POS(5,4)*+!DR{\vec v_2}
 \end{xy}
 \caption{A polytope and its candidate width directions}
 \label{f:width}
 \end{figure}
 
-\begin{example}
+\begin{example} \label{ex:width}
 Consider the (non-parametric) polytope
 $$
 P = \left\{\,
@@ -4644,7 +4644,7 @@ $$
 as shown in \autoref{f:C:2:1}.
 The vertices of the integer hull of $C_{2,1}$ are $(4,-5)$
 and $(3,-4)$.
-The corresponding width are
+The corresponding widths are
 $$
 \begin{aligned}
 \vec c_1 &= (4,-5) & w_{\vec c_1} &= 6 \\
@@ -4730,7 +4730,7 @@ Each of the three directions that yield the minimal
 width of 3 is shown in \autoref{f:width:2}.
 \end{example}
 
-\begin{example}
+\begin{example} \label{ex:width:2}
 Consider the polytope
 $$
 P(p) = \left\{\,
@@ -4812,6 +4812,7 @@ chambers surviving and hence to a larger total number of chambers.
 
 
 \subsection{Testing whether a set has an infinite number of points}
+\label{s:infinite}
 
 In some situation we are given the generating function of
 some integer set and we would like to know if the set is
@@ -4924,3 +4925,832 @@ Note that in practice, we would, as usual, first try a
 fixed number of random vectors $\vec \alpha' \ge \vec 0$
 before resorting to looking for a point on the moment curve.
 \end{proof}
+
+
+\subsection{Enumerating integer projections of parametric polytopes}
+
+In this section we are interested in computing
+\begin{equation}
+\label{eq:count:projection}
+c(\vec s)=\#\left\{\vec t\in\ZZ^{d} \mid \exists \vec u\in\ZZ^{m}:
+(\vec s,\vec t,\vec u)\in P\right\}
+,
+\end{equation}
+with $P \subset \QQ^{n}\times\QQ^{d}\times\QQ^{m}$ a rational
+pointed polyhedron such that
+$$
+P_{\vec s}=\left\{(\vec t,\vec u)\in\QQ^d\times\QQ^m
+\mid (\vec s,\vec t,\vec u)\in P\right\}
+$$
+is a polytope for any $\vec s$.
+This is equivalent to computing the number of points
+in the \ai{integer projection} of a parametric polytope
+$$
+c(\vec s)=\#\big(\pi(P_{\vec s}\cap\ZZ^{d+m})\big)
+,
+$$
+with $\pi:\QQ^d\times\QQ^m\rightarrow\QQ^d$ defined by
+$\pi(\vec t, \vec u)=\vec t$.
+Exponential methods for computing $c(\vec s)$ are
+described by \shortciteN{Verdoolaege2005experiences}
+and \shortciteN{Seghir2006memory}.
+Here, we provide some implementation details for the polynomial
+method of \shortciteN[Theorem~1.7]{Woods2003short}, for
+computing the generating function, $\sum_{\vec s}c(\vec s) \, \vec x^{\vec s}$,
+which can then be converted into an explicit function $c(\vec s)$
+\shortcite[Corollary~1.11]{Verdoolaege2007counting}.
+Note that in contrast to \shortciteN[Theorem~1.7]{Woods2003short},
+we may allow $P$ to be an unbounded (but still pointed) polyhedron here
+(as long as $P_{\vec s}$ is bounded), since
+we replace their application of
+\shortciteN[Lemma~3.1]{Kannan1992}
+by \shortciteN[Theorem~5]{Eisenbrand2007parameterised}.
+
+If there is only one existentially quantified variable ($m = 1$),
+then computing~\eqref{eq:count:projection} is easy.
+You simply shift $P$ by $1$ in the $u$ direction and subtract
+this shifted copy from the original,
+$$
+D = P \setminus (\vec e_{n+d+1} + P)
+.
+$$
+(See, e.g., \shortciteN[Figure~1, page~973]{Woods2003short}
+or \shortciteN[Figure~4.33, page~186]{Verdoolaege2005PhD}.)
+In the difference $D$ there will be {\em exactly} one value of $u$
+for each value of the remaining variables for which there was
+{\em at least} one value of $u$ in $P$,
+$$
+\forall (\vec s, \vec t):
+\quad
+\left(
+\exists u: (\vec s, \vec t, u) \in P
+\right)
+\iff
+\left(
+\exists! u: (\vec s, \vec t, u) \in D
+\right)
+.
+$$
+The function $c(\vec s)$ can then be computed by counting
+the number of elements in $D(\vec s)$.
+These operations can be performed either in the space
+of (unions of) parametric polytopes or on generating functions.
+In the first case, $D(\vec s)$ can be written as a disjoint union
+of parametric polytopes that can be enumerated separately.
+In the second case, we first compute the generating function
+$f(\vec x, \vec y)$ of the set
+$$
+S =
+\{
+(\vec s, \vec t) \mid \exists u \in \ZZ : (\vec s, \vec t, u) \in P
+\}
+$$
+and then obtain the generating function $C(\vec x)$ of $c(\vec s)$
+as $C(\vec x) = f(\vec x, \vec 1)$.
+In the remainder of this section, we will concentrate on the
+computation of the generating function of $S$.
+To compute this generating function in the current case where
+there is only one existentially quantified variable, we first
+compute the generating function $g(\vec x, \vec y, z)$ of
+$P(\vec s, \vec t, u)$, perform operations on the generating function
+equivalent to the set operations (see, e.g.,
+\shortciteN[Section~4.5.3]{Verdoolaege2005PhD}), resulting
+in a generating function $g'(\vec x, \vec y, z)$, and then sum
+over all values (at most one for each value of $\vec s$
+and $\vec t$) of $u$, i.e., $f(\vec x, \vec y) = g'(\vec c, \vec y, 1)$.
+
+\begin{figure}
+\intercol=1.05cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-0.5)\ar@{--}"c"+(0,7.5)}%
+\POS0,{\xylattice{-0}{10}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(10.5,0)}%
+\POS0,{\xylattice00{-0}7}%
+\POS@i@={(0,0),(5,3),(9,6),(5,4),(0,0)},{0*\xypolyline{}}
+\POS(0,0)*[*0.333]\xybox{
+\POS@i@={(0,0),(5,3),(9,6),(5,4),(0,0)},{0*\xypolyline{--}}
+}
+\POS(0,0)*{\bullet}
+\POS(5,3)*{\bullet}
+\POS(5,4)*{\bullet}
+\POS(9,6)*{\bullet}
+\POS(3,2)*{\bullet}
+\POS(4,3)*{\bullet}
+\POS(6,4)*{\bullet}
+\POS(7,5)*{\bullet}
+\POS(-1,-0.5)\ar@{-}(-1,7.5)
+\POS(-1,0)*{\bullet}
+\POS(-1,3)*{\bullet}
+\POS(-1,4)*{\bullet}
+\POS(-1,6)*{\bullet}
+\POS(-1,2)*{\bullet}
+\POS(-1,3)*{\bullet}
+\POS(-1,4)*{\bullet}
+\POS(-1,5)*{\bullet}
+\POS(-0.5,-1)\ar@{-}(10.5,-1)
+\POS(0,-1)*+++!UR{S}
+\POS(0,-1)*{\bullet}
+\POS(5,-1)*{\bullet}
+\POS(5,-1)*{\bullet}
+\POS(9,-1)*{\bullet}
+\POS(3,-1)*{\bullet}
+\POS(4,-1)*{\bullet}
+\POS(6,-1)*{\bullet}
+\POS(7,-1)*{\bullet}
+\end{xy}
+\caption{A polytope and its integer projections}
+\label{f:projection}
+\end{figure}
+
+If there is more than one existentially quantified variable ($m > 1$),
+then we can in principle apply the above shifting and subtracting
+technique recursively to obtain a generating function
+$f(\vec x, \vec y)$ for the set
+\begin{equation}
+\label{eq:projection:T}
+T =
+\{
+(\vec s, \vec t) \mid \exists \vec u \in \ZZ^m : (\vec s, \vec t, \vec u) \in P
+\}
+\end{equation}
+and then compute $C(\vec x) = f(\vec x, \vec 1)$.
+There are however some complications.
+Most notably, after applying the technique in one direction
+and projecting out the corresponding variable, the resulting set, i.e.,
+$$
+S =
+\{
+(\vec s, \vec t, u_1, \ldots, u_{m-1}) \mid
+\exists u_m \in \ZZ : (\vec s, \vec t, \vec u) \in P
+\}
+,
+$$
+in general does not correspond to the integer points in some polytope.
+For example, assume that the polytope in \autoref{f:projection}
+contains the values of $\vec u$ associated to a particular
+value of $(\vec s, \vec t)$.  Since there are integer points
+in this polytope, we should count this value of $\vec t$, but only once.
+If we apply the above technique in the vertical direction ($u_2$), then
+we can compute (a generating function for) the set $S$ shown
+on the bottom of the figure.
+Note, however, that there are ``gaps'' in this set, i.e.,
+if we compute $S \setminus (\vec e_{n+d+1} + S)$ then we will not
+end up with a single point (for this value of $(\vec s, \vec t)$).
+Since the biggest gap is three wide, we need
+to compute
+$$
+S
+\setminus (\vec e_{n+d+1} + S)
+\setminus (2 \vec e_{n+d+1} + S)
+\setminus (3 \vec e_{n+d+1} + S)
+$$
+to obtain a single point.
+If we do the subtraction in the horizontal direction first,
+then we end up with a set (shown on the left) with gaps
+at most two wide, so afterwards we only need to subtract twice in the
+vertical direction.
+
+\begin{figure}
+\intercol=0.8cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-0.5)\ar@{--}"c"+(0,7.5)}%
+\POS0,{\xylattice{-0}{4}00}%
+\def\latticebody{\POS="c"+(-0.5,0)\ar@{--}"c"+(4.5,0)}%
+\POS0,{\xylattice00{-0}7}%
+\POS@i@={(0,0),(1,3),(3,6),(3,4),(0,0)},{0*\xypolyline{}}
+\POS(0,0)*{\bullet}
+\POS(1,3)*{\bullet}
+\POS(3,4)*{\bullet}
+\POS(3,6)*{\bullet}
+\POS(1,2)*{\bullet}
+\POS(2,3)*{\bullet}
+\POS(2,4)*{\bullet}
+\POS(3,5)*{\bullet}
+\POS(-0.5,-1)\ar@{-}(4.5,-1)
+\POS(0,-1)*+++!UR{S}
+\POS(0,-1)*{\bullet}
+\POS(1,-1)*{\bullet}
+\POS(2,-1)*{\bullet}
+\POS(3,-1)*{\bullet}
+\end{xy}
+\caption{A transformed polytope and its integer projection}
+\label{f:projection:2}
+\end{figure}
+
+In general, there is no bound on the widths of the gaps we may
+encounter in any given direction.  However, there are directions
+in which the gaps are known to be ``small''.
+In particular, if the dimension $m$ is fixed, then the lattice width
+(see \autoref{s:width}) of lattice point free polytopes
+is bounded by a constant $\omega(m)$%
+~\shortcite{Lagarias90,Barvinok02,Banaszczyk1999flatness}.
+This means that in the direction of the lattice width of a polytope,
+the gaps will be not be larger than $\omega(m)$
+\shortcite[Theorem~4.3]{Woods2003short}.
+Otherwise, we would be able to put a (uniformly) scaled down version
+of the polytope in the gap and it would contain no lattice points,
+which would contradict the fact that its lattice width is bounded
+by $\omega(m)$.
+\autoref{f:projection} contains such a scaled down copy
+of the original polytope.  However, neither the horizontal
+nor the vertical direction is a lattice width direction
+of this polytope.  The actual lattice width of this
+polytope was computed in Example~\ref{ex:width} as $3$
+with corresponding direction $\vec c = (-1,2)$.
+\autoref{f:projection:2} shows the result of applying
+the unimodular transformation
+$$
+\begin{bmatrix}
+-1 & 2 \\
+0 & 1
+\end{bmatrix}
+$$
+to the polytope.  Note that the horizontal direction
+now has gaps of width at most 1.  After shifting, subtracting
+and projecting in the vertical direction, we therefore
+end up with a set $S$ with gaps of width 1 and we then
+only have to shift and subtract once in the remaining
+(horizontal) direction.
+
+In fact, for two-dimensional polytopes the gaps in the lattice
+width direction will always be one, as shown by the following lemma.
+\begin{lemma}
+\label{l:gap}
+For any rational polygon, the gaps in a lattice
+width direction are of width at most 1.
+\end{lemma}
+\begin{proof}
+We may assume that $x$ is the given lattice width direction of
+a given polygon $P$.
+If there is a gap of width 2, then there is an integer value $x_1$ of $x$
+such that
+$P \cap \{\, (x_1, y) \,\} \ne \emptyset$,
+$P \cap \{\, (x_1+2, y) \,\} \ne \emptyset$,
+while
+$P \cap \{\, (x_1+1, y) \,\} \cap \ZZ^2 = \emptyset$.
+Using \shortciteN[Lemma~4.2]{Woods2003short}, we can put
+a scaled down copy $P'$ of $P$ between $x=x_1$ and $x=x_1+2$
+(and inside of $P$).
+$P'$ meets the line $x=x_1+1$ between two consecutive integer
+points, $y_1$ and $y_1+1$.  Let $P''$ be the polygon bounded by $x=x_1$ and
+$x=x_1+2$ and two lines that separate $P'$ from these two
+integer points.
+$P''$ will have the same width (2) in the
+$x$ direction, while $P' \subset P''$.
+The $x$ direction is therefore also a lattice width direction of $P''$.
+$P''$ cannot intersect both $x=x_1$ and $x=x_1+2$ in a segment of
+length greater than or equal to $1$.
+Otherwise, it would also intersect $x=x_1+1$ in a segment of length
+greater than or equal to $1$.
+
+We may therefore assume that the length of the intersection
+of $P''$ with $x=x_1$ is smaller than $1$.
+If this line segment contains an integer point, then call it $y_2$.
+Otherwise, let $y_2$ be the greatest integer smaller than the
+points in the line segment.
+We may assume that $y_1 = y_2$.
+Otherwise, we can apply the unimodular transformation
+$$
+\begin{bmatrix}
+x \\
+y'
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0 \\
+y_1 - y_2 & 1
+\end{bmatrix}
+\begin{bmatrix}
+x \\
+y
+\end{bmatrix}
+,
+$$
+without changing the width in direction $x$.
+If $P''$ contains $(x_1, y_1)$, it intersects $x=x_1$
+in a segment $[y_1-\alpha_1, y_1+\alpha_2]$.
+We may then similarly assume that $\alpha_2 \ge \alpha_1$.
+$P''$ will only cut $x=x_1+2$ in points with $y$-coordinate
+smaller than $2-\alpha_2$.  The width in the $y$ direction
+will therefore be smaller than $2-\alpha_2+\alpha_1 \le 2$,
+contradicting that $x$ is a lattice width direction.
+If $P''$ does not contain $(x_1, y_1)$, then it only
+intersects $x=x_1$ in points with $y$-coordinate $y_1+\alpha$
+with $0 < \alpha < 1$.  Given any such point, it is clear
+that $P''$ intersects $x=x_1+2$ only in points with $y$-coordinate
+strictly between $y_1-\alpha$ and $y_1+1-\alpha$, again
+showing that the width in the $y$ direction is smaller than $2$ and
+leading to the same contradiction.
+The contradiction shows that there can be no gaps
+of width 2 in the lattice width direction of $P$.
+\end{proof}
+Note that the $\omega(2)$ bound is too coarse to reach
+the above conclusion as $\omega(2) > 2$.
+An example of a polygon with lattice with greater than $2$ is the polygon
+with vertices $(-17/110,83/110)$, $(2/10,-9/10)$ and $(177/90, 100/90)$,
+shown in \autoref{f:empty:width:2}, which has width $221/110$.
+
+\begin{figure}
+\intercol=3cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-1.5)\ar@{--}"c"+(0,1.5)}%
+\POS0,{\xylattice{-1}{2}00}%
+\def\latticebody{\POS="c"+(-1.5,0)\ar@{--}"c"+(2.5,0)}%
+\POS0,{\xylattice00{-1}1}%
+\POS@i@={(-0.1545,0.7545),(0.2,-0.9),(1.966,1.111),(-0.1545,0.74545)},{0*\xypolyline{}}
+\end{xy}
+\caption{Lattice point free polygon with lattice width 2}
+\label{f:empty:width:2}
+\end{figure}
+
+The idea of the projection algorithm
+is now to first find a direction in which the gaps
+are expected to be small and to unimodularly transform
+the existentially quantified variables such that this direction
+lies in the direction of one of the transformed variables.
+Then, the remaining existentially quantified variables are
+projected out by applying the technique recursively.
+The resulting generating function will have gaps at most
+$\omega(m)$ wide and so we have to subtract at most
+$\omega(m)$ shifted copies of this generating function
+before we can plug in 1 to project out the selected
+(and now only remaining) existentially quantified variable.
+We now look at each of these step in a bit more detail.
+
+We are given a polyhedron $P$ such that $P_{\vec s}$ is a polytope
+and we want to compute a generating function $f(\vec x, \vec y)$
+for the set $T$ in~\eqref{eq:projection:T}.
+We first compute the lattice width directions of
+the $m$-dimensional parametric polytope $P_{\vec s, \vec t}$
+as in \autoref{s:width}.
+The result is a partition of the parameter domain, i.e.,
+the projection of $P$ onto the first $n+d$ coordinates,
+into partially open polyhedra $Q_i$, together with
+the lattice width direction $\vec c_i$ corresponding to each $Q_i$.
+Since the generating functions only encode integer points,
+we can replace each open facet $\sp a x + b > 0$ by the closed
+facet $\sp a x + b - 1 \ge 0$ to obtain a collection of closed
+polyhedra $\tilde Q_i$.  Now let
+$$
+P_i = P \cap \tilde Q_i \times \QQ^m
+$$
+and let $f_i(\vec x, \vec y)$ be the generating function of the set
+$$
+T_i =
+\{
+(\vec s, \vec t) \mid
+	\exists \vec u \in \ZZ^m : (\vec s, \vec t, \vec u) \in P_i
+\}
+.
+$$
+Then clearly,
+$$
+f(\vec x, \vec y) = \sum_i f_i(\vec x, \vec y)
+.
+$$
+From now on, we will consider a particular $P_i$ with corresponding
+lattice width $\vec c_i$ and drop the $i$ subscript.
+
+We are now given a polyhedron $P$ such that the lattice width
+direction of $P_{\vec s, \vec t}$ is $\vec c$.
+We first extend $\vec c$ to an $m \times m$ unimodular matrix $U$
+using the technique of \autoref{s:completion},
+$$
+U
+=
+\begin{bmatrix}
+\vec c^\T
+\\
+U'
+\end{bmatrix}
+$$
+and then compute
+$$
+P' =
+\begin{bmatrix}
+I_n & 0 & 0 \\
+0 & I_d & 0 \\
+0 & 0 & U
+\end{bmatrix}
+P
+.
+$$
+We have
+$$
+T =
+\{
+(\vec s, \vec t) \mid
+	\exists \vec u' \in \ZZ^m : (\vec s, \vec t, \vec u') \in P'
+\}
+,
+$$
+i.e., we may have changed the values of the existentially
+quantified variables, but we have not changed the set $T$.
+Now consider the set
+$$
+T' =
+\{
+(\vec s, \vec t, u_1') \mid
+	\exists (u_2',\ldots,u_m') \in \ZZ^{m-1} :
+		(\vec s, \vec t, \vec u') \in P'
+\}
+.
+$$
+This set has only $m-1$ existentially quantified variables, so
+we may apply this projection algorithm recursively and obtain
+the generating function $f'(\vec x, \vec y, z)$ for $T'$.
+The set $T'$ may no longer correspond to the integer points
+in a polytope, but, by construction, the gaps in the final
+coordinate are small ($\le \omega(m)$).
+
+By now we have a generating function $f'(\vec x, \vec y, z)$
+for the set $T'$ (with small
+gaps in the final coordinate) and we have to compute the
+generating function $f(\vec x, \vec y)$ for $T$.
+By computing
+\begin{equation}
+\label{eq:projection:omega}
+f''(\vec x, \vec y, z) =
+f'(\vec x, \vec y, z) \bigoplus_{k=1}^{\floor{\omega(m)}}
+	\left( z^k f'(\vec x, \vec y, z) \right)
+,
+\end{equation}
+where $\oplus$ represents the operation on generating functions
+that corresponds to set difference on the corresponding sets,
+we obtain a generating for the set $T''$ where only
+the smallest value of $u_1'$ is retained.
+The total number of $u_1'$s associated to any $(\vec s, \vec t)$
+is therefore either zero or one and so the ``multiset'' defined
+by taking as many copies of $(\vec s, \vec t)$ as there are
+associated values of $u_1'$ is actually the set $T$.
+That is
+$$
+f(\vec x, \vec y) = f''(\vec x, \vec y, 1)
+.
+$$
+
+The only remaining problem is that the ``$\oplus$'' operation
+in~\eqref{eq:projection:omega} is fairly expensive.
+In particular, this operation is performed by first
+computing the \ai{Hadamard product} of the two generating functions
+(which corresponds to the intersection of the sets) and
+then subtracting the resulting generating function from this
+first generating function.
+The last operation is fairly cheap, but the Hadamard product
+has a time complexity which while polynomial if the dimension (in
+this case the maximum of $k_i$ in~\eqref{eq:rgf}) is fixed,
+is exponential in this dimension.
+Furthermore, this dimension increases by $\max k_i - d$ on each
+successive application of the Hadamard product, while $\max k_i > d$
+as soon as some projection is performed, which certainly happens in the
+recursive application of the algorithm.
+Now, the total number of Hadamard products is bounded by a constant
+$\floor{\omega(m)}$ and so the increase in dimension is also bounded
+by a constant, so the whole operation is still polynomial for
+fixed dimension.
+Nevertheless, we do not want to perform any additional Hadamard
+products if we do not really have to.
+That is, we would like to be able to detect when we can stop
+performing these operations {\em before} reaching the upper
+bound $\floor{\omega(m)}$.
+
+Let $f'_0(\vec x, \vec y, z) = f'(\vec x, \vec y, z)$ and
+let $f'_k(\vec x, \vec y, z)$ be the result of applying
+the ``set difference'' in~\eqref{eq:projection:omega} $k$ times.
+Denote the corresponding sets by $T'_0$ and $T'_k$.
+We want to find the smallest $k$ such that
+$f''(\vec x, \vec y, z) = f'_k(\vec x, \vec y, z)$.
+Note that we are talking about equality of rational functions here.
+Any further application of the set difference operation will
+not change this rational function, but it {\em will\/} typically
+produce a different (more complex) representation.
+To check whether the current $k$ is sufficient, we are going to
+count how many times any element of $T'_k$ still appears in a
+shifted copy of $T'_0$, with shift greater than or equal to $k+1$.
+If this number is zero, any further set difference will have no effect.
+That is, we want to compute
+$$
+\sum_{l=k+1}^\infty
+	\left|
+	    T'_l \cap \left(\vec e_{n+d+1} + T' \right)
+	\right|
+,
+$$
+or, in terms of generating functions,
+$$
+h(\vec x, \vec y, z) = \sum_{l=k+1}^\infty
+	f_k'(\vec x, \vec y, z) \star z^l \, f'(\vec x, \vec y, z)
+.
+$$
+We should point out here that while the Hadamard product ($\star$)
+corresponds to intersection when applied to generator functions
+of indicator functions (i.e., with coefficients one or zero),
+in general it will produce a generating function with coefficients
+that are the product of the corresponding coefficients in the two
+operands.
+We can therefore rewrite the above equation as
+$$
+\begin{aligned}
+h(\vec x, \vec y, z) & = \sum_{l=k+1}^\infty
+	f_k'(\vec x, \vec y, z) \star z^l \, f'(\vec x, \vec y, z)
+\\
+& = f_k'(\vec x, \vec y, z) \star
+	\left(
+		\sum_{l=k+1}^\infty  z^l \, f'(\vec x, \vec y, z)
+	\right)
+\\
+& = f_k'(\vec x, \vec y, z) \star
+\frac{z^{k+1} \, f'(\vec x, \vec y, z)}{1-z}
+.
+\end{aligned}
+$$
+Computing $h(\vec x, \vec y, 1)$ would give us a generating
+function with as coefficients how many times a point of $T'_k$
+still appears in a shifted copy of $T'_0$ for any particular
+value of $\vec s$ and $\vec t$.
+However, we want to know if this number is zero for {\em all\/}
+values of $\vec s$ and $\vec t$, so we compute $h(\vec 1, \vec 1, 1)$
+instead.  We have to be careful here since we allow the polyhedron
+$P$ to be unbounded and so we should apply the technique
+of \autoref{s:infinite} with $Q$ the projection of $P$ on
+the remaining coordinates.
+
+Note that testing whether we can stop is more expensive
+than applying the next iteration (since we have an extra
+$(1-z)$ factor in the denominator of one of the operands).
+However, we may save many iterations by stopping early
+and we will not needlessly replace a given representation
+of $f''(\vec x, \vec y, z)$ by a more complex representation
+(with more factors in the denominator).
+An alternative way of checking whether we can stop is to
+test whether $f'_k(\vec x, \vec y, z) = f'_{k+1}(\vec x, \vec y, z)$
+(as rational functions).
+To do so, we would need to check that both
+$$
+f'_k(\vec x, \vec y, z) -
+\left( f'_k(\vec x, \vec y, z) \star f'_{k+1}(\vec x, \vec y, z) \right)
+$$
+and
+$$
+f'_{k+1}(\vec x, \vec y, z) -
+\left( f'_k(\vec x, \vec y, z) \star f'_{k+1}(\vec x, \vec y, z) \right)
+$$
+are zero and this Hadamard product is more expensive than
+the one above.
+
+\begin{figure}
+\intercol=1.05cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-5.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-5}{5}00}%
+\def\latticebody{\POS="c"+(-5.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-5}5}%
+\POS(0,-5.5)\ar(0,5.5) \POS(0,5.5)*+!UL{x_2}
+\POS(-5.5,0)\ar(5.5,0) \POS(5.5,0)*+!DR{x_1}
+\POS@i@={(-5,0),(5,0)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-4.5,0.5),(4.5,0.5),(4.5,-0.5),(-4.5,-0.5),(-4.5,0.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-4,1),(4,1),(4,-1),(-4,-1),(-4,1)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-3.5,1.5),(3.5,1.5),(3.5,-1.5),(-3.5,-1.5),(-3.5,1.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-3,2),(3,2),(3,-2),(-3,-2),(-3,2)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-2.5,2.5),(2.5,2.5),(2.5,-2.5),(-2.5,-2.5),(-2.5,2.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-2,3),(2,3),(2,-3),(-2,-3),(-2,3)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-1.5,3.5),(1.5,3.5),(1.5,-3.5),(-1.5,-3.5),(-1.5,3.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-1,4),(1,4),(1,-4),(-1,-4),(-1,4)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-0.5,4.5),(0.5,4.5),(0.5,-4.5),(-0.5,-4.5),(-0.5,4.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(0,-5),(0,5)},{0*[|(2)]\xypolyline{}}
+\POS(-5,0)*+!DR{5}
+\POS(-4.5,0.5)*+!DR{4}
+\POS(-4,1)*+!DR{3}
+\POS(-3.5,1.5)*+!DR{2}
+\POS(-3,2)*+!DR{1}
+\POS(-2.5,2.5)*+!DR{0}
+\POS(-2,3)*+!DR{-1}
+\POS(-1.5,3.5)*+!DR{-2}
+\POS(-1,4)*+!DR{-3}
+\POS(-0.5,4.5)*+!DR{-4}
+\POS(-0,5)*+!DR{-5}
+\end{xy}
+\caption{The parametric polytope from Example~\ref{ex:projection}
+for different values of the parameter}
+\label{f:ex:projection}
+\end{figure}
+
+\begin{example} \label{ex:projection}
+Consider once more the parametric polytope
+$$
+P(p) = \left\{\,
+\vec x \mid
+\begin{aligned}
+-2 x_1 + p + 5 &\ge 0 \\
+2 x_1 + p + 5 &\ge 0 \\
+-2 x_2 - p + 5 &\ge 0 \\
+2 x_2 - p + 5 &\ge 0
+\end{aligned}
+\,\right\}
+$$
+from \shortciteN[Example~2.1.7]{Woods2004PhD}
+and Example~\ref{ex:width:2} and assume we want to
+compute
+$$
+c(p) = \left[ \exists \vec x \in \ZZ^2: (p, \vec x) \in P \right]
+.
+$$
+That is, we simply want to know for which values of $p$
+the polytope is non-empty.
+Now, there are more efficient ways of answering this particular question,
+but we will use it here as an example of the above algorithm.
+The polytope $P(p)$ is shown in \autoref{f:ex:projection} for
+all integer value of the parameter for which the polytope
+is non-empty.
+
+\begin{figure}
+\intercol=1.05cm
+\begin{xy}
+<\intercol,0pt>:<0pt,\intercol>::
+\def\latticebody{\POS="c"+(0,-5.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-5}{5}00}%
+\def\latticebody{\POS="c"+(-5.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{-5}5}%
+\POS(0,-5.5)\ar(0,5.5) \POS(0,5.5)*+!UL{x_2}
+\POS(-5.5,0)\ar(5.5,0) \POS(5.5,0)*+!DR{x_1}
+\POS@i@={(-2.5,2.5),(2.5,2.5),(2.5,-2.5),(-2.5,-2.5),(-2.5,2.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-2,3),(2,3),(2,-3),(-2,-3),(-2,3)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-1.5,3.5),(1.5,3.5),(1.5,-3.5),(-1.5,-3.5),(-1.5,3.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-1,4),(1,4),(1,-4),(-1,-4),(-1,4)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(-0.5,4.5),(0.5,4.5),(0.5,-4.5),(-0.5,-4.5),(-0.5,4.5)},{0*[|(2)]\xypolyline{}}
+\POS@i@={(0,-5),(0,5)},{0*[|(2)]\xypolyline{}}
+\POS(-2.5,2.5)*+!DR{0}
+\POS(-2,3)*+!DR{1}
+\POS(-1.5,3.5)*+!DR{2}
+\POS(-1,4)*+!DR{3}
+\POS(-0.5,4.5)*+!DR{4}
+\POS(-0,5)*+!DR{5}
+\POS(0,-11.5)*\xybox{
+\def\latticebody{\POS="c"+(0,-0.5)\ar@{--}"c"+(0,5.5)}%
+\POS0,{\xylattice{-5}{5}00}%
+\def\latticebody{\POS="c"+(-5.5,0)\ar@{--}"c"+(5.5,0)}%
+\POS0,{\xylattice00{0}5}%
+\POS(0,-0.5)\ar(0,5.5) \POS(0,5.5)*+!UR{p}
+\POS(-5.5,0)\ar(5.5,0) \POS(5.5,0)*+!UR{x_1}
+\POS(-2,0)*{\bullet}
+\POS(-1,0)*{\bullet},*+!DL{1}
+\POS(-0,0)*{\bullet},*+!DL{2}
+\POS(1,0)*{\bullet},*+!DL{3}
+\POS(2,0)*{\bullet},*+!DL{4}
+\POS(3,0)*+!DL{5}
+\POS(4,0)*+!DL{5}
+\POS(5,0)*+!DL{5}
+\POS(-2,1)*{\bullet}
+\POS(-1,1)*{\bullet},*+!DL{1}
+\POS(-0,1)*{\bullet},*+!DL{2}
+\POS(1,1)*{\bullet},*+!DL{3}
+\POS(2,1)*{\bullet},*+!DL{4}
+\POS(3,1)*+!DL{5}
+\POS(4,1)*+!DL{5}
+\POS(5,1)*+!DL{5}
+\POS(-1,2)*{\bullet}
+\POS(-0,2)*{\bullet},*+!DL{1}
+\POS(1,2)*{\bullet},*+!DL{2}
+\POS(2,2)*+!DL{3}
+\POS(3,2)*+!DL{3}
+\POS(4,2)*+!DL{3}
+\POS(5,2)*+!DL{3}
+\POS(-1,3)*{\bullet}
+\POS(-0,3)*{\bullet},*+!DL{1}
+\POS(1,3)*{\bullet},*+!DL{2}
+\POS(2,3)*+!DL{3}
+\POS(3,3)*+!DL{3}
+\POS(4,3)*+!DL{3}
+\POS(5,3)*+!DL{3}
+\POS(-0,4)*{\bullet}
+\POS(1,4)*+!DL{1}
+\POS(2,4)*+!DL{1}
+\POS(3,4)*+!DL{1}
+\POS(4,4)*+!DL{1}
+\POS(5,4)*+!DL{1}
+\POS(-0,5)*{\bullet}
+\POS(1,5)*+!DL{1}
+\POS(2,5)*+!DL{1}
+\POS(3,5)*+!DL{1}
+\POS(4,5)*+!DL{1}
+\POS(5,5)*+!DL{1}
+\POS(-6,-0.5)\ar(-6,5.5) \POS(-6,5.5)*+!UL{p}
+\POS(-6,0)*{\bullet}
+\POS(-6,1)*{\bullet}
+\POS(-6,2)*{\bullet}
+\POS(-6,3)*{\bullet}
+\POS(-6,4)*{\bullet}
+\POS(-6,5)*{\bullet}
+}
+\end{xy}
+\caption{The transformed parametric polytope from Example~\ref{ex:projection}
+for $0 \le p \le 5$}
+\label{f:ex:projection:transformed}
+\end{figure}
+
+The first step is to compute the lattice width of $P(p)$.
+In Example~\ref{ex:width:2}, we already obtained the decomposition
+of the parameter domain into
+$$
+\begin{aligned}
+\hat C_1 &= \{\, p \mid 0 \le p \le 5 \,\} \\
+\hat C_2 &= \{\, p \mid -5 \le p \le -1 \,\}
+,
+\end{aligned}
+$$
+with corresponding lattice widths and lattice width directions
+$$
+\begin{aligned}
+\vec c_1 &= (0,1) & w_{\vec c_1}(p) &= 5-p \\
+\vec c_2 &= (1,0) & w_{\vec c_2}(p) &= 5+p
+.
+\end{aligned}
+$$
+Note that in this example, the gaps in both coordinate directions
+are $1$, so, in principle, there is no need to perform any unimodular
+transformation here.  Nevertheless, we will apply the transformation
+that would be applied by the algorithm.
+On the first domain, we extend the lattice width direction
+to the unimodular matrix
+$$
+\begin{bmatrix}
+0 & 1 \\
+1 & 0
+\end{bmatrix}
+.
+$$
+After application to the existentially quantified variables $\vec x$,
+we obtain the parametric polytope
+$$
+P'_1(p) = \left\{\,
+\vec x \mid
+\begin{aligned}
+-2 x_2 + p + 5 &\ge 0 \\
+2 x_2 + p + 5 &\ge 0 \\
+-2 x_1 - p + 5 &\ge 0 \\
+2 x_1 - p + 5 &\ge 0 \\
+p & \ge 0 \\
+\end{aligned}
+\,\right\}
+$$
+shown in the top part of \autoref{f:ex:projection:transformed}.
+We now temporarily remove the existential quantification on $x_1$,
+resulting in
+$$
+T' = \{ (p, x_1) \in \ZZ^2 \mid \exists x_2 \in \ZZ : (s, \vec x) \in P' \}
+.
+$$
+Since there is only one existentially quantified variable left,
+we know we only have to shift and subtract the set once to obtain
+a set with at most one value of $x_2$ associated to each value
+of $(p, x_1)$.
+In particular, let $f(x,z_1,z_2)$ be the generating function
+of the integer points in $P'$.  Then $g(x,z_1) = f'(x,z_1,1)$, with
+$f'(x,z_1,z_2) = f(x,z_1,z_2) - f(x,z_1,z_2) \star z_2 f(x,z_1,z_2)$,
+is the generating function of $T'$.
+
+To check whether we need to subtract any shifted copies of
+$g(x,z_1)$ from itself, we compute
+$$
+h(x,z_1) = g(x,z_1) \star \frac{z_1 \, g(x,z_1)}{1-z_1}
+.
+$$
+The second argument of this Hadamard product is depicted
+in \autoref{f:ex:projection:transformed} by its coefficients.
+The exponents in $h(x,z_1)$ that have a non-zero coefficient
+are therefore those marked by both a dot ($\bullet$) and
+a number.  The total sum can be computed as $h(1,1) = 26$,
+which is finite, but non-zero.  We therefore need to subtract
+at least one shifted copy of $g(x,z_1)$.
+Let
+$$
+g'(x,z_1) = g(x,z_1) - g(x,z_1) \star z_1 g(x,z_1)
+.
+$$
+Computing
+$$
+h'(x,z_1) = g'(x,z_1) \star \frac{z_1^2 \, g(x,z_1)}{1-z_1}
+,
+$$
+we would find that $h'(1,1) = 0$ and so we do not need
+to shift and subtract any further.
+However, since we are dealing with a two-dimensional problem,
+we already know from \autoref{l:gap} that we can stop
+after one shift and subtract, so we do not even need
+to compute $h'(x,z_1)$ here.
+The function $g'(x,z_1)$ now only has non-zero coefficients
+for at most one exponent of $z_1$ for each exponent of $x$.
+We may therefore project down to obtain
+the function $g'(x,1)$, which is the generating function
+of the set in the lower left part of \autoref{f:ex:projection:transformed}.
+
+For the chamber $\hat C_2$ of the parameter domain, the computations
+are nearly identical and the final result is simply the sum
+of the two generating functions found for each of the two (disjoint)
+chambers.
+
+\end{example}
