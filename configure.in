@@ -265,6 +265,37 @@ AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
 ])
 
+AC_SUBST(bv_cone_hilbert_basis)
+AC_MSG_CHECKING(whether to compile zsolve)
+AC_ARG_WITH(bernstein,
+	    [AS_HELP_STRING([--without-zsolve],[do not compile zsolve])],
+            [ with_zsolve=$withval],  [ with_zsolve=yes ])
+AC_MSG_RESULT($with_zsolve)
+
+use_zsolve=false
+if test "$with_zsolve" != "no"; then
+	if test "$GCC" = "yes"; then
+		$CC --version |
+		sed -e 's/.* \(@<:@0-9@:>@@<:@0-9@:>@*\)\.\(@<:@0-9@:>@@<:@0-9@:>@*\).*/\1 \2/' |
+		(read major minor
+			if test $major -gt 3; then
+				exit 0
+			fi
+			if test $major -eq 3 -a $minor -ge 4; then
+				exit 0
+			fi
+			exit 1
+		) && use_zsolve=true
+	fi
+	if test "$use_zsolve" = false; then
+		AC_MSG_WARN(gcc 3.4 required to compile zsolve)
+	else
+		AC_DEFINE(USE_ZSOLVE,[],[use zsolve])
+		bv_cone_hilbert_basis="cone_hilbert_basis\$(EXEEXT)"
+	fi
+fi
+AM_CONDITIONAL(USE_ZSOLVE, test x$use_zsolve = xtrue)
+
 AC_MSG_CHECKING(whether to compile bernstein)
 AC_ARG_WITH(bernstein,
 	    [AS_HELP_STRING([--without-bernstein],[do not compile bernstein])],

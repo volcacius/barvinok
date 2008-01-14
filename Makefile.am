@@ -7,7 +7,11 @@ endif
 if BUNDLED_PIPLIB
     MAYBE_PIPLIB = piplib
 endif
-SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) lib zsolve . omega doc
+if USE_ZSOLVE
+    MAYBE_ZSOLVE = zsolve
+endif
+SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) \
+		lib $(MAYBE_ZSOLVE) . omega doc
 
 FORCE:
 lib/libgnu.la: FORCE
@@ -33,10 +37,10 @@ noinst_PROGRAMS = test testlib randomtest \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate verify_lexsmaller piptest \
 		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@ \
-		  cone_hilbert_basis cone_integer_hull \
+		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
 		  polyhedron_integer_hull
-EXTRA_PROGRAMS = barvinok_maximize
+EXTRA_PROGRAMS = barvinok_maximize cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
@@ -63,6 +67,9 @@ if HAVE_GLPK
 endif
 if HAVE_TOPCOM
     TOPCOM = topcom.c topcom.h
+endif
+if USE_ZSOLVE
+    HILBERT_C = hilbert.c
 endif
 libbarvinok_core_la_SOURCES = \
     barvinok/evalue.h \
@@ -93,7 +100,7 @@ libbarvinok_core_la_SOURCES = \
     euler.h \
     genfun_constructor.cc \
     genfun_constructor.h \
-    hilbert.c \
+    $(HILBERT_C) \
     hilbert.h \
     hull.c \
     hull.h \
@@ -140,6 +147,7 @@ EXTRA_libbarvinok_la_SOURCES = \
     basis_reduction_cdd.cc \
     basis_reduction_glpk.c \
     bernstein.cc \
+    hilbert.c \
     polysign_cddf.cc \
     polysign_cdd.cc \
     polysign.c \
@@ -153,9 +161,12 @@ endif
 if BUNDLED_PIPLIB
     PIPLIB_LA = $(top_builddir)/piplib/libpiplibMP.la
 endif
+if USE_ZSOLVE
+    ZSOLVE_LA = zsolve/libzsolve.la
+endif
 libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			     $(PIPLIB_LA) @PIPLIB_LIBS@ \
-			     zsolve/libzsolve.la lib/libgnu.la
+			     $(ZSOLVE_LA) lib/libgnu.la
 libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 if HAVE_GINAC
     BERNSTEIN_CC = bernstein.cc

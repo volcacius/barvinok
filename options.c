@@ -194,8 +194,13 @@ static struct argp_option barvinok_argp_options[] = {
 	"[default: factors]" },
     { "recurse",	    BV_OPT_RECURSE,    	    "",
 	OPTION_ALIAS | OPTION_HIDDEN },
-    { "integer-hull",	    BV_OPT_HULL,	"gbr|hilbert",		0,
-	"[default: gbr]" },
+    { "integer-hull",	    BV_OPT_HULL,
+#ifdef USE_ZSOLVE
+	"gbr|hilbert",
+#else
+	"gbr",
+#endif
+	0, "[default: gbr]" },
     { "version",	    'V',		    0,			0 },
     { "verbose",    	    'v' },
     { "print-stats",	    BV_OPT_PRINT_STATS,	0,	0 },

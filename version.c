@@ -44,6 +44,11 @@ const char *barvinok_version(void)
 #else
 	" -TOPCOM"
 #endif
+#ifdef USE_ZSOLVE
+	" +ZSOLVE"
+#else
+	" -ZSOLVE"
+#endif
     "\n"
     ;
 }

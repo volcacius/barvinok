@@ -6,6 +6,15 @@
 #include "hull.h"
 #include "ilp.h"
 #include "polysign.h"
+#include "config.h"
+
+#ifndef USE_ZSOLVE
+Matrix *Cone_Hilbert_Integer_Hull(Polyhedron *C,
+				  struct barvinok_options *options)
+{
+    assert(0);
+}
+#endif
 
 struct integer_hull {
     Polyhedron	*P;	/* Original polyhedron or cone */

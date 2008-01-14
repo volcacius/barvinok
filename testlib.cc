@@ -15,6 +15,7 @@
 #include "hull.h"
 #include "ilp.h"
 #include "matrix_read.h"
+#include "config.h"
 
 using std::cout;
 using std::cerr;
@@ -474,6 +475,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
 
 int test_hilbert(struct barvinok_options *options)
 {
+#ifdef USE_ZSOLVE
     Matrix *M = matrix_read_from_str(
 	"2 4\n"
 	"   1    4   -3    0 \n"
@@ -492,6 +494,7 @@ int test_hilbert(struct barvinok_options *options)
     Matrix_Free(M);
 
     Polyhedron_Free(P);
+#endif
 }
 
 int test_ilp(struct barvinok_options *options)
