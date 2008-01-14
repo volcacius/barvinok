@@ -25,7 +25,7 @@ AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@
 AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@
 
-lib_LTLIBRARIES = libbarvinok.la
+lib_LTLIBRARIES = libbarvinok-core.la libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart polytope_scan
 noinst_PROGRAMS = test testlib randomtest \
@@ -53,9 +53,6 @@ nodist_pkginclude_HEADERS = \
     barvinok/set.h
 LINK = $(CXXLINK)
 
-if HAVE_GINAC
-    BERNSTEIN_CC = bernstein.cc
-endif
 if HAVE_CDDLIB
     BR_CDD = basis_reduction_cdd.cc initcdd.cc
     POLYSIGN_CDD = polysign_cddf.cc polysign_cdd.cc
@@ -67,7 +64,7 @@ endif
 if HAVE_TOPCOM
     TOPCOM = topcom.c topcom.h
 endif
-libbarvinok_la_SOURCES = \
+libbarvinok_core_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
     barvinok/util.h \
@@ -137,7 +134,6 @@ libbarvinok_la_SOURCES = \
     matrix_read.h \
     barvinok.cc \
     barvinok_e.cc \
-    $(BERNSTEIN_CC) \
     $(BR_CDD) \
     $(BR_GLPK)
 EXTRA_libbarvinok_la_SOURCES = \
@@ -151,20 +147,27 @@ EXTRA_libbarvinok_la_SOURCES = \
     initcdd.h \
     topcom.c \
     topcom.h
-if HAVE_GINAC
-    BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
-endif
 if BUNDLED_POLYLIB
     POLYLIB_LA = $(top_builddir)/polylib/libpolylibgmp.la
 endif
 if BUNDLED_PIPLIB
     PIPLIB_LA = $(top_builddir)/piplib/libpiplibMP.la
 endif
-libbarvinok_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
-			$(PIPLIB_LA) @PIPLIB_LIBS@ $(BERNSTEIN_LA) \
-			zsolve/libzsolve.la lib/libgnu.la
+libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
+			     $(PIPLIB_LA) @PIPLIB_LIBS@ \
+			     zsolve/libzsolve.la lib/libgnu.la
+libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
+if HAVE_GINAC
+    BERNSTEIN_CC = bernstein.cc
+endif
+libbarvinok_la_SOURCES = \
+    $(BERNSTEIN_CC)
+if HAVE_GINAC
+    BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
+endif
+libbarvinok_la_LIBADD = libbarvinok-core.la $(BERNSTEIN_LA)
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
-LDADD = libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
+LDADD = libbarvinok-core.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 test_SOURCES = \
 	evalue_read.c \
@@ -216,7 +219,9 @@ barvinok_enumerate_e_SOURCES = \
 EXTRA_barvinok_enumerate_e_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
-barvinok_enumerate_e_LDADD = @OMEGA_LIBS@ libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
+barvinok_enumerate_e_LDADD = \
+	@OMEGA_LIBS@ libbarvinok-core.la \
+	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_maximize_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
@@ -227,6 +232,8 @@ barvinok_maximize_SOURCES = \
 	verify.h \
 	verify.c
 EXTRA_barvinok_maximize_SOURCES = fdstream.cc fdstream.h
+barvinok_maximize_LDADD = \
+	libbarvinok-core.la libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \

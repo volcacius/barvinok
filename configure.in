@@ -444,7 +444,7 @@ CPPFLAGS="$SAVE_CPPFLAGS"
 AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
 
-PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lpolylibgmp -lpiplibMP"
+PACKAGE_LIBS="-lbarvinok -lbarvinok-core $EXTRA_PACKAGE_LIBS -lpolylibgmp -lpiplibMP"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
