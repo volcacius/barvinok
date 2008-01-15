@@ -24,7 +24,8 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
     return true;
 }
 
-static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options)
+gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
+				    barvinok_options *options)
 {
     Matrix *CP = NULL;
     gen_fun *gf;
@@ -51,7 +52,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
     } else {
 	POL_ENSURE_VERTICES(P);
 	if (P->NbEq)
-	    gf = series(P, nparam, options);
+	    gf = barvinok_enumerate_series(P, nparam, options);
 	else {
 	    gf_base *red;
 	    red = gf_base::create(Polyhedron_Project(P, nparam),
@@ -81,7 +82,7 @@ gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
     P = DomainIntersection(P, CA, options->MaxRays);
     Polyhedron_Free(CA);
 
-    gf = series(P, nparam, options);
+    gf = barvinok_enumerate_series(P, nparam, options);
     Polyhedron_Free(P);
 
     return gf;
@@ -162,7 +163,7 @@ gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron*
 	assert(P->Dimension == D2->Dimension);
 	gen_fun *P_gf;
 
-	P_gf = series(P, P->Dimension, options);
+	P_gf = barvinok_enumerate_series(P, P->Dimension, options);
 	if (!gf)
 	    gf = P_gf;
 	else {
@@ -278,7 +279,7 @@ gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
     if (n == 1) {
 	gen_fun *S, *S_shift, *hp;
 
-	S = series(P, P->Dimension, options);
+	S = barvinok_enumerate_series(P, P->Dimension, options);
 	S_shift = new gen_fun(S);
 	S_shift->shift(up);
 	hp = S->Hadamard_product(S_shift, options);
@@ -352,7 +353,7 @@ gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
     unsigned nvar = P->Dimension - exist - nparam;
 
     if (exist == 0)
-	return series(P, nparam, options);
+	return barvinok_enumerate_series(P, nparam, options);
 
     if (emptyQ(P))
 	return new gen_fun(Empty_Polyhedron(nparam));

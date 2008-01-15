@@ -603,7 +603,6 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 {
     QQ one(1, 1);
     Polyhedron *C = DomainIntersection(context, gf->context, options->MaxRays);
-    Polyhedron *U = Universe_Polyhedron(C->Dimension);
     gen_fun *sum = new gen_fun(C);
 
     int j = 0;
@@ -652,7 +651,7 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 		    QQ c = (*i)->n.coeff[j];
 		    c *= (*i2)->n.coeff[j2];
 		    if (!pp.add(c, P)) {
-			gen_fun *t = barvinok_series_with_options(P, U, options);
+			gen_fun *t = barvinok_enumerate_series(P, C->Dimension, options);
 			sum->add(c, t);
 			delete t;
 		    }
@@ -668,7 +667,6 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 	    }
 	}
     }
-    Polyhedron_Free(U);
     return sum;
 }
 

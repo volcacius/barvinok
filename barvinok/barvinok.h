@@ -50,6 +50,8 @@ void zz2value(const ZZ& z, Value& v);
 gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C, unsigned MaxRays);
 gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
 				       barvinok_options *options);
+gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
+				    barvinok_options *options);
 gen_fun *barvinok_enumerate_scarf_series(Polyhedron *P,
 			  unsigned exist, unsigned nparam,
 			  barvinok_options *options);
