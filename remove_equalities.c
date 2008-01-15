@@ -47,6 +47,9 @@ static int first_parameter_equality(Polyhedron *Q, unsigned nparam)
 {
     int i;
 
+    if (emptyQ(Q))
+	return Q->NbEq;
+
     for (i = 0; i < Q->NbEq; ++i)
 	if (First_Non_Zero(Q->Constraint[i]+1, Q->Dimension-nparam) == -1)
 	    break;
