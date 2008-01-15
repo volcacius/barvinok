@@ -24,35 +24,20 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
     return true;
 }
 
-/*
- * remove equalities that require a "compression" of the parameters
- */
-static Polyhedron *remove_more_equalities(Polyhedron *P, unsigned nparam,
-					  Matrix **CP, unsigned MaxRays)
-{
-    Polyhedron *Q = P;
-    remove_all_equalities(&P, NULL, CP, NULL, nparam, MaxRays);
-    if (P != Q)
-	Polyhedron_Free(Q);
-    return P;
-}
-
-/* frees P */
 static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options)
 {
     Matrix *CP = NULL;
     gen_fun *gf;
+    Polyhedron *P_orig = P;
 
-    if (emptyQ2(P)) {
-	Polyhedron_Free(P);
+    if (emptyQ2(P))
 	return new gen_fun(Empty_Polyhedron(nparam));
-    }
 
     assert(!Polyhedron_is_unbounded(P, nparam, options->MaxRays));
     assert(P->NbBid == 0);
     assert(Polyhedron_has_revlex_positive_rays(P, nparam));
     if (P->NbEq != 0)
-	P = remove_more_equalities(P, nparam, &CP, options->MaxRays);
+	remove_all_equalities(&P, NULL, &CP, NULL, nparam, options->MaxRays);
     assert(emptyQ2(P) || P->NbEq == 0);
     if (CP)
 	nparam = CP->NbColumns-1;
@@ -66,7 +51,7 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
     } else {
 	POL_ENSURE_VERTICES(P);
 	if (P->NbEq)
-	    gf = series(Polyhedron_Copy(P), nparam, options);
+	    gf = series(P, nparam, options);
 	else {
 	    gf_base *red;
 	    red = gf_base::create(Polyhedron_Project(P, nparam),
@@ -80,7 +65,8 @@ static gen_fun *series(Polyhedron *P, unsigned nparam, barvinok_options *options
 	gf->substitute(CP);
 	Matrix_Free(CP);
     }
-    Polyhedron_Free(P);
+    if (P != P_orig)
+	Polyhedron_Free(P);
     return gf;
 }
 
@@ -96,6 +82,7 @@ gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
     Polyhedron_Free(CA);
 
     gf = series(P, nparam, options);
+    Polyhedron_Free(P);
 
     return gf;
 }
@@ -175,7 +162,7 @@ gen_fun* barvinok_enumerate_union_series_with_options(Polyhedron *D, Polyhedron*
 	assert(P->Dimension == D2->Dimension);
 	gen_fun *P_gf;
 
-	P_gf = series(Polyhedron_Copy(P), P->Dimension, options);
+	P_gf = series(P, P->Dimension, options);
 	if (!gf)
 	    gf = P_gf;
 	else {
@@ -291,7 +278,7 @@ gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
     if (n == 1) {
 	gen_fun *S, *S_shift, *hp;
 
-	S = series(Polyhedron_Copy(P), P->Dimension, options);
+	S = series(P, P->Dimension, options);
 	S_shift = new gen_fun(S);
 	S_shift->shift(up);
 	hp = S->Hadamard_product(S_shift, options);
@@ -365,7 +352,7 @@ gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
     unsigned nvar = P->Dimension - exist - nparam;
 
     if (exist == 0)
-	return series(Polyhedron_Copy(P), nparam, options);
+	return series(P, nparam, options);
 
     if (emptyQ(P))
 	return new gen_fun(Empty_Polyhedron(nparam));
