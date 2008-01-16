@@ -1,3 +1,15 @@
+version: 0.26
+date: Wed Jan 16 23:45:17 CET 2008
+changes:
+    - support computation of generating functions in barvinok_enumerate_e
+    - support polymake 2.3
+    - support GiNaC 1.3.8 and newer
+    - support summation using Bernoulli formula
+    - add and use zsolve from 4ti2 for computing Hilbert bases of cones
+    - support use of piplib for solving LPs
+    - add polyhedron_integer_hull and polytope_minimize
+    - add polytope_lattice_width for computing the lattice widths of polytopes
+---
 version: 0.25
 date: Tue Sep 11 22:02:22 CEST 2007
 changes:
