@@ -486,3 +486,58 @@ comma separated list of variables over which to sum
 \ai[\tt]{--verbose} & \ai[\tt]{-v} &
 print parsed piecewise quasi-polynomial
 \end{tabular}
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{polytope\_minimize}}
+{polytope\_minimize}}
+
+The program \ai[\tt]{polytope\_minimize} takes a polytope
+in \PolyLib/ notation and a linear objective function
+as input and prints an integer point in the polytope attaining the minimial
+value of the objective function.
+The objective function is specified as the length of
+the vector (the number of variables) followed by
+the coefficients of the variables.
+The point is computed as explained in \autoref{s:optimization}.
+
+For example
+\begin{verbatim}
+> cat min_test 
+8 8
+   1   34    0    0    0    1    0    0 
+   1    0  -82   -1    0    0    0    0 
+   1    0  -82    0    0    0   -1    0 
+   1    0   31    0    0    1    0    0 
+   1    0    0    0    2   -3    0    0 
+   1    0    0    0    0   -1    0    0 
+   1    0    0    0    0    0    0    1 
+   1   -34 4676  34   -34  21  34  34
+
+6
+  34 -4676  -34   34  -21  -34 
+> ./polytope_minimize < min_test 
+7
+   2    2 -164  -93  -62 -164    1 
+\end{verbatim}
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{polyhedron\_integer\_hull}}
+{polyhedron\_integer\_hull}}
+
+The program \ai[\tt]{polyhedron\_integer\_hull} takes a polyhedron
+in \PolyLib/ notation and
+prints its \ai{integer hull}.
+The integer hull is computed as explained in \autoref{s:integer:hull}.
+
+\subsection{\texorpdfstring{\protect\ai[\tt]{polytope\_lattice\_width}}
+{polytope\_lattice\_width}}
+
+The program \ai[\tt]{polytope\_lattice\_width} computes
+the \ai{lattice width} of a parametric polytope.
+The input is the same as that of \ai[\tt]{barvinok\_enumerate}.
+The lattice width is computed as explained
+in \autoref{s:width}.
+
+Options:\\
+\begin{tabular}{llp{0.7\textwidth}}
+\ai[\tt]{--direction} & \ai[\tt]{-d} & 
+print the lattice width directions
+\end{tabular}

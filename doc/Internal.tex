@@ -275,11 +275,16 @@ struct barvinok_options {
     #define     BV_BERNSTEIN_INTERVALS  2
     int         bernstein_recurse;
 
-    #define	BV_LP_POLYLIB		0
-    #define	BV_LP_GLPK		1
-    #define	BV_LP_CDD		2
-    #define	BV_LP_CDDF		3
-    int		lp_solver;
+    #define     BV_LP_POLYLIB           0
+    #define     BV_LP_GLPK              1
+    #define     BV_LP_CDD               2
+    #define     BV_LP_CDDF              3
+    #define     BV_LP_PIP               4
+    int         lp_solver;
+
+    #define     BV_HULL_GBR             0
+    #define     BV_HULL_HILBERT         1
+    int         integer_hull;
 };
 
 struct barvinok_options *barvinok_options_new_with_defaults();
@@ -781,7 +786,8 @@ struct gen_fun {
 
     void add(const QQ& c, const vec_ZZ& num, const mat_ZZ& den);
     void add(short_rat *r);
-    void add(const QQ& c, const gen_fun *gf);
+    void add(const QQ& c, const gen_fun *gf,
+                barvinok_options *options);
     void substitute(Matrix *CP);
     gen_fun *Hadamard_product(const gen_fun *gf,
                               barvinok_options *options);
@@ -791,7 +797,7 @@ struct gen_fun {
     ZZ coefficient(Value* params, barvinok_options *options) const;
     void coefficient(Value* params, Value* c) const;
 
-    gen_fun(Polyhedron *C = NULL);
+    gen_fun(Polyhedron *C);
     gen_fun(Value c);
     gen_fun(const gen_fun *gf);
     ~gen_fun();
@@ -963,6 +969,9 @@ gen_fun * barvinok_series(Polyhedron *P, Polyhedron* C,
                           unsigned MaxRays);
 gen_fun * barvinok_series_with_options(Polyhedron *P,
     Polyhedron* C, barvinok_options *options);
+gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
+                  unsigned exist, unsigned nparam,
+                  barvinok_options *options);
 gen_fun *barvinok_enumerate_scarf_series(Polyhedron *P,
                           unsigned exist, unsigned nparam,
                           barvinok_options *options);
@@ -974,6 +983,11 @@ in the form of a \rgf/.
 The polyhedron \verb+P+ is assumed to have only
 revlex-positive rays.
 \\
+The function \ai[\tt]{barvinok\_enumerate\_e\_series} computes a
+generating function for the number of point in the parametric set
+defined by \verb+P+ with \verb+exist+ existentially quantified
+variables using the \ai{projection theorem}, as explained
+in \autoref{s:projection}.
 The function \ai[\tt]{barvinok\_enumerate\_scarf\_series} computes a
 generating function for the number of point in the parametric set
 defined by \verb+P+ with \verb+exist+ existentially quantified
