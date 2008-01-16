@@ -781,7 +781,10 @@ void short_rat::print(std::ostream& os, unsigned int nparam, char **param_name) 
 	    os << "+";
 	print_power(os, n.coeff[j], n.power[j], nparam, param_name);
     }
-    os << ")/(";
+    os << ")";
+    if (d.power.NumRows() == 0)
+	return;
+    os << "/(";
     for (int j = 0; j < d.power.NumRows(); ++j) {
 	if (j != 0)
 	    os << " * ";
