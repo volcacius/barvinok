@@ -393,7 +393,9 @@ check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
 		    opt="--specialization=$$spec --scarf"; \
 		    echo $$i $$opt; \
 		    ./barvinok_enumerate_e$(EXEEXT) --verify $$opt < $$i || exit; \
-		done \
+		done; \
+		echo $$i --series; \
+		./barvinok_enumerate_e$(EXEEXT) --verify --series < $$i || exit; \
 	    fi \
 	done
 check-test: test$(EXEEXT)
