@@ -348,10 +348,12 @@ if test "$omega_package" != "no"; then
     CPPFLAGS="$OMEGA_CPPFLAGS $CPPFLAGS"
     AC_CHECK_HEADERS([omega.h],[
 	if test x$have_ginac = xtrue; then
-	    bv_omega_programs="occ $bv_omega_programs"
+		AC_CHECK_LIB(code_gen,main,[
+			bv_omega_programs="occ $bv_omega_programs"
+		])
 	fi
 	AC_DEFINE(HAVE_OMEGA,[],[use omega])
-	OMEGA_LIBS="-lcode_gen -lomega"
+	OMEGA_LIBS="-lomega"
 	have_omega=true
     ],[AC_MSG_WARN(Omega not found)])
     CPPFLAGS="$SAVE_CPPFLAGS"
