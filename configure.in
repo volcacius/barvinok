@@ -381,7 +381,37 @@ if test "$cddlib_package" != "no"; then
     mytype a;
     dd_init(a); ], [
 	have_cddlib=true
-	AC_CHECK_LIB(cddgmp, main,[],[have_cddlib=false])
+	AC_CHECK_LIB(cddgmp, main,[
+		SAVE_LIBS="$LIBS"
+		LIBS="-lcddgmp $LIBS"
+		AC_DEFINE_UNQUOTED([SRCDIR], ["$srcdir"], [srcdir])
+		AC_LANG_PUSH(C++)
+		AC_RUN_IFELSE(AC_LANG_PROGRAM([[#define GMPRATIONAL
+#include <setoper.h>
+#include <cdd.h>]],
+		[[
+	const char *filename = SRCDIR"/cdd94e-test";
+	FILE *f;
+	dd_MatrixPtr M;
+	dd_LPType *lp;
+	dd_ErrorType err = dd_NoError;
+
+	dd_set_global_constants();
+
+	f = fopen(filename, "r");
+	M = dd_PolyFile2Matrix(f, &err);
+	lp = dd_Matrix2LP(M, &err);
+	dd_LPSolve(lp, dd_DualSimplex, &err);
+	return lp->LPS == dd_Inconsistent;
+		]]),[
+			AC_DEFINE(HAVE_LIBCDDGMP, [], [Define to 1 if you have the `cddgmp' library (-lcddgmp).])
+		],[
+			AC_MSG_WARN(please upgrade cddlib to 0.94e or later)
+			LIBS="$SAVE_LIBS"
+			have_cddlib=false
+		])
+		AC_LANG_POP
+	],[have_cddlib=false])
     ])
 fi
 AM_CONDITIONAL(HAVE_CDDLIB, test x$have_cddlib = xtrue)
