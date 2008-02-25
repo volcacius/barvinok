@@ -382,6 +382,25 @@ static bool Polyhedron_is_infinite(Polyhedron *P, Value* result,
     return true;
 }
 
+static void evalue2value(evalue *e, Value *v)
+{
+    if (EVALUE_IS_ZERO(*e)) {
+	value_set_si(*v, 0);
+	return;
+    }
+
+    if (value_notzero_p(e->d)) {
+	assert(value_one_p(e->d));
+	value_assign(*v, e->x.n);
+	return;
+    }
+
+    assert(e->x.p->type == partition);
+    assert(e->x.p->size == 2);
+    assert(EVALUE_DOMAIN(e->x.p->arr[0])->Dimension == 0);
+    evalue2value(&e->x.p->arr[1], v);
+}
+
 static void barvinok_count_f(Polyhedron *P, Value* result,
 			     barvinok_options *options);
 
@@ -428,6 +447,14 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
 	value_set_si(*result, !emptyQ(P));
 	if (allocated)
 	    Polyhedron_Free(P);
+	return;
+    }
+    if (options->summation == BV_SUM_BERNOULLI) {
+	Polyhedron *C = Universe_Polyhedron(0);
+	evalue *sum = Bernoulli_sum(P, C, options);
+	Polyhedron_Free(C);
+	evalue2value(sum, result);
+	evalue_free(sum);
 	return;
     }
     Q = Polyhedron_Factor(P, 0, NULL, options->MaxRays);
