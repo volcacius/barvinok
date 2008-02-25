@@ -1409,7 +1409,8 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
     next = P->next;
     P->next = NULL;
 
-    if (options->approximation_method == BV_APPROX_BERNOULLI)
+    if (options->approximation_method == BV_APPROX_BERNOULLI ||
+	options->summation == BV_SUM_BERNOULLI)
 	eres = Bernoulli_sum(P, C, options);
     else
 	eres = enumerate(P, C, options);

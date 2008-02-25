@@ -334,6 +334,7 @@ int main(int argc, char **argv)
 	}
     } else {
 	EP = barvinok_enumerate_with_options(A, C, bv_options);
+	assert(EP);
 	if (evalue_convert(EP, &options.convert, bv_options->verbose,
 			   C->Dimension, param_name))
 	    print_solution = 0;
