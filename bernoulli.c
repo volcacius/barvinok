@@ -196,6 +196,30 @@ static evalue *power_sums(struct poly_list *faulhaber, evalue *poly,
     return sum;
 }
 
+/* Given a constraint (cst_affine) a x + b y + c >= 0, compate a constraint (c)
+ * +- (b y + c) +- a >=,> 0
+ * ^            ^      ^
+ * |            |      strict
+ * sign_affine  sign_cst
+ */
+static void bound_constraint(Value *c, unsigned dim,
+			     Value *cst_affine,
+			     int sign_affine, int sign_cst, int strict)
+{
+    if (sign_affine == -1)
+	Vector_Oppose(cst_affine+1, c, dim+1);
+    else
+	Vector_Copy(cst_affine+1, c, dim+1);
+
+    if (sign_cst == -1)
+	value_subtract(c[dim], c[dim], cst_affine[0]);
+    else if (sign_cst == 1)
+	value_addto(c[dim], c[dim], cst_affine[0]);
+
+    if (strict)
+	value_decrement(c[dim], c[dim]);
+}
+
 struct Bernoulli_data {
     unsigned MaxRays;
     struct evalue_section *s;
@@ -203,6 +227,31 @@ struct Bernoulli_data {
     int ns;
     evalue *e;
 };
+
+static evalue *compute_poly_u(evalue *poly_u, Value *upper, Vector *row,
+			      unsigned dim, Value tmp,
+			      struct poly_list *faulhaber,
+			      struct Bernoulli_data *data)
+{
+    if (poly_u)
+	return poly_u;
+    Vector_Copy(upper+2, row->p, dim+1);
+    value_oppose(tmp, upper[1]);
+    value_addto(row->p[dim], row->p[dim], tmp);
+    return power_sums(faulhaber, data->e, row, tmp, 0, 0);
+}
+
+static evalue *compute_poly_l(evalue *poly_l, Value *lower, Vector *row,
+			      unsigned dim,
+			      struct poly_list *faulhaber,
+			      struct Bernoulli_data *data)
+{
+    if (poly_l)
+	return poly_l;
+    Vector_Copy(lower+2, row->p, dim+1);
+    value_addto(row->p[dim], row->p[dim], lower[1]);
+    return power_sums(faulhaber, data->e, row, lower[1], 0, 1);
+}
 
 static void Bernoulli_init(unsigned n, void *cb_data)
 {
@@ -294,20 +343,14 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	/* Case 1:
 	 *		1 <= l		l' - b >= 0
 	 */
-	Vector_Oppose(lower+2, M2->p[0]+1, T->Dimension+1);
-	value_subtract(M2->p[0][1+T->Dimension], M2->p[0][1+T->Dimension],
-		      lower[1]);
+	bound_constraint(M2->p[0]+1, T->Dimension, lower+1, -1, -1, 0);
 	D = AddConstraints(M2->p_Init, 1, T, data->MaxRays);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
 	    evalue *extra;
-	    if (!poly_u) {
-		Vector_Copy(upper+2, row->p, dim+1);
-		value_oppose(tmp, upper[1]);
-		value_addto(row->p[dim], row->p[dim], tmp);
-		poly_u = power_sums(faulhaber, data->e, row, tmp, 0, 0);
-	    }
+	    poly_u = compute_poly_u(poly_u, upper, row, dim, tmp,
+					faulhaber, data);
 	    Vector_Oppose(lower+2, row->p, dim+1);
 	    extra = power_sums(faulhaber, data->e, row, lower[1], 1, 0);
 	    eadd(poly_u, extra);
@@ -321,19 +364,13 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	/* Case 2:
 	 *		1 <= -u		-u' - a >= 0
 	 */
-	Vector_Oppose(upper+2, M2->p[0]+1, T->Dimension+1);
-	value_addto(M2->p[0][1+T->Dimension], M2->p[0][1+T->Dimension],
-		      upper[1]);
+	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, -1, 1, 0);
 	D = AddConstraints(M2->p_Init, 1, T, data->MaxRays);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
 	    evalue *extra;
-	    if (!poly_l) {
-		Vector_Copy(lower+2, row->p, dim+1);
-		value_addto(row->p[dim], row->p[dim], lower[1]);
-		poly_l = power_sums(faulhaber, data->e, row, lower[1], 0, 1);
-	    }
+	    poly_l = compute_poly_l(poly_l, lower, row, dim, faulhaber, data);
 	    Vector_Oppose(upper+2, row->p, dim+1);
 	    value_oppose(tmp, upper[1]);
 	    extra = power_sums(faulhaber, data->e, row, tmp, 1, 1);
@@ -349,23 +386,15 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	 *		u >= 0		u' >= 0
 	 *		-l >= 0		-l' >= 0
 	 */
-	Vector_Copy(upper+2, M2->p[0]+1, T->Dimension+1);
-	Vector_Copy(lower+2, M2->p[1]+1, T->Dimension+1);
+	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, 1, 0, 0);
+	bound_constraint(M2->p[1]+1, T->Dimension, lower+1, 1, 0, 0);
 	D = AddConstraints(M2->p_Init, 2, T, data->MaxRays);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
-	    if (!poly_l) {
-		Vector_Copy(lower+2, row->p, dim+1);
-		value_addto(row->p[dim], row->p[dim], lower[1]);
-		poly_l = power_sums(faulhaber, data->e, row, lower[1], 0, 1);
-	    }
-	    if (!poly_u) {
-		Vector_Copy(upper+2, row->p, dim+1);
-		value_oppose(tmp, upper[1]);
-		value_addto(row->p[dim], row->p[dim], tmp);
-		poly_u = power_sums(faulhaber, data->e, row, tmp, 0, 0);
-	    }
+	    poly_l = compute_poly_l(poly_l, lower, row, dim, faulhaber, data);
+	    poly_u = compute_poly_u(poly_u, upper, row, dim, tmp,
+					faulhaber, data);
 	
 	    data->s[data->ns].E = ALLOC(evalue);
 	    value_init(data->s[data->ns].E->d);
@@ -380,21 +409,14 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	 *		l < 1		-l' + b - 1 >= 0
 	 *		0 < l		l' - 1 >= 0
 	 */
-	Vector_Copy(lower+2, M2->p[0]+1, T->Dimension+1);
-	value_addto(M2->p[0][1+T->Dimension], M2->p[0][1+T->Dimension], lower[1]);
-	value_decrement(M2->p[0][1+T->Dimension], M2->p[0][1+T->Dimension]);
-	Vector_Oppose(lower+2, M2->p[1]+1, T->Dimension+1);
-	value_decrement(M2->p[1][1+T->Dimension], M2->p[1][1+T->Dimension]);
+	bound_constraint(M2->p[0]+1, T->Dimension, lower+1, 1, 1, 1);
+	bound_constraint(M2->p[1]+1, T->Dimension, lower+1, -1, 0, 1);
 	D = AddConstraints(M2->p_Init, 2, T, data->MaxRays);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
-	    if (!poly_u) {
-		Vector_Copy(upper+2, row->p, dim+1);
-		value_oppose(tmp, upper[1]);
-		value_addto(row->p[dim], row->p[dim], tmp);
-		poly_u = power_sums(faulhaber, data->e, row, tmp, 0, 0);
-	    }
+	    poly_u = compute_poly_u(poly_u, upper, row, dim, tmp,
+					faulhaber, data);
 
 	    eadd(linear, poly_u);
 	    data->s[data->ns].E = poly_u;
@@ -408,22 +430,14 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	 *		0 < -u		-u' - 1 >= 0
 	 *		l <= 0		-l' >= 0
 	 */
-	Vector_Copy(upper+2, M2->p[0]+1, T->Dimension+1);
-	value_subtract(M2->p[0][1+T->Dimension], M2->p[0][1+T->Dimension],
-			upper[1]);
-	value_decrement(M2->p[0][1+T->Dimension], M2->p[0][1+T->Dimension]);
-	Vector_Oppose(upper+2, M2->p[1]+1, T->Dimension+1);
-	value_decrement(M2->p[1][1+T->Dimension], M2->p[1][1+T->Dimension]);
-	Vector_Copy(lower+2, M2->p[2]+1, T->Dimension+1);
+	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, 1, -1, 1);
+	bound_constraint(M2->p[1]+1, T->Dimension, upper+1, -1, 0, 1);
+	bound_constraint(M2->p[2]+1, T->Dimension, lower+1, 1, 0, 0);
 	D = AddConstraints(M2->p_Init, 3, T, data->MaxRays);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
-	    if (!poly_l) {
-		Vector_Copy(lower+2, row->p, dim+1);
-		value_addto(row->p[dim], row->p[dim], lower[1]);
-		poly_l = power_sums(faulhaber, data->e, row, lower[1], 0, 1);
-	    }
+	    poly_l = compute_poly_l(poly_l, lower, row, dim, faulhaber, data);
 
 	    eadd(linear, poly_l);
 	    data->s[data->ns].E = poly_l;
