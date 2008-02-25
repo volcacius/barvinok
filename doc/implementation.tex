@@ -1916,11 +1916,12 @@ smaller than all other lower bounds and similarly for the upper bound.
 For any given pair of lower and upper bound $(l(\vec {\hat x}), u(\vec{\hat x}))$,
 the formula~\eqref{eq:nested:sum} is computed for each monomial of $p(\vec x)$
 separately.  For the constant term $\alpha_0$, we have
-$$
+\begin{equation}
+\label{eq:summation:1d}
 \sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_0(\vec{\hat x})
     = \alpha_0(\vec{\hat x}) \left(u(\vec{\hat x}) - l(\vec {\hat x}) + 1\right)
 .
-$$
+\end{equation}
 For the higher degree monomials, we use the formula
 \begin{equation}
 \label{eq:summation}
@@ -1947,6 +1948,7 @@ the lower bound is zero (or one), we need to consider several
 cases.
 \begin{enumerate}
 \item $l(\vec {\hat x}) \ge 1$
+\label{i:l}
 
 \begin{align*}
 \sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
@@ -1964,6 +1966,7 @@ cases.
 \end{align*}
 
 \item $u(\vec{\hat x}) \le -1$
+\label{i:u}
 
 \begin{align*}
 \sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
@@ -2066,6 +2069,121 @@ results on some examples.
 The last approach has the additional drawback that we
 would also have to deal with 5 cases, even if the bounds
 are integers.
+
+\subsection{Exact Enumeration using Nested Sums}
+\label{s:nested:exact}
+
+The exact enumeration using nested sums proceeds in much
+the same way as the approximate enumeration from
+\autoref{s:nested}, with the notable exception
+that we need to take the (greatest or least) integer part
+of any fractional bounds that may occur.
+This has several consequences, discussed below.
+
+Since we will introduce floors during the recursive application
+of the procedure, we may as well allow the weight
+$p(\vec x)$ in~\eqref{eq:nested:sum} to be a (piecewise)
+quasipolynomial.
+
+For the constant term, \eqref{eq:summation:1d} becomes
+$$
+\sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_0(\vec{\hat x})
+    = \alpha_0(\vec{\hat x})
+	\left(\floor{u(\vec{\hat x})} - \ceil{l(\vec {\hat x})} + 1\right)
+.
+$$
+
+Since we force the lower and upper bounds to be integers,
+cases~\ref{i:l:fractional} and~\ref{i:u:fractional} do not occur,
+while the conditions for cases~\ref{i:l} and~\ref{i:u} can be simplified
+to
+$$
+l(\vec {\hat x}) > 0
+$$
+and
+$$
+u(\vec {\hat x}) < 0
+,
+$$
+respectively.
+
+If the variable $x$ appears in any floor expression, either
+because such an expression was present in the original weight function
+or because it was introduced when another variable with an affine bound
+in $x$ was summed, then the domain has to
+be ``splintered'' into $D$ parts, where $D$ is the least common
+multiple of the denominators of the coefficients of $x$ in
+any of the integer parts.
+In particular, the domain is split into $x = D y + i$ for
+each $i$ in $[0, D-1]$.  Since $D$ is proportional to
+the coefficients in the constraints, it is exponential in
+the input size.  This splintering will therefore
+introduce exponential behavior, even if the dimension is fixed.
+
+Splintering is clearly the most expensive step in the algorithm,
+so we want to avoid this step as much as possible.
+\shortciteN{Pugh94counting} already noted that summation should
+proceed over variables with integer bounds first.
+This can be extended to choosing a variable with the smallest
+coefficient in absolute value.  In this way, we can avoid
+splintering on the largest denominator.
+
+\shortciteN{Sakellariou1996phd} claims that splintering
+can be avoided altogether.
+In particular, \shortciteN[Lemma~3.2]{Sakellariou1996phd}
+shows that
+$$
+\sum_{x=0}^a x^m\left(x \bmod b\right)^n
+,
+$$
+with $a$ and $b$ integers, is equal to
+\begin{equation}
+\label{eq:3.2}
+\begin{cases}
+\displaystyle
+\sum_{x=0}^a x^{m+n} & \text{if $a<b$}
+\\
+\displaystyle
+\sum_{i=0}^{\floor{a/b}-1} \sum_{x=0}^{b-1} (x+ib)^m x^n +
+\sum_{x=0}^{a \bmod b} (x+b\floor{a/b})^m x^n & \text{if $a\ge b$}
+,
+\end{cases}
+\end{equation}
+effectively avoiding splintering if a given monomial contains
+a single integer part expression with argument of the form
+$x/b$.  An argument of the form $(x-c(\vec{\hat x}))/b$ can
+be handled through a variable substitution.
+If the argument is of the form $c x/b$, with $c \ne 1$,
+then \shortciteN[(3.27)]{Sakellariou1996phd} proposes to
+rewrite the monomial as
+\begin{align*}
+\sum_{x=0}^a (c x \bmod b)^n
+& =
+        \sum_{x=0}^a \sum_{y=cx}^{cx} (y \bmod b)^n
+\\
+& =
+    \sum_{x=0}^a
+    \left(\sum_{y=0}^{cx} (y \bmod b)^n - \sum_{y=0}^{cx-1} (y \bmod b)^n\right)
+\end{align*}
+and applying \eqref{eq:3.2}.
+However, such an application results in an expression containing
+$$
+        \sum_{y=0}^{cx \bmod b} y^n
+,
+$$
+which in turn leads to a polynomial of degree $n+1$ in $(c x \bmod b)$,
+i.e., of degree one higher than the original expression.
+Furthermore, if the bound on $x$ is rational then $a$ itself contains
+a floor, which, on application of \eqref{eq:3.2}, results in
+a nested floor expression, blocking the application of the same
+rule for the next variable.
+Finally, the case where a monomial contains multiple floor
+expressions, either occurring in the input quasi-polynomial
+or introduced by different variables having a rational
+bound with a non-zero coefficient in the same variable, is not handled.
+Also note that if we disallow nested floor expressions,
+then this rule will rarely be applicable since we try to eliminate
+variables with integer bounds first.
 
 \subsection{Summation using local Euler-Maclaurin formula}
 \label{s:euler}
