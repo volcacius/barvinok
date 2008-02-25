@@ -336,10 +336,9 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	 * upper is the constraint
 	 *			-a i + u' >= 0		i <= u'/a = u
 	 */
-	M2 = Matrix_Alloc(3, 2+T->Dimension);
+	M2 = Matrix_Alloc(2, 2+T->Dimension);
 	value_set_si(M2->p[0][0], 1);
 	value_set_si(M2->p[1][0], 1);
-	value_set_si(M2->p[2][0], 1);
 	/* Case 1:
 	 *		1 <= l		l' - b >= 0
 	 */
@@ -428,12 +427,10 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	/* Case 5:
 	 * 		-u < 1		u' + a - 1 >= 0
 	 *		0 < -u		-u' - 1 >= 0
-	 *		l <= 0		-l' >= 0
 	 */
 	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, 1, -1, 1);
 	bound_constraint(M2->p[1]+1, T->Dimension, upper+1, -1, 0, 1);
-	bound_constraint(M2->p[2]+1, T->Dimension, lower+1, 1, 0, 0);
-	D = AddConstraints(M2->p_Init, 3, T, data->MaxRays);
+	D = AddConstraints(M2->p_Init, 2, T, data->MaxRays);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
