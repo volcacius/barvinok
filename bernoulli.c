@@ -344,6 +344,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	 */
 	bound_constraint(M2->p[0]+1, T->Dimension, lower+1, -1, -1, 0);
 	D = AddConstraints(M2->p_Init, 1, T, data->MaxRays);
+	POL_ENSURE_VERTICES(D);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
@@ -365,6 +366,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	 */
 	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, -1, 1, 0);
 	D = AddConstraints(M2->p_Init, 1, T, data->MaxRays);
+	POL_ENSURE_VERTICES(D);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
@@ -388,6 +390,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, 1, 0, 0);
 	bound_constraint(M2->p[1]+1, T->Dimension, lower+1, 1, 0, 0);
 	D = AddConstraints(M2->p_Init, 2, T, data->MaxRays);
+	POL_ENSURE_VERTICES(D);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
@@ -411,6 +414,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	bound_constraint(M2->p[0]+1, T->Dimension, lower+1, 1, 1, 1);
 	bound_constraint(M2->p[1]+1, T->Dimension, lower+1, -1, 0, 1);
 	D = AddConstraints(M2->p_Init, 2, T, data->MaxRays);
+	POL_ENSURE_VERTICES(D);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
@@ -431,6 +435,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	bound_constraint(M2->p[0]+1, T->Dimension, upper+1, 1, -1, 1);
 	bound_constraint(M2->p[1]+1, T->Dimension, upper+1, -1, 0, 1);
 	D = AddConstraints(M2->p_Init, 2, T, data->MaxRays);
+	POL_ENSURE_VERTICES(D);
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
