@@ -1977,6 +1977,7 @@ cases.
 \end{align*}
 
 \item $l(\vec {\hat x}) \le 0$ and $u(\vec{\hat x}) \ge 0$
+\label{i:l:u}
 
 \begin{align*}
 \sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
@@ -2007,14 +2008,13 @@ integer, then the above 3 cases partition (the integer points in)
 the projection of $P$ onto the remaining variables.
 However, if some of the coefficients are rational, then the lower
 and upper bound can lie in the open interval $(0,1)$ for some
-values of $\vec{\hat x}$.  We therefore also need to consider
+values of $\vec{\hat x}$.  We may therefore also want to consider
 the following two cases.
-Note that the results will not be correct in these cases, but
-not taking them into account would lead to a greater loss in accuracy.
 
 \begin{enumerate}
 \setcounter{enumi}{\value{saveenumi}}
 \item $0 < l(\vec {\hat x}) < 1$
+\label{i:l:fractional}
 
 $$
 \sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
@@ -2024,6 +2024,7 @@ S_n(u(\vec{\hat x})+1)
 $$
 
 \item $0 < -u(\vec {\hat x}) < 1$
+\label{i:u:fractional}
 
 $$
 \sum_{x_1 = l(\vec {\hat x})}^{u(\vec{\hat x})} \alpha_n(\vec{\hat x}) \, x_1^n
@@ -2034,6 +2035,37 @@ S_n(-l(\vec{\hat x})+1)
 $$
 
 \end{enumerate}
+Note that we may add the constraint $u \ge 1$ to
+case~\ref{i:l:fractional} and the constraint $l \le -1$
+to case~\ref{i:u:fractional}, since the correct value for
+these two cases would be zero if these extra constraints do not hold.
+
+An alternative to adding the above two cases would be
+to simply ignore them, i.e., assume a value of $0$.
+Another alternative would be to reduce case~\ref{i:l:u}
+to
+$$
+l(\vec {\hat x}) \le -1\quad\hbox{and}\quad u(\vec{\hat x}) \ge 1
+,
+$$
+while extending cases~\ref{i:l:fractional} and~\ref{i:u:fractional}
+to
+$$
+-1 < l(\vec {\hat x}) < 1\quad\hbox{and}\quad u \ge 1
+$$
+and
+$$
+-1 < u(\vec {\hat x}) < 1\quad\hbox{and}\quad l \le -1
+,
+$$
+respectively, with the remaining cases
+($-1 < l \le u < 1$) having value $0$.
+There does not appear to be a consistently better choice
+here, as each of these three approaches seems to yield better
+results on some examples.
+The last approach has the additional drawback that we
+would also have to deal with 5 cases, even if the bounds
+are integers.
 
 \subsection{Summation using local Euler-Maclaurin formula}
 \label{s:euler}
