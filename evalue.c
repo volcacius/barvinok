@@ -1171,6 +1171,7 @@ void eadd_partitions(const evalue *e1, evalue *res)
 		if (emptyQ(fd))
 		    break;
 	    }
+	fd = DomainConstraintSimplify(fd, 0);
 	if (emptyQ(fd)) {
 	    Domain_Free(fd);
 	    continue;
@@ -1195,6 +1196,7 @@ void eadd_partitions(const evalue *e1, evalue *res)
 	    Polyhedron *t;
 	    d = DomainIntersection(EVALUE_DOMAIN(e1->x.p->arr[2*j]),
 				   EVALUE_DOMAIN(res->x.p->arr[2*i]), 0);
+	    d = DomainConstraintSimplify(d, 0);
 	    if (emptyQ(d)) {
 		Domain_Free(d);
 		continue;
@@ -1206,6 +1208,7 @@ void eadd_partitions(const evalue *e1, evalue *res)
 	    value_init(s[n].E.d);
 	    evalue_copy(&s[n].E, &res->x.p->arr[2*i+1]);
 	    eadd(&e1->x.p->arr[2*j+1], &s[n].E);
+	    fd = DomainConstraintSimplify(fd, 0);
 	    if (!emptyQ(fd) && is_zero_on(&e1->x.p->arr[2*j+1], fd)) {
 		d = DomainConcat(fd, d);
 		fd = Empty_Polyhedron(fd->Dimension);
@@ -1230,7 +1233,6 @@ void eadd_partitions(const evalue *e1, evalue *res)
     assert(n > 0);
     res->x.p = new_enode(partition, 2*n, e1->x.p->pos);
     for (j = 0; j < n; ++j) {
-	s[j].D = DomainConstraintSimplify(s[j].D, 0);
 	EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
 	value_clear(res->x.p->arr[2*j+1].d);
 	res->x.p->arr[2*j+1] = s[j].E;
@@ -1587,6 +1589,7 @@ void emul_partitions(const evalue *e1, evalue *res)
 	for (j = 0; j < e1->x.p->size/2; ++j) {
 	    d = DomainIntersection(EVALUE_DOMAIN(e1->x.p->arr[2*j]),
 				   EVALUE_DOMAIN(res->x.p->arr[2*i]), 0);
+	    d = DomainConstraintSimplify(d, 0);
 	    if (emptyQ(d)) {
 		Domain_Free(d);
 		continue;
@@ -1628,7 +1631,6 @@ void emul_partitions(const evalue *e1, evalue *res)
     else {
 	res->x.p = new_enode(partition, 2*n, e1->x.p->pos);
 	for (j = 0; j < n; ++j) {
-	    s[j].D = DomainConstraintSimplify(s[j].D, 0);
 	    EVALUE_SET_DOMAIN(res->x.p->arr[2*j], s[j].D);
 	    value_clear(res->x.p->arr[2*j+1].d);
 	    res->x.p->arr[2*j+1] = s[j].E;
