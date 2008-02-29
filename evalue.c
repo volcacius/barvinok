@@ -4273,7 +4273,16 @@ void evalue_substitute(evalue *e, evalue **subs)
 
 /* evalue e is given in terms of "new" parameter; CP maps the new
  * parameters back to the old parameters.
- * Transforms e such that it refers back to the old parameters.
+ * Transforms e such that it refers back to the old parameters and
+ * adds appropriate constraints to the domain.
+ * In particular, if CP maps the new parameters onto an affine
+ * subspace of the old parameters, then the corresponding equalities
+ * are added to the domain.
+ * Also, if any of the new parameters was a rational combination
+ * of the old parameters $p' = (<a, p> + c)/m$, then modulo
+ * constraints ${<a, p> + c)/m} = 0$ are added to ensure
+ * the new evalue remains non-zero only for integer parameters
+ * of the new parameters (which have been removed by the substitution). 
  */
 void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
 {
@@ -4281,9 +4290,10 @@ void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
     Matrix *inv;
     evalue **subs;
     enode *p;
-    int i;
+    int i, j;
     unsigned nparam = CP->NbColumns-1;
     Polyhedron *CEq;
+    Value gcd;
 
     if (EVALUE_IS_ZERO(*e))
 	return;
@@ -4308,6 +4318,40 @@ void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays)
     for (i = 0; i < nparam; ++i)
 	evalue_free(subs[i]);
     free(subs);
+
+    value_init(gcd);
+    for (i = 0; i < inv->NbRows-1; ++i) {
+	Vector_Gcd(inv->p[i], inv->NbColumns, &gcd);
+	value_gcd(gcd, gcd, inv->p[inv->NbRows-1][inv->NbColumns-1]);
+	if (value_eq(gcd, inv->p[inv->NbRows-1][inv->NbColumns-1]))
+	    continue;
+	Vector_AntiScale(inv->p[i], inv->p[i], gcd, inv->NbColumns);
+	value_divexact(gcd, inv->p[inv->NbRows-1][inv->NbColumns-1], gcd);
+
+	for (j = 0; j < p->size/2; ++j) {
+	    evalue *arg = affine2evalue(inv->p[i], gcd, inv->NbColumns-1);
+	    evalue *ev;
+	    evalue rel;
+
+	    value_init(rel.d);
+	    value_set_si(rel.d, 0);
+	    rel.x.p = new_enode(relation, 2, 0);
+	    value_clear(rel.x.p->arr[1].d);
+	    rel.x.p->arr[1] = p->arr[2*j+1];
+	    ev = &rel.x.p->arr[0];
+	    value_set_si(ev->d, 0);
+	    ev->x.p = new_enode(fractional, 3, -1);
+	    evalue_set_si(&ev->x.p->arr[1], 0, 1);
+	    evalue_set_si(&ev->x.p->arr[2], 1, 1);
+	    value_clear(ev->x.p->arr[0].d);
+	    ev->x.p->arr[0] = *arg;
+	    free(arg);
+
+	    p->arr[2*j+1] = rel;
+	}
+    }
+    value_clear(gcd);
+
     Matrix_Free(eq);
     Matrix_Free(inv);
 }
