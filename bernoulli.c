@@ -504,7 +504,7 @@ static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
 	data->ns = 0;
 	data->e = E;
 
-	for_each_lower_upper_bound(P, Bernoulli_cb, data);
+	for_each_lower_upper_bound(P, NULL, Bernoulli_cb, data);
 
 	res = evalue_from_section_array(data->s, data->ns);
     }

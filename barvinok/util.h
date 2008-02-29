@@ -107,8 +107,17 @@ void Polyhedron_ExchangeColumns(Polyhedron *P, int Column1, int Column2);
 
 void Matrix_Transposition(Matrix *M);
 
-typedef void (*for_each_lower_upper_bound_fn)(Matrix *, Value *, Value *, void *);
-void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
+/* n is the total number of times fn will be called */
+typedef void (*for_each_lower_upper_bound_init)(unsigned n, void *data);
+/* M contains the constraints on the remaining variables
+ * lower is the constraint in the original domain representing the lower bound
+ * upper is the constraint in the original domain representing the upper bound
+ */
+typedef void (*for_each_lower_upper_bound_fn)
+		(Matrix *M, Value *lower, Value *upper, void *data);
+void for_each_lower_upper_bound(Polyhedron *P,
+				for_each_lower_upper_bound_init init,
+				for_each_lower_upper_bound_fn fn,
 				void *cb_data);
 
 void Polyhedron_Matrix_View(Polyhedron *P, Matrix *M, unsigned rows);
