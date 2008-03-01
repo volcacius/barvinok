@@ -405,8 +405,9 @@ static int add_modulo_substitution(struct subst *s, evalue *r)
 
 static int type_offset(enode *p)
 {
-   return p->type == fractional ? 1 : 
-	  p->type == flooring ? 1 : 0;
+   return p->type == fractional ? 1 :
+	  p->type == flooring ? 1 :
+	  p->type == relation ? 1 : 0;
 }
 
 static void reorder_terms_about(enode *p, evalue *v)
@@ -1109,6 +1110,56 @@ void print_enode(FILE *DST, enode *p, const char *const *pname)
   return;
 } /* print_enode */ 
 
+/* Returns
+ *	 0 if toplevels of e1 and e2 are at the same level
+ *	<0 if toplevel of e1 should be outside of toplevel of e2
+ *	>0 if toplevel of e2 should be outside of toplevel of e1
+ */
+static int evalue_level_cmp(const evalue *e1, const evalue *e2)
+{
+    if (value_notzero_p(e1->d) && value_notzero_p(e2->d))
+	return 0;
+    if (value_notzero_p(e1->d))
+	return 1;
+    if (value_notzero_p(e2->d))
+	return -1;
+    if (e1->x.p->type == partition && e2->x.p->type == partition)
+	return 0;
+    if (e1->x.p->type == partition)
+	return -1;
+    if (e2->x.p->type == partition)
+	return 1;
+    if (e1->x.p->type == relation && e2->x.p->type == relation) {
+	if (eequal(&e1->x.p->arr[0], &e2->x.p->arr[0]))
+	    return 0;
+	if (mod_term_smaller(&e1->x.p->arr[0], &e2->x.p->arr[0]))
+	    return -1;
+	else
+	    return 1;
+    }
+    if (e1->x.p->type == relation)
+	return -1;
+    if (e2->x.p->type == relation)
+	return 1;
+    if (e1->x.p->type == polynomial && e2->x.p->type == polynomial)
+	return e1->x.p->pos - e2->x.p->pos;
+    if (e1->x.p->type == polynomial)
+	return -1;
+    if (e2->x.p->type == polynomial)
+	return 1;
+    if (e1->x.p->type == periodic && e2->x.p->type == periodic)
+	return e1->x.p->pos - e2->x.p->pos;
+    assert(e1->x.p->type != periodic);
+    assert(e2->x.p->type != periodic);
+    assert(e1->x.p->type == e2->x.p->type);
+    if (eequal(&e1->x.p->arr[0], &e2->x.p->arr[0]))
+	return 0;
+    if (mod_term_smaller(e1, e2))
+	return -1;
+    else
+	return 1;
+}
+
 static void eadd_rev(const evalue *e1, evalue *res)
 {
     evalue ev;
@@ -1269,9 +1320,94 @@ static void reduce_constant(evalue *e)
     value_clear(g);
 }
 
+/* Add two rational numbers */
+static void eadd_rationals(const evalue *e1, evalue *res)
+{
+    if (value_eq(e1->d, res->d))
+	value_addto(res->x.n, res->x.n, e1->x.n);
+    else {
+	value_multiply(res->x.n, res->x.n, e1->d);
+	value_addmul(res->x.n, e1->x.n, res->d);
+	value_multiply(res->d,e1->d,res->d);
+    }
+    reduce_constant(res);
+}
+
+static void eadd_relations(const evalue *e1, evalue *res)
+{
+    int i;
+
+    if (res->x.p->size < 3 && e1->x.p->size == 3)
+	explicit_complement(res);
+    for (i = 1; i < e1->x.p->size; ++i)
+	eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
+}
+
+static void eadd_arrays(const evalue *e1, evalue *res, int n)
+{
+    int i;
+
+    // add any element in e1 to the corresponding element in res 
+    i = type_offset(res->x.p);
+    if (i == 1)
+	assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
+    for (; i < n; i++)
+	eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
+}
+
+static void eadd_poly(const evalue *e1, evalue *res)
+{
+    if (e1->x.p->size > res->x.p->size)
+	eadd_rev(e1, res);
+    else
+	eadd_arrays(e1, res, e1->x.p->size);
+}
+
+static void eadd_periodics(const evalue *e1, evalue *res)
+{
+    int i;
+    int x, y, p;
+    Value ex, ey ,ep;
+    evalue *ne;
+
+    if (e1->x.p->size == res->x.p->size) {
+	eadd_arrays(e1, res, e1->x.p->size);
+	return;
+    }
+    /* you have to create a new evalue 'ne' in whitch size equals to the lcm
+     * of the sizes of e1 and res, then to copy res periodicaly in ne, after
+     * to add periodicaly elements of e1 to elements of ne, and finaly to 
+     * return ne.
+     */
+    value_init(ex);
+    value_init(ey);
+    value_init(ep);
+    x = e1->x.p->size;
+    y = res->x.p->size;
+    value_set_si(ex, e1->x.p->size);
+    value_set_si(ey, res->x.p->size);
+    value_lcm(ep, ex, ey);
+    p = (int)mpz_get_si(ep);
+    ne = (evalue *) malloc(sizeof(evalue)); 
+    value_init(ne->d);
+    value_set_si(ne->d, 0);
+		
+    ne->x.p = new_enode(res->x.p->type,p, res->x.p->pos);
+    for (i = 0; i < p; i++)
+	evalue_copy(&ne->x.p->arr[i], &res->x.p->arr[i%y]);
+    for (i = 0; i < p; i++)
+	eadd(&e1->x.p->arr[i%x], &ne->x.p->arr[i]);
+
+    value_assign(res->d, ne->d);
+    res->x.p = ne->x.p;
+    value_clear(ex);
+    value_clear(ey);
+    value_clear(ep);
+}
+
 void eadd(const evalue *e1, evalue *res)
 {
- int i; 
+    int cmp;
 
     if (EVALUE_IS_ZERO(*e1))
 	return;
@@ -1288,222 +1424,73 @@ void eadd(const evalue *e1, evalue *res)
 	return;
     }
 
-    if (value_notzero_p(e1->d) && value_notzero_p(res->d)) {
-         /* Add two rational numbers */
-	if (value_eq(e1->d, res->d))
-	    value_addto(res->x.n, res->x.n, e1->x.n);
-	else {
-	    value_multiply(res->x.n, res->x.n, e1->d);
-	    value_addmul(res->x.n, e1->x.n, res->d);
-	    value_multiply(res->d,e1->d,res->d);
+    cmp = evalue_level_cmp(res, e1);
+    if (cmp > 0) {
+	switch (e1->x.p->type) {
+	case polynomial:
+	case flooring:
+	case fractional:
+	    eadd_rev_cst(e1, res); 
+	    break;
+	default:
+	    eadd_rev(e1, res);
 	}
-	reduce_constant(res);
-        return;
-     }
-     else if (value_notzero_p(e1->d) && value_zero_p(res->d)) {
-	  switch (res->x.p->type) {
-	  case polynomial:
-	      /* Add the constant to the constant term of a polynomial*/
-	       eadd(e1, &res->x.p->arr[0]);
-	       return ;
-	  case periodic:
-	      /* Add the constant to all elements of a periodic number */
-	      for (i=0; i<res->x.p->size; i++) {
-		  eadd(e1, &res->x.p->arr[i]);
-	      }
-	      return ;
-	  case evector:
-	      fprintf(stderr, "eadd: cannot add const with vector\n");
-	      return;
-	  case flooring:
-	  case fractional:
-	       eadd(e1, &res->x.p->arr[1]);
-	       return ;
-	  case partition:
-		assert(EVALUE_IS_ZERO(*e1));
-		break;				/* Do nothing */
-	  case relation:
-		/* Create (zero) complement if needed */
-		if (res->x.p->size < 3 && !EVALUE_IS_ZERO(*e1))
-		    explicit_complement(res);
-		for (i = 1; i < res->x.p->size; ++i)
-		    eadd(e1, &res->x.p->arr[i]);
+    } else if (cmp == 0) {
+	if (value_notzero_p(e1->d)) {
+	    eadd_rationals(e1, res);
+	} else {
+	    switch (e1->x.p->type) {
+	    case partition:
+		eadd_partitions(e1, res);
 		break;
-	  default:
+	    case relation:
+		eadd_relations(e1, res);
+		break;
+	    case evector:
+		assert(e1->x.p->size == res->x.p->size);
+	    case polynomial:
+	    case flooring:
+	    case fractional:
+		eadd_poly(e1, res);
+		break;
+	    case periodic:
+		eadd_periodics(e1, res);
+		break;
+	    default:
 		assert(0);
-	  }
-     }
-     /* add polynomial or periodic to constant 
-      * you have to exchange e1 and res, before doing addition */
-     
-     else if (value_zero_p(e1->d) && value_notzero_p(res->d)) {
-	  eadd_rev(e1, res); 
-	  return;
-     }
-     else {   // ((e1->d==0) && (res->d==0)) 
-	assert(!((e1->x.p->type == partition) ^
-	         (res->x.p->type == partition)));
-	if (e1->x.p->type == partition) {
-	    eadd_partitions(e1, res);
-	    return;
-	}
-	if (e1->x.p->type == relation &&
-	    (res->x.p->type != relation || 
-	     mod_term_smaller(&e1->x.p->arr[0], &res->x.p->arr[0]))) {
-		eadd_rev(e1, res);
-		return;
-	}
-	if (res->x.p->type == relation) {
-	    if (e1->x.p->type == relation &&
-		eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
-		    if (res->x.p->size < 3 && e1->x.p->size == 3)
-			explicit_complement(res);
-		    for (i = 1; i < e1->x.p->size; ++i)
-			eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
-		    return;
 	    }
+	}
+    } else {
+	int i;
+	switch (res->x.p->type) {
+	case polynomial:
+	case flooring:
+	case fractional:
+	    /* Add to the constant term of a polynomial */
+	    eadd(e1, &res->x.p->arr[type_offset(res->x.p)]);
+	    break;
+	case periodic:
+	    /* Add to all elements of a periodic number */
+	    for (i = 0; i < res->x.p->size; i++)
+		eadd(e1, &res->x.p->arr[i]);
+	    break;
+	case evector:
+	    fprintf(stderr, "eadd: cannot add const with vector\n");
+	    break;
+	case partition:
+	    assert(0);
+	case relation:
+	    /* Create (zero) complement if needed */
 	    if (res->x.p->size < 3)
 		explicit_complement(res);
 	    for (i = 1; i < res->x.p->size; ++i)
 		eadd(e1, &res->x.p->arr[i]);
-	    return;
+	    break;
+	default:
+	    assert(0);
 	}
-                 if ((e1->x.p->type != res->x.p->type) ) {
-		      /* adding to evalues of different type. two cases are possible  
-		       * res is periodic and e1 is polynomial, you have to exchange
-		       * e1 and res then to add e1 to the constant term of res */
-		     if (e1->x.p->type == polynomial) {
-			  eadd_rev_cst(e1, res); 
-	             }
-                     else if (res->x.p->type == polynomial) {
-                          /* res is polynomial and e1 is periodic,
-		            add e1 to the constant term of res */
-			 
-			  eadd(e1,&res->x.p->arr[0]);
-		     } else
-			assert(0);
-	                	 
-		     return;
-	         }
-	         else if (e1->x.p->pos != res->x.p->pos ||
-			    ((res->x.p->type == fractional ||
-			      res->x.p->type == flooring) &&
-			     !eequal(&e1->x.p->arr[0], &res->x.p->arr[0]))) { 
-	      	 /* adding evalues of different position (i.e function of different unknowns
-		  * to case are possible  */
-			   
-			switch (res->x.p->type) {
-			case flooring:
-			case fractional:
-			    if (mod_term_smaller(res, e1))
-				eadd(e1,&res->x.p->arr[1]);
-			    else
-				eadd_rev_cst(e1, res);
-			    return;
-			case polynomial: //  res and e1 are polynomials
-			       //  add e1 to the constant term of res
-			       
-			    if(res->x.p->pos < e1->x.p->pos)
-		               eadd(e1,&res->x.p->arr[0]);
-			    else
-				eadd_rev_cst(e1, res);
-		              // value_clear(g); value_clear(m1); value_clear(m2);
-		               return;
-		        case periodic:  // res and e1 are pointers to periodic numbers
-				  //add e1 to all elements of res 
-				   
-			    if(res->x.p->pos < e1->x.p->pos)
-			          for (i=0;i<res->x.p->size;i++) {
-			               eadd(e1,&res->x.p->arr[i]);
-			          }
-			    else
-				eadd_rev(e1, res);
-			    return;
-			default:
-			    assert(0);
-			}
-	         }  
-                 
-                
-		 //same type , same pos  and same size
-                 if (e1->x.p->size == res->x.p->size) {
-	              // add any element in e1 to the corresponding element in res 
-		      i = type_offset(res->x.p);
-		      if (i == 1)
-			assert(eequal(&e1->x.p->arr[0], &res->x.p->arr[0]));
-	              for (; i<res->x.p->size; i++) {
-                            eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
-                      }
-                      return ;
-                }
-                
-		/* Sizes are different */
-		switch(res->x.p->type) {
-		case polynomial:
-		case flooring:
-		case fractional:
-                    /* VIN100: if e1-size > res-size you have to copy e1 in a   */
-                    /* new enode and add res to that new node. If you do not do */
-                    /* that, you lose the the upper weight part of e1 !         */
-
-                     if(e1->x.p->size > res->x.p->size)
-			  eadd_rev(e1, res);
-                     else {
-		        i = type_offset(res->x.p);
-		        if (i == 1)
-			    assert(eequal(&e1->x.p->arr[0], 
-				   &res->x.p->arr[0]));
-                        for (; i<e1->x.p->size ; i++) {
-                             eadd(&e1->x.p->arr[i], &res->x.p->arr[i]);
-                        } 
-                      		   
-                        return ;
-                     } 
-		     break;
-                
-    /* add two periodics of the same pos (unknown) but whith different sizes (periods) */
-	        case periodic:
-		{
-		      /* you have to create a new evalue 'ne' in whitch size equals to the lcm
-		       of the sizes of e1 and res, then to copy res periodicaly in ne, after
-		       to add periodicaly elements of e1 to elements of ne, and finaly to 
-		       return ne. */
-		       int x,y,p;
-		       Value ex, ey ,ep;
-		       evalue *ne;
-	               value_init(ex); value_init(ey);value_init(ep);
-		       x=e1->x.p->size;
-	               y= res->x.p->size;
-		       value_set_si(ex,e1->x.p->size);
-		       value_set_si(ey,res->x.p->size);
-		       value_assign (ep,*Lcm(ex,ey));
-		       p=(int)mpz_get_si(ep);
-	               ne= (evalue *) malloc (sizeof(evalue)); 
-	               value_init(ne->d);
-	               value_set_si( ne->d,0);
-	    	           	    
-	               ne->x.p=new_enode(res->x.p->type,p, res->x.p->pos);
-	               for(i=0;i<p;i++)  {
-			  evalue_copy(&ne->x.p->arr[i], &res->x.p->arr[i%y]);
-	               }
-	               for(i=0;i<p;i++)  {
-	                    eadd(&e1->x.p->arr[i%x], &ne->x.p->arr[i]);
-	               }
-      
-	              value_assign(res->d, ne->d);
-		      res->x.p=ne->x.p;
-	    	    
-                        return ;
-		}
-		case evector:
-                     fprintf(stderr, "eadd: ?cannot add vectors of different length\n");
-                     return ;
-		default:
-		    assert(0);
-                }
-     }
-     return ;
- }/* eadd  */ 
+    }
+} /* eadd */ 
  
 static void emul_rev(const evalue *e1, evalue *res)
 {
@@ -1640,20 +1627,107 @@ void emul_partitions(const evalue *e1, evalue *res)
     free(s);
 }
 
+/* Product of two rational numbers */
+static void emul_rationals(const evalue *e1, evalue *res)
+{
+    value_multiply(res->d, e1->d, res->d);
+    value_multiply(res->x.n, e1->x.n, res->x.n);
+    reduce_constant(res);
+}
+
+static void emul_relations(const evalue *e1, evalue *res)
+{
+    int i;
+
+    if (e1->x.p->size < 3 && res->x.p->size == 3) {
+	free_evalue_refs(&res->x.p->arr[2]);
+	res->x.p->size = 2;
+    }
+    for (i = 1; i < res->x.p->size; ++i)
+	emul(&e1->x.p->arr[i], &res->x.p->arr[i]);
+}
+
+static void emul_periodics(const evalue *e1, evalue *res)
+{
+    int i;
+    evalue *newp;
+    Value x, y, z;
+    int ix, iy, lcm;
+
+    if (e1->x.p->size == res->x.p->size) {
+	/* Product of two periodics of the same parameter and period */
+	for (i = 0; i < res->x.p->size; i++) 
+	    emul(&(e1->x.p->arr[i]), &(res->x.p->arr[i]));
+	return;
+    }
+
+    /* Product of two periodics of the same parameter and different periods */
+    value_init(x);
+    value_init(y);
+    value_init(z);
+    ix = e1->x.p->size;
+    iy = res->x.p->size;
+    value_set_si(x, e1->x.p->size);
+    value_set_si(y, res->x.p->size);
+    value_lcm(z, x, y);
+    lcm = (int)mpz_get_si(z);
+    newp = (evalue *) malloc(sizeof(evalue));
+    value_init(newp->d);
+    value_set_si(newp->d, 0);
+    newp->x.p = new_enode(periodic, lcm, e1->x.p->pos);
+    for (i = 0; i < lcm; i++)
+	evalue_copy(&newp->x.p->arr[i], &res->x.p->arr[i%iy]);
+    for (i = 0; i < lcm; i++)
+	emul(&e1->x.p->arr[i%ix], &newp->x.p->arr[i]);		
+    value_assign(res->d, newp->d);
+    res->x.p = newp->x.p;
+    value_clear(x);
+    value_clear(y);
+    value_clear(z); 
+}
+
 #define value_two_p(val)	(mpz_cmp_si(val,2) == 0)
 
-/* Computes the product of two evalues "e1" and "res" and puts the result in "res". you must
- * do a copy of "res" befor calling this function if you nead it after. The vector type of 
- * evalues is not treated here */
+static void emul_fractionals(const evalue *e1, evalue *res)
+{
+    evalue d;
+    value_init(d.d);
+    poly_denom(&e1->x.p->arr[0], &d.d);
+    if (!value_two_p(d.d))
+	emul_poly(e1, res);
+    else {
+	evalue tmp;
+	value_init(d.x.n);
+	value_set_si(d.x.n, 1);
+	/* { x }^2 == { x }/2 */
+	/* a0 b0 + (a0 b1 + a1 b0 + a1 b1/2) { x } */
+	assert(e1->x.p->size == 3);
+	assert(res->x.p->size == 3);
+	value_init(tmp.d);
+	evalue_copy(&tmp, &res->x.p->arr[2]);
+	emul(&d, &tmp);
+	eadd(&res->x.p->arr[1], &tmp);
+	emul(&e1->x.p->arr[2], &tmp);
+	emul(&e1->x.p->arr[1], &res->x.p->arr[1]);
+	emul(&e1->x.p->arr[1], &res->x.p->arr[2]);
+	eadd(&tmp, &res->x.p->arr[2]);
+	free_evalue_refs(&tmp);	  
+	value_clear(d.x.n);
+    }
+    value_clear(d.d);
+}
 
+/* Computes the product of two evalues "e1" and "res" and puts
+ * the result in "res".  You need to make a copy of "res"
+ * before calling this function if you still need it afterward.
+ * The vector type of evalues is not treated here
+ */
 void emul(const evalue *e1, evalue *res)
 {
-    int i,j;
+    int cmp;
 
-if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x.p->type==evector))) {    
-    fprintf(stderr, "emul: do not proced on evector type !\n");
-    return;
-}
+    assert(!(value_zero_p(e1->d) && e1->x.p->type == evector));
+    assert(!(value_zero_p(res->d) && res->x.p->type == evector));
      
     if (EVALUE_IS_ZERO(*res))
 	return;
@@ -1673,206 +1747,49 @@ if((value_zero_p(e1->d)&&e1->x.p->type==evector)||(value_zero_p(res->d)&&(res->x
 	return;
     }
 
-    if (value_zero_p(e1->d) && e1->x.p->type == partition) {
-        if (value_zero_p(res->d) && res->x.p->type == partition)
-	    emul_partitions(e1, res);
-	else
-	    emul_rev(e1, res);
-    } else if (value_zero_p(res->d) && res->x.p->type == partition) {
-	for (i = 0; i < res->x.p->size/2; ++i)
-	    emul(e1, &res->x.p->arr[2*i+1]);
-    } else
-   if (value_zero_p(res->d) && res->x.p->type == relation) {
-	if (value_zero_p(e1->d) && e1->x.p->type == relation &&
-	    eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
-		if (e1->x.p->size < 3 && res->x.p->size == 3) {
-		    free_evalue_refs(&res->x.p->arr[2]);
-		    res->x.p->size = 2;
-		}
-		for (i = 1; i < res->x.p->size; ++i)
-		    emul(&e1->x.p->arr[i], &res->x.p->arr[i]);
-		return;
-	}
-	for (i = 1; i < res->x.p->size; ++i)
-	    emul(e1, &res->x.p->arr[i]);
-   } else
-   if(value_zero_p(e1->d)&& value_zero_p(res->d)) {
-       switch(e1->x.p->type) {
-       case polynomial:
-	   switch(res->x.p->type) {
-	   case polynomial:
-	       if(e1->x.p->pos == res->x.p->pos) {
-	       /* Product of two polynomials of the same variable */
-		    emul_poly(e1, res);
-		    return;
-	       }
-	       else {
-		  /* Product of two polynomials of different variables */     
-	          
-		if(res->x.p->pos < e1->x.p->pos)
-		     for( i=0; i<res->x.p->size ; i++) 
-		            emul(e1, &res->x.p->arr[i]);
-		else
-		    emul_rev(e1, res);
-			  
-		 return ;
-	       }      
-	   case periodic:
-	   case flooring:
-	   case fractional:
-	        /* Product of a polynomial and a periodic or fractional */
-		emul_rev(e1, res);
-		return;
-	   default:
-		assert(0);
-	   }
-       case periodic:
-	   switch(res->x.p->type) {
-	   case periodic:
-		if(e1->x.p->pos==res->x.p->pos && e1->x.p->size==res->x.p->size) {
-		 /* Product of two periodics of the same parameter and period */	
-                   
-		     for(i=0; i<res->x.p->size;i++) 
-		           emul(&(e1->x.p->arr[i]), &(res->x.p->arr[i]));
-	             		     
-		     return;
-		}
-		else{
-                  if(e1->x.p->pos==res->x.p->pos && e1->x.p->size!=res->x.p->size) {  
-	           /* Product of two periodics of the same parameter and different periods */		  
-		    evalue *newp;
-	            Value x,y,z;
-		    int ix,iy,lcm;
-		    value_init(x); value_init(y);value_init(z);
-		    ix=e1->x.p->size;
-		    iy=res->x.p->size;
-		    value_set_si(x,e1->x.p->size);
-		    value_set_si(y,res->x.p->size);
-		    value_assign (z,*Lcm(x,y));
-		    lcm=(int)mpz_get_si(z);
-		    newp= (evalue *) malloc (sizeof(evalue));
-		    value_init(newp->d);
-		    value_set_si( newp->d,0);
-		    newp->x.p=new_enode(periodic,lcm, e1->x.p->pos);
-		        for(i=0;i<lcm;i++)  {
-		           evalue_copy(&newp->x.p->arr[i], 
-				       &res->x.p->arr[i%iy]);
-			}
-			for(i=0;i<lcm;i++)  
-		            emul(&e1->x.p->arr[i%ix], &newp->x.p->arr[i]);		
-			  
-			value_assign(res->d,newp->d);
-			res->x.p=newp->x.p;
-			
-			  value_clear(x); value_clear(y);value_clear(z); 
-			  return ;	 
-		  }
-		  else {
-	             /* Product of two periodics of different parameters */
-			  
-			if(res->x.p->pos < e1->x.p->pos)
-			    for(i=0; i<res->x.p->size; i++)
-				emul(e1, &(res->x.p->arr[i]));
-			else
-			    emul_rev(e1, res);
-			
-			return;
-		  }
-		}		       
-	   case polynomial:
-                  /* Product of a periodic and a polynomial */
-			  
-		       for(i=0; i<res->x.p->size ; i++)
-		            emul(e1, &(res->x.p->arr[i]));    
-                 
-		       return; 
-			       
-	   }		   
-       case flooring:
-       case fractional:
-	    switch(res->x.p->type) {
+    cmp = evalue_level_cmp(res, e1);
+    if (cmp > 0) {
+	emul_rev(e1, res);
+    } else if (cmp == 0) {
+	if (value_notzero_p(e1->d)) {
+	    emul_rationals(e1, res);
+	} else {
+	    switch (e1->x.p->type) {
+	    case partition:
+		emul_partitions(e1, res);
+		break;
+	    case relation:
+		emul_relations(e1, res);
+		break;
 	    case polynomial:
-	        for(i=0; i<res->x.p->size ; i++)
-		    emul(e1, &(res->x.p->arr[i]));    
-	        return; 
-	    default:
-	    case periodic:
-		assert(0);
 	    case flooring:
+		emul_poly(e1, res);
+		break;
+	    case periodic:
+		emul_periodics(e1, res);
+		break;
 	    case fractional:
-		assert(e1->x.p->type == res->x.p->type);
-	        if (e1->x.p->pos == res->x.p->pos &&
-			    eequal(&e1->x.p->arr[0], &res->x.p->arr[0])) {
-		    evalue d;
-		    value_init(d.d);
-		    poly_denom(&e1->x.p->arr[0], &d.d);
-		    if (e1->x.p->type != fractional || !value_two_p(d.d))
-			emul_poly(e1, res);
-		    else {
-			evalue tmp;
-			value_init(d.x.n);
-			value_set_si(d.x.n, 1);
-			/* { x }^2 == { x }/2 */
-			/* a0 b0 + (a0 b1 + a1 b0 + a1 b1/2) { x } */
-			assert(e1->x.p->size == 3);
-			assert(res->x.p->size == 3);
-			value_init(tmp.d);
-			evalue_copy(&tmp, &res->x.p->arr[2]);
-			emul(&d, &tmp);
-			eadd(&res->x.p->arr[1], &tmp);
-			emul(&e1->x.p->arr[2], &tmp);
-			emul(&e1->x.p->arr[1], &res->x.p->arr[1]);
-			emul(&e1->x.p->arr[1], &res->x.p->arr[2]);
-			eadd(&tmp, &res->x.p->arr[2]);
-			free_evalue_refs(&tmp);	  
-			value_clear(d.x.n);
-		    }
-		    value_clear(d.d);
-		} else {
-		    if(mod_term_smaller(res, e1))
-			for(i=1; i<res->x.p->size ; i++)
-			    emul(e1, &(res->x.p->arr[i]));    
-		    else
-			emul_rev(e1, res);
-		    return; 
-		}
+		emul_fractionals(e1, res);
+		break;
 	    }
+	}
+    } else {
+	int i;
+	switch (res->x.p->type) {
+	case partition:
+	    for (i = 0; i < res->x.p->size/2; ++i)
+		emul(e1, &res->x.p->arr[2*i+1]);
 	    break;
-       case relation:
-	    emul_rev(e1, res);
+	case relation:
+	case polynomial:
+	case periodic:
+	case flooring:
+	case fractional:
+	    for (i = type_offset(res->x.p); i < res->x.p->size; ++i)
+		emul(e1, &res->x.p->arr[i]);
 	    break;
-       default:
-	    assert(0);
-       }		   
-   }
-   else {
-       if (value_notzero_p(e1->d)&& value_notzero_p(res->d)) {
-	   /* Product of two rational numbers */
-	    value_multiply(res->d,e1->d,res->d);
-	    value_multiply(res->x.n,e1->x.n,res->x.n );
-	    reduce_constant(res);
-	    return;
-       }
-       else { 
-	     if(value_zero_p(e1->d)&& value_notzero_p(res->d)) { 
-	      /* Product of an expression (polynomial or peririodic) and a rational number */
-		     
-		emul_rev(e1, res);
-		 return ;
-	     }
-	     else {
-	       /* Product of a rationel number and an expression (polynomial or peririodic) */ 
-	         
-		   i = type_offset(res->x.p);
-		   for (; i<res->x.p->size; i++) 
-	              emul(e1, &res->x.p->arr[i]);		 
-		  
-		 return ;
-	     }
-       }
-   }
-   
-   return ;
+	}
+    }
 }
 
 /* Frees mask content ! */
