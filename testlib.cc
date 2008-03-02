@@ -28,6 +28,23 @@ void set_from_string(T& v, const char *s)
     str >> v;
 }
 
+int test_evalue_read(struct barvinok_options *options)
+{
+    unsigned nvar, nparam;
+    char **all_vars;
+    evalue *e1, *e2;
+
+    e1 = evalue_read_from_str("(1 * aa + 2 * a)",
+			    NULL, &all_vars, &nvar, &nparam, options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+    e2 = evalue_read_from_str("(3 * aa)",
+			    NULL, &all_vars, &nvar, &nparam, options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+    assert(!eequal(e1, e2));
+    evalue_free(e1);
+    evalue_free(e2);
+}
+
 int test_evalue(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
@@ -580,6 +597,7 @@ int test_hull(struct barvinok_options *options)
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
+    test_evalue_read(options);
     test_evalue(options);
     test_split_periods(options);
     test_specialization(options);

@@ -263,10 +263,12 @@ struct parameter {
     struct parameter	*next;
 };
 
-struct parameter *parameter_new(const char *name, int pos, struct parameter *next)
+struct parameter *parameter_new(const char *name, int len,
+				int pos, struct parameter *next)
 {
     struct parameter *p = ALLOC(struct parameter);
     p->name = strdup(name);
+    p->name[len] = '\0';
     p->pos = pos;
     p->next = next;
     return p;
@@ -280,13 +282,13 @@ static int parameter_pos(struct parameter **p, const char *s, int len)
     if (len == -1)
 	len = strlen(s);
     for (q = *p; q; q = q->next) {
-	if (strncmp(q->name, s, len) == 0)
+	if (strncmp(q->name, s, len) == 0 && q->name[len] == '\0')
 	    break;
     }
     if (q)
 	pos = q->pos;
     else
-	*p = parameter_new(s, pos, *p);
+	*p = parameter_new(s, len, pos, *p);
     return pos;
 }
 
