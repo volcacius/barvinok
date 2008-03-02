@@ -896,7 +896,7 @@ static evalue *evalue_read(struct stream *s, const char *var_list, char ***ppp,
 	    nv = p ? p->pos+1 : 0;
     }
 
-    if (tok->type == '(') {
+    if (tok->type == '(' || tok->type == '[') {
 	stream_push_token(s, tok);
 	e = evalue_read_term(s, &p);
 	*ppp = extract_parameters(p, nparam);
