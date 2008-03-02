@@ -66,6 +66,49 @@ int test_evalue(struct barvinok_options *options)
     free_evalue_refs(&poly2);
 }
 
+int test_substitute(struct barvinok_options *options)
+{
+    unsigned nvar, nparam;
+    char **all_vars;
+    const char *vars = "a,b";
+    evalue *e1, *e2;
+    evalue *subs[2];
+
+    e1 = evalue_read_from_str("[ { 1/3 * a } = 0 ] * \n"
+			      "	    ([ { 1/5 * b + 2/5 } = 0 ] * 5) + \n"
+			      "[ { 1/3 * a } != 0 ] * 42",
+			      vars, &all_vars, &nvar, &nparam,
+			      options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+
+    subs[0] = evalue_read_from_str("(2 * b + 5)",
+				   vars, &all_vars, &nvar, &nparam,
+				   options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+    subs[1] = evalue_read_from_str("(a + 1)",
+				   vars, &all_vars, &nvar, &nparam,
+				   options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+
+    evalue_substitute(e1, subs);
+    evalue_free(subs[0]);
+    evalue_free(subs[1]);
+    reduce_evalue(e1);
+
+    e2 = evalue_read_from_str("[ { 2/3 * b + 2/3 } = 0 ] * \n"
+			      "	    ([ { 1/5 * a + 3/5 } = 0 ] * 5) + \n"
+			      "[ { 2/3 * b + 2/3 } != 0 ] * 42",
+			      vars, &all_vars, &nvar, &nparam,
+			      options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+    reduce_evalue(e2);
+
+    assert(eequal(e1, e2));
+
+    evalue_free(e1);
+    evalue_free(e2);
+}
+
 int test_split_periods(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
@@ -599,6 +642,7 @@ int main(int argc, char **argv)
     struct barvinok_options *options = barvinok_options_new_with_defaults();
     test_evalue_read(options);
     test_evalue(options);
+    test_substitute(options);
     test_split_periods(options);
     test_specialization(options);
     test_lattice_points(options);

@@ -4159,6 +4159,38 @@ void evalue_substitute(evalue *e, evalue **subs)
     for (i = 0; i < p->size; ++i)
 	evalue_substitute(&p->arr[i], subs);
 
+    if (p->type == relation) {
+	/* For relation a ? b : c, compute (a' ? 1) * b' + (a' ? 0 : 1) * c' */
+	if (p->size == 3) {
+	    v = ALLOC(evalue);
+	    value_init(v->d);
+	    value_set_si(v->d, 0);
+	    v->x.p = new_enode(relation, 3, 0);
+	    evalue_copy(&v->x.p->arr[0], &p->arr[0]);
+	    evalue_set_si(&v->x.p->arr[1], 0, 1);
+	    evalue_set_si(&v->x.p->arr[2], 1, 1);
+	    emul(v, &p->arr[2]);
+	    evalue_free(v);
+	}
+	v = ALLOC(evalue);
+	value_init(v->d);
+	value_set_si(v->d, 0);
+	v->x.p = new_enode(relation, 2, 0);
+	value_clear(v->x.p->arr[0].d);
+	v->x.p->arr[0] = p->arr[0];
+	evalue_set_si(&v->x.p->arr[1], 1, 1);
+	emul(v, &p->arr[1]);
+	evalue_free(v);
+	if (p->size == 3) {
+	    eadd(&p->arr[2], &p->arr[1]);
+	    free_evalue_refs(&p->arr[2]);
+	}
+	value_clear(e->d);
+	*e = p->arr[1];
+	free(p);
+	return;
+    }
+
     if (p->type == polynomial)
 	v = subs[p->pos-1];
     else {
