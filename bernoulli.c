@@ -179,7 +179,7 @@ static void unshift(evalue *e, unsigned n)
 	unshift(&e->x.p->arr[i], n);
 }
 
-static evalue *shifted_copy(evalue *src)
+static evalue *shifted_copy(const evalue *src)
 {
     evalue *e = ALLOC(evalue);
     value_init(e->d);
@@ -220,7 +220,7 @@ static evalue *power_sums_base(Vector *arg, Value denom, int neg, int exact)
     return base;
 }
 
-static evalue *power_sums(struct poly_list *faulhaber, evalue *poly,
+static evalue *power_sums(struct poly_list *faulhaber, const evalue *poly,
 			  Vector *arg, Value denom, int neg, int alt_neg,
 			  int exact)
 {
@@ -274,7 +274,7 @@ struct Bernoulli_data {
     struct evalue_section *s;
     int size;
     int ns;
-    evalue *e;
+    const evalue *e;
 };
 
 static evalue *compute_poly_u(evalue *poly_u, Value *upper, Vector *row,
@@ -306,7 +306,7 @@ static evalue *compute_poly_l(evalue *poly_l, Value *lower, Vector *row,
 
 /* Compute sum of constant term.
  */
-static evalue *linear_term(evalue *cst, Value *lower, Value *upper,
+static evalue *linear_term(const evalue *cst, Value *lower, Value *upper,
 			   Vector *row, Value tmp, int exact)
 {
     evalue *linear;
@@ -364,7 +364,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     struct Bernoulli_data *data = (struct Bernoulli_data *)cb_data;
     Matrix *M2;
     Polyhedron *T;
-    evalue *factor = NULL;
+    const evalue *factor = NULL;
     evalue *linear = NULL;
     int constant = 0;
     Value tmp;
@@ -555,7 +555,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	evalue_free(linear);
     }
     if (factor != data->e)
-	evalue_free(factor);
+	evalue_free((evalue *)factor);
     value_clear(tmp);
     Vector_Free(row);
 }
