@@ -370,7 +370,10 @@ check-enumerate: barvinok_enumerate$(EXEEXT)
 			echo "        $$opt"; \
 			./barvinok_enumerate$(EXEEXT) --verify $$opt < $$i || exit; \
 		    done \
-		done \
+		done; \
+		opt="--summation=bernoulli"; \
+		echo "        $$opt"; \
+		./barvinok_enumerate$(EXEEXT) --verify $$opt < $$i || exit; \
 	    fi \
 	done
 check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
