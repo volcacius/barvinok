@@ -15,6 +15,7 @@ struct verify_options {
     int continue_on_error;
     int m;
     int M;
+    int r;
 
     /* "generated" options */
     int st;

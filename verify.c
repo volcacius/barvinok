@@ -42,6 +42,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->continue_on_error = 0;
 	options->m = INT_MAX;
 	options->M = INT_MIN;
+	options->r = -1;
 	break;
     case ARGP_KEY_FINI:
 	break;
@@ -66,6 +67,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->verify = 1;
 	break;
     case 'r':
+	options->r = atoi(arg);
 	options->M = atoi(arg);
 	options->m = -options->M;
 	options->verify = 1;
@@ -86,6 +88,11 @@ void verify_options_set_range(struct verify_options *options, int dim)
 	r = SRANGE;
     else
 	r = RANGE;
+    /* If the user didn't set m or M, then we try to adjust the window
+     * to the context in check_poly_context_scan.
+     */
+    if (options->m == INT_MAX && options->M == INT_MIN)
+	options->r = r;
     if (options->M == INT_MIN)
 	options->M = r;
     if (options->m == INT_MAX)
@@ -100,6 +107,58 @@ void verify_options_set_range(struct verify_options *options, int dim)
 struct argp verify_argp = {
     argp_options, parse_opt, 0, 0
 };
+
+static Polyhedron *project_on(Polyhedron *P, int i)
+{
+    unsigned dim = P->Dimension;
+    Matrix *T;
+    Polyhedron *I;
+
+    if (dim == 1)
+	return Polyhedron_Copy(P);
+
+    T = Matrix_Alloc(2, dim+1);
+    value_set_si(T->p[0][i], 1);
+    value_set_si(T->p[1][dim], 1);
+    I = Polyhedron_Image(P, T, P->NbConstraints);
+    Matrix_Free(T);
+    return I;
+}
+
+static void set_bounds(Polyhedron *C, Value **rows, int i, unsigned nparam,
+			const struct verify_options *options)
+{
+    Value min;
+    Value max;
+
+    value_init(min);
+    value_init(max);
+    value_set_si(min, options->m);
+    value_set_si(max, options->M);
+
+    if (options->r > 0) {
+	Polyhedron *I = project_on(C, i);
+	line_minmax(I, &min, &max);
+	if (value_cmp_si(min, options->M) >= 0)
+	    value_add_int(max, min, options->r);
+	else if (value_cmp_si(max, options->m) <= 0)
+	    value_sub_int(min, max, options->r);
+	else {
+	    value_set_si(min, options->m);
+	    value_set_si(max, options->M);
+	}
+    }
+
+    value_set_si(rows[0][0], 1);
+    value_set_si(rows[0][1+i], 1);
+    value_oppose(rows[0][1+nparam], min);
+    value_set_si(rows[1][0], 1);
+    value_set_si(rows[1][1+i], -1);
+    value_assign(rows[1][1+nparam], max);
+
+    value_clear(min);
+    value_clear(max);
+}
 
 Polyhedron *check_poly_context_scan(Polyhedron *P, Polyhedron **C,
 				    unsigned nparam,
@@ -126,14 +185,8 @@ Polyhedron *check_poly_context_scan(Polyhedron *P, Polyhedron **C,
 
     /* Intersect context with range */
     MM = Matrix_Alloc(2*nparam, nparam+2);
-    for (i = 0; i < nparam; ++i) {
-	value_set_si(MM->p[2*i][0], 1);
-	value_set_si(MM->p[2*i][1+i], 1);
-	value_set_si(MM->p[2*i][1+nparam], -options->m);
-	value_set_si(MM->p[2*i+1][0], 1);
-	value_set_si(MM->p[2*i+1][1+i], -1);
-	value_set_si(MM->p[2*i+1][1+nparam], options->M);
-    }
+    for (i = 0; i < nparam; ++i)
+	set_bounds(CC, &MM->p[2*i], i, nparam, options);
     CC2 = AddConstraints(MM->p[0], 2*nparam, CC, options->barvinok->MaxRays);
     if (CC != *C)
 	Domain_Free(CC);
