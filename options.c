@@ -28,6 +28,8 @@ void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
     }
     if (stats->gbr_solved_lps)
 	fprintf(out, "LPs solved during GBR: %d\n", stats->gbr_solved_lps);
+    if (stats->bernoulli_sums)
+	fprintf(out, "Bernoulli sums: %d\n", stats->bernoulli_sums);
 }
 
 struct barvinok_options *barvinok_options_new_with_defaults()

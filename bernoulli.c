@@ -408,6 +408,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	data->s[data->ns].E = linear;
 	data->s[data->ns].D = T;
 	++data->ns;
+	data->options->stats->bernoulli_sums++;
     } else {
 	evalue *poly_u = NULL, *poly_l = NULL;
 	Polyhedron *D;
@@ -448,6 +449,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    data->s[data->ns].E = extra;
 	    data->s[data->ns].D = D;
 	    ++data->ns;
+	    data->options->stats->bernoulli_sums++;
 	}
 
 	/* Case 2:
@@ -474,6 +476,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    data->s[data->ns].E = extra;
 	    data->s[data->ns].D = D;
 	    ++data->ns;
+	    data->options->stats->bernoulli_sums++;
 	}
 
 	/* Case 3:
@@ -498,6 +501,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    eadd(linear, data->s[data->ns].E);
 	    data->s[data->ns].D = D;
 	    ++data->ns;
+	    data->options->stats->bernoulli_sums++;
 	}
 
 	if (!exact) {
@@ -521,6 +525,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 		poly_u = NULL;
 		data->s[data->ns].D = D;
 		++data->ns;
+		data->options->stats->bernoulli_sums++;
 	    }
 
 	    /* Case 5:
@@ -543,6 +548,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 		poly_l = NULL;
 		data->s[data->ns].D = D;
 		++data->ns;
+		data->options->stats->bernoulli_sums++;
 	    }
 	}
 
