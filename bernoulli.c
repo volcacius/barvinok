@@ -359,6 +359,90 @@ static void Bernoulli_init(unsigned n, void *cb_data)
     data->s = REALLOCN(data->s, struct evalue_section, data->size);
 }
 
+static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data);
+
+/*
+ * This function requires that either the lower or the upper bound
+ * represented by the constraints "lower" and "upper" is an integer
+ * affine expression.
+ * An affine substitution is performed to make this bound exactly
+ * zero, ensuring that in the recursive call to Bernoulli_cb,
+ * only one of the "cases" will apply.
+ */
+static void transform_to_single_case(Matrix *M, Value *lower, Value *upper,
+				     struct Bernoulli_data *data)
+{
+    unsigned dim = M->NbColumns-2;
+    Vector *shadow;
+    Value a, b;
+    evalue **subs;
+    const evalue *e = data->e;
+    evalue *t;
+    int i;
+
+    value_init(a);
+    value_init(b);
+    subs = ALLOCN(evalue *, dim+1);
+    for (i = 0; i < dim; ++i)
+	subs[1+i] = evalue_var(1+i);
+    shadow = Vector_Alloc(2 * (2+dim+1));
+    if (value_one_p(lower[1])) {
+	/* Replace i by i + l' when b = 1 */
+	value_set_si(shadow->p[0], 1);
+	Vector_Oppose(lower+2, shadow->p+1, dim+1);
+	subs[0] = affine2evalue(shadow->p, shadow->p[0], dim+1);
+	/* new lower
+	 *		i >= 0
+	 * new upper
+	 *		(-a i + u') + a (-l') >= 0
+	 */
+	value_assign(shadow->p[2+dim+1+1], upper[1]);
+	value_oppose(a, upper[1]);
+	value_set_si(b, 1);
+	Vector_Combine(upper+2, lower+2, shadow->p+2+dim+1+2,
+		       b, a, dim+1);
+	upper = shadow->p+2+dim+1;
+	lower = shadow->p;
+	value_set_si(lower[1], 1);
+	Vector_Set(lower+2, 0, dim+1);
+    } else {
+	/* Replace i by i + u' when a = 1 */
+	value_set_si(shadow->p[0], 1);
+	Vector_Copy(upper+2, shadow->p+1, dim+1);
+	subs[0] = affine2evalue(shadow->p, shadow->p[0], dim+1);
+	/* new lower
+	 *		(b i - l') + b u' >= 0
+	 * new upper
+	 *		-i >= 0
+	 */
+	value_assign(shadow->p[1], lower[1]);
+	value_set_si(a, 1);
+	value_assign(b, lower[1]);
+	Vector_Combine(upper+2, lower+2, shadow->p+2,
+		       b, a, dim+1);
+	upper = shadow->p+2+dim+1;
+	lower = shadow->p;
+	value_set_si(upper[1], -1);
+	Vector_Set(upper+2, 0, dim+1);
+    }
+    value_clear(a);
+    value_clear(b);
+
+    t = evalue_dup(data->e);
+    evalue_substitute(t, subs);
+    reduce_evalue(t);
+    data->e = t;
+    for (i = 0; i < dim+1; ++i)
+	evalue_free(subs[i]);
+    free(subs);
+
+    Bernoulli_cb(M, lower, upper, data);
+
+    evalue_free(t);
+    data->e = e;
+    Vector_Free(shadow);
+}
+
 static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 {
     struct Bernoulli_data *data = (struct Bernoulli_data *)cb_data;
@@ -385,6 +469,27 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     if (emptyQ(T)) {
 	Polyhedron_Free(T);
 	return;
+    }
+
+    constant = value_notzero_p(data->e->d) ||
+		data->e->x.p->type != polynomial ||
+		data->e->x.p->pos != 1;
+    if (!constant && (value_one_p(lower[1]) || value_mone_p(upper[1]))) {
+	int single_case;
+	int lower_cst, upper_cst;
+
+	lower_cst = First_Non_Zero(lower+2, dim) == -1;
+	upper_cst = First_Non_Zero(upper+2, dim) == -1;
+	single_case =
+	    (lower_cst && value_negz_p(lower[2+dim])) ||
+	    (upper_cst && value_negz_p(upper[2+dim])) ||
+	    (lower_cst && upper_cst &&
+	     value_posz_p(lower[2+dim]) && value_posz_p(upper[2+dim]));
+	if (!single_case) {
+	    transform_to_single_case(M, lower, upper, data);
+	    Polyhedron_Free(T);
+	    return;
+	}
     }
 
     assert(lower != upper);

@@ -2070,6 +2070,15 @@ The last approach has the additional drawback that we
 would also have to deal with 5 cases, even if the bounds
 are integers.
 
+If at least one of the lower or upper bound is an
+integer affine expression, then we can reduce
+the 3 (or 5) cases to a single case (case~\ref{i:l:u})
+by an affine substitution that ensure that the
+new (lower or upper) bound is zero.
+In particular, if $l(\vec {\hat x})$ is an integer affine
+expression, then we replace $x$ by $x' + l(\vec {\hat x})$
+and similarly for an upper bound.
+
 \subsection{Exact Enumeration using Nested Sums}
 \label{s:nested:exact}
 
