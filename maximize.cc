@@ -73,6 +73,7 @@ static int check_poly_max(const struct check_poly_data *data,
 			  const struct verify_options *options);
 
 struct check_poly_max_data : public check_poly_data {
+    int			  n_S;
     Polyhedron	    	**S;
     evalue		 *EP;
     piecewise_lst	 *pl;
@@ -126,7 +127,7 @@ static void optimum(const check_poly_max_data *data, Value *opt,
 		    const struct verify_options *options)
 {
     bool found = false;
-    for (int i = 0; i < data->EP->x.p->size/2; ++i)
+    for (int i = 0; i < data->n_S; ++i)
 	if (!emptyQ2(data->S[i]))
 	    optimum(data->S[i], 0, data, opt, found, options);
     assert(found);
@@ -234,14 +235,30 @@ static int verify(Polyhedron *D, piecewise_lst *pl, evalue *EP,
     check_poly_init(D, options);
 
     if (!(CS && emptyQ2(CS))) {
-	check_poly_max_data data(p->p, EP, pl);
-	data.S = ALLOCN(Polyhedron *, EP->x.p->size/2);
+	int n_S = 0;
+
 	for (int i = 0; i < EP->x.p->size/2; ++i) {
 	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	    data.S[i] = Polyhedron_Scan(A, D, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
+	    for (; A; A = A->next)
+		++n_S;
+	}
+
+	check_poly_max_data data(p->p, EP, pl);
+	data.n_S = n_S;
+	data.S = ALLOCN(Polyhedron *, n_S);
+	n_S = 0;
+	for (int i = 0; i < EP->x.p->size/2; ++i) {
+	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	    for (; A; A = A->next) {
+		Polyhedron *next = A->next;
+		A->next = NULL;
+		data.S[n_S++] = Polyhedron_Scan(A, D,
+					MaxRays & POL_NO_DUAL ? 0 : MaxRays);
+		A->next = next;
+	    }
 	}
 	ok = check_poly(CS, &data, nparam, 0, p->p+1+nvar, options);
-	for (int i = 0; i < EP->x.p->size/2; ++i)
+	for (int i = 0; i < data.n_S; ++i)
 	    Domain_Free(data.S[i]);
 	free(data.S);
     }
