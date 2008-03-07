@@ -896,6 +896,12 @@ static void _reduce_evalue_in_domain(evalue *e, Polyhedron *D, struct subst *s)
     dim = D->Dimension;
     if (D->next)
 	D = DomainConvex(D, 0);
+    /* We don't perform any substitutions if the domain is a union.
+     * We may therefore miss out on some possible simplifications,
+     * e.g., if a variable is always even in the whole union,
+     * while there is a relation in the evalue that evaluates
+     * to zero for even values of the variable.
+     */
     if (!D->next && D->NbEq) {
 	int j, k;
 	if (s->max < dim) {
