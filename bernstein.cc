@@ -611,10 +611,12 @@ piecewise_lst *bernstein_coefficients_relation(piecewise_lst *pl_all,
 {
     if (value_zero_p(EP->d) && EP->x.p->type == relation) {
 	Polyhedron *E = relation_domain(D, &EP->x.p->arr[0], options->MaxRays);
-	pl_all = bernstein_coefficients_relation(pl_all, E, &EP->x.p->arr[1],
-						 ctx, allvars, vars, params,
-						 options);
-	Domain_Free(E);
+	if (E) {
+	    pl_all = bernstein_coefficients_relation(pl_all, E, &EP->x.p->arr[1],
+						     ctx, allvars, vars, params,
+						     options);
+	    Domain_Free(E);
+	}
 	/* In principle, we could cut off the edges of this domain too */
 	if (EP->x.p->size > 2)
 	    pl_all = bernstein_coefficients_relation(pl_all, D, &EP->x.p->arr[2],
