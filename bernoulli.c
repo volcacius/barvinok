@@ -151,40 +151,12 @@ struct poly_list *faulhaber_compute(int n)
     return bernoulli_faulhaber_compute(n, &faulhaber, 1);
 }
 
-/* shift variables in polynomial one down */
-static void shift(evalue *e)
-{
-    int i;
-    if (value_notzero_p(e->d))
-	return;
-    assert(e->x.p->type == polynomial || e->x.p->type == fractional);
-    if (e->x.p->type == polynomial) {
-	assert(e->x.p->pos > 1);
-	e->x.p->pos--;
-    }
-    for (i = 0; i < e->x.p->size; ++i)
-	shift(&e->x.p->arr[i]);
-}
-
-/* shift variables in polynomial n up */
-static void unshift(evalue *e, unsigned n)
-{
-    int i;
-    if (value_notzero_p(e->d))
-	return;
-    assert(e->x.p->type == polynomial || e->x.p->type == fractional);
-    if (e->x.p->type == polynomial)
-	e->x.p->pos += n;
-    for (i = 0; i < e->x.p->size; ++i)
-	unshift(&e->x.p->arr[i], n);
-}
-
 static evalue *shifted_copy(const evalue *src)
 {
     evalue *e = ALLOC(evalue);
     value_init(e->d);
     evalue_copy(e, src);
-    shift(e);
+    evalue_shift_variables(e, -1);
     return e;
 }
 
@@ -903,7 +875,7 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
 					 new_nparam);
 	else
 	    subs[nvar+j] = evalue_var(j);
-	unshift(subs[nvar+j], new_dim-new_nparam);
+	evalue_shift_variables(subs[nvar+j], new_dim-new_nparam);
     }
 
     E = evalue_dup(E);
