@@ -10,6 +10,7 @@
 #include "evalue_convert.h"
 #include "evalue_read.h"
 #include "verify.h"
+#include "range.h"
 
 using std::cout;
 using std::cerr;
@@ -23,12 +24,15 @@ using namespace barvinok;
 #define OPT_VARS  	    (BV_OPT_LAST+1)
 #define OPT_SPLIT  	    (BV_OPT_LAST+2)
 #define OPT_MIN  	    (BV_OPT_LAST+3)
+#define OPT_METHOD  	    (BV_OPT_LAST+4)
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
     { "variables",	    OPT_VARS,  	"list",	0,
 	"comma separated list of variables over which to maximize" },
     { "minimize",	    OPT_MIN,  	0, 0,	"minimize instead of maximize"},
+    { "optimization-method",	OPT_METHOD,	"bernstein|propagation",
+	0, "optimization method to use" },
     { 0 }
 };
 
@@ -38,6 +42,9 @@ struct options {
     char* var_list;
     int split;
     int minimize;
+#define	METHOD_BERNSTEIN	0
+#define METHOD_PROPAGATION	1
+    int method;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -52,6 +59,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->var_list = NULL;
 	options->split = 0;
 	options->minimize = 0;
+	options->method = METHOD_BERNSTEIN;
 	break;
     case OPT_VARS:
 	options->var_list = strdup(arg);
@@ -61,6 +69,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case OPT_MIN:
 	options->minimize = 1;
+	break;
+    case OPT_METHOD:
+	if (!strcmp(arg, "bernstein"))
+	    options->method = METHOD_BERNSTEIN;
+	else if (!strcmp(arg, "propagation"))
+	    options->method = METHOD_PROPAGATION;
+	else
+	    argp_error(state, "unknown value for --optimization-method option");
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -315,17 +331,26 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
-    pl = evalue_bernstein_coefficients(NULL, EP, U, params,
-				       options->verify.barvinok);
+    if (options->method == METHOD_BERNSTEIN) {
+	pl = evalue_bernstein_coefficients(NULL, EP, U, params,
+					   options->verify.barvinok);
+	if (options->minimize)
+	    pl->minimize();
+	else
+	    pl->maximize();
+    } else
+	pl = evalue_range_propagation(NULL, EP, params,
+				      options->verify.barvinok);
     assert(pl);
-    if (options->minimize)
-    	pl->minimize();
-    else
-    	pl->maximize();
     if (print_solution)
 	cout << *pl << endl;
-    if (options->verify.verify)
+    if (options->verify.verify) {
+	if (options->minimize)
+	    pl->sign = -1;
+	else
+	    pl->sign = 1;
 	result = verify(pl, EP, nvar, nparam, &options->verify);
+    }
     delete pl;
 
     Polyhedron_Free(U);

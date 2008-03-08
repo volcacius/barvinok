@@ -146,6 +146,8 @@ libbarvinok_core_la_SOURCES = \
 EXTRA_libbarvinok_la_SOURCES = \
     basis_reduction_cdd.cc \
     basis_reduction_glpk.c \
+    range.cc \
+    range.h \
     bernstein.cc \
     hilbert.c \
     polysign_cddf.cc \
@@ -169,7 +171,7 @@ libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			     $(ZSOLVE_LA) lib/libgnu.la
 libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
 if HAVE_GINAC
-    BERNSTEIN_CC = bernstein.cc
+    BERNSTEIN_CC = bernstein.cc range.cc
 endif
 libbarvinok_la_SOURCES = \
     $(BERNSTEIN_CC)
