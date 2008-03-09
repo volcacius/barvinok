@@ -862,6 +862,9 @@ static void smaller_constraint(Value *a, Value *b, Value *c, int pos, int shift,
  * If the first variable is equal to an affine combination of the
  * other variables then fn is called with both lower and upper
  * pointing to the corresponding equality.
+ *
+ * If there is no lower (or upper) bound, then NULL is passed
+ * as the corresponding bound.
  */
 void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
 				void *cb_data)
@@ -898,15 +901,14 @@ void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
 	else if (value_neg_p(P->Constraint[i][1]))
 	    pos[n--] = i;
     n = P->NbConstraints-z-p;
-    assert (p >= 1 && n >= 1);
 
-    M = Matrix_Alloc((p-1) + (n-1) + z + 1, dim-1+2);
+    M = Matrix_Alloc((p ? p-1 : 0) + (n ? n-1 : 0) + z + 1, dim-1+2);
     for (i = 0; i < z; ++i) {
 	value_assign(M->p[i][0], P->Constraint[pos[P->NbConstraints-1 - i]][0]);
 	Vector_Copy(P->Constraint[pos[P->NbConstraints-1 - i]]+2,
 		    M->p[i]+1, dim);
     }
-    for (k = 0; k < p; ++k) {
+    for (k = p ? 0 : -1; k < p; ++k) {
 	for (k2 = 0; k2 < p; ++k2) {
 	    if (k2 == k)
 		continue;
@@ -916,7 +918,9 @@ void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
 		P->Constraint[pos[k2]],
 		M->p[q], 0, 1, dim+2, k2 > k, &g);
 	}
-	for (l = p; l < p+n; ++l) {
+	for (l = n ? p : p-1; l < p+n; ++l) {
+	    Value *lower;
+	    Value *upper;
 	    for (l2 = p; l2 < p+n; ++l2) {
 		if (l2 == l)
 		    continue;
@@ -926,10 +930,13 @@ void for_each_lower_upper_bound(Polyhedron *P, for_each_lower_upper_bound_fn fn,
 		    P->Constraint[pos[l]],
 		    M->p[q], 0, 1, dim+2, l2 > l, &g);
 	    }
-	    smaller_constraint(P->Constraint[pos[k]],
-				P->Constraint[pos[l]],
-				M->p[z], 0, 1, dim+2, 0, &g);
-	    fn(M, P->Constraint[pos[k]], P->Constraint[pos[l]], cb_data);
+	    if (p && n)
+		smaller_constraint(P->Constraint[pos[k]],
+				    P->Constraint[pos[l]],
+				    M->p[z], 0, 1, dim+2, 0, &g);
+	    lower = p ? P->Constraint[pos[k]] : NULL;
+	    upper = n ? P->Constraint[pos[l]] : NULL;
+	    fn(M, lower, upper, cb_data);
 	}
     }
     Matrix_Free(M);
@@ -955,6 +962,9 @@ static void PLL_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     Matrix *M2;
     Polyhedron *T;
     evalue *L, *U;
+
+    assert(lower);
+    assert(upper);
 
     M2 = Matrix_Copy(M);
     T = Constraints2Polyhedron(M2, data->MaxRays);

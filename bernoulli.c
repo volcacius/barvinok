@@ -215,6 +215,8 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     unsigned dim = M->NbColumns-2;
     Vector *row;
 
+    assert(lower);
+    assert(upper);
     assert(data->ns < data->size);
 
     M2 = Matrix_Copy(M);
