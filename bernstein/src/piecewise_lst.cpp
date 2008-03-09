@@ -12,16 +12,21 @@ using namespace GiNaC;
 
 namespace bernstein {
 
-static void print_max(std::ostream & os, lst l)
+static void print_lst(std::ostream & os, int sign, lst l)
 {
-    for (int i = 1; i < l.nops(); ++i)
-	os << "max(";
+    for (int i = 1; i < l.nops(); ++i) {
+	if (sign > 0)
+	    os << "max(";
+	else if (sign < 0)
+	    os << "min(";
+    }
     if (l.nops() > 0)
 	l.op(0).print(print_csrc(os), 0);
     for (int i = 1; i < l.nops(); ++i) {
 	os << ",";
 	l.op(i).print(print_csrc(os), 0);
-	os << ")";
+	if (sign)
+	    os << ")";
     }
 }
 
@@ -67,13 +72,13 @@ static void printdomain(std::ostream& o, Polyhedron *D, const exvector& p)
 std::ostream & operator<< (std::ostream & os, const piecewise_lst & pl)
 {
     if (pl.list.size() == 1 && universeQ(pl.list[0].first))
-	print_max(os, pl.list[0].second);
+	print_lst(os, pl.sign, pl.list[0].second);
     else {
 	for (int i = 0; i < pl.list.size(); ++i) {
 	    os << "(";
 	    printdomain(os, pl.list[i].first, pl.vars);
 	    os << ") ? (";
-	    print_max(os, pl.list[i].second);
+	    print_lst(os, pl.sign, pl.list[i].second);
 	    os << ") : ";
 	}
 	os << "0";
@@ -227,12 +232,16 @@ numeric piecewise_lst::evaluate(const exvector& values, int n, Value *v)
 	ex ex_val = list[i].second.subs(m);
 	assert(is_a<lst>(ex_val));
 	lst val = ex_to<lst>(ex_val);;
-	ex max = val.op(0);
-	for (int j = 1; j < val.nops(); ++j)
-	    if (val.op(j) > max)
-		max = val.op(j);
-	assert(is_a<numeric>(max));
-	result = ex_to<numeric>(max);
+	ex opt = val.op(0);
+	for (int j = 1; j < val.nops(); ++j) {
+	    assert(sign);
+	    if (sign > 0 && val.op(j) > opt)
+		opt = val.op(j);
+	    if (sign < 0 && val.op(j) < opt)
+		opt = val.op(j);
+	}
+	assert(is_a<numeric>(opt));
+	result = ex_to<numeric>(opt);
 	break;
     }
     return result;
