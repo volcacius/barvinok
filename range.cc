@@ -23,6 +23,8 @@ struct range_data {
     const evalue	*poly;
     int 		*signs;
     int			 sign;
+    int			 test_monotonicity;
+    int			 monotonicity;
     piecewise_lst	*pl;
     piecewise_lst	*pl_all;
     exvector	 	 params;
@@ -127,6 +129,13 @@ static void range_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 
     if (evalue_is_constant(data->poly)) {
 	pos = evalue_dup(data->poly);
+    } else if (data->monotonicity) {
+	pos = evalue_dup(data->poly);
+	if (data->monotonicity * data->sign > 0)
+	    subs[0] = u;
+	else
+	    subs[0] = l;
+	evalue_substitute(pos, subs);
     } else {
 	pos = evalue_dup(data->poly);
 	neg = evalue_dup(data->poly);
@@ -160,12 +169,93 @@ static void range_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     evalue_free(pos);
 }
 
+static int has_sign(Polyhedron *D, evalue *poly, int sign,
+		    int *signs, struct barvinok_options *options)
+{
+    struct range_data data_m;
+    int i;
+    lst l;
+
+    data_m.options = options;
+    data_m.nparam = 0;
+    data_m.test_monotonicity = 0;
+    data_m.signs = signs;
+
+    data_m.pl_all = NULL;
+    data_m.sign = -sign;
+    propagate_on_domain(D, poly, &data_m);
+
+    assert(data_m.pl_all->list.size() == 1);
+    assert(universeQ(data_m.pl_all->list[0].first));
+    l = data_m.pl_all->list[0].second;
+
+    for (i = 0; i < l.nops(); ++i) {
+	if (is_exactly_a<fail>(l.op(i)))
+	    break;
+	if (sign * l.op(i) < 0)
+	    break;
+    }
+    delete data_m.pl_all;
+
+    return i == l.nops();
+}
+
+/* Returns 1 if poly is monotonically increasing,
+ *        -1 if poly is monotonically decreasing,
+ *	   0 if no conclusion.
+ */
+static int monotonicity(Polyhedron *D, const evalue *poly,
+			struct range_data *data)
+{
+    evalue **subs;
+    evalue *diff;
+    Value one;
+    int result = 0;
+
+    value_init(one);
+    value_set_si(one, 1);
+
+    subs = ALLOCN(evalue *, D->Dimension);
+    for (int i = 0; i < D->Dimension; ++i)
+	subs[i] = evalue_var(i);
+
+    evalue_add_constant(subs[0], one);
+
+    diff = evalue_dup(poly);
+    evalue_substitute(diff, subs);
+
+    for (int i = 0; i < D->Dimension; ++i)
+	evalue_free(subs[i]);
+    free(subs);
+
+    evalue_negate(diff);
+    eadd(poly, diff);
+    reduce_evalue(diff);
+    evalue_negate(diff);
+
+    value_clear(one);
+
+    if (has_sign(D, diff, 1, data->signs, data->options))
+	result = 1;
+    else if (has_sign(D, diff, -1, data->signs, data->options))
+	result = -1;
+
+    evalue_free(diff);
+    return result;
+}
+
 static void propagate_on_domain(Polyhedron *D, const evalue *poly,
 				struct range_data *data)
 {
     const evalue *save_poly = data->poly;
+    int save_monotonicity = data->monotonicity;
 
     assert(D->Dimension > data->nparam);
+
+    if (data->test_monotonicity)
+	data->monotonicity = monotonicity(D, poly, data);
+    else
+	data->monotonicity = 0;
 
     if (D->Dimension == data->nparam+1)
 	data->pl = new piecewise_lst(data->params);
@@ -184,6 +274,7 @@ static void propagate_on_domain(Polyhedron *D, const evalue *poly,
     }
 
     data->poly = save_poly;
+    data->monotonicity = save_monotonicity;
 }
 
 /*
@@ -235,6 +326,7 @@ piecewise_lst *evalue_range_propagation(piecewise_lst *pl_all, const evalue *e,
 	data.sign = -1;
     else
 	data.sign = 1;
+    data.test_monotonicity = 1;
 
     e2 = evalue_dup(e);
     evalue_split_domains_into_orthants(e2, options->MaxRays);
