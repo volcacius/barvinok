@@ -50,6 +50,15 @@ evalue* evalue_zero()
     return EP;
 }
 
+evalue *evalue_nan()
+{
+    evalue *EP = ALLOC(evalue);
+    value_init(EP->d);
+    value_set_si(EP->d, -2);
+    EP->x.p = NULL;
+    return EP;
+}
+
 /* returns an evalue that corresponds to
  *
  * x_var
@@ -986,6 +995,11 @@ void reduce_evalue (evalue *e) {
 
 static void print_evalue_r(FILE *DST, const evalue *e, const char *const *pname)
 {
+    if (EVALUE_IS_NAN(*e)) {
+	fprintf(DST, "NaN");
+	return;
+    }
+
   if(value_notzero_p(e->d)) {    
     if(value_notone_p(e->d)) {
       value_print(DST,VALUE_FMT,e->x.n);
@@ -1383,6 +1397,18 @@ static void eadd_periodics(const evalue *e1, evalue *res)
     value_clear(ep);
 }
 
+void evalue_assign(evalue *dst, const evalue *src)
+{
+    if (value_pos_p(dst->d) && value_pos_p(src->d)) {
+	value_assign(dst->d, src->d);
+	value_assign(dst->x.n, src->x.n);
+	return;
+    }
+    free_evalue_refs(dst);
+    value_init(dst->d);
+    evalue_copy(dst, src);
+}
+
 void eadd(const evalue *e1, evalue *res)
 {
     int cmp;
@@ -1390,15 +1416,16 @@ void eadd(const evalue *e1, evalue *res)
     if (EVALUE_IS_ZERO(*e1))
 	return;
 
+    if (EVALUE_IS_NAN(*res))
+	return;
+
+    if (EVALUE_IS_NAN(*e1)) {
+	evalue_assign(res, e1);
+	return;
+    }
+
     if (EVALUE_IS_ZERO(*res)) {
-	if (value_notzero_p(e1->d)) {
-	    value_assign(res->d, e1->d);
-	    value_assign(res->x.n, e1->x.n);
-	} else {
-	    value_clear(res->x.n);
-	    value_set_si(res->d, 0);
-	    res->x.p = ecopy(e1->x.p);
-	}
+	evalue_assign(res, e1);
 	return;
     }
 
@@ -1714,14 +1741,15 @@ void emul(const evalue *e1, evalue *res)
 	return;
 
     if (EVALUE_IS_ZERO(*e1)) {
-	if (value_notzero_p(res->d)) {
-	    value_assign(res->d, e1->d);
-	    value_assign(res->x.n, e1->x.n);
-	} else {
-	    free_evalue_refs(res);
-	    value_init(res->d);
-	    evalue_set_si(res, 0, 1);
-	}
+	evalue_assign(res, e1);
+	return;
+    }
+
+    if (EVALUE_IS_NAN(*res))
+	return;
+
+    if (EVALUE_IS_NAN(*e1)) {
+	evalue_assign(res, e1);
 	return;
     }
 
@@ -1876,7 +1904,11 @@ void emask(evalue *mask, evalue *res) {
 void evalue_copy(evalue *dst, const evalue *src)
 {
     value_assign(dst->d, src->d);
-    if(value_notzero_p(src->d)) {
+    if (EVALUE_IS_NAN(*dst)) {
+	dst->x.p = NULL;
+	return;
+    }
+    if (value_pos_p(src->d)) {
 	 value_init(dst->x.n);
 	 value_assign(dst->x.n, src->x.n);
     } else
@@ -2013,6 +2045,11 @@ void free_evalue_refs(evalue *e) {
   enode *p;
   int i;
   
+    if (EVALUE_IS_NAN(*e)) {
+	value_clear(e->d);
+	return;
+    }
+
   if (EVALUE_IS_DOMAIN(*e)) {
     Domain_Free(EVALUE_DOMAIN(*e));
     value_clear(e->d);

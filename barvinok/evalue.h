@@ -54,6 +54,8 @@ typedef struct _evalue {
 #define EVALUE_IS_ZERO(ev)	(value_pos_p((ev).d) && value_zero_p((ev).x.n))
 #define EVALUE_IS_ONE(ev)	(value_one_p((ev).d) && value_one_p((ev).x.n))
 
+#define EVALUE_IS_NAN(ev)	(value_cmp_si((ev).d, -2) == 0)
+
 typedef struct _enode {
   enode_type type;      /* polynomial or periodic or evector */
   int size;             /* number of attached pointers */
@@ -76,6 +78,7 @@ void evalue_set(evalue *ev, Value n, Value d);
 void evalue_copy(evalue *dst, const evalue *src);
 evalue *evalue_dup(const evalue *e);
 evalue *evalue_zero();
+evalue *evalue_nan();
 evalue *evalue_var(int var);
 void evalue_free(evalue *e);
 enode *new_enode(enode_type type,int size,int pos);

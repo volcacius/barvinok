@@ -20,8 +20,10 @@ namespace barvinok {
 
 ex evalue2ex(evalue *e, const exvector& vars)
 {
-    if (value_notzero_p(e->d))
+    if (value_pos_p(e->d))
 	return value2numeric(e->x.n)/value2numeric(e->d);
+    if (EVALUE_IS_NAN(*e))
+	return fail();
     if (e->x.p->type != polynomial)
 	return fail();
     ex poly = 0;
