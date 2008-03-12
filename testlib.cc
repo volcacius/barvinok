@@ -15,6 +15,7 @@
 #include "hull.h"
 #include "ilp.h"
 #include "matrix_read.h"
+#include "remove_equalities.h"
 #include "config.h"
 
 using std::cout;
@@ -26,6 +27,37 @@ void set_from_string(T& v, const char *s)
 {
     std::istringstream str(s);
     str >> v;
+}
+
+static Matrix *matrix_read_from_str(const char *s)
+{
+    std::istringstream str(s);
+    return Matrix_Read(str);
+}
+
+static int test_equalities(struct barvinok_options *options)
+{
+    Matrix *M = matrix_read_from_str(
+	"11 11\n"
+	"   0   23    0    0  -10    0    0    0    7  -44   -8 \n"
+	"   0    0   23    0    5    0    0    0  -15  114   27 \n"
+	"   0    0    0    1    0    0    0    0    0   -1    2 \n"
+	"   0    0    0    0    0    1    0    0   -1    8    0 \n"
+	"   0    0    0    0    0    0    1    0    0   -1    2 \n"
+	"   0    0    0    0    0    0    0    1    0   -1   -1 \n"
+	"   1    0    0    0   10    0    0    0   -7   44    8 \n"
+	"   1    0    0    0   -5    0    0    0   15 -114  -27 \n"
+	"   1    0    0    0    1    0    0    0    0    0    0 \n"
+	"   1    0    0    0    0    0    0    0    1   -8    0 \n"
+	"   1    0    0    0    0    0    0    0    0    1   -2 \n");
+    Polyhedron *P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    Polyhedron *Q = P;
+    remove_all_equalities(&P, NULL, NULL, NULL, 2, options->MaxRays);
+    assert(P->NbEq == 0);
+    if (P != Q)
+	Polyhedron_Free(Q);
+    Polyhedron_Free(P);
 }
 
 int test_evalue_read(struct barvinok_options *options)
@@ -284,12 +316,6 @@ static int test_icounter(struct barvinok_options *options)
     cnt.reduce(n_coeff, n_power, d_power);
     assert(value_cmp_si(mpq_numref(cnt.count), -1) == 0);
     assert(value_cmp_si(mpq_denref(cnt.count), 1) == 0);
-}
-
-static Matrix *matrix_read_from_str(const char *s)
-{
-    std::istringstream str(s);
-    return Matrix_Read(str);
 }
 
 static int test_infinite_counter(struct barvinok_options *options)
@@ -694,6 +720,7 @@ int test_hull(struct barvinok_options *options)
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
+    test_equalities(options);
     test_evalue_read(options);
     test_eadd(options);
     test_evalue(options);

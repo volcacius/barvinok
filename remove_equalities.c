@@ -92,6 +92,22 @@ static void remove_parameter_equalities(Polyhedron **Q, Polyhedron **D,
     }
 }
 
+static int is_translation(Matrix *M)
+{
+    unsigned i, j;
+
+    if (M->NbRows != M->NbColumns)
+	return 0;
+
+    for (i = 0; i < M->NbRows; ++i)
+	for (j = 0; j < M->NbColumns-1; ++j)
+	    if (i == j ? value_notone_p(M->p[i][j])
+		       : value_notzero_p(M->p[i][j]))
+		return 0;
+
+    return 1;
+}
+
 /* Remove all equalities in P and the context C (if not NULL).
  * Does not destroy P (or C).
  * Returns transformation on the parameters in the Matrix pointed to by CPP
@@ -131,28 +147,32 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
     /* compress_parms doesn't like equalities that only involve parameters */
     remove_parameter_equalities(&Q, &D, &CP, &nparam, Q != *P, MaxRays);
 
-    if (!emptyQ2(Q) && Q->NbEq) {
-	Matrix *T;
-	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
-	T = compress_parms(&M, nparam);
-	if (!T) {
-	    Q = replace_by_empty_polyhedron(Q, Q != *P);
-	} else if (isIdentity(T)) {
-	    Matrix_Free(T);
-	} else {
-	    transform(&Q, &D, T, Q != *P, MaxRays);
-	    CP = compose_transformations(CP, T);
-	    nparam = CP->NbColumns-1;
-	    remove_parameter_equalities(&Q, &D, &CP, &nparam, Q != *P, MaxRays);
-	}
-    }
-
     /* We need to loop until we can't find any more equalities
      * because the transformation may enable a simplification of the
      * constraints resulting in new implicit equalities.
      */
     while (!emptyQ2(Q) && Q->NbEq) {
 	Matrix *T;
+
+	do {
+	    Polyhedron_Matrix_View(Q, &M, Q->NbEq);
+	    T = compress_parms(&M, nparam);
+	    if (!T) {
+		Q = replace_by_empty_polyhedron(Q, Q != *P);
+	    } else if (is_translation(T)) {
+		Matrix_Free(T);
+		T = NULL;
+	    } else {
+		transform(&Q, &D, T, Q != *P, MaxRays);
+		CP = compose_transformations(CP, T);
+		nparam = CP->NbColumns-1;
+		remove_parameter_equalities(&Q, &D, &CP, &nparam, Q != *P, MaxRays);
+	    }
+	} while (!emptyQ(Q) && Q->NbEq && T);
+
+	if (emptyQ(Q) || !Q->NbEq)
+	    break;
+
 	Polyhedron_Matrix_View(Q, &M, Q->NbEq);
 	T = compress_variables(&M, nparam);
 	if (!T) {
