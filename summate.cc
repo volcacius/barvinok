@@ -53,15 +53,12 @@ static int check_poly_sum(const struct check_poly_data *data,
 			  int nparam, Value *z,
 			  const struct verify_options *options);
 
-struct check_poly_sum_data : public check_poly_data {
-    Polyhedron	    	**S;
-    evalue		 *EP;
+struct check_poly_sum_data : public check_EP_data {
     evalue		 *sum;
 
-    check_poly_sum_data(Value *z, evalue *EP, evalue *sum) :
-	    		EP(EP), sum(sum) {
-	this->z = z;
-	this->check = check_poly_sum;
+    check_poly_sum_data(const evalue *EP, evalue *sum) : sum(sum) {
+	this->EP = EP;
+	this->cp.check = check_poly_sum;
     }
 };
 
@@ -69,7 +66,7 @@ static void sum(Polyhedron *S, int pos, const check_poly_sum_data *data,
 		evalue *s, const struct verify_options *options)
 {
     if (!S) {
-	evalue *e = evalue_eval(data->EP, data->z+1);
+	evalue *e = evalue_eval(data->EP, data->cp.z+1);
 	eadd(e, s);
 	evalue_free(e);
     } else {
@@ -77,13 +74,13 @@ static void sum(Polyhedron *S, int pos, const check_poly_sum_data *data,
 	int ok;
 	value_init(LB);
 	value_init(UB);
-	ok = !(lower_upper_bounds(1+pos, S, data->z, &LB, &UB));
+	ok = !(lower_upper_bounds(1+pos, S, data->cp.z, &LB, &UB));
 	assert(ok);
 	for (; value_le(LB, UB); value_increment(LB, LB)) {
-	    value_assign(data->z[1+pos], LB);
+	    value_assign(data->cp.z[1+pos], LB);
 	    sum(S->next, pos+1, data, s, options);
 	}
-	value_set_si(data->z[1+pos], 0);
+	value_set_si(data->cp.z[1+pos], 0);
 	value_clear(LB);
 	value_clear(UB);
     }
@@ -93,7 +90,7 @@ static evalue *sum(const check_poly_sum_data *data,
 			  const struct verify_options *options)
 {
     evalue *s = evalue_zero();
-    for (int i = 0; i < data->EP->x.p->size/2; ++i)
+    for (int i = 0; i < data->n_S; ++i)
 	if (!emptyQ2(data->S[i]))
 	    sum(data->S[i], 0, data, s, options);
     return s;
@@ -104,7 +101,7 @@ static int check_poly_sum(const struct check_poly_data *data,
 			  const struct verify_options *options)
 {
     const check_poly_sum_data *sum_data;
-    sum_data = static_cast<const check_poly_sum_data *>(data);
+    sum_data = (const check_poly_sum_data *)data;
     evalue *e, *s;
     int k;
     int ok;
@@ -123,95 +120,11 @@ static int check_poly_sum(const struct check_poly_data *data,
     return ok;
 }
 
-static int verify(Polyhedron *P, evalue *sum, evalue *EP,
-		  unsigned nvar, unsigned nparam, Vector *p,
-		  struct verify_options *options)
-{
-    Polyhedron *CS;
-    unsigned MaxRays = options->barvinok->MaxRays;
-    int error = 0;
-
-    CS = check_poly_context_scan(NULL, &P, P->Dimension, options);
-
-    check_poly_init(P, options);
-
-    if (!(CS && emptyQ2(CS))) {
-	check_poly_sum_data data(p->p, EP, sum);
-	data.S = ALLOCN(Polyhedron *, EP->x.p->size/2);
-	for (int i = 0; i < EP->x.p->size/2; ++i) {
-	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	    data.S[i] = Polyhedron_Scan(A, P, MaxRays & POL_NO_DUAL ? 0 : MaxRays);
-	}
-	error = !check_poly(CS, &data, nparam, 0, p->p+1+nvar, options);
-	for (int i = 0; i < EP->x.p->size/2; ++i)
-	    Domain_Free(data.S[i]);
-	free(data.S);
-    }
-
-    if (!options->print_all)
-	printf("\n");
-
-    if (CS) {
-	Domain_Free(CS);
-	Domain_Free(P);
-    }
-
-    return error;
-}
-
-/*
- * Project on final dim dimensions
- */
-Polyhedron *DomainProject(Polyhedron *D, unsigned dim, unsigned MaxRays)
-{
-    Polyhedron *P;
-    Polyhedron *R;
-
-    R = Polyhedron_Project(D, dim);
-    for (P = D->next; P; P = P->next) {
-	Polyhedron *R2 = Polyhedron_Project(P, dim);
-	Polyhedron *R3 = DomainUnion(R, R2, MaxRays);
-	Polyhedron_Free(R2);
-	Domain_Free(R);
-	R = R3;
-    }
-    return R;
-}
-
 static int verify(evalue *EP, evalue *sum, unsigned nvar, unsigned nparam,
 		  struct verify_options *options)
 {
-    Vector *p;
-
-    p = Vector_Alloc(nvar+nparam+2);
-    value_set_si(p->p[nvar+nparam+1], 1);
-
-    assert(value_zero_p(EP->d));
-    assert(EP->x.p->type == partition);
-
-    Polyhedron *EP_D = EVALUE_DOMAIN(EP->x.p->arr[0]);
-    Polyhedron *D = Polyhedron_Project(EP_D, nparam);
-
-    for (int i = 1; i < EP->x.p->size/2; ++i) {
-	Polyhedron *D2 = D;
-	EP_D = DomainProject(EVALUE_DOMAIN(EP->x.p->arr[2*i]), nparam,
-			     options->barvinok->MaxRays);
-	D = DomainUnion(EP_D, D, options->barvinok->MaxRays);
-	Domain_Free(D2);
-    }
-
-    int error = 0;
-
-    for (Polyhedron *P = D; P; P = P->next) {
-	error = verify(P, sum, EP, nvar, nparam, p, options);
-	if (error && !options->continue_on_error)
-	    break;
-    }
-
-    Domain_Free(D);
-    Vector_Free(p);
-
-    return error;
+    check_poly_sum_data data(EP, sum);
+    return !check_EP(&data, nvar, nparam, options);
 }
 
 int main(int argc, char **argv)

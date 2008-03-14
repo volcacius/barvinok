@@ -88,16 +88,12 @@ static int check_poly_max(const struct check_poly_data *data,
 			  int nparam, Value *z,
 			  const struct verify_options *options);
 
-struct check_poly_max_data : public check_poly_data {
-    int			  n_S;
-    Polyhedron	    	**S;
-    evalue		 *EP;
+struct check_poly_max_data : public check_EP_data {
     piecewise_lst	 *pl;
 
-    check_poly_max_data(Value *z, evalue *EP, piecewise_lst *pl) :
-	    		EP(EP), pl(pl) {
-	this->z = z;
-	this->check = check_poly_max;
+    check_poly_max_data(evalue *EP, piecewise_lst *pl) : pl(pl) {
+	this->EP = EP;
+	this->cp.check = check_poly_max;
     }
 };
 
@@ -108,7 +104,7 @@ static void optimum(Polyhedron *S, int pos, const check_poly_max_data *data,
     if (!S) {
 	Value c;
 	value_init(c);
-	value_set_double(c, compute_evalue(data->EP, data->z+1)+.25);
+	value_set_double(c, compute_evalue(data->EP, data->cp.z+1)+.25);
 	if (!found) {
 	    value_assign(*opt, c);
 	    found = true;
@@ -127,13 +123,13 @@ static void optimum(Polyhedron *S, int pos, const check_poly_max_data *data,
 	int ok;
 	value_init(LB);
 	value_init(UB);
-	ok = !(lower_upper_bounds(1+pos, S, data->z, &LB, &UB));
+	ok = !(lower_upper_bounds(1+pos, S, data->cp.z, &LB, &UB));
 	assert(ok);
 	for (; value_le(LB, UB); value_increment(LB, LB)) {
-	    value_assign(data->z[1+pos], LB);
+	    value_assign(data->cp.z[1+pos], LB);
 	    optimum(S->next, pos+1, data, opt, found, options);
 	}
-	value_set_si(data->z[1+pos], 0);
+	value_set_si(data->cp.z[1+pos], 0);
 	value_clear(LB);
 	value_clear(UB);
     }
@@ -156,7 +152,7 @@ static int check_poly_max(const struct check_poly_data *data,
     int k;
     int ok;
     const check_poly_max_data *max_data;
-    max_data = static_cast<const check_poly_max_data *>(data);
+    max_data = (const check_poly_max_data *)data;
     const char *minmax;
     Value m, n, d;
     value_init(m);
@@ -236,77 +232,11 @@ static int check_poly_max(const struct check_poly_data *data,
     return ok;
 }
 
-static int verify(Polyhedron *D, piecewise_lst *pl, evalue *EP,
-		  unsigned nvar, unsigned nparam, Vector *p,
-		  struct verify_options *options)
-{
-    Polyhedron *CS, *S;
-    unsigned MaxRays = options->barvinok->MaxRays;
-    assert(value_zero_p(EP->d));
-    assert(EP->x.p->type == partition);
-    int ok = 1;
-
-    CS = check_poly_context_scan(NULL, &D, D->Dimension, options);
-
-    check_poly_init(D, options);
-
-    if (!(CS && emptyQ2(CS))) {
-	int n_S = 0;
-
-	for (int i = 0; i < EP->x.p->size/2; ++i) {
-	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	    for (; A; A = A->next)
-		++n_S;
-	}
-
-	check_poly_max_data data(p->p, EP, pl);
-	data.n_S = n_S;
-	data.S = ALLOCN(Polyhedron *, n_S);
-	n_S = 0;
-	for (int i = 0; i < EP->x.p->size/2; ++i) {
-	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	    for (; A; A = A->next) {
-		Polyhedron *next = A->next;
-		A->next = NULL;
-		data.S[n_S++] = Polyhedron_Scan(A, D,
-					MaxRays & POL_NO_DUAL ? 0 : MaxRays);
-		A->next = next;
-	    }
-	}
-	ok = check_poly(CS, &data, nparam, 0, p->p+1+nvar, options);
-	for (int i = 0; i < data.n_S; ++i)
-	    Domain_Free(data.S[i]);
-	free(data.S);
-    }
-
-    if (!options->print_all)
-	printf("\n");
-
-    if (CS) {
-	Domain_Free(CS);
-	Domain_Free(D);
-    }
-
-    return ok;
-}
-
 static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar, unsigned nparam,
 		  struct verify_options *options)
 {
-    Vector *p;
-
-    p = Vector_Alloc(nvar+nparam+2);
-    value_set_si(p->p[nvar+nparam+1], 1);
-
-    for (int i = 0; i < pl->list.size(); ++i) {
-	int ok = verify(pl->list[i].first, pl, EP, nvar, nparam, p, options);
-	if (!ok && !options->continue_on_error)
-	    break;
-    }
-
-    Vector_Free(p);
-
-    return 0;
+    check_poly_max_data data(EP, pl);
+    return !check_EP(&data, nvar, nparam, options);
 }
 
 static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,

@@ -4,6 +4,8 @@
 #include <barvinok/util.h>
 #include "verify.h"
 
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+
 /* RANGE : normal range for evalutations (-RANGE -> RANGE) */
 #define RANGE 50
 
@@ -314,3 +316,131 @@ int check_poly(Polyhedron *CS, const struct check_poly_data *data,
     }
     return 1;
 } /* check_poly */
+
+static int check_EP_on_poly(Polyhedron *P,
+			    struct check_EP_data *data,
+			    unsigned nvar, unsigned nparam,
+			    struct verify_options *options)
+{
+    Polyhedron *CS;
+    unsigned MaxRays = options->barvinok->MaxRays;
+    int ok = 1;
+    const evalue *EP = data->EP;
+
+    CS = check_poly_context_scan(NULL, &P, P->Dimension, options);
+
+    check_poly_init(P, options);
+
+    if (!(CS && emptyQ2(CS))) {
+	int i;
+	int n_S = 0;
+
+	for (i = 0; i < EP->x.p->size/2; ++i) {
+	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	    for (; A; A = A->next)
+		++n_S;
+	}
+
+	data->n_S = n_S;
+	data->S = ALLOCN(Polyhedron *, n_S);
+	n_S = 0;
+	for (i = 0; i < EP->x.p->size/2; ++i) {
+	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	    for (; A; A = A->next) {
+		Polyhedron *next = A->next;
+		A->next = NULL;
+		data->S[n_S++] = Polyhedron_Scan(A, P,
+					MaxRays & POL_NO_DUAL ? 0 : MaxRays);
+		A->next = next;
+	    }
+	}
+	ok = check_poly(CS, &data->cp, nparam, 0, data->cp.z+1+nvar, options);
+	for (i = 0; i < data->n_S; ++i)
+	    Domain_Free(data->S[i]);
+	free(data->S);
+    }
+
+    if (!options->print_all)
+	printf("\n");
+
+    if (CS) {
+	Domain_Free(CS);
+	Domain_Free(P);
+    }
+
+    return ok;
+}
+
+/*
+ * Project on final dim dimensions
+ */
+Polyhedron *DomainProject(Polyhedron *D, unsigned dim, unsigned MaxRays)
+{
+    Polyhedron *P;
+    Polyhedron *R;
+
+    R = Polyhedron_Project(D, dim);
+    for (P = D->next; P; P = P->next) {
+	Polyhedron *R2 = Polyhedron_Project(P, dim);
+	Polyhedron *R3 = DomainUnion(R, R2, MaxRays);
+	Polyhedron_Free(R2);
+	Domain_Free(R);
+	R = R3;
+    }
+    return R;
+}
+
+static Polyhedron *evalue_parameter_domain(const evalue *e, unsigned nparam,
+					     unsigned MaxRays)
+{
+    int i;
+    Polyhedron *U = NULL;
+
+    if (EVALUE_IS_ZERO(*e))
+	return Universe_Polyhedron(0);
+
+    assert(value_zero_p(e->d));
+    assert(e->x.p->type == partition);
+    assert(e->x.p->size >= 2);
+
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	Polyhedron *P = DomainProject(D, nparam, MaxRays);
+	if (!U) {
+	    U = P;
+	} else {
+	    Polyhedron *T = U;
+	    U = DomainUnion(U, P, MaxRays);
+	    Domain_Free(P);
+	    Domain_Free(T);
+	}
+    }
+    return U;
+}
+
+int check_EP(struct check_EP_data *data, unsigned nvar, unsigned nparam,
+	     struct verify_options *options)
+{
+    Vector *p;
+    int i;
+    int ok = 1;
+    Polyhedron *D, *P;
+
+    p = Vector_Alloc(nvar+nparam+2);
+    value_set_si(p->p[nvar+nparam+1], 1);
+
+    data->cp.z = p->p;
+
+    D = evalue_parameter_domain(data->EP, nparam, options->barvinok->MaxRays);
+
+    for (P = D; P; P = P->next) {
+	ok = check_EP_on_poly(P, data, nvar, nparam, options);
+	if (!ok && !options->continue_on_error)
+	    break;
+    }
+
+    Domain_Free(D);
+    Vector_Free(p);
+
+    return ok;
+}

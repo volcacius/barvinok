@@ -50,6 +50,17 @@ int check_poly(Polyhedron *CS, const struct check_poly_data *data,
 	       int nparam, int pos, Value *z,
 	       const struct verify_options *options);
 
+struct check_EP_data {
+    struct check_poly_data	  cp;
+    int			  	  n_S;
+    Polyhedron	    		**S;
+
+    const evalue		 *EP;
+};
+
+int check_EP(struct check_EP_data *data, unsigned nvar, unsigned nparam,
+	     struct verify_options *options);
+
 #if defined(__cplusplus)
 }
 #endif
