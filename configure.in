@@ -316,7 +316,7 @@ if test "$with_bernstein" != "no"; then
 		have_ginac=true
 		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
 		EXTRA_PACKAGE_LIBS="-lbernstein $EXTRA_PACKAGE_LIBS"
-		bv_barvinok_maximize="barvinok_maximize\$(EXEEXT)"
+		bv_barvinok_maximize="barvinok_maximize\$(EXEEXT) test_bound\$(EXEEXT)"
 	])
 fi
 AM_CONDITIONAL(HAVE_GINAC, test x$have_ginac = xtrue)
