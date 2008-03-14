@@ -97,54 +97,6 @@ struct check_poly_max_data : public check_EP_data {
     }
 };
 
-static void optimum(Polyhedron *S, int pos, const check_poly_max_data *data,
-		    Value *opt, bool& found,
-		    const struct verify_options *options)
-{
-    if (!S) {
-	Value c;
-	value_init(c);
-	value_set_double(c, compute_evalue(data->EP, data->cp.z+1)+.25);
-	if (!found) {
-	    value_assign(*opt, c);
-	    found = true;
-	} else {
-	    if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX) {
-		if (value_gt(c, *opt))
-		    value_assign(*opt, c);
-	    } else {
-		if (value_lt(c, *opt))
-		    value_assign(*opt, c);
-	    }
-	}
-	value_clear(c);
-    } else {
-	Value LB, UB;
-	int ok;
-	value_init(LB);
-	value_init(UB);
-	ok = !(lower_upper_bounds(1+pos, S, data->cp.z, &LB, &UB));
-	assert(ok);
-	for (; value_le(LB, UB); value_increment(LB, LB)) {
-	    value_assign(data->cp.z[1+pos], LB);
-	    optimum(S->next, pos+1, data, opt, found, options);
-	}
-	value_set_si(data->cp.z[1+pos], 0);
-	value_clear(LB);
-	value_clear(UB);
-    }
-}
-
-static void optimum(const check_poly_max_data *data, Value *opt,
-		    const struct verify_options *options)
-{
-    bool found = false;
-    for (int i = 0; i < data->n_S; ++i)
-	if (!emptyQ2(data->S[i]))
-	    optimum(data->S[i], 0, data, opt, found, options);
-    assert(found);
-}
-
 static int check_poly_max(const struct check_poly_data *data,
 			  int nparam, Value *z,
 			  const struct verify_options *options)
@@ -158,14 +110,18 @@ static int check_poly_max(const struct check_poly_data *data,
     value_init(m);
     value_init(n);
     value_init(d);
+    int sign;
 
-    if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX)
+    if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX) {
 	minmax = "max";
-    else
+	sign = 1;
+    } else {
 	minmax = "min";
+	sign = -1;
+    }
 
     max_data->pl->evaluate(nparam, z, &n, &d);
-    if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX)
+    if (sign > 0)
 	mpz_fdiv_q(m, n, d);
     else
 	mpz_cdiv_q(m, n, d);
@@ -188,9 +144,9 @@ static int check_poly_max(const struct check_poly_data *data,
 	printf(")");
     }
 
-    optimum(max_data, &n, options);
+    evalue_optimum(max_data, &n, sign);
 
-    if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX)
+    if (sign > 0)
 	ok = value_ge(m, n);
     else
 	ok = value_le(m, n);
@@ -212,7 +168,7 @@ static int check_poly_max(const struct check_poly_data *data,
 	    value_print(stderr, VALUE_FMT, z[k]);
 	}
 	fprintf(stderr, ") should be ");
-	if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX)
+	if (sign > 0)
 	    fprintf(stderr, "greater");
 	else
 	    fprintf(stderr, "smaller");

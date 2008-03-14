@@ -60,6 +60,7 @@ struct check_EP_data {
 
 int check_EP(struct check_EP_data *data, unsigned nvar, unsigned nparam,
 	     struct verify_options *options);
+void evalue_optimum(const struct check_EP_data *data, Value *opt, int sign);
 
 #if defined(__cplusplus)
 }
