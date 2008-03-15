@@ -3577,6 +3577,7 @@ evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
     }
 
     evalue_split_domains_into_orthants(e, MaxRays);
+    reduce_evalue(e);
     evalue_frac2floor2(e, 0);
     evalue_set_si(res, 0, 1);
 
@@ -3901,7 +3902,6 @@ void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays)
 	free_evalue_refs(&split);
 	Matrix_Free(C);
     }
-    reduce_evalue(e);
 }
 
 static evalue *find_fractional_with_max_periods(evalue *e, Polyhedron *D,
