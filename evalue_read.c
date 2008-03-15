@@ -522,6 +522,7 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 	} else
 	    token_free(tok);
     } else if (tok->type == TOKEN_VALUE) {
+	int line = tok->line;
 	e = ALLOC(evalue);
 	value_init(e->d);
 	value_set_si(e->d, 1);
@@ -540,7 +541,7 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 	    }
 	    value_assign(e->d, tok->u.v);
 	    token_free(tok);
-	} else if (tok && tok->type == TOKEN_IDENT) {
+	} else if (tok && tok->type == TOKEN_IDENT && tok->line == line) {
 	    stream_push_token(s, tok);
 	    e = read_factor_and_multiply(s, p, e);
 	} else if (tok)
@@ -695,10 +696,15 @@ static int evalue_read_constraint(struct stream *s, struct parameter **p,
 		    stream_push_token(s, tok);
 		*constraints = NULL;
 	    } else {
-		c->type = type;
-		c->next = *constraints;
-		c->union_next = union_next;
-		*constraints = c;
+		if (!c) {
+		    stream_error(s, NULL, "empty constraint");
+		    *constraints = NULL;
+		} else {
+		    c->type = type;
+		    c->next = *constraints;
+		    c->union_next = union_next;
+		    *constraints = c;
+		}
 		token_free(tok);
 	    }
 	    break;
