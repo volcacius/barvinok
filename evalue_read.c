@@ -667,6 +667,12 @@ static int evalue_read_constraint(struct stream *s, struct parameter **p,
 	    if (!c)
 		c = constraint_new();
 	    tok2 = stream_next_token(s);
+	    if (tok2 && tok2->type == TOKEN_VALUE) {
+		/* Handle "-" space cst, where "-" is translated to -1 */
+		value_multiply(tok->u.v, tok->u.v, tok2->u.v);
+		token_free(tok2);
+		tok2 = stream_next_token(s);
+	    }
 	    if (tok2 && tok2->type == TOKEN_IDENT) {
 		pos = parameter_pos(p, tok2->u.s, -1);
 		constraint_extend(c, 1+pos);
