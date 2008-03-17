@@ -6,6 +6,7 @@
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
 #include <barvinok/options.h>
+#include "reduce_domain.h"
 
 using namespace GiNaC;
 using namespace bernstein;
@@ -502,11 +503,16 @@ static piecewise_lst *bernstein_coefficients_polyhedron(piecewise_lst *pl_all,
     Param_Polyhedron *PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
     assert(PP);
     piecewise_lst *pl = new piecewise_lst(params, options->bernstein_optimize);
-    for (Param_Domain *Q = PP->D; Q; Q = Q->next) {
-	matrix VM = domainVertices(PP, Q, params);
+
+    int nd = -1;
+    Polyhedron *TC = true_context(P, ctx, options->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, PD, rVD)
+	matrix VM = domainVertices(PP, PD, params);
 	lst coeffs = bernsteinExpansion(VM, poly, floorvar, params);
-	pl->add_guarded_lst(Polyhedron_Copy(Q->Domain), coeffs);
-    }
+	pl->add_guarded_lst(rVD, coeffs);
+    END_FORALL_REDUCED_DOMAIN
+    Polyhedron_Free(TC);
+
     Param_Polyhedron_Free(PP);
     if (!pl_all)
 	pl_all = pl;
