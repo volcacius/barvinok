@@ -1522,6 +1522,9 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     unsigned nparam = C->Dimension;
     bool do_scale = options->approximation_method == BV_APPROX_SCALE;
 
+    if (options->summation == BV_SUM_EULER)
+	return barvinok_summate_unweighted(P, C, euler_summate, options);
+
     if (options->approximation_method == BV_APPROX_VOLUME)
 	return Param_Polyhedron_Volume(P, C, options);
 

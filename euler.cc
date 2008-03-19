@@ -1051,7 +1051,8 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
     return res;
 }
 
-evalue *euler_summate(evalue *e, int nvar, struct barvinok_options *options)
+evalue *euler_summate(evalue *e, unsigned nvar,
+			struct barvinok_options *options)
 {
     int i;
     evalue *res;
