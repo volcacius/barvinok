@@ -189,7 +189,7 @@ static void test(evalue *EP, unsigned nvar, unsigned nparam,
 
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
 {
-    evalue *EP;
+    evalue *EP, *upper, *lower;
     char **all_vars = NULL;
     unsigned nvar;
     unsigned nparam;
@@ -206,6 +206,11 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	return;
     }
 
+    upper = evalue_dup(EP);
+    lower = evalue_dup(EP);
+    evalue_frac2polynomial(upper, 1, options->barvinok->MaxRays);
+    evalue_frac2polynomial(lower, -1, options->barvinok->MaxRays);
+
     U = Universe_Polyhedron(nparam);
     params = constructParameterVector(all_vars+nvar, nparam);
 
@@ -215,17 +220,18 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 
 	times(&st_cpu);
 	for (int j = 0; j < 2; ++j) {
+	    evalue *poly = j == 0 ? upper : lower;
 	    int sign = j == 0 ? BV_BERNSTEIN_MAX : BV_BERNSTEIN_MIN;
 	    options->barvinok->bernstein_optimize = sign;
 	    if (methods[i].method == METHOD_BERNSTEIN) {
-		pl[2*i+j] = evalue_bernstein_coefficients(NULL, EP, U, params,
+		pl[2*i+j] = evalue_bernstein_coefficients(NULL, poly, U, params,
 						   options->barvinok);
 		if (sign == BV_BERNSTEIN_MIN)
 		    pl[2*i+j]->minimize();
 		else
 		    pl[2*i+j]->maximize();
 	    } else {
-		pl[2*i+j] = evalue_range_propagation(NULL, EP, params,
+		pl[2*i+j] = evalue_range_propagation(NULL, poly, params,
 					      options->barvinok);
 		if (sign == BV_BERNSTEIN_MIN)
 		    pl[2*i+j]->sign = -1;
@@ -245,6 +251,8 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	delete pl[i];
     Polyhedron_Free(U);
     evalue_free(EP);
+    evalue_free(lower);
+    evalue_free(upper);
     Free_ParamNames(all_vars, nvar+nparam);
 }
 
