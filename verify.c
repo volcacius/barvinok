@@ -449,9 +449,16 @@ static void optimum(Polyhedron *S, int pos, const struct check_EP_data *data,
 		    Value *opt, int *found, int sign)
 {
     if (!S) {
+	double d;
 	Value c;
 	value_init(c);
-	value_set_double(c, compute_evalue(data->EP, data->cp.z+1)+.25);
+	/* value_set_double rounds to zero; give it some slop */
+	d = compute_evalue(data->EP, data->cp.z+1);
+	if (d > 0)
+	    d += .25;
+	else
+	    d -= .25;
+	value_set_double(c, d);
 	if (!*found) {
 	    value_assign(*opt, c);
 	    *found = 1;
