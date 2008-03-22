@@ -841,9 +841,9 @@ static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
 	    struct section *next = part->next;
 	    constraints = part->constraints;
 	    D = constraints2domain(part->constraints, *nparam, MaxRays);
-	    EVALUE_SET_DOMAIN(e->x.p->arr[2*j], D);
-	    value_clear(e->x.p->arr[2*j+1].d);
-	    e->x.p->arr[2*j+1] = *part->e;
+	    EVALUE_SET_DOMAIN(e->x.p->arr[2*(m-j-1)], D);
+	    value_clear(e->x.p->arr[2*(m-j-1)+1].d);
+	    e->x.p->arr[2*(m-j-1)+1] = *part->e;
 	    free(part->e);
 	    free(part);
 	    part = next;
