@@ -45,6 +45,60 @@ int test_evalue_read(struct barvinok_options *options)
     evalue_free(e2);
 }
 
+static void evalue_check_disjoint(evalue *e)
+{
+    int i, j;
+
+    if (!e)
+	return;
+    if (EVALUE_IS_ZERO(*e))
+	return;
+    for (i = 0; i < e->x.p->size/2; ++i) {
+	Polyhedron *A = EVALUE_DOMAIN(e->x.p->arr[2*i]);
+	for (j = i+1; j < e->x.p->size/2; ++j) {
+	    Polyhedron *B = EVALUE_DOMAIN(e->x.p->arr[2*j]);
+	    Polyhedron *I = DomainIntersection(A, B, 0);
+	    assert(emptyQ(I));
+	    Polyhedron_Free(I);
+	}
+    }
+}
+
+static int test_eadd(struct barvinok_options *options)
+{
+    unsigned nvar, nparam;
+    char **all_vars;
+    evalue *e1, *e2;
+
+    e1 = evalue_read_from_str("         d  -1 = 0\n"
+			      "         h  -3 >= 0\n"
+			      "         - h + 100 >= 0\n"
+		      	      "\n"
+			      "(1)\n",
+			      "d,h", &all_vars, &nvar, &nparam,
+			      options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+    e2 = evalue_read_from_str(
+				"         h  -3 = 0\n"
+				"         d  -1 >= 0\n"
+				"         - d + 3 >= 0\n"
+				"\n"
+				"(0)\n"
+				"         d  -1 >= 0\n"
+				"         - d + 3 >= 0\n"
+				"         h  -4 >= 0\n"
+				"         - h + 100 >= 0\n"
+				"\n"
+				"(1)\n",
+			      	"d,h", &all_vars, &nvar, &nparam,
+			      	options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+    eadd(e2, e1);
+    evalue_check_disjoint(e1);
+    evalue_free(e1);
+    evalue_free(e2);
+}
+
 int test_evalue(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
@@ -641,6 +695,7 @@ int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
     test_evalue_read(options);
+    test_eadd(options);
     test_evalue(options);
     test_substitute(options);
     test_split_periods(options);
