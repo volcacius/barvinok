@@ -15,6 +15,7 @@ using namespace barvinok;
 using std::cerr;
 using std::endl;
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 struct range_data {
@@ -296,6 +297,84 @@ static void domain_signs(Polyhedron *D, int *signs)
     }
 }
 
+static evalue *ex2evalue(const ex& poly, const exvector& params, int pos)
+{
+    if (pos >= params.size()) {
+	evalue *c = ALLOC(evalue);
+	value_init(c->d);
+	value_init(c->x.n);
+	assert(is_a<numeric>(poly));
+	numeric2value(ex_to<numeric>(poly).numer(), c->x.n);
+	numeric2value(ex_to<numeric>(poly).denom(), c->d);
+	return c;
+    }
+
+    evalue *v = evalue_var(pos);
+    evalue *sum = ex2evalue(poly.coeff(params[pos], poly.degree(params[pos])),
+			    params, pos+1);
+    for (int i = poly.degree(params[pos])-1; i >= 0; --i) {
+	evalue *t = ex2evalue(poly.coeff(params[pos], i), params, pos+1);
+	emul(v, sum);
+	eadd(t, sum);
+	evalue_free(t);
+    }
+    evalue_free(v);
+    return sum;
+}
+
+/* Returns true is poly is no better than any of those from begin to end */
+static int is_no_better(const ex& poly, const lst::const_iterator& begin,
+			const lst::const_iterator& end, const exvector& params,
+			int sign, Polyhedron *D,
+			int *signs, barvinok_options *options)
+{
+    lst::const_iterator k;
+    int no_better = 0;
+
+    for (k = begin; k != end; ++k) {
+	ex diff = *k - poly;
+	diff = diff.expand();
+	evalue *e = ex2evalue(diff, params, 0);
+	no_better = has_sign(D, e, sign, signs, options);
+	evalue_free(e);
+	if (no_better)
+	    break;
+    }
+    return no_better;
+}
+
+static void remove_redundants(piecewise_lst *pl, const exvector& params,
+				barvinok_options *options)
+{
+    if (pl->sign == 0)
+	return;
+
+    int *signs = (int *)alloca(sizeof(int) * params.size());
+
+    for (int i = 0; i < pl->list.size(); ++i) {
+	Polyhedron *D = pl->list[i].first;
+	lst todo = pl->list[i].second;
+	lst newlist;
+	lst::const_iterator j, k;
+
+	domain_signs(D, signs);
+
+	for (j = todo.begin(); j != todo.end(); ++j) {
+	    k = j; ++k;
+	    if (is_no_better(*j, k, todo.end(), params,
+				pl->sign, D, signs, options))
+		continue;
+
+	    if (is_no_better(*j, newlist.begin(), newlist.end(),
+				params, pl->sign, D, signs, options))
+		continue;
+
+	    newlist.append(*j);
+	}
+	pl->list[i].second = newlist;
+    }
+}
+
 piecewise_lst *evalue_range_propagation(piecewise_lst *pl_all, const evalue *e,
 				      const exvector& params,
 				      barvinok_options *options)
@@ -341,5 +420,9 @@ piecewise_lst *evalue_range_propagation(piecewise_lst *pl_all, const evalue *e,
 	}
     }
     evalue_free(e2);
+    if (data.pl_all) {
+	data.pl_all->sign = options->bernstein_optimize;
+	remove_redundants(data.pl_all, params, options);
+    }
     return data.pl_all;
 }

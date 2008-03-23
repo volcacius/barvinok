@@ -241,10 +241,6 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	    } else {
 		pl[2*i+j] = evalue_range_propagation(NULL, poly, params,
 					      options->barvinok);
-		if (sign == BV_BERNSTEIN_MIN)
-		    pl[2*i+j]->sign = -1;
-		else
-		    pl[2*i+j]->sign = 1;
 	    }
 	}
 	times(&en_cpu);

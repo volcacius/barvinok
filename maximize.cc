@@ -231,10 +231,6 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
     if (print_solution)
 	cout << *pl << endl;
     if (options->verify.verify) {
-	if (options->minimize)
-	    pl->sign = -1;
-	else
-	    pl->sign = 1;
 	result = verify(pl, EP, nvar, nparam, &options->verify);
     }
     delete pl;
