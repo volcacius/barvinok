@@ -88,9 +88,9 @@ void result_data_print(struct result_data *result, int n)
 	fprintf(stderr, ", %d", result->ticks[i]/n);
     fprintf(stderr, "\n");
 
-    fprintf(stderr, "%d", result->size[0]/n);
+    fprintf(stderr, "%d/%d", result->size[0], n);
     for (i = 1; i < nr_methods; ++i)
-	fprintf(stderr, ", %d", result->size[i]/n);
+	fprintf(stderr, ", %d/%d", result->size[i], n);
     fprintf(stderr, "\n");
 
     fprintf(stderr, "%g\n", VALUE_TO_DOUBLE(result->n));
@@ -187,6 +187,14 @@ static void test(evalue *EP, unsigned nvar, unsigned nparam,
     check_EP(&data, nvar, nparam, options);
 }
 
+static int number_of_polynomials(piecewise_lst *pl)
+{
+    int n = 0;
+    for (int i = 0; i < pl->list.size(); ++i)
+	n += pl->list[i].second.nops();
+    return n;
+}
+
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
 {
     evalue *EP, *upper, *lower;
@@ -244,6 +252,8 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	if (options->barvinok->verbose)
 	    for (int j = 0; j < 2; ++j)
 		cerr << *pl[2*i+j] << endl;
+	result->size[i] = number_of_polynomials(pl[2*i]);
+	result->size[i] += number_of_polynomials(pl[2*i+1]);
     }
     test(EP, nvar, nparam, pl, result, options);
 
