@@ -152,19 +152,11 @@ int bit_vector_count(unsigned *F, int F_len)
     return count;
 }
 
-Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
-			      struct barvinok_options *options)
+void Param_Vertex_Set_Facets(Param_Polyhedron *PP, Param_Vertices *V)
 {
-    int i, j, ix;
-    unsigned bx;
-    int len = (PP->Constraints->NbRows+INT_BITS-1)/INT_BITS;
-    int n;
-    Matrix *M;
-    Polyhedron *C;
-    unsigned nvar = V->Vertex->NbRows;
-    unsigned nparam = V->Vertex->NbColumns - 2;
-
     if (!V->Facets) {
+	unsigned nparam = V->Vertex->NbColumns - 2;
+	int len = (PP->Constraints->NbRows+INT_BITS-1)/INT_BITS;
 	int i, ix;
 	unsigned bx;
 	Vector *row = Vector_Alloc(1 + nparam + 1);
@@ -178,6 +170,22 @@ Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
 	}
 	Vector_Free(row);
     }
+}
+
+Polyhedron *Param_Vertex_Cone(Param_Polyhedron *PP, Param_Vertices *V,
+			      struct barvinok_options *options)
+{
+    int i, j, ix;
+    unsigned bx;
+    int len = (PP->Constraints->NbRows+INT_BITS-1)/INT_BITS;
+    int n;
+    Matrix *M;
+    Polyhedron *C;
+    unsigned nvar = V->Vertex->NbRows;
+    unsigned nparam = V->Vertex->NbColumns - 2;
+
+    if (!V->Facets)
+	Param_Vertex_Set_Facets(PP, V);
     n = bit_vector_count(V->Facets, len);
 
     M = Matrix_Alloc(n, 1+nvar+1);
