@@ -85,7 +85,7 @@ static Param_Polyhedron *PL_P2PP(Polyhedron *Din, Polyhedron *Cin,
  * saturating constraint c of P
  */
 Param_Domain *Param_Polyhedron_Facet(Param_Polyhedron *PP, Param_Domain *D,
-				     Polyhedron *P, int c)
+				     Value *constraint)
 {
     int nv;
     Param_Vertices *V;
@@ -101,7 +101,7 @@ Param_Domain *Param_Polyhedron_Facet(Param_Polyhedron *PP, Param_Domain *D,
 
     FORALL_PVertex_in_ParamPolyhedron(V, D, PP) /* _i, _ix, _bx internal counters */
 	int n;
-	Param_Inner_Product(P->Constraint[c], V->Vertex, row->p);
+	Param_Inner_Product(constraint, V->Vertex, row->p);
 	if (First_Non_Zero(row->p+1, nparam+1) == -1)
 	    FD->F[_ix] |= _bx;
     END_FORALL_PVertex_in_ParamPolyhedron;

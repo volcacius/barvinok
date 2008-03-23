@@ -596,7 +596,7 @@ evalue *summator_2d::summate_over_pdomain(Polyhedron *P,
 	if (value_zero_p(normal->p[0]) && value_zero_p(normal->p[1]))
 	    continue;
 
-	FD = Param_Polyhedron_Facet(PP, PD, P, j);
+	FD = Param_Polyhedron_Facet(PP, PD, P->Constraint[j]);
 	Vector_Normalize(normal->p, 2);
 	handle_facet(PP, FD, normal->p);
 	Param_Domain_Free(FD);
@@ -775,7 +775,7 @@ void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
 	value_assign(dir->p[0], normal->p[1]);
 	value_oppose(dir->p[1], normal->p[0]);
 
-	FD = Param_Polyhedron_Facet(PP, PD, P, j);
+	FD = Param_Polyhedron_Facet(PP, PD, P->Constraint[j]);
 
 	FORALL_PVertex_in_ParamPolyhedron(V, FD, PP)
 	    vertex[nbV++] = V;

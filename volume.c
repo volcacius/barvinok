@@ -323,7 +323,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 		continue;
 	}
 	FF = facet(F, j, options->MaxRays);
-	FD = Param_Polyhedron_Facet(PP, D, F, j);
+	FD = Param_Polyhedron_Facet(PP, D, F->Constraint[j]);
 	tmp = volume_in_domain(PP, FD, dim, matrix, point,
 			       row+1, FF, options);
 	if (!vol)
