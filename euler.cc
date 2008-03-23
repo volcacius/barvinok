@@ -332,11 +332,11 @@ struct summator_2d : public signed_cone_consumer, public vertex_decomposer {
 	delete [] subs_0d;
 	delete [] subs_1d;
     }
-    evalue *summate_over_pdomain(Polyhedron *P,
+    evalue *summate_over_pdomain(Param_Polyhedron *PP, unsigned *facets,
 				    Param_Domain *PD,
 				    struct barvinok_options *options);
     void handle_facet(Param_Polyhedron *PP, Param_Domain *FD, Value *normal);
-    void integrate(Polyhedron *P, Param_Domain *PD);
+    void integrate(Param_Polyhedron *PP, unsigned *facets, Param_Domain *PD);
     virtual void handle(const signed_cone& sc, barvinok_options *options);
 };
 
@@ -576,12 +576,13 @@ void summator_2d::handle(const signed_cone& sc, barvinok_options *options)
     evalue_free(res);
 }
 
-evalue *summator_2d::summate_over_pdomain(Polyhedron *P,
-					Param_Domain *PD,
+evalue *summator_2d::summate_over_pdomain(Param_Polyhedron *PP,
+					unsigned *facets, Param_Domain *PD,
 					struct barvinok_options *options)
 {
-    int j;
     Param_Vertices *V;
+    int i, ix;
+    unsigned bx;
 
     assert(PP->V->Vertex->NbRows == 2);
 
@@ -590,20 +591,27 @@ evalue *summator_2d::summate_over_pdomain(Polyhedron *P,
     END_FORALL_PVertex_in_ParamPolyhedron;
 
     Vector *normal = Vector_Alloc(2);
-    for (j = P->NbEq; j < P->NbConstraints; ++j) {
+    for (i = 0, ix = 0, bx = MSB; i < PP->Constraints->NbRows; ++i) {
 	Param_Domain *FD;
-	Vector_Copy(P->Constraint[j]+1, normal->p, 2);
+
+	if (!(facets[ix] & bx)) {
+	    NEXT(ix, bx);
+	    continue;
+	}
+
+	Vector_Copy(PP->Constraints->p[i]+1, normal->p, 2);
 	if (value_zero_p(normal->p[0]) && value_zero_p(normal->p[1]))
 	    continue;
 
-	FD = Param_Polyhedron_Facet(PP, PD, P->Constraint[j]);
+	FD = Param_Polyhedron_Facet(PP, PD, PP->Constraints->p[i]);
 	Vector_Normalize(normal->p, 2);
 	handle_facet(PP, FD, normal->p);
 	Param_Domain_Free(FD);
+	NEXT(ix, bx);
     }
     Vector_Free(normal);
 
-    integrate(P, PD);
+    integrate(PP, facets, PD);
 
     return sum;
 }
@@ -748,10 +756,13 @@ void summator_2d::handle_facet(Param_Polyhedron *PP, Param_Domain *FD,
 /* Integrate the polynomial over the whole polygon using
  * the Green-Stokes theorem.
  */
-void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
+void summator_2d::integrate(Param_Polyhedron *PP, unsigned *facets,
+				Param_Domain *PD)
 {
     Value tmp;
     evalue *res = evalue_zero();
+    int i, ix;
+    unsigned bx;
 
     evalue *I = evalue_dup(polynomial);
     evalue_anti_derive(I, 0);
@@ -762,11 +773,17 @@ void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
     Matrix *v0v1 = Matrix_Alloc(2, nparam+2);
     Vector *f_v0v1 = Vector_Alloc(2);
     Vector *s = Vector_Alloc(1+nparam+2);
-    for (int j = P->NbEq; j < P->NbConstraints; ++j) {
+    for (i = 0, ix = 0, bx = MSB; i < PP->Constraints->NbRows; ++i) {
 	Param_Domain *FD;
 	int nbV = 0;
 	Param_Vertices *vertex[2];
-	Vector_Copy(P->Constraint[j]+1, normal->p, 2);
+
+	if (!(facets[ix] & bx)) {
+	    NEXT(ix, bx);
+	    continue;
+	}
+
+	Vector_Copy(PP->Constraints->p[i]+1, normal->p, 2);
 
 	if (value_zero_p(normal->p[0]))
 	    continue;
@@ -775,7 +792,7 @@ void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
 	value_assign(dir->p[0], normal->p[1]);
 	value_oppose(dir->p[1], normal->p[0]);
 
-	FD = Param_Polyhedron_Facet(PP, PD, P->Constraint[j]);
+	FD = Param_Polyhedron_Facet(PP, PD, PP->Constraints->p[i]);
 
 	FORALL_PVertex_in_ParamPolyhedron(V, FD, PP)
 	    vertex[nbV++] = V;
@@ -843,6 +860,7 @@ void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
 	evalue_free(d);
 
 	Param_Domain_Free(FD);
+	NEXT(ix, bx);
     }
     Vector_Free(s);
     Vector_Free(f_v0v1);
@@ -858,7 +876,7 @@ void summator_2d::integrate(Polyhedron *P, Param_Domain *PD)
 
 evalue *summate_over_1d_pdomain(evalue *e,
 				Param_Polyhedron *PP, Param_Domain *PD,
-				Polyhedron *P, Value *inner,
+				Value *inner,
 				struct barvinok_options *options)
 {
     Param_Vertices *V;
@@ -963,6 +981,24 @@ evalue *summate_over_1d_pdomain(evalue *e,
     return res;
 }
 
+#define INT_BITS (sizeof(unsigned) * 8)
+
+static unsigned *active_constraints(Param_Polyhedron *PP, Param_Domain *D)
+{
+    int len = (PP->Constraints->NbRows+INT_BITS-1)/INT_BITS;
+    unsigned *facets = (unsigned *)calloc(len, sizeof(unsigned));
+    Param_Vertices *V;
+
+    FORALL_PVertex_in_ParamPolyhedron(V, D, PP)
+	if (!V->Facets)
+	    Param_Vertex_Set_Facets(PP, V);
+	for (int i = 0; i < len; ++i)
+	    facets[i] |= V->Facets[i];
+    END_FORALL_PVertex_in_ParamPolyhedron;
+
+    return facets;
+}
+
 static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 				   struct barvinok_options *options)
 {
@@ -985,25 +1021,23 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 
     Polyhedron *TC = true_context(D, U, MaxRays);
     FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, PD, rVD)
-	Polyhedron *CA, *F;
+	unsigned *facets;
 
-	CA = align_context(PD->Domain, D->Dimension, options->MaxRays);
-	F = DomainIntersection(D, CA, options->MaxRays);
-	Domain_Free(CA);
+	facets = active_constraints(PP, PD);
 
 	Vector *inner = inner_point(rVD);
 	s[i].D = rVD;
 
 	if (nvar == 1) {
-	    s[i].E = summate_over_1d_pdomain(e, PP, PD, F, inner->p+1, options);
+	    s[i].E = summate_over_1d_pdomain(e, PP, PD, inner->p+1, options);
 	} else if (nvar == 2) {
 	    summator_2d s2d(e, PP, inner->p+1, rVD->Dimension);
 
-	    s[i].E = s2d.summate_over_pdomain(F, PD, options);
+	    s[i].E = s2d.summate_over_pdomain(PP, facets, PD, options);
 
 	}
-	Polyhedron_Free(F);
 	Vector_Free(inner);
+	free(facets);
     END_FORALL_REDUCED_DOMAIN
     Polyhedron_Free(TC);
     Polyhedron_Free(U);
