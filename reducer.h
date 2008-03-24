@@ -22,6 +22,7 @@ struct np_base : public signed_cone_consumer {
     ZZ one;
 
     np_base(unsigned dim) {
+	assert(dim > 0);
 	this->dim = dim;
 	one = 1;
     }

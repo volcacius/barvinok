@@ -448,6 +448,11 @@ struct parallel_polytopes {
 	    reduced_nparam = nparam;
 	}
 
+	if (Q->Dimension == 0) {
+	    Polyhedron_Free(Q);
+	    return false;
+	}
+
 	if (First_Non_Zero(Q->Constraint[Q->NbConstraints-1]+1, Q->Dimension) == -1)
 	    Q->NbConstraints--;
 
