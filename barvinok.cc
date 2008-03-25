@@ -40,6 +40,10 @@ using std::ostringstream;
 
 #define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
 
+static evalue *barvinok_summate_unweighted(Polyhedron *P, Polyhedron *C,
+     evalue *(*summate)(evalue *, unsigned, struct barvinok_options *options),
+     struct barvinok_options *options);
+
 class dpoly_n {
 public:
     Matrix *coeff;
@@ -451,7 +455,8 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
     }
     if (options->summation == BV_SUM_BERNOULLI) {
 	Polyhedron *C = Universe_Polyhedron(0);
-	evalue *sum = Bernoulli_sum(P, C, options);
+	evalue *sum = barvinok_summate_unweighted(P, C, Bernoulli_sum_evalue,
+						options);
 	Polyhedron_Free(C);
 	evalue2value(sum, result);
 	evalue_free(sum);
@@ -1438,7 +1443,7 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
 
     if (options->approximation_method == BV_APPROX_BERNOULLI ||
 	options->summation == BV_SUM_BERNOULLI)
-	eres = Bernoulli_sum(P, C, options);
+	eres = barvinok_summate_unweighted(P, C, Bernoulli_sum_evalue, options);
     else
 	eres = enumerate(P, C, options);
     Domain_Free(C);
@@ -1569,4 +1574,36 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 	return Bernoulli_sum_evalue(e, nvar, options);
     else
 	return evalue_sum(e, nvar, options->MaxRays);
+}
+
+/* Turn unweighted counting problem into "weighted" counting problem
+ * with weight equal to 1 and call "summate" on this weighted problem.
+ */
+static evalue *barvinok_summate_unweighted(Polyhedron *P, Polyhedron *C,
+     evalue *(*summate)(evalue *, unsigned, struct barvinok_options *options),
+     struct barvinok_options *options)
+{
+    Polyhedron *CA, *D;
+    evalue e;
+    evalue *sum;
+
+    if (emptyQ(P) || emptyQ(C))
+	return evalue_zero();
+
+    CA = align_context(C, P->Dimension, options->MaxRays);
+    D = DomainIntersection(P, CA, options->MaxRays);
+    Domain_Free(CA);
+
+    if (emptyQ(D)) {
+	Domain_Free(D);
+	return evalue_zero();
+    }
+
+    value_init(e.d);
+    e.x.p = new_enode(partition, 2, P->Dimension);
+    EVALUE_SET_DOMAIN(e.x.p->arr[0], D);
+    evalue_set_si(&e.x.p->arr[1], 1, 1);
+    sum = summate(&e, P->Dimension - C->Dimension, options);
+    free_evalue_refs(&e);
+    return sum;
 }

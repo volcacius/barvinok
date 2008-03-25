@@ -38,8 +38,6 @@ struct poly_list *faulhaber_compute(int n);
  */
 struct poly_list *bernoulli_compute(int n);
 
-evalue *Bernoulli_sum(Polyhedron *P, Polyhedron *C,
-			struct barvinok_options *options);
 evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 			     struct barvinok_options *options);
 
