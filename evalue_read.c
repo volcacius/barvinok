@@ -11,6 +11,7 @@ enum token_type { TOKEN_UNKNOWN = 256, TOKEN_VALUE, TOKEN_IDENT, TOKEN_GE,
 struct token {
     enum token_type  type;
 
+    unsigned int on_new_line : 1;
     int line;
     int col;
 
@@ -20,11 +21,12 @@ struct token {
     } u;
 };
 
-static struct token *token_new(int line, int col)
+static struct token *token_new(int line, int col, unsigned on_new_line)
 {
     struct token *tok = ALLOC(struct token);
     tok->line = line;
     tok->col = col;
+    tok->on_new_line = on_new_line;
     return tok;
 }
 
@@ -140,6 +142,7 @@ static struct token *stream_next_token(struct stream *s)
     int c;
     struct token *tok;
     int line, col;
+    int old_line = s->line;
 
     if (s->n_token)
 	return s->tokens[--s->n_token];
@@ -169,12 +172,12 @@ static struct token *stream_next_token(struct stream *s)
 	c == ']' ||
 	c == '{' ||
 	c == '}') {
-	tok = token_new(line, col);
+	tok = token_new(line, col, old_line != line);
 	tok->type = (enum token_type)c;
 	return tok;
     }
     if (c == '-' || isdigit(c)) {
-	tok = token_new(line, col);
+	tok = token_new(line, col, old_line != line);
 	tok->type = TOKEN_VALUE;
 	value_init(tok->u.v);
 	stream_push_char(s, c);
@@ -191,7 +194,7 @@ static struct token *stream_next_token(struct stream *s)
 	return tok;
     }
     if (c == '#' || isalpha(c)) {
-	tok = token_new(line, col);
+	tok = token_new(line, col, old_line != line);
 	stream_push_char(s, c);
 	while ((c = stream_getc(s)) != -1 && isalnum(c))
 	    stream_push_char(s, c);
@@ -212,7 +215,7 @@ static struct token *stream_next_token(struct stream *s)
     }
     if (c == '>') {
 	if ((c = stream_getc(s)) == '=') {
-	    tok = token_new(line, col);
+	    tok = token_new(line, col, old_line != line);
 	    tok->type = TOKEN_GE;
 	    return tok;
 	}
@@ -221,7 +224,7 @@ static struct token *stream_next_token(struct stream *s)
     }
     if (c == '!') {
 	if ((c = stream_getc(s)) == '=') {
-	    tok = token_new(line, col);
+	    tok = token_new(line, col, old_line != line);
 	    tok->type = TOKEN_NE;
 	    return tok;
 	}
@@ -229,7 +232,7 @@ static struct token *stream_next_token(struct stream *s)
 	    stream_ungetc(s, c);
     }
 
-    tok = token_new(line, col);
+    tok = token_new(line, col, old_line != line);
     tok->type = TOKEN_UNKNOWN;
     return tok;
 }
@@ -317,7 +320,8 @@ static int optional_power(struct stream *s)
 }
 
 static evalue *evalue_read_factor(struct stream *s, struct parameter **p);
-static evalue *evalue_read_term(struct stream *s, struct parameter **p);
+static evalue *evalue_read_term(struct stream *s, struct parameter **p,
+				int multi_line);
 
 static evalue *create_fract_like(struct stream *s, evalue *arg, enode_type type,
 			         struct parameter **p)
@@ -365,7 +369,7 @@ static evalue *read_fract(struct stream *s, struct token *tok, struct parameter 
     assert(tok->type == '{');
 
     token_free(tok);
-    arg = evalue_read_term(s, p);
+    arg = evalue_read_term(s, p, 1);
     tok = stream_next_token(s);
     if (!tok || tok->type != '}') {
 	stream_error(s, tok, "expecting \"}\"");
@@ -394,7 +398,7 @@ static evalue *read_periodic(struct stream *s, struct parameter **p)
     n = 0;
 
     for (;;) {
-	evalue *e = evalue_read_term(s, p);
+	evalue *e = evalue_read_term(s, p, 1);
 	if (!e) {
 	    stream_error(s, NULL, "missing argument or list element");
 	    goto out;
@@ -513,7 +517,7 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
 
     if (tok->type == '(') {
 	token_free(tok);
-	e = evalue_read_term(s, p);
+	e = evalue_read_term(s, p, 1);
 	tok = stream_next_token(s);
 	if (!tok || tok->type != ')') {
 	    stream_error(s, tok, "expecting \")\"");
@@ -574,7 +578,8 @@ static evalue *evalue_read_factor(struct stream *s, struct parameter **p)
     return e;
 }
 
-static evalue *evalue_read_term(struct stream *s, struct parameter **p)
+static evalue *evalue_read_term(struct stream *s, struct parameter **p,
+				int multi_line)
 {
     struct token *tok;
     evalue *e = NULL;
@@ -587,13 +592,15 @@ static evalue *evalue_read_term(struct stream *s, struct parameter **p)
     if (!tok)
 	return e;
 
-    if (tok->type == '+' || tok->type == TOKEN_VALUE) {
+    if (!multi_line && tok->on_new_line)
+	stream_push_token(s, tok);
+    else if (tok->type == '+' || tok->type == TOKEN_VALUE) {
 	evalue *e2;
 	if (tok->type == '+')
 	    token_free(tok);
 	else
 	    stream_push_token(s, tok);
-	e2 = evalue_read_term(s, p);
+	e2 = evalue_read_term(s, p, multi_line);
 	if (!e2) {
 	    stream_error(s, NULL, "unexpected EOF");
 	    return NULL;
@@ -826,7 +833,7 @@ static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
 
     while ((constraints = evalue_read_domain(s, &p, MaxRays))) {
 	struct section *sect;
-	evalue *e = evalue_read_term(s, &p);
+	evalue *e = evalue_read_term(s, &p, 0);
 	if (!e) {
 	    stream_error(s, NULL, "missing evalue");
 	    break;
@@ -912,7 +919,7 @@ static evalue *evalue_read(struct stream *s, const char *var_list, char ***ppp,
 
     if (tok->type == '(' || tok->type == '[') {
 	stream_push_token(s, tok);
-	e = evalue_read_term(s, &p);
+	e = evalue_read_term(s, &p, 0);
 	*ppp = extract_parameters(p, nparam);
     } else if (tok->type == TOKEN_VALUE) {
 	struct token *tok2 = stream_next_token(s);
@@ -922,7 +929,7 @@ static evalue *evalue_read(struct stream *s, const char *var_list, char ***ppp,
 	if (tok2 && (tok2->type == TOKEN_IDENT || tok2->type == TOKEN_GE))
 	    e = evalue_read_partition(s, p, ppp, nparam, MaxRays);
 	else {
-	    e = evalue_read_term(s, &p);
+	    e = evalue_read_term(s, &p, 0);
 	    *ppp = extract_parameters(p, nparam);
 	}
     } else if (tok->type == TOKEN_IDENT) {
