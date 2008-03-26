@@ -5,6 +5,7 @@
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+#define REALLOCN(ptr,type,n) (type*)realloc(ptr, (n) * sizeof(type))
 
 static struct bernoulli_coef bernoulli_coef;
 static struct poly_list bernoulli;
@@ -203,6 +204,18 @@ struct Bernoulli_data {
     evalue *e;
 };
 
+static void Bernoulli_init(unsigned n, void *cb_data)
+{
+    struct Bernoulli_data *data = (struct Bernoulli_data *)cb_data;
+    int cases = 5;
+
+    if (cases * n <= data->size)
+	return;
+
+    data->size = cases * (n + 16);
+    data->s = REALLOCN(data->s, struct evalue_section, data->size);
+}
+
 static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 {
     struct Bernoulli_data *data = (struct Bernoulli_data *)cb_data;
@@ -214,10 +227,11 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     Value tmp;
     unsigned dim = M->NbColumns-2;
     Vector *row;
+    int cases = 5;
 
     assert(lower);
     assert(upper);
-    assert(data->ns < data->size);
+    assert(data->ns + cases <= data->size);
 
     M2 = Matrix_Copy(M);
     T = Constraints2Polyhedron(M2, data->MaxRays);
@@ -504,7 +518,7 @@ static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
 	data->ns = 0;
 	data->e = E;
 
-	for_each_lower_upper_bound(P, NULL, Bernoulli_cb, data);
+	for_each_lower_upper_bound(P, Bernoulli_init, Bernoulli_cb, data);
 
 	res = evalue_from_section_array(data->s, data->ns);
     }
@@ -536,7 +550,7 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
     assert(value_zero_p(e->d));
     assert(e->x.p->type == partition);
 
-    data.size = e->x.p->size * 2 + 16;
+    data.size = 16;
     data.s = ALLOCN(struct evalue_section, data.size);
     data.MaxRays = options->MaxRays;
 
