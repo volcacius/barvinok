@@ -163,6 +163,19 @@ static void shift(evalue *e)
 	shift(&e->x.p->arr[i]);
 }
 
+/* shift variables in polynomial n up */
+static void unshift(evalue *e, unsigned n)
+{
+    int i;
+    if (value_notzero_p(e->d))
+	return;
+    assert(e->x.p->type == polynomial || e->x.p->type == fractional);
+    if (e->x.p->type == polynomial)
+	e->x.p->pos += n;
+    for (i = 0; i < e->x.p->size; ++i)
+	unshift(&e->x.p->arr[i], n);
+}
+
 static evalue *shifted_copy(evalue *src)
 {
     evalue *e = ALLOC(evalue);
@@ -518,31 +531,20 @@ static int find_integer_bounds(Polyhedron **P_p, evalue **E_p, unsigned nvar)
     return 1;
 }
 
-static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
-				 struct Bernoulli_data *data,
-				 struct barvinok_options *options)
+static evalue *sum_over_polytope_base(Polyhedron *P, evalue *E, unsigned nvar,
+				      struct Bernoulli_data *data,
+				      struct barvinok_options *options)
 {
-    unsigned dim = P->Dimension - 1;
     evalue *res;
 
-    if (value_zero_p(P->Constraint[0][0]) &&
-	    value_notzero_p(P->Constraint[0][1])) {
-	res = ALLOC(evalue);
-	value_init(res->d);
-	value_set_si(res->d, 0);
-	res->x.p = new_enode(partition, 2, dim);
-	EVALUE_SET_DOMAIN(res->x.p->arr[0], Polyhedron_Project(P, dim));
-	evalue_copy(&res->x.p->arr[1], E);
-	reduce_evalue_in_domain(&res->x.p->arr[1], P);
-	shift(&res->x.p->arr[1]);
-    } else {
-	data->ns = 0;
-	data->e = E;
+    assert(P->NbEq == 0);
 
-	for_each_lower_upper_bound(P, Bernoulli_init, Bernoulli_cb, data);
+    data->ns = 0;
+    data->e = E;
 
-	res = evalue_from_section_array(data->s, data->ns);
-    }
+    for_each_lower_upper_bound(P, Bernoulli_init, Bernoulli_cb, data);
+
+    res = evalue_from_section_array(data->s, data->ns);
 
     if (nvar > 1) {
 	evalue *tmp = Bernoulli_sum_evalue(res, nvar-1, options);
@@ -551,6 +553,95 @@ static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
     }
 
     return res;
+}
+
+static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
+				 struct Bernoulli_data *data,
+				 struct barvinok_options *options);
+
+static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
+				 unsigned nvar,
+				 struct Bernoulli_data *data,
+				 struct barvinok_options *options)
+{
+    unsigned dim = P->Dimension;
+    unsigned new_dim, new_nparam;
+    Matrix *T = NULL, *CP = NULL;
+    evalue **subs;
+    evalue *sum;
+    int j;
+
+    assert(P->NbEq > 0);
+
+    remove_all_equalities(&P, NULL, &CP, &T, dim-nvar, options->MaxRays);
+
+    if (emptyQ(P)) {
+	Polyhedron_Free(P);
+	return evalue_zero();
+    }
+
+    new_nparam = CP ? CP->NbColumns-1 : dim - nvar;
+    new_dim = T ? T->NbColumns-1 : nvar + new_nparam;
+
+    /* We can avoid these substitutions if E is a constant */
+    subs = ALLOCN(evalue *, dim);
+    for (j = 0; j < nvar; ++j) {
+	if (T)
+	    subs[j] = affine2evalue(T->p[j], T->p[nvar+new_nparam][new_dim],
+				    new_dim);
+	else
+	    subs[j] = evalue_var(j);
+    }
+    for (j = 0; j < dim-nvar; ++j) {
+	if (CP)
+	    subs[nvar+j] = affine2evalue(CP->p[j], CP->p[dim-nvar][new_nparam],
+					 new_nparam);
+	else
+	    subs[nvar+j] = evalue_var(j);
+	unshift(subs[nvar+j], new_dim-new_nparam);
+    }
+
+    E = evalue_dup(E);
+    evalue_substitute(E, subs);
+    reduce_evalue(E);
+
+    for (j = 0; j < dim; ++j)
+	evalue_free(subs[j]);
+    free(subs);
+
+    if (new_dim-new_nparam > 0) {
+	sum = sum_over_polytope(P, E, new_dim-new_nparam, data, options);
+	evalue_free(E);
+	Polyhedron_Free(P);
+    } else {
+	sum = ALLOC(evalue);
+	value_init(sum->d);
+	sum->x.p = new_enode(partition, 2, new_dim);
+	EVALUE_SET_DOMAIN(sum->x.p->arr[0], P);
+	value_clear(sum->x.p->arr[1].d);
+	sum->x.p->arr[1] = *E;
+	free(E);
+    }
+
+    if (CP) {
+	evalue_backsubstitute(sum, CP, options->MaxRays);
+	Matrix_Free(CP);
+    }
+
+    if (T)
+	Matrix_Free(T);
+
+    return sum;
+}
+
+static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
+				 struct Bernoulli_data *data,
+				 struct barvinok_options *options)
+{
+    if (P->NbEq)
+	return sum_over_polytope_with_equalities(P, E, nvar, data, options);
+    else
+	return sum_over_polytope_base(P, E, nvar, data, options);
 }
 
 evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
