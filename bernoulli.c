@@ -601,12 +601,25 @@ evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
 evalue *Bernoulli_sum(Polyhedron *P, Polyhedron *C,
 			struct barvinok_options *options)
 {
+    Polyhedron *CA, *D;
     evalue e;
     evalue *sum;
 
+    if (emptyQ(P) || emptyQ(C))
+	return evalue_zero();
+
+    CA = align_context(C, P->Dimension, options->MaxRays);
+    D = DomainIntersection(P, CA, options->MaxRays);
+    Domain_Free(CA);
+
+    if (emptyQ(D)) {
+	Domain_Free(D);
+	return evalue_zero();
+    }
+
     value_init(e.d);
     e.x.p = new_enode(partition, 2, P->Dimension);
-    EVALUE_SET_DOMAIN(e.x.p->arr[0], Polyhedron_Copy(P));
+    EVALUE_SET_DOMAIN(e.x.p->arr[0], D);
     evalue_set_si(&e.x.p->arr[1], 1, 1);
     sum = Bernoulli_sum_evalue(&e, P->Dimension - C->Dimension, options);
     free_evalue_refs(&e);
