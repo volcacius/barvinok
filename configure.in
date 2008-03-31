@@ -308,7 +308,7 @@ if test "x$with_ginac_prefix" != "x"; then
 	export PKG_CONFIG_PATH=$with_ginac_prefix/lib/pkgconfig:$PKG_CONFIG_PATH
 fi
 
-AC_SUBST(bv_barvinok_maximize)
+AC_SUBST(bv_barvinok_bound)
 have_ginac=false
 if test "$with_bernstein" != "no"; then
 	PKG_CHECK_EXISTS([ginac], [
@@ -316,7 +316,7 @@ if test "$with_bernstein" != "no"; then
 		have_ginac=true
 		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
 		EXTRA_PACKAGE_LIBS="-lbernstein $EXTRA_PACKAGE_LIBS"
-		bv_barvinok_maximize="barvinok_maximize\$(EXEEXT) test_bound\$(EXEEXT)"
+		bv_barvinok_bound="barvinok_bound\$(EXEEXT) test_bound\$(EXEEXT)"
 	])
 fi
 AM_CONDITIONAL(HAVE_GINAC, test x$have_ginac = xtrue)

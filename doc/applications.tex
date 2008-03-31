@@ -442,11 +442,12 @@ specifies which summation method to use;
 \autoref{s:euler}
 \end{tabular}
 
-\subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_maximize}}
-{barvinok\_maximize}}
+\subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_bound}}
+{barvinok\_bound}}
 
 Given a piecewise quasi-polynomial,
-the program \ai[\tt]{barvinok\_maximize} computes an \ai{upper bound} for
+the program \ai[\tt]{barvinok\_bound} computes an \ai{upper bound}
+(or \ai{lower bound}) for
 the values attained by the piecewise quasi-polynomial
 over all (integer) values of a subset of the variables.
 The result is an expression in the remaining variables.
@@ -474,17 +475,20 @@ a line specifying the variables over which to compute the upper bound as
          U  >= 0
 
 ( {( 1/3 * U + ( 2/3 * V + 0 ) ) } )
-> ./barvinok_maximize < devos 
+> ./barvinok_bound < devos 
 (1*U >= 0 && -1*U + 10 >= 0) ? ((2.0/3.0)) : 0
 \end{verbatim}
 
 Options:\\
 \begin{tabular}{llp{0.7\textwidth}}
 \ai[\tt]{--variables} & & 
-comma separated list of variables over which to sum
+comma separated list of variables over which to compute a bound
 \\
 \ai[\tt]{--verbose} & \ai[\tt]{-v} &
 print parsed piecewise quasi-polynomial
+\\
+\ai[\tt]{--lower} & &
+compute lower bound instead of upper bound
 \end{tabular}
 
 \subsection{\texorpdfstring{\protect\ai[\tt]{polytope\_minimize}}

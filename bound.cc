@@ -23,14 +23,14 @@ using namespace barvinok;
 
 #define OPT_VARS  	    (BV_OPT_LAST+1)
 #define OPT_SPLIT  	    (BV_OPT_LAST+2)
-#define OPT_MIN  	    (BV_OPT_LAST+3)
+#define OPT_LOWER  	    (BV_OPT_LAST+3)
 #define OPT_METHOD  	    (BV_OPT_LAST+4)
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
     { "variables",	    OPT_VARS,  	"list",	0,
-	"comma separated list of variables over which to maximize" },
-    { "minimize",	    OPT_MIN,  	0, 0,	"minimize instead of maximize"},
+	"comma separated list of variables over which to compute a bound" },
+    { "lower",	    	    OPT_LOWER, 	0, 0,	"compute lower bound instead of upper bound"},
     { "optimization-method",	OPT_METHOD,	"bernstein|propagation",
 	0, "optimization method to use" },
     { 0 }
@@ -41,7 +41,7 @@ struct options {
     struct verify_options    verify;
     char* var_list;
     int split;
-    int minimize;
+    int lower;
 #define	METHOD_BERNSTEIN	0
 #define METHOD_PROPAGATION	1
     int method;
@@ -58,7 +58,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[2] = options->verify.barvinok;
 	options->var_list = NULL;
 	options->split = 0;
-	options->minimize = 0;
+	options->lower = 0;
 	options->method = METHOD_BERNSTEIN;
 	break;
     case OPT_VARS:
@@ -67,8 +67,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case OPT_SPLIT:
 	options->split = atoi(arg);
 	break;
-    case OPT_MIN:
-	options->minimize = 1;
+    case OPT_LOWER:
+	options->lower = 1;
 	break;
     case OPT_METHOD:
 	if (!strcmp(arg, "bernstein"))
@@ -213,14 +213,14 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 	    print_solution = 0;
     }
 
-    if (options->minimize)
+    if (options->lower)
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
     if (options->method == METHOD_BERNSTEIN) {
 	pl = evalue_bernstein_coefficients(NULL, EP, U, params,
 					   options->verify.barvinok);
-	if (options->minimize)
+	if (options->lower)
 	    pl->minimize();
 	else
 	    pl->maximize();

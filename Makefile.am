@@ -36,11 +36,11 @@ noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate verify_lexsmaller piptest \
-		  polyhedron_sample 4coins lexmin @bv_barvinok_maximize@ \
+		  polyhedron_sample 4coins lexmin @bv_barvinok_bound@ \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
 		  polyhedron_integer_hull
-EXTRA_PROGRAMS = barvinok_maximize test_bound cone_hilbert_basis
+EXTRA_PROGRAMS = barvinok_bound test_bound cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
@@ -235,17 +235,17 @@ barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
 	@OMEGA_LIBS@ libbarvinok-core.la \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
-barvinok_maximize_SOURCES = \
+barvinok_bound_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \
 	evalue_read.h \
 	$(FDSTREAM) \
-	maximize.cc \
+	bound.cc \
 	verify.h \
 	verify.c
-EXTRA_barvinok_maximize_SOURCES = fdstream.cc fdstream.h
-barvinok_maximize_LDADD = \
+EXTRA_barvinok_bound_SOURCES = fdstream.cc fdstream.h
+barvinok_bound_LDADD = \
 	libbarvinok-core.la libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
 	evalue_convert.cc \
@@ -354,12 +354,12 @@ check-approx: test_approx$(EXEEXT)
 		echo $$i | ./test_approx$(EXEEXT) -q -r 10 || exit; \
 	    fi \
 	done
-check-evalue: @bv_barvinok_maximize@ barvinok_summate$(EXEEXT)
+check-evalue: @bv_barvinok_bound@ barvinok_summate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		if test -n "@bv_barvinok_maximize@"; then \
-		    ./barvinok_maximize$(EXEEXT) -T < $$i || exit; \
+		if test -n "@bv_barvinok_bound@"; then \
+		    ./barvinok_bound$(EXEEXT) -T < $$i || exit; \
 		    echo $$i | ./test_bound$(EXEEXT) -q || exit; \
 		fi; \
 		./barvinok_summate$(EXEEXT) -T < $$i || exit; \
