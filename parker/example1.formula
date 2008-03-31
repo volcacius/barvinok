@@ -1,0 +1,7 @@
+# This example Presburger formula has 17 solutions.
+
+{[In_1,In_2,In_3,In_4]: 1 <= In_1 <= 4 && In_2 = 5 && In_3 = 12 && In_4 = 2} union
+{[In_1,In_2,In_3,In_4]: 0 <= In_1 <= 3 && In_2 = 5 && In_3 = 12 && In_4 = 2} union
+{[In_1,In_2,In_3,In_4]: 4 <= In_1 <= 7 && In_2 = 11 && In_3 =0 && In_4 = 0} union
+{[In_1,In_2,In_3,In_4]: 0 <= In_1 <= 3 && In_2 = 6 && In_3 = 0 && In_4 = 1} union
+{[In_1,In_2,In_3,In_4]: 5 <= In_1 <= 8 && In_2 = 5 && In_3 = 12 && In_4 = 2}
