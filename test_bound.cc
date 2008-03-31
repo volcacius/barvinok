@@ -32,11 +32,13 @@ static struct {
 #define nr_methods (sizeof(methods)/sizeof(*methods))
 
 struct argp_option argp_options[] = {
+    { "quiet",	    'q' },
     { 0 }
 };
 
 struct options {
     struct verify_options    verify;
+    int quiet;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -47,6 +49,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
 	state->child_inputs[0] = options->verify.barvinok;
 	state->child_inputs[1] = &options->verify;
+	options->quiet = 0;
+	break;
+    case 'q':
+	options->quiet = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -301,7 +307,8 @@ int main(int argc, char **argv)
 	handle(in, &result, &options.verify);
 	fclose(in);
 
-	result_data_print(&result, 1);
+	if (!options.quiet)
+	    result_data_print(&result, 1);
 
 	value_addto(all_result.n, all_result.n, result.n);
 	for (i = 0; i < nr_methods; ++i) {
@@ -312,8 +319,10 @@ int main(int argc, char **argv)
 
 	result_data_clear(&result);
 
-	fprintf(stderr, "average\n");
-	result_data_print(&all_result, n);
+	if (!options.quiet) {
+	    fprintf(stderr, "average\n");
+	    result_data_print(&all_result, n);
+	}
     }
 
     result_data_clear(&all_result);

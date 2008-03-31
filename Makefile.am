@@ -360,6 +360,7 @@ check-evalue: @bv_barvinok_maximize@ barvinok_summate$(EXEEXT)
 		echo $$i; \
 		if test -n "@bv_barvinok_maximize@"; then \
 		    ./barvinok_maximize$(EXEEXT) -T < $$i || exit; \
+		    echo $$i | ./test_bound$(EXEEXT) -q || exit; \
 		fi; \
 		./barvinok_summate$(EXEEXT) -T < $$i || exit; \
 	    fi \
