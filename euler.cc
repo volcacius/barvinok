@@ -363,9 +363,14 @@ static void evalue_derive(evalue *poly, int var)
 	return;
     }
 
-    assert(poly->x.p->size > 1);
+    assert(poly->x.p->size >= 1);
     enode *p = poly->x.p;
     free_evalue_refs(&p->arr[0]);
+    if (p->size == 1) {
+	free(p);
+	evalue_set_si(poly, 0, 1);
+	return;
+    }
     if (p->size == 2) {
 	value_clear(poly->d);
 	*poly = p->arr[1];
