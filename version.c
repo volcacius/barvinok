@@ -49,6 +49,11 @@ const char *barvinok_version(void)
 #else
 	" -ZSOLVE"
 #endif
+#ifdef USE_PARKER
+	" +PARKER"
+#else
+	" -PARKER"
+#endif
     "\n"
     ;
 }

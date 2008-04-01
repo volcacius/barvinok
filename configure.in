@@ -379,6 +379,7 @@ if test "$with_parker" != "no"; then
 		MONAPATH=$with_mona
 		AC_MSG_RESULT($MONAPATH)
 		use_parker=true
+		AC_DEFINE(USE_PARKER,[],[use parker])
 	fi
 
 	if test "x$with_mona" = "x"; then

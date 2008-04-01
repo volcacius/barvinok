@@ -27,6 +27,8 @@ piplib/libpiplibMP.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C piplib libpiplibMP.la
 zsolve/libzsolve.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C zsolve libzsolve.la
+parker/libparker.la: FORCE
+	$(MAKE) $(AM_MAKEFLAGS) -C parker libparker.la
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@
@@ -235,10 +237,17 @@ barvinok_enumerate_e_SOURCES = \
 	verify_series.cc \
 	$(BEEO_SOURCES)
 EXTRA_barvinok_enumerate_e_SOURCES = fdstream.cc fdstream.h
-barvinok_enumerate_e_CPPFLAGS = @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
-barvinok_enumerate_e_LDFLAGS = @OMEGA_LDFLAGS@ @LDFLAGS@
+if USE_PARKER
+    MONA_LIBS = -ldfa -lbdd -lmem
+    PARKER_LA = parker/libparker.la
+    PARKERLDFLAGS = -L$(MONAPATH)/DFA -L$(MONAPATH)/BDD -L$(MONAPATH)/Mem
+    PARKERCPPFLAGS = -I$(MONAPATH)/Mem -I$(MONAPATH)/DFA -I$(MONAPATH)/BDD
+endif
+barvinok_enumerate_e_CPPFLAGS = \
+	$(PARKERCPPFLAGS) @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
+barvinok_enumerate_e_LDFLAGS = $(PARKERLDFLAGS) @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
-	@OMEGA_LIBS@ libbarvinok-core.la \
+	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ libbarvinok-core.la \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
 	evalue_convert.cc \

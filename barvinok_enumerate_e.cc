@@ -10,11 +10,15 @@
 #ifdef HAVE_OMEGA
 #include "omega/convert.h"
 #endif
+#ifdef USE_PARKER
+#include "parker/count_solutions.h"
+#endif
 #include "skewed_genfun.h"
 #include "verify.h"
 #include "verif_ehrhart.h"
 #include "verify_series.h"
 #include "evalue_convert.h"
+#include "normalization.h"
 
 /* The input of this example program is a polytope in combined
  * data and parameter space followed by two lines indicating
@@ -25,8 +29,11 @@
  * The polytope is in PolyLib notation.
  */
 
+#define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
+
 struct argp_option argp_options[] = {
     { "omega",      	    'o',    0,      0 },
+    { "parker", 	    'P',    0,      0 },
     { "pip",   	    	    'p',    0,      0 },
     { "series",     	    's',    0,	    0 },
     { "series",		    's', 0, 0, "compute rational generating function" },
@@ -39,6 +46,7 @@ struct arguments {
     struct verify_options    verify;
     struct convert_options   convert;
     int omega;
+    int parker;
     int pip;
     int scarf;
     int series;
@@ -71,6 +79,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	error(0, 0, "--omega option not supported");
 #endif
 	break;
+    case 'P':
+#ifdef USE_PARKER
+	arguments->parker = 1;
+#else
+	error(0, 0, "--parker option not supported");
+#endif
+	break;
     case 'p':
 	arguments->pip = 1;
 	break;
@@ -96,6 +111,43 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 			    unsigned exist, unsigned nparam, char **parms)
 {
     return P;
+}
+#endif
+
+#ifdef USE_PARKER
+/*
+ * Use parker's method to compute the number of integer points in P.
+ * Since this method assumes all variables are non-negative,
+ * we have to transform the input polytope first.
+ */
+evalue *barvinok_enumerate_parker(Polyhedron *P,
+					unsigned exist, unsigned nparam,
+					unsigned MaxRays)
+{
+    Polyhedron *R;
+    evalue *res;
+
+    assert(nparam == 0);
+    R = skew_to_positive_orthant(P, P->Dimension-exist, MaxRays);
+    Relation r = Polyhedron2relation(R, exist, 0, NULL);
+    Polyhedron_Free(R);
+    double d = count_solutions(r);
+    ALLOC(evalue, res);
+    value_init(res->d);
+    value_set_si(res->d, 0);
+    res->x.p = new_enode(partition, 2, 0);
+    EVALUE_SET_DOMAIN(res->x.p->arr[0], Universe_Polyhedron(0));
+    value_set_si(res->x.p->arr[1].d, 1);
+    value_init(res->x.p->arr[1].x.n);
+    value_set_double(res->x.p->arr[1].x.n, d);
+    return res;
+}
+#else
+evalue *barvinok_enumerate_parker(Polyhedron *P,
+					unsigned exist, unsigned nparam,
+					unsigned MaxRays)
+{
+    assert(0);
 }
 #endif
 
@@ -125,6 +177,7 @@ int main(int argc, char **argv)
 
     arguments.verify.barvinok = options;
     arguments.omega = 0;
+    arguments.parker = 0;
     arguments.pip = 0;
     arguments.scarf = 0;
     arguments.series = 0;
@@ -179,7 +232,9 @@ int main(int argc, char **argv)
 		print_evalue(stdout, EP, param_name);
 	}
     } else {
-	if (arguments.scarf)
+	if (arguments.parker)
+	    EP = barvinok_enumerate_parker(A, exist, nparam, options->MaxRays);
+	else if (arguments.scarf)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
 	else if (arguments.pip && exist > 0)
 	    EP = barvinok_enumerate_pip_with_options(A, exist, nparam, options);
