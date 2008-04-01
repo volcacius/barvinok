@@ -2,7 +2,7 @@
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include <unistd.h>
-#include "polysign.h"
+#include "normalization.h"
 #include "topcom.h"
 #include "config.h"
 
