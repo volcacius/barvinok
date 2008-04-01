@@ -10,8 +10,11 @@ endif
 if USE_ZSOLVE
     MAYBE_ZSOLVE = zsolve
 endif
+if USE_PARKER
+    MAYBE_PARKER = parker
+endif
 SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) \
-		lib $(MAYBE_ZSOLVE) . omega doc
+		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega doc
 
 FORCE:
 lib/libgnu.la: FORCE

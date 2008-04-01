@@ -361,6 +361,32 @@ if test "$omega_package" != "no"; then
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
 
+use_parker=false
+AC_MSG_CHECKING(whether to compile parker)
+AC_ARG_WITH(parker,
+	    [AS_HELP_STRING([--without-zsolve],[do not compile zsolve])],
+            [ with_parker=$withval],  [ with_parker=yes ])
+AC_MSG_RESULT($with_parker)
+
+if test "$with_parker" != "no"; then
+	AC_MSG_CHECKING(for mona)
+	AC_ARG_WITH(mona,
+		[AS_HELP_STRING([--with-mona=DIR],[mona *source* directory])],
+				[], [AC_MSG_RESULT(not specified)])
+
+	if test "x$with_mona" != "x"; then
+		AC_SUBST(MONAPATH)
+		MONAPATH=$with_mona
+		AC_MSG_RESULT($MONAPATH)
+		use_parker=true
+	fi
+
+	if test "x$with_mona" = "x"; then
+		AC_MSG_WARN(mona source directory required to compile parker)
+		AC_MSG_WARN(http://www.brics.dk/mona/download)
+	fi
+fi
+AM_CONDITIONAL(USE_PARKER, test x$use_parker = xtrue)
 
 AC_MSG_CHECKING(whether to use cddlib)
 AC_ARG_WITH(cddlib, [AS_HELP_STRING([--with-cddlib=DIR],[DIR Location of cddlib])],
@@ -512,6 +538,7 @@ AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_FILES(Makefile lib/Makefile zsolve/Makefile doc/Makefile omega/Makefile)
+AC_CONFIG_FILES(parker/Makefile)
 if test $with_polylib = bundled; then
 	AC_CONFIG_SUBDIRS(polylib)
 fi
