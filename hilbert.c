@@ -78,13 +78,15 @@ static Matrix *Polyhedron2standard_form(Polyhedron *P, Matrix **T)
     unsigned dim = P->Dimension;
     Matrix *M2;
     Matrix *H, *U;
+    Matrix M;
 
     assert(P->NbEq == 0);
     Polyhedron_Remove_Positivity_Constraint(P);
     for (i = 0; i < P->NbConstraints; ++i)
 	assert(value_zero_p(P->Constraint[i][1+dim]));
 
-    H = standard_constraints(P, 0, &rows, &U);
+    Polyhedron_Matrix_View(P, &M, P->NbConstraints);
+    H = standard_constraints(&M, 0, &rows, &U);
     *T = homogenize(U);
     Matrix_Free(U);
 

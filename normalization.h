@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-Matrix *standard_constraints(Polyhedron *P, unsigned nparam, int *rows_p,
+Matrix *standard_constraints(Matrix *C, unsigned nparam, int *rows_p,
 			     Matrix **T);
 
 #if defined(__cplusplus)

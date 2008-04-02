@@ -369,10 +369,12 @@ Param_Polyhedron *TC_P2PP(Polyhedron *P, Polyhedron *C,
     Matrix *K;
     int rows;
     Param_Polyhedron *PP;
+    Matrix M;
 
     assert(C->NbEq == 0);
 
-    H = standard_constraints(P, nparam, &rows, NULL);
+    Polyhedron_Matrix_View(P, &M, P->NbConstraints);
+    H = standard_constraints(&M, nparam, &rows, NULL);
 
     A = Matrix_Alloc(rows, nvar+rows);
     for (i = nvar; i < H->NbRows; ++i) {
