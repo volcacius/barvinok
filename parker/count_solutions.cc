@@ -17,6 +17,7 @@ static void max_index(Constraint_Handle c, varvector& vv)
 double count_solutions(Relation& r) 
 {
     int dim;
+    int max_size;
 
     r.simplify();
 
@@ -33,12 +34,25 @@ double count_solutions(Relation& r)
 	    vv.push_back(r.output_var(j));
     }
 
-    int *coeffs = new int[vv.size()];
-    int *indices = new int[vv.size()];
+    max_size = dim;
+    for (DNF_Iterator di(r.query_DNF()); di; ++di) {
+	vv.resize(dim);
+	for (EQ_Iterator ei = (*di)->EQs(); ei; ++ei)
+	    max_index((*ei), vv);
+	for (GEQ_Iterator gi = (*di)->GEQs(); gi; ++gi)
+	    max_index((*gi), vv);
+	if (vv.size() > max_size)
+	    max_size = vv.size();
+    }
+
+    int *coeffs = new int[max_size];
+    int *indices = new int[max_size];
     DFA* dfa = NULL;
 
     for (DNF_Iterator di(r.query_DNF()); di; ++di) {
 	DFA* c = NULL;
+
+	vv.resize(dim);
 
 	for (EQ_Iterator ei = (*di)->EQs(); ei; ++ei)
 	    max_index((*ei), vv);
@@ -82,6 +96,13 @@ double count_solutions(Relation& r)
 	    }
 	}
 
+	assert(c);
+	for (int i = dim; i < vv.size(); ++i) {
+	    DFA *t = c;
+	    c = dfaMinimize(dfaProject(c, i));
+	    dfaFree(t);
+	}
+
 	if (!dfa)
 	    dfa = c;
 	else {
@@ -90,13 +111,6 @@ double count_solutions(Relation& r)
 	    dfaFree(t);
 	    dfaFree(c);
 	}
-    }
-
-    assert(dfa);
-    for (int i = dim; i < vv.size(); ++i) {
-	DFA *t = dfa;
-	dfa = dfaMinimize(dfaProject(dfa, i));
-	dfaFree(t);
     }
 
     double c = count_accepting_paths(dfa, dfa->ns, dim);
