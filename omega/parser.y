@@ -23,6 +23,7 @@
 #include "count.h"
 #include "vertices.h"
 #include "polyfunc.h"
+#include "convert.h"
 
 #define CALC_VERSION_STRING "Omega Calculator v1.2"
 
@@ -109,6 +110,7 @@ Map<Variable_Ref *, GiNaC::ex> *variableMap;
 %token CARD RANKING COUNT_LEXSMALLER
 %token VERTICES
 %token BMAX
+%token DUMP
 
 %token PARSE_EXPRESSION PARSE_FORMULA PARSE_RELATION
 
@@ -129,6 +131,7 @@ Map<Variable_Ref *, GiNaC::ex> *variableMap;
 %left '('	OMEGA_P10
 %right CARD RANKING COUNT_LEXSMALLER
 %right VERTICES
+%right DUMP
 
 
 %type <INT_VALUE> effort 
@@ -551,6 +554,9 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    current_Declaration_Site = globalDecls;
 	    delete relationDecl;
 	    delete variableMap;
+	}
+	| DUMP relation ';' {
+	    dump(*$2);
 	}
 	;
 
