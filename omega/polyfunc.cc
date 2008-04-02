@@ -24,7 +24,8 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
     polyfunc->domain.simplify();
     polyfunc->domain.print(stdout);
 
-    Polyhedron *D = relation2Domain(polyfunc->domain, vv, params);
+    Polyhedron *D = relation2Domain(polyfunc->domain, vv, params,
+					options->MaxRays);
     assert(!D->next);
     assert(polyfunc->domain.is_set());
     int dim = polyfunc->domain.n_set();
@@ -42,8 +43,8 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
 	assert(var != 0);
 	exvars.push_back(var);
     }
-    for (int i = dim; i < vv.size(); ++i) {
-	Global_Var_ID global = vv[i]->get_global_var();
+    for (int i = 0; i < params.size(); ++i) {
+	Global_Var_ID global = params[i]->get_global_var();
 	ex var = 0;
 	foreach_map(vr,Variable_Ref *,s,ex,variableMap, {
 	    if (vr->g == global) {
@@ -54,7 +55,7 @@ void maximize(PolyFunc *polyfunc, Map<Variable_Ref *, GiNaC::ex>& variableMap)
 	if (var != 0)
 	    exparams.push_back(var);
 	else
-	    exparams.push_back(symbol(vv[i]->char_name()));
+	    exparams.push_back(symbol(params[i]->char_name()));
     }
 
     PP = Polyhedron2Param_Polyhedron(D, ctx, options);

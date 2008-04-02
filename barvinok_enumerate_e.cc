@@ -98,17 +98,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 #ifdef HAVE_OMEGA
 
 Polyhedron *Omega_simplify(Polyhedron *P, 
-			    unsigned exist, unsigned nparam, char **parms)
+			    unsigned exist, unsigned nparam, char **parms,
+			    unsigned MaxRays)
 {
     varvector varv;
     varvector paramv;
     Relation r = Polyhedron2relation(P, exist, nparam, parms);
     Polyhedron_Free(P);
-    return relation2Domain(r, varv, paramv);
+    return relation2Domain(r, varv, paramv, MaxRays);
 }
 #else
 Polyhedron *Omega_simplify(Polyhedron *P, 
-			    unsigned exist, unsigned nparam, char **parms)
+			    unsigned exist, unsigned nparam, char **parms,
+			    unsigned MaxRays)
 {
     return P;
 }
@@ -213,7 +215,7 @@ int main(int argc, char **argv)
     param_name = Read_ParamNames(stdin, nparam);
     nvar = A->Dimension - exist - nparam;
     if (arguments.omega) {
-	A = Omega_simplify(A, exist, nparam, param_name);
+	A = Omega_simplify(A, exist, nparam, param_name, options->MaxRays);
 	assert(!A->next);
 	exist = A->Dimension - nvar - nparam;
     }

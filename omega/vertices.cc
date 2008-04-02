@@ -14,7 +14,7 @@ void vertices(Relation& r)
     Param_Polyhedron *PP;
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-    Polyhedron *D = relation2Domain(r, vv, params);
+    Polyhedron *D = relation2Domain(r, vv, params, options->MaxRays);
     assert(!D->next);
     Polyhedron *ctx = Universe_Polyhedron(params.size());
 

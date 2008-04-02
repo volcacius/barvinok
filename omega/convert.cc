@@ -1,7 +1,4 @@
-#include <barvinok/util.h>
 #include "omega/convert.h"
-
-#define MAXRAYS    POL_NO_DUAL
 
 static void max_index(Constraint_Handle c, varvector& vv, varvector& params)
 {
@@ -22,9 +19,13 @@ static void set_constraint(Matrix *M, int row,
     value_set_si(M->p[row][1+vv.size()], c.get_const());
 }
 
-Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params)
+Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params,
+				unsigned MaxRays)
 {
+    unsigned dim;
+    unsigned max_size;
     Polyhedron *D = NULL;
+    Polyhedron **next = &D;
 
     r.simplify();
 
@@ -37,13 +38,28 @@ Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params)
 	for (int j = 1; j <= r.n_out(); ++j)
 	    vv.push_back(r.output_var(j));
     }
+    dim = vv.size();
 
     const Variable_ID_Tuple * globals = r.global_decls();
     for (int i = 0; i < globals->size(); ++i)
 	params.push_back(r.get_local((*globals)[i+1]));
 
+    max_size = dim;
+    for (DNF_Iterator di(r.query_DNF()); di; ++di) {
+	vv.resize(dim);
+	for (EQ_Iterator ei = (*di)->EQs(); ei; ++ei)
+	    max_index((*ei), vv, params);
+	for (GEQ_Iterator gi = (*di)->GEQs(); gi; ++gi)
+	    max_index((*gi), vv, params);
+	if (vv.size() > max_size)
+	    max_size = vv.size();
+    }
+
     for (DNF_Iterator di(r.query_DNF()); di; ++di) {
 	int c = 0;
+
+	vv.resize(dim);
+
 	for (EQ_Iterator ei = (*di)->EQs(); ei; ++ei, ++c)
 	    max_index((*ei), vv, params);
 	for (GEQ_Iterator gi = (*di)->GEQs(); gi; ++gi, ++c)
@@ -57,10 +73,11 @@ Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params)
 	    set_constraint(M, row++, (*ei), vv, 0);
 	for (GEQ_Iterator gi = (*di)->GEQs(); gi; ++gi)
 	    set_constraint(M, row++, (*gi), vv, 1);
-	Polyhedron *P = Constraints2Polyhedron(M, MAXRAYS);
+	*next = Constraints2Polyhedron(M, MaxRays);
 	Matrix_Free(M);
-	D = DomainConcat(P, D);
+	next = &(*next)->next;
     }
+    vv.resize(dim);
     return D;
 }
 
@@ -99,7 +116,8 @@ void dump(Relation& r)
 {
     varvector vv;
     varvector params;
-    Polyhedron *D = relation2Domain(r, vv, params);
+    struct barvinok_options *options = barvinok_options_new_with_defaults();
+    Polyhedron *D = relation2Domain(r, vv, params, options->MaxRays);
     unsigned dim = r.is_set() ? r.n_set() : r.n_inp() + r.n_out();
 
     if (D->next) {
@@ -114,4 +132,5 @@ void dump(Relation& r)
     }
 
     Domain_Free(D);
+    barvinok_options_free(options);
 }
