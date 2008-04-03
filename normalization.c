@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <barvinok/util.h>
 #include "normalization.h"
 
 static int is_unit_row(Value *row, int pos, int len)
@@ -87,68 +88,44 @@ Matrix *standard_constraints(Matrix *C, unsigned nparam, int *rows_p,
 }
 
 /*
- * Transform the constraints of P, which may have existentially
- * quantified variables to "standard form".
+ * Transform the constraints of PE involving existentially
+ * quantified variables, placed in front in PE, to "standard form".
  *
- * We need to make sure that the new variables are affine
- * combinations of only the original variables (and not
- * of any of the existentially quantified variables).
- * We therefore first apply standard_constraints on
- * the constraints involving only the variables and
- * then apply the same procedure on the remaining
- * constraints with the variables as parameters.
- *
- * Perhaps we are overly careful here.  Moving the constraints
- * involving existentially quantified variables down should prevent
- * the regular variables from being replaced by linear combinations
- * of existential variables.
+ * The resulting matrix has the existential variables after
+ * the unquantified variables again.
  */
-static Matrix *exist_standard_constraints(Polyhedron *P, unsigned nvar)
+static Matrix *exist_standard_constraints(Polyhedron *PE, unsigned nvar)
 {
     int i, i1, i2;
-    unsigned exist = P->Dimension - nvar;
-    Matrix *M = Matrix_Alloc(P->NbConstraints, 2+P->Dimension);
-    Matrix *M1 = Matrix_Alloc(P->NbConstraints, 2+nvar);
-    Matrix *M2 = Matrix_Alloc(P->NbConstraints, 2+P->Dimension);
-    Matrix *S1, *S2;
+    unsigned exist = PE->Dimension - nvar;
+    Matrix *M = Matrix_Alloc(PE->NbConstraints, 2+PE->Dimension);
+    Matrix *M2 = Matrix_Alloc(PE->NbConstraints, 2+PE->Dimension);
+    Matrix *S2;
     Value c;
 
-    for (i = 0; i < P->NbConstraints; ++i) {
-	value_assign(M->p[i][0], P->Constraint[i][0]);
-	Vector_Copy(P->Constraint[i]+1, M->p[i]+1+exist, nvar);
-	Vector_Copy(P->Constraint[i]+1+nvar, M->p[i]+1, exist);
-	value_assign(M->p[i][1+P->Dimension], P->Constraint[i][1+P->Dimension]);
-    }
-    Gauss(M, P->NbEq, P->Dimension+1);
-    for (i = i1 = i2 = 0; i < M->NbRows; ++i) {
-	if (First_Non_Zero(M->p[i]+1, exist) == -1) {
-	    value_assign(M1->p[i1][0], M->p[i][0]);
-	    Vector_Copy(M->p[i]+1+exist, M1->p[i1]+1, nvar+1);
+    for (i = i1 = i2 = 0; i < PE->NbConstraints; ++i) {
+	if (First_Non_Zero(PE->Constraint[i]+1, exist) == -1) {
+	    value_assign(M->p[i1][0], PE->Constraint[i][0]);
+	    Vector_Copy(PE->Constraint[i]+1+exist, M->p[i1]+1, nvar);
+	    value_assign(M->p[i1][1+PE->Dimension],
+			 PE->Constraint[i][1+PE->Dimension]);
 	    ++i1;
 	} else {
-	    Vector_Copy(M->p[i], M2->p[i2], M->NbColumns);
+	    Vector_Copy(PE->Constraint[i], M2->p[i2], M2->NbColumns);
 	    ++i2;
 	}
     }
-    M1->NbRows = i1;
+    M->NbRows = i1;
     M2->NbRows = i2;
-    Matrix_Free(M);
 
-    S1 = standard_constraints(M1, 0, NULL, NULL);
     S2 = standard_constraints(M2, nvar, NULL, NULL);
 
-    M = Matrix_Alloc(P->NbConstraints, 2+P->Dimension);
-    for (i = 0; i < M1->NbRows; ++i) {
-	value_assign(M->p[i][0], M1->p[i][0]);
-	Vector_Copy(S1->p[i], M->p[i]+1, nvar);
-	value_assign(M->p[i][1+P->Dimension], M1->p[i][1+nvar]);
-    }
     for (i = 0; i < M2->NbRows; ++i) {
-	value_assign(M->p[M1->NbRows+i][0], M2->p[i][0]);
-	Vector_Copy(M2->p[i]+1+exist, M->p[M1->NbRows+i]+1, nvar);
-	Vector_Copy(S2->p[i], M->p[M1->NbRows+i]+1+nvar, exist);
-	value_assign(M->p[M1->NbRows+i][1+P->Dimension],
-			M2->p[i][1+P->Dimension]);
+	value_assign(M->p[M->NbRows+i][0], M2->p[i][0]);
+	Vector_Copy(M2->p[i]+1+exist, M->p[M->NbRows+i]+1, nvar);
+	Vector_Copy(S2->p[i], M->p[M->NbRows+i]+1+nvar, exist);
+	value_assign(M->p[M->NbRows+i][1+PE->Dimension],
+			M2->p[i][1+PE->Dimension]);
     }
 
     /* Make sure "standard" constraints for existential variables
@@ -159,17 +136,17 @@ static Matrix *exist_standard_constraints(Polyhedron *P, unsigned nvar)
     for (i = 0; i < exist; ++i) {
 	assert(value_pos_p(S2->p[i][i]));
 	for (i1 = 0; i1 < nvar; ++i1) {
-	    if (value_negz_p(M->p[M1->NbRows+i][1+i1]))
+	    if (value_negz_p(M->p[M->NbRows+i][1+i1]))
 		continue;
-	    mpz_cdiv_q(c, M->p[M1->NbRows+i][1+i1], S2->p[i][i]);
+	    mpz_cdiv_q(c, M->p[M->NbRows+i][1+i1], S2->p[i][i]);
 	    value_oppose(c, c);
 	    for (i2 = i; i2 < M2->NbRows; ++i2)
-		value_addmul(M->p[M1->NbRows+i2][1+i1], c, S2->p[i2][i]);
+		value_addmul(M->p[M->NbRows+i2][1+i1], c, S2->p[i2][i]);
 	}
     }
     value_clear(c);
+    M->NbRows += M2->NbRows;
 
-    Matrix_Free(M1);
     Matrix_Free(M2);
 
     return M;
@@ -187,13 +164,15 @@ static Matrix *exist_standard_constraints(Polyhedron *P, unsigned nvar)
  *		A x' + b - A t >= 0
  *
  * are sure to attain only non-negative values.
+ *
+ * The first nvar shifts have already been set prior to
+ * calling this function.
  */
-static Vector *compute_shifts(Matrix *M)
+static void compute_shifts(Matrix *M, unsigned nvar, Vector *shifts)
 {
     int c, r;
     unsigned dim = M->NbColumns-2;
-    Vector *shifts = Vector_Alloc(M->NbColumns);
-    for (c = 0, r = 0; c < dim; ++c) {
+    for (c = nvar, r = 0; c < dim; ++c) {
 	for ( ; r < M->NbRows; ++r) {
 	    if (value_notzero_p(M->p[r][1+c]))
 		break;
@@ -212,6 +191,85 @@ static Vector *compute_shifts(Matrix *M)
 }
 
 /*
+ * Move the existential variables before the unquantified variables.
+ */
+static Polyhedron *move_exists_in_front(Polyhedron *D, unsigned nvar,
+					unsigned MaxRays)
+{
+    Polyhedron *P;
+    Polyhedron *DE = NULL;
+    Polyhedron **next = &DE;
+
+    for (P = D; P; P = P->next) {
+	int i;
+	unsigned exist = P->Dimension - nvar;
+	Matrix *M = Matrix_Alloc(P->NbConstraints, 2+P->Dimension);
+
+	for (i = 0; i < P->NbConstraints; ++i) {
+	    value_assign(M->p[i][0], P->Constraint[i][0]);
+	    Vector_Copy(P->Constraint[i]+1, M->p[i]+1+exist, nvar);
+	    Vector_Copy(P->Constraint[i]+1+nvar, M->p[i]+1, exist);
+	    value_assign(M->p[i][1+P->Dimension],
+			 P->Constraint[i][1+P->Dimension]);
+	}
+
+	*next = Constraints2Polyhedron(M, MaxRays);
+	Matrix_Free(M);
+
+	next = &(*next)->next;
+    }
+
+    return DE;
+}
+
+/*
+ * Compute the shifts s for the variables x, such that x + s >= 0.
+ * DE is a union of polyhedra with the existential variables first.
+ *
+ * We simply project out the existential variables, compute
+ * the convex hull and then compute the minimal coordinate
+ * in each direction of all the vertices.
+ * The shift is the opposite of this minimal coordinate or zero.
+ */
+static Vector *compute_var_shifts(Polyhedron *DE, unsigned nvar,
+					unsigned MaxRays)
+{
+    Polyhedron *PE;
+    Polyhedron *D = NULL;
+    Polyhedron **next = &D;
+    Polyhedron *C;
+    Vector *shifts;
+    int i, j;
+    Value tmp;
+
+    for (PE = DE; PE; PE = PE->next) {
+	*next = Polyhedron_Project(PE, nvar);
+	next = &(*next)->next;
+    }
+    C = DomainConvex(D, MaxRays);
+    Domain_Free(D);
+    POL_ENSURE_VERTICES(C);
+
+    shifts = Vector_Alloc(C->Dimension);
+    value_init(tmp);
+    for (i = 0; i < C->Dimension; ++i) {
+	for (j = 0; j < C->NbRays; ++j) {
+	    assert(value_notzero_p(C->Ray[j][1+C->Dimension]));
+	    if (value_posz_p(C->Ray[j][1+i]))
+		continue;
+	    mpz_fdiv_q(tmp, C->Ray[j][1+i], C->Ray[j][1+C->Dimension]);
+	    if (value_lt(tmp, shifts->p[i]))
+		value_assign(shifts->p[i], tmp);
+	}
+	value_oppose(shifts->p[i], shifts->p[i]);
+    }
+    value_clear(tmp);
+    Polyhedron_Free(C);
+
+    return shifts;
+}
+
+/*
  * Given a union of polyhedra, with possibly existentially
  * quantified variables, but no parameters, apply a unimodular
  * transformation with constant translation to the variables,
@@ -219,32 +277,41 @@ static Vector *compute_shifts(Matrix *M)
  * depending on the variables to the existentially quantified variables,
  * such that all variables and all existentially quantified variables
  * attain only non-negative values.
+ *
+ * The projection onto the variables is assumed to be a polytope.
  */
 Polyhedron *skew_to_positive_orthant(Polyhedron *D, unsigned nvar,
 					unsigned MaxRays)
 {
-    Polyhedron *P;
+    Polyhedron *PE;
     Polyhedron *R = NULL;
     Polyhedron **next = &R;
+    Vector *var_shifts;
+    Polyhedron *DE;
 
-    for (P = D; P; P = P->next) {
+    DE = move_exists_in_front(D, nvar, MaxRays);
+    var_shifts = compute_var_shifts(DE, nvar, MaxRays);
+
+    for (PE = DE; PE; PE = PE->next) {
 	Matrix *M, *C;
 	Vector *shifts, *offsets;
 	int i;
 
-	M = exist_standard_constraints(P, nvar);
-	shifts = compute_shifts(M);
+	M = exist_standard_constraints(PE, nvar);
+	shifts = Vector_Alloc(M->NbColumns);
+	Vector_Copy(var_shifts->p, shifts->p+1, nvar);
+	compute_shifts(M, nvar, shifts);
 
-	offsets = Vector_Alloc(P->NbConstraints);
+	offsets = Vector_Alloc(M->NbRows);
 	Matrix_Vector_Product(M, shifts->p, offsets->p);
 	Vector_Free(shifts);
 
-	C = Matrix_Alloc(P->NbConstraints, P->Dimension+2);
-	for (i = 0; i < P->NbConstraints; ++i) {
+	C = Matrix_Alloc(M->NbRows, M->NbColumns);
+	for (i = 0; i < M->NbRows; ++i) {
 	    value_assign(C->p[i][0], M->p[i][0]);
-	    Vector_Copy(M->p[i]+1, C->p[i]+1, P->Dimension);
-	    value_subtract(C->p[i][1+P->Dimension],
-			    M->p[i][1+P->Dimension], offsets->p[i]);
+	    Vector_Copy(M->p[i]+1, C->p[i]+1, M->NbColumns-2);
+	    value_subtract(C->p[i][M->NbColumns-1],
+			    M->p[i][M->NbColumns-1], offsets->p[i]);
 	}
 	Vector_Free(offsets);
 	Matrix_Free(M);
@@ -254,5 +321,7 @@ Polyhedron *skew_to_positive_orthant(Polyhedron *D, unsigned nvar,
 
 	next = &(*next)->next;
     }
+    Vector_Free(var_shifts);
+    Domain_Free(DE);
     return R;
 }
