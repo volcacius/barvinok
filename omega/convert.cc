@@ -81,10 +81,19 @@ Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params,
     return D;
 }
 
-Relation Polyhedron2relation(Polyhedron *P,
-			  unsigned exist, unsigned nparam, char **params)
+typedef std::vector<Global_Var_Decl *> globalvector;
+
+static void create_globals(globalvector& globals, unsigned nparam,
+				char **params)
 {
-    int nvar = P->Dimension - exist - nparam;
+    for (int i = 0; i < nparam; ++i)
+	globals.push_back(new Global_Var_Decl(params[i]));
+}
+
+Relation Polyhedron2relation(Polyhedron *P,
+			  unsigned exist, globalvector& globals)
+{
+    int nvar = P->Dimension - exist - globals.size();
     Relation r(nvar);
     varvector vars;
 
@@ -95,8 +104,8 @@ Relation Polyhedron2relation(Polyhedron *P,
 	vars.push_back(r.set_var(j));
     for (int i = 0; i < exist; ++i)
 	vars.push_back(e->declare());
-    for (int i = 0; i < nparam; ++i)
-	vars.push_back(r.get_local(new Global_Var_Decl(params[i])));
+    for (int i = 0; i < globals.size(); ++i)
+	vars.push_back(r.get_local(globals[i]));
 
     for (int i = 0; i < P->NbConstraints; ++i) {
 	Constraint_Handle h;
@@ -109,6 +118,30 @@ Relation Polyhedron2relation(Polyhedron *P,
 	h.update_const(VALUE_TO_INT(P->Constraint[i][1+P->Dimension]));
     }
     r.finalize();
+    return r;
+}
+
+Relation Polyhedron2relation(Polyhedron *P,
+			  unsigned exist, unsigned nparam, char **params)
+{
+    globalvector globals;
+    create_globals(globals, nparam, params);
+    return Polyhedron2relation(P, exist, globals);
+}
+
+Relation Domain2relation(Polyhedron *D, unsigned nvar, unsigned nparam,
+			 char **params)
+{
+    globalvector globals;
+    create_globals(globals, nparam, params);
+
+    Relation r = Polyhedron2relation(D, D->Dimension - nvar - nparam,
+					globals);
+    for (Polyhedron *P = D->next; P; P = P->next) {
+	Relation s = Polyhedron2relation(P, P->Dimension - nvar - nparam,
+					    globals);
+	r = Union(r, s);
+    }
     return r;
 }
 

@@ -77,6 +77,23 @@ Relation *build_relation(tupleDescriptor *tuple, AST* ast)
 Map<Variable_Ref *, GiNaC::ex> *variableMap;
 
 
+static void evalue_print_and_free(Relation *r, evalue *EP)
+{
+    if (!EP)
+	return;
+
+    const Variable_ID_Tuple * globals = r->global_decls();
+    const char **param_names = new const char *[globals->size()];
+    r->setup_names();
+    for (int i = 0; i < globals->size(); ++i)
+	param_names[i] = (*globals)[i+1]->char_name();
+    print_evalue(stdout, EP, param_names);
+    puts("");
+    delete [] param_names;
+    evalue_free(EP);
+}
+
+
 %}
 
 %token <VAR_NAME> VAR 
@@ -107,7 +124,7 @@ Map<Variable_Ref *, GiNaC::ex> *variableMap;
 %token SUPERSETOF SUBSETOF SAMPLE SYM_SAMPLE
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
-%token CARD RANKING COUNT_LEXSMALLER
+%token CARD USING BARVINOK PARKER RANKING COUNT_LEXSMALLER
 %token VERTICES
 %token BMAX
 %token DUMP
@@ -129,7 +146,7 @@ Map<Variable_Ref *, GiNaC::ex> *variableMap;
 %nonassoc GIVEN
 %left OMEGA_P9
 %left '('	OMEGA_P10
-%right CARD RANKING COUNT_LEXSMALLER
+%right CARD USING RANKING COUNT_LEXSMALLER
 %right VERTICES
 %right DUMP
 
@@ -158,6 +175,7 @@ Map<Variable_Ref *, GiNaC::ex> *variableMap;
 %type <PMMAP> partialwrite
 %type <POLYFUNC> polyfunc
 %type <POLYNOMIAL> polynomial
+%type <INT_VALUE> counting_method
 
 %union {
 	int INT_VALUE;
@@ -486,18 +504,13 @@ printf("was substantially faster on the limited domain it handled.\n");
 		delete reachable_info;
 	}
 	| CARD relation ';' {
-	    evalue *EP = count_relation(*$2);
-	    if (EP) {
-		const Variable_ID_Tuple * globals = $2->global_decls();
-		const char **param_names = new const char *[globals->size()];
-		$2->setup_names();
-		for (int i = 0; i < globals->size(); ++i)
-		    param_names[i] = (*globals)[i+1]->char_name();
-		print_evalue(stdout, EP, param_names);
-		puts("");
-		delete [] param_names;
-		evalue_free(EP);
-	    }
+	    evalue *EP = count_relation(*$2, COUNT_RELATION_BARVINOK);
+	    evalue_print_and_free($2, EP);
+	    delete $2;
+	}
+	| CARD relation USING counting_method ';' {
+	    evalue *EP = count_relation(*$2, $4);
+	    evalue_print_and_free($2, EP);
 	    delete $2;
 	}
 	| RANKING relation ';' {
@@ -588,6 +601,11 @@ blockAndProcsAndEffort  : { Block_Size = 0; Num_Procs = 0; overheadEffort=0; }
 	       | INT INT { Block_Size = $1; Num_Procs = $2; overheadEffort=0;}
 	       | INT INT INT { Block_Size = $1; Num_Procs = $2; overheadEffort=$3;}
 	       ;
+
+counting_method:
+	  BARVINOK { $$ = COUNT_RELATION_BARVINOK; }
+	| PARKER { $$ = COUNT_RELATION_PARKER; }
+	;
 
 effort : { $$ = 0; }
 	| INT { $$ = $1; }

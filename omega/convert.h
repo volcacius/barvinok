@@ -8,4 +8,6 @@ Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params,
 				unsigned MaxRays);
 Relation Polyhedron2relation(Polyhedron *P,
 			  unsigned exist, unsigned nparam, char **params);
+Relation Domain2relation(Polyhedron *D, unsigned nvar, unsigned nparam,
+			 char **params);
 void dump(Relation& r);

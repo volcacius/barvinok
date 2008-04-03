@@ -1,6 +1,19 @@
 #include <vector>
 #include <omega.h>
 
+extern "C" {
+/* Erin Parker (parker@cs.unc.edu), March 2004 */
+
+#include "dfa.h"
+
+/* Functions defined in construction.c */
+DFA* build_DFA_eq(int, int*, int, int*);
+DFA* build_DFA_ineq(int, int*, int, int*);
+
+/* Function defined in count.c */
+double count_accepting_paths(DFA*, int, int);
+}
+
 #include "count_solutions.h"
 
 typedef std::vector<Variable_ID> varvector;
