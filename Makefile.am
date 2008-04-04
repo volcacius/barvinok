@@ -308,6 +308,7 @@ EXTRA_DIST = \
     latte2polylib.pl \
     NTL_5_3_2.patch \
     basis_reduction_templ.c \
+    cdd94e-test \
     polysign_cdd_template.cc \
     barvinok/NTL.h.broken \
     barvinok/NTL.h.normal \
