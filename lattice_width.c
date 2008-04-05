@@ -276,6 +276,17 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 	    for (i = 0; i < basis->NbRows; ++i) {
 		Vector v;
 		struct width_direction wd;
+		Matrix *VM_min, *VM_max;
+		int pos;
+
+		VM_min = V_min->Vertex;
+		VM_max = V_max->Vertex;
+		pos = First_Non_Zero(basis->p[i], nvar);
+		if (value_neg_p(basis->p[i][pos])) {
+		    Vector_Oppose(basis->p[i], basis->p[i], nvar);
+		    VM_min = V_max->Vertex;
+		    VM_max = V_min->Vertex;
+		}
 
 		v.Size = nvar;
 		v.p = basis->p[i];
@@ -286,8 +297,7 @@ compute_width_directions(Param_Polyhedron *PP, struct barvinok_options *options)
 		    continue;
 
 		n_vertices = add_vertex(all_vertices, n_vertices, basis->p[i]);
-		compute_width_direction(V_min->Vertex, V_max->Vertex,
-					basis->p[i],
+		compute_width_direction(VM_min, VM_max, basis->p[i],
 					&width_dirs->wd[width_dirs->n++]);
 	    }
 	    Matrix_Free(basis);
