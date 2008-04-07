@@ -68,7 +68,7 @@ noinst_PROGRAMS = test testlib randomtest \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
 		  polyhedron_integer_hull vector_partition_chambers \
-		  semigroup_holes
+		  semigroup_holes evalue_convert
 EXTRA_PROGRAMS = barvinok_bound test_bound cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
@@ -357,6 +357,13 @@ EXTRA_test_bound_SOURCES = fdstream.cc fdstream.h
 test_bound_LDADD = \
 	libbarvinok-core.la libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
+evalue_convert_SOURCES = \
+	evalue_convert_main.c \
+	evalue_convert.cc \
+	evalue_convert.h \
+	evalue_read.c \
+	evalue_read.h \
+	$(FDSTREAM)
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
