@@ -1355,46 +1355,50 @@ static void eadd_poly(const evalue *e1, evalue *res)
 	eadd_arrays(e1, res, e1->x.p->size);
 }
 
+/*
+ * Product or sum of two periodics of the same parameter
+ * and different periods
+ */
+static void combine_periodics(const evalue *e1, evalue *res,
+				void (*op)(const evalue *, evalue*))
+{
+    Value es, rs;
+    int i, size;
+    enode *p;
+
+    value_init(es);
+    value_init(rs);
+    value_set_si(es, e1->x.p->size);
+    value_set_si(rs, res->x.p->size);
+    value_lcm(rs, es, rs);
+    size = (int)mpz_get_si(rs);
+    value_clear(es);
+    value_clear(rs);
+    p = new_enode(periodic, size, e1->x.p->pos);
+    for (i = 0; i < res->x.p->size; i++) {
+	value_clear(p->arr[i].d);
+	p->arr[i] = res->x.p->arr[i];
+    }
+    for (i = res->x.p->size; i < size; i++)
+	evalue_copy(&p->arr[i], &res->x.p->arr[i % res->x.p->size]);
+    for (i = 0; i < size; i++)
+	op(&e1->x.p->arr[i % e1->x.p->size], &p->arr[i]);
+    free(res->x.p);
+    res->x.p = p;
+}
+
 static void eadd_periodics(const evalue *e1, evalue *res)
 {
     int i;
     int x, y, p;
-    Value ex, ey ,ep;
     evalue *ne;
 
     if (e1->x.p->size == res->x.p->size) {
 	eadd_arrays(e1, res, e1->x.p->size);
 	return;
     }
-    /* you have to create a new evalue 'ne' in whitch size equals to the lcm
-     * of the sizes of e1 and res, then to copy res periodicaly in ne, after
-     * to add periodicaly elements of e1 to elements of ne, and finaly to 
-     * return ne.
-     */
-    value_init(ex);
-    value_init(ey);
-    value_init(ep);
-    x = e1->x.p->size;
-    y = res->x.p->size;
-    value_set_si(ex, e1->x.p->size);
-    value_set_si(ey, res->x.p->size);
-    value_lcm(ep, ex, ey);
-    p = (int)mpz_get_si(ep);
-    ne = (evalue *) malloc(sizeof(evalue)); 
-    value_init(ne->d);
-    value_set_si(ne->d, 0);
-		
-    ne->x.p = new_enode(res->x.p->type,p, res->x.p->pos);
-    for (i = 0; i < p; i++)
-	evalue_copy(&ne->x.p->arr[i], &res->x.p->arr[i%y]);
-    for (i = 0; i < p; i++)
-	eadd(&e1->x.p->arr[i%x], &ne->x.p->arr[i]);
 
-    value_assign(res->d, ne->d);
-    res->x.p = ne->x.p;
-    value_clear(ex);
-    value_clear(ey);
-    value_clear(ep);
+    combine_periodics(e1, res, eadd);
 }
 
 void evalue_assign(evalue *dst, const evalue *src)
@@ -1666,29 +1670,7 @@ static void emul_periodics(const evalue *e1, evalue *res)
 	return;
     }
 
-    /* Product of two periodics of the same parameter and different periods */
-    value_init(x);
-    value_init(y);
-    value_init(z);
-    ix = e1->x.p->size;
-    iy = res->x.p->size;
-    value_set_si(x, e1->x.p->size);
-    value_set_si(y, res->x.p->size);
-    value_lcm(z, x, y);
-    lcm = (int)mpz_get_si(z);
-    newp = (evalue *) malloc(sizeof(evalue));
-    value_init(newp->d);
-    value_set_si(newp->d, 0);
-    newp->x.p = new_enode(periodic, lcm, e1->x.p->pos);
-    for (i = 0; i < lcm; i++)
-	evalue_copy(&newp->x.p->arr[i], &res->x.p->arr[i%iy]);
-    for (i = 0; i < lcm; i++)
-	emul(&e1->x.p->arr[i%ix], &newp->x.p->arr[i]);		
-    value_assign(res->d, newp->d);
-    res->x.p = newp->x.p;
-    value_clear(x);
-    value_clear(y);
-    value_clear(z); 
+    combine_periodics(e1, res, emul);
 }
 
 #define value_two_p(val)	(mpz_cmp_si(val,2) == 0)
