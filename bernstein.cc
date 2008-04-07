@@ -343,6 +343,9 @@ static piecewise_lst *bernstein_coefficients_recursive(piecewise_lst *pl_all,
 	}
 
 	done += dims[j];
+
+	if (!pl)
+	    return pl_all;
     }
 
     if (!pl_all)
@@ -503,7 +506,8 @@ static piecewise_lst *bernstein_coefficients_polyhedron(piecewise_lst *pl_all,
 	PP_MaxRays = 0;
 
     Param_Polyhedron *PP = Polyhedron2Param_Domain(P, ctx, PP_MaxRays);
-    assert(PP);
+    if (!PP)
+	return pl_all;
     piecewise_lst *pl = new piecewise_lst(params, options->bernstein_optimize);
 
     int nd = -1;
@@ -588,7 +592,7 @@ static piecewise_lst *bernstein_coefficients_periodic(piecewise_lst *pl_all,
 	Polyhedron *E = DomainPreimage(D, T, options->MaxRays);
 	Polyhedron *F = DomainPreimage(E, T2, options->MaxRays);
 	Polyhedron_Free(E);
-	if (!emptyQ2(F))
+	if (!emptyQ(F))
 	    pl_all = bernstein_coefficients(pl_all, F, poly, ctx, params,
 					    vars, options);
 	Polyhedron_Free(F);
