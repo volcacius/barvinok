@@ -25,6 +25,7 @@ using namespace barvinok;
 #define OPT_SPLIT  	    (BV_OPT_LAST+2)
 #define OPT_LOWER  	    (BV_OPT_LAST+3)
 #define OPT_METHOD  	    (BV_OPT_LAST+4)
+#define OPT_ITERATE  	    (BV_OPT_LAST+5)
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
@@ -33,6 +34,8 @@ struct argp_option argp_options[] = {
     { "lower",	    	    OPT_LOWER, 	0, 0,	"compute lower bound instead of upper bound"},
     { "optimization-method",	OPT_METHOD,	"bernstein|propagation",
 	0, "optimization method to use" },
+    { "iterate",	    OPT_ITERATE,  	0, 0,
+	"exact result by iterating over domain"},
     { 0 }
 };
 
@@ -45,6 +48,7 @@ struct options {
 #define	METHOD_BERNSTEIN	0
 #define METHOD_PROPAGATION	1
     int method;
+    int iterate;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -60,6 +64,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->split = 0;
 	options->lower = 0;
 	options->method = METHOD_BERNSTEIN;
+	options->iterate = 0;
 	break;
     case OPT_VARS:
 	options->var_list = strdup(arg);
@@ -77,6 +82,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	    options->method = METHOD_PROPAGATION;
 	else
 	    argp_error(state, "unknown value for --optimization-method option");
+	break;
+    case OPT_ITERATE:
+	options->iterate = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -195,6 +203,36 @@ static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar, unsigned nparam,
     return !check_EP(&data, nvar, nparam, options);
 }
 
+static piecewise_lst *iterate(evalue *EP, unsigned nvar, unsigned nparam,
+				struct options *options)
+{
+    assert(nparam == 0);
+    Vector *p = Vector_Alloc(nvar+2);
+    value_set_si(p->p[nvar+1], 1);
+    Polyhedron *U = Universe_Polyhedron(0);
+    Value opt;
+
+    value_init(opt);
+    struct check_EP_data data;
+    data.cp.z = p->p;
+    data.cp.check = NULL;
+
+    data.EP = EP;
+    check_EP_set_scan(&data, U, options->verify.barvinok->MaxRays);
+    int sign = options->verify.barvinok->bernstein_optimize;
+    evalue_optimum(&data, &opt, sign);
+    check_EP_clear_scan(&data);
+
+    exvector params;
+    piecewise_lst *pl = new piecewise_lst(params, sign);
+    pl->add_guarded_lst(U, lst(value2numeric(opt)));
+
+    value_clear(opt);
+    Vector_Free(p);
+
+    return pl;
+}
+
 static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 		    struct options *options)
 {
@@ -217,7 +255,9 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
-    if (options->method == METHOD_BERNSTEIN) {
+    if (options->iterate)
+	pl = iterate(EP, nvar, nparam, options);
+    else if (options->method == METHOD_BERNSTEIN) {
 	pl = evalue_bernstein_coefficients(NULL, EP, U, params,
 					   options->verify.barvinok);
 	if (options->lower)
