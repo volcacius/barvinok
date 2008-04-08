@@ -268,7 +268,8 @@ int main(int argc, char **argv)
     if (options.split)
 	evalue_split_periods(EP, options.split, bv_options->MaxRays);
 
-    evalue_convert(EP, &options.convert, bv_options->verbose, nparam, all_vars);
+    evalue_convert(EP, &options.convert, bv_options->verbose,
+			nvar+nparam, all_vars);
 
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);
