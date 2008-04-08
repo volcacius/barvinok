@@ -317,6 +317,43 @@ int check_poly(Polyhedron *CS, const struct check_poly_data *data,
     return 1;
 } /* check_poly */
 
+void check_EP_set_scan(struct check_EP_data *data, Polyhedron *C,
+			unsigned MaxRays)
+{
+    const evalue *EP = data->EP;
+    int i;
+    int n_S = 0;
+
+    for (i = 0; i < EP->x.p->size/2; ++i) {
+	Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	for (; A; A = A->next)
+	    ++n_S;
+    }
+
+    data->n_S = n_S;
+    data->S = ALLOCN(Polyhedron *, n_S);
+    n_S = 0;
+    for (i = 0; i < EP->x.p->size/2; ++i) {
+	Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	for (; A; A = A->next) {
+	    Polyhedron *next = A->next;
+	    A->next = NULL;
+	    data->S[n_S++] = Polyhedron_Scan(A, C,
+				    MaxRays & POL_NO_DUAL ? 0 : MaxRays);
+	    A->next = next;
+	}
+    }
+}
+
+void check_EP_clear_scan(struct check_EP_data *data)
+{
+    int i;
+
+    for (i = 0; i < data->n_S; ++i)
+	Domain_Free(data->S[i]);
+    free(data->S);
+}
+
 static int check_EP_on_poly(Polyhedron *P,
 			    struct check_EP_data *data,
 			    unsigned nvar, unsigned nparam,
@@ -332,32 +369,9 @@ static int check_EP_on_poly(Polyhedron *P,
     check_poly_init(P, options);
 
     if (!(CS && emptyQ2(CS))) {
-	int i;
-	int n_S = 0;
-
-	for (i = 0; i < EP->x.p->size/2; ++i) {
-	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	    for (; A; A = A->next)
-		++n_S;
-	}
-
-	data->n_S = n_S;
-	data->S = ALLOCN(Polyhedron *, n_S);
-	n_S = 0;
-	for (i = 0; i < EP->x.p->size/2; ++i) {
-	    Polyhedron *A = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	    for (; A; A = A->next) {
-		Polyhedron *next = A->next;
-		A->next = NULL;
-		data->S[n_S++] = Polyhedron_Scan(A, P,
-					MaxRays & POL_NO_DUAL ? 0 : MaxRays);
-		A->next = next;
-	    }
-	}
+	check_EP_set_scan(data, P, MaxRays);
 	ok = check_poly(CS, &data->cp, nparam, 0, data->cp.z+1+nvar, options);
-	for (i = 0; i < data->n_S; ++i)
-	    Domain_Free(data->S[i]);
-	free(data->S);
+	check_EP_clear_scan(data);
     }
 
     if (!options->print_all)
