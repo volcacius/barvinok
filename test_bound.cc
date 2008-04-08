@@ -166,7 +166,7 @@ static int test_bound(const struct check_poly_data *data,
 	assert(value_ge(approx, exact));
 	value_subtract(approx, approx, exact);
 
-	error = ::abs(VALUE_TO_DOUBLE(approx)) / VALUE_TO_DOUBLE(exact);
+	error = fabs(VALUE_TO_DOUBLE(approx)) / VALUE_TO_DOUBLE(exact);
 	if (options->print_all)
 	    fprintf(stderr, " (%g)", error);
 	tb_data->result->RE_sum[i] += error;
