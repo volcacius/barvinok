@@ -495,7 +495,7 @@ void evalue_optimum(const struct check_EP_data *data, Value *opt, int sign)
     int found = 0;
 
     for (i = 0; i < data->n_S; ++i)
-	if (!emptyQ2(data->S[i]))
+	if (!(data->S[i] && emptyQ(data->S[i])))
 	    optimum(data->S[i], 0, data, opt, &found, sign);
     assert(found);
 }
