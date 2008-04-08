@@ -96,6 +96,7 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
 	return value2numeric(e->x.n)/value2numeric(e->d);
     ex base_var = 0;
     ex poly = 0;
+    int rem;
 
     switch (e->x.p->type) {
     case polynomial:
@@ -109,8 +110,8 @@ static ex evalue2ex_r(const evalue *e, const exvector& vars,
 	break;
     case periodic:
 	assert(coset);
-	return evalue2ex_r(&e->x.p->arr[VALUE_TO_INT(coset->p[e->x.p->pos-1])],
-			   vars, extravar, expr, coset);
+	rem = VALUE_TO_INT(coset->p[e->x.p->pos-1]) % e->x.p->size;
+	return evalue2ex_r(&e->x.p->arr[rem], vars, extravar, expr, coset);
     default:
 	return fail();
     }
