@@ -4,6 +4,7 @@
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 #include <barvinok/bernstein.h>
 #include "argp.h"
 #include "progname.h"
@@ -34,8 +35,8 @@ struct argp_option argp_options[] = {
     { "lower",	    	    OPT_LOWER, 	0, 0,	"compute lower bound instead of upper bound"},
     { "optimization-method",	OPT_METHOD,	"bernstein|propagation",
 	0, "optimization method to use" },
-    { "iterate",	    OPT_ITERATE,  	0, 0,
-	"exact result by iterating over domain"},
+    { "iterate",	    OPT_ITERATE,  	"int", 1,
+	"exact result by iterating over domain (of specified maximal size)"},
     { 0 }
 };
 
@@ -84,7 +85,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	    argp_error(state, "unknown value for --optimization-method option");
 	break;
     case OPT_ITERATE:
-	options->iterate = 1;
+	if (!arg)
+	    options->iterate = -1;
+	else
+	    options->iterate = atoi(arg);
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -203,13 +207,12 @@ static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar, unsigned nparam,
     return !check_EP(&data, nvar, nparam, options);
 }
 
-static piecewise_lst *iterate(evalue *EP, unsigned nvar, unsigned nparam,
+static piecewise_lst *iterate(evalue *EP, unsigned nvar, Polyhedron *C,
 				struct options *options)
 {
-    assert(nparam == 0);
+    assert(C->Dimension == 0);
     Vector *p = Vector_Alloc(nvar+2);
     value_set_si(p->p[nvar+1], 1);
-    Polyhedron *U = Universe_Polyhedron(0);
     Value opt;
 
     value_init(opt);
@@ -218,18 +221,128 @@ static piecewise_lst *iterate(evalue *EP, unsigned nvar, unsigned nparam,
     data.cp.check = NULL;
 
     data.EP = EP;
-    check_EP_set_scan(&data, U, options->verify.barvinok->MaxRays);
+    check_EP_set_scan(&data, C, options->verify.barvinok->MaxRays);
     int sign = options->verify.barvinok->bernstein_optimize;
     evalue_optimum(&data, &opt, sign);
     check_EP_clear_scan(&data);
 
     exvector params;
     piecewise_lst *pl = new piecewise_lst(params, sign);
-    pl->add_guarded_lst(U, lst(value2numeric(opt)));
+    pl->add_guarded_lst(Polyhedron_Copy(C), lst(value2numeric(opt)));
 
     value_clear(opt);
     Vector_Free(p);
 
+    return pl;
+}
+
+/*
+ * Split (partition) EP into a partition with (sub)domains containing
+ * size integer points or less and a partition with (sub)domains
+ * containing more integer points.
+ */
+static void split_on_domain_size(evalue *EP, evalue **EP_less, evalue **EP_more,
+				 int size, barvinok_options *options)
+{
+    assert(value_zero_p(EP->d));
+    assert(EP->x.p->type == partition);
+    assert(EP->x.p->size >= 2);
+
+    struct evalue_section *s_less = new evalue_section[EP->x.p->size/2];
+    struct evalue_section *s_more = new evalue_section[EP->x.p->size/2];
+
+    int n_less = 0;
+    int n_more = 0;
+
+    Value c;
+    value_init(c);
+
+    for (int i = 0; i < EP->x.p->size/2; ++i) {
+	Polyhedron *D = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
+	Polyhedron *D_less = NULL;
+	Polyhedron *D_more = NULL;
+	Polyhedron **next_less = &D_less;
+	Polyhedron **next_more = &D_more;
+
+	for (Polyhedron *P = D; P; P = P->next) {
+	    Polyhedron *next = P->next;
+	    P->next = NULL;
+	    barvinok_count_with_options(P, &c, options);
+	    P->next = next;
+
+	    if (value_zero_p(c))
+		continue;
+
+	    if (value_pos_p(c) && value_cmp_si(c, size) <= 0) {
+		*next_less = Polyhedron_Copy(P);
+		next_less = &(*next_less)->next;
+	    } else {
+		*next_more = Polyhedron_Copy(P);
+		next_more = &(*next_more)->next;
+	    }
+	}
+
+	if (D_less) {
+	    s_less[n_less].D = D_less;
+	    s_less[n_less].E = evalue_dup(&EP->x.p->arr[2*i+1]);
+	    n_less++;
+	} else {
+	    s_more[n_more].D = D_more;
+	    s_more[n_more].E = evalue_dup(&EP->x.p->arr[2*i+1]);
+	    n_more++;
+	}
+    }
+
+    value_clear(c);
+
+    *EP_less = evalue_from_section_array(s_less, n_less);
+    *EP_more = evalue_from_section_array(s_more, n_more);
+
+    delete [] s_less;
+    delete [] s_more;
+}
+
+static piecewise_lst *optimize(evalue *EP, unsigned nvar, Polyhedron *C,
+				const exvector& params,
+				struct options *options)
+{
+    piecewise_lst *pl = NULL;
+    if (options->iterate > 0) {
+	evalue *EP_less = NULL;
+	evalue *EP_more = NULL;
+	piecewise_lst *pl_more = NULL;
+	split_on_domain_size(EP, &EP_less, &EP_more, options->iterate,
+				options->verify.barvinok);
+	if (!EVALUE_IS_ZERO(*EP_less)) {
+	    options->iterate = -1;
+	    pl = optimize(EP_less, nvar, C, params, options);
+	}
+	if (!EVALUE_IS_ZERO(*EP_more)) {
+	    options->iterate = 0;
+	    pl_more = optimize(EP_more, nvar, C, params, options);
+	}
+	evalue_free(EP_less);
+	evalue_free(EP_more);
+	if (!pl)
+	    return pl_more;
+	if (!pl_more)
+	    return pl;
+	pl->combine(*pl_more);
+	delete pl_more;
+	return pl;
+    }
+    if (options->iterate)
+	pl = iterate(EP, nvar, C, options);
+    else if (options->method == METHOD_BERNSTEIN) {
+	pl = evalue_bernstein_coefficients(NULL, EP, C, params,
+					   options->verify.barvinok);
+	if (options->lower)
+	    pl->minimize();
+	else
+	    pl->maximize();
+    } else
+	pl = evalue_range_propagation(NULL, EP, params,
+				      options->verify.barvinok);
     return pl;
 }
 
@@ -255,18 +368,7 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
-    if (options->iterate)
-	pl = iterate(EP, nvar, nparam, options);
-    else if (options->method == METHOD_BERNSTEIN) {
-	pl = evalue_bernstein_coefficients(NULL, EP, U, params,
-					   options->verify.barvinok);
-	if (options->lower)
-	    pl->minimize();
-	else
-	    pl->maximize();
-    } else
-	pl = evalue_range_propagation(NULL, EP, params,
-				      options->verify.barvinok);
+    pl = optimize(EP, nvar, U, params, options);
     assert(pl);
     if (print_solution)
 	cout << *pl << endl;
