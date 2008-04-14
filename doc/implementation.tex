@@ -1517,6 +1517,7 @@ Both substitutions also transform the problem of computing the
 constant term in the Laurent expansions about $\vec x = \vec 1$
 to that of computing the constant term in the
 Laurent expansions about $t = 0$.
+Here, we discuss the exponential substitution.
 
 Consider now one of the terms in~\eqref{eq:rgf},
 $$
@@ -1537,7 +1538,7 @@ g(t) =
 .
 $$
 The second factor is analytic in a neighborhood of the origin
-$x = c_1 = \cdots = c_d = 0$ and therefore has a Taylor series expansion
+$t = c_1 = \cdots = c_d = 0$ and therefore has a Taylor series expansion
 \begin{equation}
 \label{eq:todd}
     \prod_{j=1}^d \frac{-c_j t}
@@ -1552,7 +1553,7 @@ Also expanding the numerator in the first factor, we find
 $$
 g(t)  = \frac{(-1)^d}{t^d \prod_{j=1}^d c_j}
 	    \left(
-		\sum_{n=0}^{\infty}\frac{\sum_{k=1}^{r} a_k^n}{n!}
+		\sum_{n=0}^{\infty}\frac{\sum_{k=1}^{r} a_k^n}{n!} t^n
 	    \right)
 	    \left(
 		\sum_{m=0}^{\infty} \todd_m(-c_1, \ldots, -c_d) t^m
@@ -1589,9 +1590,10 @@ Computing the reciprocal as explained in Section~\ref{s:division},
 we find
 \begin{equation}
 \label{eq:t-exp-1}
+\frac{-t}{1-e^t} =
 \frac{t}{e^t-1} = \frac 1{\frac{e^t -1}t}
 \equiv (d+1)! \frac 1{\sum_{i=0}^d \frac{(d+1)!}{(i+1)!} t^i}
-=: \sum_{i=0}^d b_i t^i
+\eqqcolon \sum_{i=0}^d b_i t^i
 .
 \end{equation}
 Note that the constant term of the denominator is $1/(d+1)!$.
@@ -1615,7 +1617,7 @@ Multiplication of these truncated Taylor series for each $c_j$
 results in the first $d+1$ terms of~\eqref{eq:todd},
 $$
     \sum_{m=0}^{d} \todd_m(-c_1, \ldots, -c_d) t^m
-=:
+\eqqcolon
     \sum_{m=0}^{d} \frac{\beta_m}{((d+1)!)^m} t^m
 ,
 $$
@@ -1648,7 +1650,7 @@ Since this is a 2-dimensional problem, we first compute the first
 3 Todd polynomials (evaluated at $-1$),
 $$
 \frac{e^t -1}t \equiv
-1 + \frac 1 2 t + \frac 1 7 t^2 =
+1 + \frac 1 2 t + \frac 1 6 t^2 =
 \frac 1 6
 \begin{bmatrix}
 6 & 3 & 1
@@ -1656,9 +1658,10 @@ $$
 $$
 and
 $$
+\frac {-t}{1-e^t} =
 \frac t{e^t -1} \equiv
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{3}{6} & \displaystyle\frac{-3}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{-3}{6} & \displaystyle\frac{3}{36}
 \end{bmatrix}
 ,
 $$
@@ -1680,22 +1683,22 @@ We have
 \begin{align*}
 \frac{t}{1-e^{- t}} & = 
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{-3}{6} & \displaystyle\frac{-3}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{3}{6} & \displaystyle\frac{3}{36}
 \end{bmatrix}
 \\
 \frac{2t}{1-e^{-2 t}} & = 
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{-6}{6} & \displaystyle\frac{-12}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{6}{6} & \displaystyle\frac{12}{36}
 \end{bmatrix}
 \\
 \frac{-t}{1-e^{t}} & = 
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{3}{6} & \displaystyle\frac{-3}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{-3}{6} & \displaystyle\frac{3}{36}
 \end{bmatrix}
 \\
 \frac{-2t}{1-e^{2t}} & = 
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{6}{6} & \displaystyle\frac{-12}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{-6}{6} & \displaystyle\frac{12}{36}
 \end{bmatrix}
 .
 \end{align*}
@@ -1709,10 +1712,10 @@ The first term in the \rgf/ evaluates to
 *
 \left(
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{-3}{6} & \displaystyle\frac{-3}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{3}{6} & \displaystyle\frac{3}{36}
 \end{bmatrix}
 \begin{bmatrix}
-\displaystyle\frac{-1}{1} & \displaystyle\frac{-6}{6} & \displaystyle\frac{-12}{36}
+\displaystyle\frac{1}{1} & \displaystyle\frac{6}{6} & \displaystyle\frac{12}{36}
 \end{bmatrix}
 \right)
 \\
@@ -1773,7 +1776,7 @@ on an Athlon MP 1500+ with 512MiB internal memory.
 This machine appears to be slightly slower than the
 machine used in the experiments of \citeN{Koeppe2006primal}
 as computing {\tt hickerson-14} using the dual decomposition
-with polynomial substitution an maximal index 1
+with polynomial substitution and maximal index 1
 took 2768 seconds on this machine using \LattEmk/.
 At this stage, it is not clear yet why the number of
 cones in the dual decomposition of {\tt hickerson-13}
