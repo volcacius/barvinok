@@ -298,8 +298,7 @@ int test_lattice_points(struct barvinok_options *options)
     for (int i = 0; i < 4; ++i) {
 	assert(eequal(num.E[i], point[i]));
 	evalue_free(point[i]);
-	free_evalue_refs(num.E[i]);
-	delete num.E[i];
+	evalue_free(num.E[i]);
     }
     delete [] num.E; 
 }

@@ -42,6 +42,8 @@ using std::cout;
 using std::endl;
 using std::ostream;
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+
 #define EMPTINESS_CHECK     	(BV_OPT_LAST+1)
 #define NO_REDUCTION  	    	(BV_OPT_LAST+2)
 
@@ -146,10 +148,8 @@ struct indicator_term {
     }
     ~indicator_term() {
 	unsigned dim = den.NumCols();
-	for (int i = 0; i < dim; ++i) {
-	    free_evalue_refs(vertex[i]);
-	    delete vertex[i];
-	}
+	for (int i = 0; i < dim; ++i)
+	    evalue_free(vertex[i]);
 	delete [] vertex;
     }
     void print(ostream& os, char **p) const;
@@ -384,10 +384,8 @@ void indicator_term::substitute(Matrix *T)
 	}
     }
     free_evalue_refs(&factor);
-    for (int i = 0; i < dim; ++i) {
-	free_evalue_refs(vertex[i]);
-	delete vertex[i];
-    }
+    for (int i = 0; i < dim; ++i)
+	evalue_free(vertex[i]);
     delete [] vertex;
     vertex = newvertex;
 }
@@ -558,7 +556,7 @@ void indicator_constructor::handle(const signed_cone& sc, barvinok_options *opti
 
     for (int i = 0; i < dim; ++i) {
 	if (!term->vertex[i]) {
-	    term->vertex[i] = new evalue();
+	    term->vertex[i] = ALLOC(evalue);
 	    value_init(term->vertex[i]->d);
 	    value_init(term->vertex[i]->x.n);
 	    zz2value(vertex[i], term->vertex[i]->x.n);

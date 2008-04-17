@@ -1065,10 +1065,8 @@ void ienumerator::handle(const signed_cone& sc, barvinok_options *options)
     free_evalue_refs(&one);
 
     for (int i = 0; i < dim; ++i)
-	if (E_vertex[i]) {
-	    free_evalue_refs(E_vertex[i]);
-	    delete E_vertex[i];
-	}
+	if (E_vertex[i])
+	    evalue_free(E_vertex[i]);
 }
 
 struct bfenumerator : public vertex_decomposer, public bf_base,
@@ -1254,10 +1252,8 @@ void bfenumerator::handle(const signed_cone& sc, barvinok_options *options)
     reduce(factors, v, options);
 
     for (int i = 0; i < enumerator_base::dim; ++i)
-	if (E_vertex[i]) {
-	    free_evalue_refs(E_vertex[i]);
-	    delete E_vertex[i];
-	}
+	if (E_vertex[i])
+	    evalue_free(E_vertex[i]);
 }
 
 static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C, 

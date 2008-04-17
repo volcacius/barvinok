@@ -40,7 +40,7 @@ static evalue *term(int param, ZZ& c, Value *den = NULL)
  */
 evalue *multi_monom(vec_ZZ& p)
 {
-    evalue *X = new evalue();
+    evalue *X = ALLOC(evalue);
     value_init(X->d);
     value_init(X->x.n);
     unsigned nparam = p.length()-1;
@@ -237,8 +237,7 @@ evalue *fractional_part(Value *coef, Value denom, int nvar, Polyhedron *PD)
 	}
 
 	free_evalue_refs(&EV); 
-	free_evalue_refs(E); 
-	delete E;
+	evalue_free(E); 
     }
 
     free_evalue_refs(&tmp); 
@@ -290,15 +289,10 @@ evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     eadd(f, EP);
     evalue_free(f);
 
-    /* copy EP to malloc'ed evalue */
-    evalue *E = ALLOC(evalue);
-    *E = *EP;
-    delete EP;
-
     free_evalue_refs(&tmp); 
     Vector_Free(val);
 
-    return E;
+    return EP;
 }
 
 void lattice_point_fixed(Value *vertex, Value *vertex_res,
@@ -525,7 +519,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	Vector *row = Vector_Alloc(nparam+1);
 	FORALL_COSETS(det, D, i, k)
 	    Vector_Matrix_Product(k->p, T2, lambda->p);
-	    E[i] = new evalue();
+	    E[i] = ALLOC(evalue);
 	    value_init(E[i]->d);
 	    evalue_copy(E[i], EP);
 	    for (int j = 0; j < L->NbRows; ++j) {
@@ -546,8 +540,7 @@ static evalue **lattice_point_fractional(const mat_ZZ& rays, vec_ZZ& lambda,
 	Matrix_Free(D);
 
 	value_clear(denom);
-	free_evalue_refs(EP);
-	delete EP;
+	evalue_free(EP);
     }
     value_clear(tmp);
 
