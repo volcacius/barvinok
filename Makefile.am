@@ -128,6 +128,7 @@ libbarvinok_core_la_SOURCES = \
     polysign_pip.c \
     polysign_polylib.c \
     polysign.h \
+    power.h \
     reduce_domain.c \
     reduce_domain.h \
     reducer.cc \
