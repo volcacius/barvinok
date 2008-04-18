@@ -93,6 +93,8 @@ libbarvinok_core_la_SOURCES = \
     bernoulli.h \
     bfcounter.cc \
     bfcounter.h \
+    binomial.c \
+    binomial.h \
     conversion.cc \
     conversion.h \
     counter.cc \
