@@ -2,7 +2,7 @@
 #define LATTICE_POINT_H
 
 #include <gmp.h>
-#include <barvinok/polylib.h>
+#include <barvinok/evalue.h>
 
 #if defined(__cplusplus)
 extern "C" {
