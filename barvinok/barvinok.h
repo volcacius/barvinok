@@ -35,9 +35,6 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
 
 evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options);
 
-/* private function */
-evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P);
-
 #if defined(__cplusplus)
 }
 #endif

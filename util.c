@@ -4,6 +4,7 @@
 #include <barvinok/options.h>
 #include <polylib/ranking.h>
 #include "config.h"
+#include "lattice_point.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
@@ -967,6 +968,31 @@ static void PLL_init(unsigned n, void *cb_data)
     struct PLL_data *data = (struct PLL_data *)cb_data;
 
     data->s = ALLOCN(struct section, n);
+}
+
+/* Computes ceil(-coef/abs(d)) */
+static evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
+{
+    Value t;
+    evalue *EP, *f;
+    Vector *val = Vector_Alloc(len);
+
+    value_init(t);
+    Vector_Oppose(coef, val->p, len);
+    value_absolute(t, d);
+
+    EP = affine2evalue(val->p, t, len-1);
+
+    Vector_Oppose(val->p, val->p, len);
+    f = fractional_part(val->p, t, len-1, P);
+    value_clear(t);
+
+    eadd(f, EP);
+    evalue_free(f);
+
+    Vector_Free(val);
+
+    return EP;
 }
 
 static void PLL_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)

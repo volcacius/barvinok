@@ -260,41 +260,6 @@ static evalue *ceil(Value *coef, int len, Value d,
     return c;
 }
 
-evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
-{
-    Vector *val = Vector_Alloc(len);
-
-    Value t;
-    value_init(t);
-    value_set_si(t, -1);
-    Vector_Scale(coef, val->p, t, len);
-    value_absolute(t, d);
-
-    vec_ZZ num;
-    values2zz(val->p, num, len);
-    evalue *EP = multi_monom(num);
-
-    evalue tmp;
-    value_init(tmp.d);
-    value_init(tmp.x.n);
-    value_set_si(tmp.x.n, 1);
-    value_assign(tmp.d, t);
-
-    emul(&tmp, EP);
-
-    Vector_Oppose(val->p, val->p, len);
-    evalue *f = fractional_part(val->p, t, len-1, P);
-    value_clear(t);
-
-    eadd(f, EP);
-    evalue_free(f);
-
-    free_evalue_refs(&tmp); 
-    Vector_Free(val);
-
-    return EP;
-}
-
 void lattice_point_fixed(Value *vertex, Value *vertex_res,
 			 Matrix *Rays, Matrix *Rays_res,
 			 Value *point)
