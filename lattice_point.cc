@@ -248,6 +248,25 @@ out:
     return EP;
 }
 
+/* Computes the ceil of the affine expression specified
+ * by coef (of length nvar+1) and the denominator denom.
+ * If PD is not NULL, then it specifies additional constraints
+ * on the variables that may be used to simplify the resulting
+ * ceil expression.
+ *
+ * Modifies coef argument !
+ */
+evalue *ceiling(Value *coef, Value denom, int nvar, Polyhedron *PD)
+{
+    evalue *EP, *f;
+    EP = affine2evalue(coef, denom, nvar);
+    Vector_Oppose(coef, coef, nvar+1);
+    f = fractional_part(coef, denom, nvar, PD);
+    eadd(f, EP);
+    evalue_free(f);
+    return EP;
+}
+
 static evalue *ceil(Value *coef, int len, Value d,
 		    barvinok_options *options)
 {

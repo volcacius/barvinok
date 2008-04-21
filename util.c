@@ -981,15 +981,9 @@ static evalue* bv_ceil3(Value *coef, int len, Value d, Polyhedron *P)
     Vector_Oppose(coef, val->p, len);
     value_absolute(t, d);
 
-    EP = affine2evalue(val->p, t, len-1);
+    EP = ceiling(val->p, t, len-1, P);
 
-    Vector_Oppose(val->p, val->p, len);
-    f = fractional_part(val->p, t, len-1, P);
     value_clear(t);
-
-    eadd(f, EP);
-    evalue_free(f);
-
     Vector_Free(val);
 
     return EP;

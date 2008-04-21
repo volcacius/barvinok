@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 evalue *fractional_part(Value *coef, Value denom, int nvar, Polyhedron *PD);
+evalue *ceiling(Value *coef, Value denom, int nvar, Polyhedron *PD);
 
 #if defined(__cplusplus)
 }
