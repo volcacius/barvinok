@@ -2000,7 +2000,16 @@ int eequal(const evalue *e1, const evalue *e2)
   
     if (value_ne(e1->d,e2->d))
         return 0;
+
+    if (EVALUE_IS_DOMAIN(*e1))
+	return PolyhedronIncludes(EVALUE_DOMAIN(*e2), EVALUE_DOMAIN(*e1)) &&
+	       PolyhedronIncludes(EVALUE_DOMAIN(*e1), EVALUE_DOMAIN(*e2));
+
+    if (EVALUE_IS_NAN(*e1))
+	return 1;
   
+    assert(value_posz_p(e1->d));
+
     /* e1->d == e2->d */
     if (value_notzero_p(e1->d)) {    
         if (value_ne(e1->x.n,e2->x.n))
