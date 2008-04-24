@@ -91,7 +91,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->lp_solver = BV_LP_PIP;
 #endif
 
-    options->summation = BV_SUM_BARVINOK;
+    options->summation = BV_SUM_LAURENT;
 
     options->bernstein_optimize = BV_BERNSTEIN_NONE;
 
@@ -191,7 +191,7 @@ static struct argp_option barvinok_argp_options[] = {
 #endif
 	},
     { "summation",	    BV_OPT_SUM,		"barvinok|bernoulli|euler|laurent", 0,
-	"[default: barvinok]" },
+	"[default: laurent]" },
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
     { "recurse",	    BV_OPT_RECURSE,    	    "",
