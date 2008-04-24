@@ -10,6 +10,7 @@ extern "C" {
 
 evalue *fractional_part(Value *coef, Value denom, int nvar, Polyhedron *PD);
 evalue *ceiling(Value *coef, Value denom, int nvar, Polyhedron *PD);
+Matrix *relative_coordinates(Param_Vertices *V, Matrix *basis);
 
 #if defined(__cplusplus)
 }

@@ -548,6 +548,26 @@ static evalue **lattice_point(const mat_ZZ& rays, vec_ZZ& lambda,
     return lp;
 }
 
+Matrix *relative_coordinates(Param_Vertices *V, Matrix *basis)
+{
+    unsigned nparam = V->Vertex->NbColumns - 2;
+    Matrix *T = Matrix_Copy(basis);
+    Matrix *inv = Matrix_Alloc(T->NbRows, T->NbColumns);
+    int ok = Matrix_Inverse(T, inv);
+    assert(ok);
+    Matrix_Free(T);
+
+    Param_Vertex_Common_Denominator(V);
+    /* temporarily ignore (common) denominator */
+    V->Vertex->NbColumns--;
+    Matrix *L = Matrix_Alloc(inv->NbRows, V->Vertex->NbColumns);
+    Matrix_Product(inv, V->Vertex, L);
+    V->Vertex->NbColumns++;
+    Matrix_Free(inv);
+
+    return L;
+}
+
 /* returns the unique lattice point in the fundamental parallelepiped
  * of the unimodual cone C shifted to the parametric vertex V.
  *
@@ -580,18 +600,8 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
     if (value_notone_p(V->Vertex->p[0][nparam+1])) {
 	Matrix* Rays = zz2matrix(rays);
 	Matrix *T = Transpose(Rays);
-	Matrix *T2 = Matrix_Copy(T);
-	Matrix *inv = Matrix_Alloc(T2->NbRows, T2->NbColumns);
-	int ok = Matrix_Inverse(T2, inv);
-	assert(ok);
 	Matrix_Free(Rays);
-	Matrix_Free(T2);
-	/* temporarily ignore (common) denominator */
-	V->Vertex->NbColumns--;
-	Matrix *L = Matrix_Alloc(inv->NbRows, V->Vertex->NbColumns);
-	Matrix_Product(inv, V->Vertex, L);
-	V->Vertex->NbColumns++;
-	Matrix_Free(inv);
+	Matrix *L = relative_coordinates(V, T);
 
 	evalue f;
 	value_init(f.d);
