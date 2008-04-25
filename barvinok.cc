@@ -20,6 +20,7 @@
 #include "decomposer.h"
 #include "euler.h"
 #include "lattice_point.h"
+#include "laurent.h"
 #include "reduce_domain.h"
 #include "remove_equalities.h"
 #include "scale.h"
@@ -1569,6 +1570,8 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 {
     if (options->summation == BV_SUM_EULER)
 	return euler_summate(e, nvar, options);
+    else if (options->summation == BV_SUM_LAURENT)
+	return laurent_summate(e, nvar, options);
     else if (options->summation == BV_SUM_BERNOULLI)
 	return Bernoulli_sum_evalue(e, nvar, options);
     else

@@ -1477,6 +1477,7 @@ c_l = \frac{d_l}{b_0^{l+1}}
 $$
 
 \subsection{Specialization through exponential substitution}
+\label{s:exponential}
 
 This section draws heavily from \shortciteN{Koeppe2006experiments}.
 
@@ -1635,16 +1636,16 @@ $$
 $$
 with $\alpha_i = \sum_{k=1}^{r} a_k^i$.
 
-\begin{example}
+\begin{example} \label{ex:todd}
 Consider the \rgf/
-\begin{multline*}
+$$
 \f T x =
 \frac{x_1^2}{(1-x_1^{-1})(1-x_1^{-1}x_2)}
 +
 \frac{x_2^2}{(1-x_2^{-1})(1-x_1 x_2^{-1})}
-+ {} \\
++
 \frac1{(1-x_1)(1-x_2)}
-\end{multline*}
+$$
 from \shortciteN[Example~39]{Verdoolaege2005PhD}.
 Since this is a 2-dimensional problem, we first compute the first
 3 Todd polynomials (evaluated at $-1$),
@@ -2328,10 +2329,12 @@ we have~\cite[(13)]{Berline2006local}
 \end{equation}
 with $y = \sps \xi r$ and $b(n,t)$ the \ai{Bernoulli polynomial}s
 defined by the generating series
-$$
+\begin{equation}
+\label{eq:bernoulli}
+\Todd(t,y) =
 \frac{e^{ty} y}{e^y - 1} = \sum_{n=0}^\infty \frac{b(n,t)}{n!} y^n
 .
-$$
+\end{equation}
 The constant terms of these Bernoulli polynomials
 are the \ai{Bernoulli number}s.
 
@@ -3423,6 +3426,301 @@ the integer points of $P(n)$}
 
 \end{example}
 
+\subsection{Summation through exponential substitution and Laurent expansions}
+
+This section was inspired by \shortciteN{Baldoni2008}.
+
+Let $f(\vec x)$ be the generating function of a polytope $P$,
+i.e.,
+$$
+f(\vec x) = \sum_{\vec t \in P \cap \ZZ^d} \vec x^{\vec t}
+.
+$$
+Substituting $\vec x = \vec e^{\vec y}$, we obtain
+$$
+f(\vec e^{\vec y}) = \sum_{\vec t \in P \cap \ZZ^d} e^{\sp t y}
+=
+\sum_{\vec t \in P \cap \ZZ^d}
+    \sum_{\vec n \ge \vec 0} \frac{\vec t^{\vec n} \vec y^{\vec n}}{\vec n!}
+=
+\sum_{\vec n \ge \vec 0}
+    \left(\sum_{\vec t \in P \cap \ZZ^d} \vec t^{\vec n}\right)
+	\frac{\vec y^{\vec n}}{\vec n!}
+,
+$$
+with $\vec n! = n_1! n_2! \cdots n_d!$.
+We observe that the sum of the monomial $\vec t^{\vec n}$
+over the integer points in $P$ is equal to $\vec n!$ times the coefficient
+of the $\vec y^{\vec n}$ term in the Taylor expansion of $f(\vec e^{\vec y})$.
+
+As in the case of unweighted counting (see \autoref{s:exponential}),
+we have to add the coefficients
+of these monomials in the Laurent expansions of the terms in \eqref{eq:rgf}.
+However, unlike the case of unweighted counting, we cannot transform
+this problem to a univariate problem and computing the coefficient
+of a monomial in the Laurent expansions does not reduces to computing
+the coefficient of a single higher-degree monomial in a Taylor expansion.
+
+Consider now one of the terms $g(\vec x) = f_{ik}(\vec x)$ in~\eqref{eq:rgf},
+$$
+g(\vec e^{\vec y}) =
+	\frac{e^{\sum_{j=1}^d s_j(\vec p) \sp{b_j}y}}
+	     {\prod_{j=1}^{d}\left(1-e^{\sp{b_j}y}\right)}
+,
+$$
+with $\vec w_{ij}(\vec p) = \sum_{j=1}^d s_j(\vec p) \vec b_j$ written
+in terms of the $\vec b_j$, which are assumed to form a basis
+and where we have made explicit the only place where the
+parameter $\vec p$ appear.
+We rewrite this equation as
+\begin{equation}
+\label{eq:laurent}
+g(\vec e^{\vec y}) =
+	\left(\prod_{j=1}^d \frac{-1}{\sp{b_j}y}\right)
+	\left(\prod_{j=1}^d \frac{-\sp{b_j}y \, e^{s_j(\vec p)\sp{b_j}y}}
+				 {1-e^{\sp{b_j}y}} \right)
+.
+\end{equation}
+The second factor is analytic and is a product of
+generating functions
+$\Todd(s_j(\vec p), \sp{b_j}y)$
+of \ai{Bernoulli polynomial}s~\eqref{eq:bernoulli}.
+Plugging in these expressions, we find
+\begin{align}
+\Todd(s_j(\vec p), \sp{b_j}y)
+&= \frac{-\sp{b_j}y e^{s_j(\vec p)\sp{b_j}y}}
+				 {1-e^{\sp{b_j}y}}
+\nonumber
+\\
+&= \sum_{n=0}^\infty \frac{b(n,s_j(\vec p))}{n!} \sp{b_j}y^n
+\nonumber
+\\
+&= \sum_{\vec k \ge \vec 0}
+	\frac{b(\sum k_i,s_j(\vec p))}{(\sum k_i)!}
+		{\sum k_i \choose \vec k} \vec b_j^{\vec k} \vec y^{\vec k}
+\nonumber
+\\
+&= \sum_{\vec k \ge \vec 0}
+	\frac{b(\sum k_i,s_j(\vec p))}{\prod_i k_i!}
+		 \vec b_j^{\vec k} \vec y^{\vec k}
+\label{eq:laurent:todd}
+,
+\end{align}
+with
+$$
+{\sum k_i \choose \vec k} =
+{\sum k_i \choose k_1, k_2, \ldots k_d} =
+\frac{(\sum k_i)!}{\vec k!} =
+\prod_{i=1}^d {\sum_{j=1}^i k_j \choose k_i}
+$$
+the \ai{multinomial coefficient}s.
+For the first factor, we compute the Laurent expansion
+of each of its factors,
+\begin{align}
+\frac{-1}{\sp{b_j}y}
+&= \frac{-1}{\sum_{k=f}^d b_{jk} y_k}
+\nonumber
+\\
+&= \frac{-1}{b_{jf} y_f\left(1 + \frac{\sum_{k=f+1}^d b_{jk} y_k}
+					{b_{jf} y_f}\right)}
+\nonumber
+\\
+&= \frac{-1}{b_{jf} y_f}
+	\sum_{n=0}^\infty (-1)^n \left(\frac{\sum_{k=f+1}^d b_{jk} y_k}
+					{b_{jf} y_f}\right)^n
+\nonumber
+\\
+&= \sum_{\vec n \ge \vec 0}
+	{\sum n_k \choose \vec n}
+		(-1)^{\sum n_k+1}
+		    \frac{{\vec b'_j}^{\vec n}}{b_{jf}^{\sum n_k+1}}
+		    \frac{{\vec y'}^{\vec n}}{y_f^{\sum n_k+1}}
+\label{eq:laurent:reciprocal}
+,
+\end{align}
+where $b_{jf}$ is the first non-zero coefficient of $\vec b_j$
+and the vector $\vec b_j'$ contains
+the subsequent $d-f$ coefficients of $\vec b_j$.
+
+Given a polynomial
+$$
+q(\vec y, \vec p) = \sum_{\vec m} \beta_{\vec m}(\vec p) \, \vec y^{\vec m}
+$$
+that we wish to sum over the integer points of a polytope $P$, we perform
+the following operations for each unimodular cone in the decomposition
+of each vertex cone.
+\begin{itemize}
+\item For each $\vec m$ with $\beta_{\vec m}(\vec p) \ne 0$
+\begin{itemize}
+\item Compute all sums
+$\vec N = \sum_{j=1}^d (\vec 0, -\sum_k n_{jk}-1, \vec n_j)$
+of exponents from \eqref{eq:laurent:reciprocal} such that
+$\vec N \le \vec m$ and compute the corresponding coefficient $\gamma_{\vec N}$
+in the product of Laurent series by enumerating all combinations
+of $\vec n_j$ leading to the same $\vec N$.
+Note that there are only a finite number of $\vec N$ satisfying this constraint
+since $\sum N_k = -d$.
+By reordering the variables such that the highest exponents occurs
+for the first variable, the number of $\vec N$ can be reduced.
+\item For each of these $\vec N$
+\begin{itemize}
+\item Compute the coefficient $\delta_{\vec m - \vec N}(\vec p)$ of
+$\vec y^{\vec m - \vec N}$ in the product of
+Taylor expansions~\eqref{eq:laurent:todd}.
+\end{itemize}
+\end{itemize}
+\item The contribution of this cone is the sum of
+$$
+\vec m! \, \alpha \, \beta_{\vec m}(\vec p) \, \gamma_{\vec N} \,
+		\delta_{\vec m - \vec N}(\vec p)
+$$
+over all considered $\vec m$ and $\vec N$.
+\end{itemize}
+Within each vertex cone computation, the coefficients
+$\gamma_{\vec N}$ and $\delta_{\vec m - \vec N}(\vec p)$
+only need to be computed once.
+
+\begin{example}
+Consider once more the \rgf/
+$$
+\f T x =
+\frac{x_1^2}{(1-x_1^{-1})(1-x_1^{-1}x_2)}
++
+\frac{x_2^2}{(1-x_2^{-1})(1-x_1 x_2^{-1})}
++
+\frac1{(1-x_1)(1-x_2)}
+$$
+from \shortciteN[Example~39]{Verdoolaege2005PhD}
+and Example~\ref{ex:todd}.
+Assume we want to compute
+$$
+\sum_{\vec y \in T\cap \ZZ^2} y_1^2 + y_2^2
+.
+$$
+We will need the following \ai{Bernoulli polynomials}
+\begin{align*}
+b(0,s) & = 1
+\\
+b(1,s) &= \frac 1 2 \left(-1 + 2 s \right)
+\\
+b(2,s) &= \frac 1 6 \left(1 -6 s + 6 s^2 \right)
+\\
+b(3,s) &= \frac 1 2 \left(s -3 s^2 + 2 s^3\right)
+\\
+b(4,s) & = \frac 1{30} \left(-1 + 30 s^2 -60 s^3 + 30 s^4\right)
+\end{align*}
+For the first term, substitution yields
+\begin{align*}
+h(\vec y)
+=&
+\frac 1{y_1}
+\frac 1{y_1-y_2}
+\frac {y_1 e^{(-2)(-y_1)}}{1-e^{-y_1}}
+\frac {(y_1-y2) e^{0(-y_1+y_2)}}{1-e^{-y_1+y_2}}
+\\
+=&
+\frac 1{y_1}
+\left(
+    \frac 1{y_1} \left(
+		1 + \frac{y_2}{y_1} + \frac{y_2^2}{y_1^2} + \cdots
+	\right)
+\right)
+\\
+&
+\left(
+1 + \frac{b(1,-2)}1 (-y_1) + \frac{b(2,-2)}2 (-y_1)^2
+	+ \frac{b(3,-2)}{3!} (-y_1)^3 + \frac{b(4,-2)}{4!} (-y_1)^4 + \cdots
+\right)
+\\
+&
+\left(
+1 + \frac{-1}2 (-y_1+y_2) + \frac{1}{12} (-y_1+y_2)^2
+	+ 0 (-y_1+y_2)^3
+	+ \frac{1}{720} (-y_1+y_2)^4 + \cdots
+\right)
+\end{align*}
+We obtain the following results:
+{\renewcommand\arraystretch{2}
+$$
+\begin{array}{rrr@{}lrr@{}lc}
+\vec m & \vec N & \gamma_{\vec N} & \vec y^{\vec N} &
+\vec m - \vec N & \delta_{\vec m - \vec N} & \vec y^{\vec m - \vec N} &
+\vec m! \alpha \beta_{\vec m} \gamma_{\vec N} \delta_{\vec m - \vec N}
+\\
+(2,0) & (-2,0) & 1 & y_1^{-2} & (4,0)
+		& \displaystyle\frac{721}{240} & y_1^4
+		& \displaystyle\frac{721}{120}
+\\
+(0,2) & (-2,0) & 1 & y_1^{-2} & (2,2)
+		& \displaystyle\frac{179}{720} & y_1^2 y_2^2
+		& \displaystyle\frac{179}{360}
+\\
+      & (-3,1) & 1 & y_1^{-3} y_2 & (3,1)
+		& \displaystyle-\frac{211}{120} & y_1^3 y_1
+		& \displaystyle-\frac{211}{60}
+\\
+      & (-4,2) & 1 & y_1^{-4} y_2^2 & (4,0)
+		& \displaystyle\frac{721}{240} & y_1^4
+		& \displaystyle\frac{721}{120}
+\end{array}
+$$
+}%
+For the second term, we similarly obtain
+{\renewcommand\arraystretch{2}
+$$
+\begin{array}{rrr@{}lrr@{}lc}
+\vec m & \vec N & \gamma_{\vec N} & \vec y^{\vec N} &
+\vec m - \vec N & \delta_{\vec m - \vec N} & \vec y^{\vec m - \vec N} &
+\vec m! \alpha \beta_{\vec m} \gamma_{\vec N} \delta_{\vec m - \vec N}
+\\
+(2,0) & (-1,-1) & -1 & y_1^{-1} y_2^{-1} & (3,1)
+		& \displaystyle\frac{1}{180} & y_1^3 y_1
+		& \displaystyle-\frac{1}{90}
+\\
+      & (-2,0) & -1 & y_1^{-2} & (4,0)
+		& \displaystyle-\frac{1}{720} & y_1^4
+		& \displaystyle\frac{1}{360}
+\\
+(0,2) & (-1,-1) & -1 & y_1^{-1} y_2^{-1} & (1,3)
+		& \displaystyle-\frac{211}{120} & y_1 y_2^3
+		& \displaystyle\frac{211}{60}
+\\
+      & (-2,0) & -1 & y_1^{-3} y_2 & (2,2)
+		& \displaystyle\frac{179}{720} & y_1^3 y_2
+		& \displaystyle-\frac{179}{360}
+\\
+      & (-3,1) & -1 & y_1^{-3} y_2 & (3,1)
+		& \displaystyle\frac{1}{180} & y_1^3 y_1
+		& \displaystyle-\frac{1}{90}
+\\
+      & (-4,2) & -1 & y_1^{-4} y_2^2 & (4,0)
+		& \displaystyle-\frac{1}{720} & y_1^4
+		& \displaystyle\frac{1}{360}
+\end{array}
+$$
+}%
+Finally, for the third term, we obtain
+$$
+\begin{array}{rrr@{}lrr@{}lc}
+\vec m & \vec N & \gamma_{\vec N} & \vec y^{\vec N} &
+\vec m - \vec N & \delta_{\vec m - \vec N} & \vec y^{\vec m - \vec N} &
+\vec m! \alpha \beta_{\vec m} \gamma_{\vec N} \delta_{\vec m - \vec N}
+\\
+(2,0) & (-1,-1) & -1 & y_1^{-1} y_2^{-1} & (3,1)
+		& 0 & y_1^3 y_1
+		& 0
+\\
+(0,2) & (-1,-1) & -1 & y_1^{-1} y_2^{-1} & (1,3)
+		& 0 & y_1 y_2^3
+		& 0
+\end{array}
+$$
+Adding up all contributions in the final columns of these tables,
+we obtain a grand total of
+$$
+12.
+$$
+\end{example}
 
 \subsection{Conversion to ``standard form''}
 \label{s:standard}

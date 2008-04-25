@@ -14,6 +14,7 @@
 #include "hilbert.h"
 #include "hull.h"
 #include "ilp.h"
+#include "laurent.h"
 #include "matrix_read.h"
 #include "remove_equalities.h"
 #include "config.h"
@@ -716,6 +717,39 @@ int test_hull(struct barvinok_options *options)
     Matrix_Free(hull);
 }
 
+static int test_laurent(struct barvinok_options *options)
+{
+    unsigned nvar, nparam;
+    char **all_vars;
+    evalue *e, *sum, *res;
+
+    e = evalue_read_from_str("         x1 >= 0\n"
+			     "         x2 >= 0\n"
+			     "         -x1 -x2 + 2 >= 0\n"
+			     "\n"
+			     "(N + M * x2)\n",
+			     "x1,x2", &all_vars, &nvar, &nparam,
+			     options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+
+    sum = laurent_summate(e, nvar, options);
+
+    res = evalue_read_from_str("(6 * N + 4 * M)",
+			       "", &all_vars, &nvar, &nparam,
+			       options->MaxRays);
+    Free_ParamNames(all_vars, nvar+nparam);
+
+    assert(value_zero_p(sum->d));
+    assert(sum->x.p->type == partition);
+    assert(sum->x.p->size == 2);
+
+    assert(eequal(res, &sum->x.p->arr[1]));
+
+    evalue_free(e);
+    evalue_free(sum);
+    evalue_free(res);
+}
+
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -736,5 +770,6 @@ int main(int argc, char **argv)
     test_hilbert(options);
     test_ilp(options);
     test_hull(options);
+    test_laurent(options);
     barvinok_options_free(options);
 }

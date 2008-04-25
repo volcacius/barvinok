@@ -93,6 +93,7 @@ struct barvinok_options {
     #define	BV_SUM_BARVINOK		0
     #define	BV_SUM_EULER		1
     #define	BV_SUM_BERNOULLI	2
+    #define	BV_SUM_LAURENT		3
     int		summation;
 
     #define	BV_CHAMBERS_POLYLIB	0

@@ -190,7 +190,7 @@ static struct argp_option barvinok_argp_options[] = {
 	"[default: pip]",
 #endif
 	},
-    { "summation",	    BV_OPT_SUM,		"barvinok|bernoulli|euler", 0,
+    { "summation",	    BV_OPT_SUM,		"barvinok|bernoulli|euler|laurent", 0,
 	"[default: barvinok]" },
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
@@ -355,10 +355,14 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
     case BV_OPT_SUM:
 	if (!strcmp(arg, "barvinok"))
 	    options->summation = BV_SUM_BARVINOK;
-	if (!strcmp(arg, "euler"))
+	else if (!strcmp(arg, "euler"))
 	    options->summation = BV_SUM_EULER;
-	if (!strcmp(arg, "bernoulli"))
+	else if (!strcmp(arg, "bernoulli"))
 	    options->summation = BV_SUM_BERNOULLI;
+	else if (!strcmp(arg, "laurent"))
+	    options->summation = BV_SUM_LAURENT;
+	else
+	    argp_error(state, "unknown summation method '%s'\n", arg);
 	break;
     case BV_OPT_RECURSE:
 	if (!strcmp(arg, "none"))

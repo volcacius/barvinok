@@ -40,6 +40,8 @@ if test "x$bv_cv_shared_barvinok" != "xyes" ; then
 	BV_LDFLAGS="$BV_LDFLAGS -static"
 fi
 
+AC_CXX_GNUCXX_HASHMAP
+
 AC_ARG_WITH(default-prefix,
 	AS_HELP_STRING([--with-default-prefix=DIR],
 	    [Default installation prefix of optional packages]))

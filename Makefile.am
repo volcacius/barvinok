@@ -117,6 +117,8 @@ libbarvinok_core_la_SOURCES = \
     lattice_point.h \
     lattice_width.c \
     lattice_width.h \
+    laurent.cc \
+    laurent.h \
     normalization.c \
     normalization.h \
     options.c \
