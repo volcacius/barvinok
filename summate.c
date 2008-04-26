@@ -5,10 +5,95 @@
 #include "summate.h"
 #include "section_array.h"
 
-static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
+#define ALLOC(type) (type*)malloc(sizeof(type))
+#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
+
+static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
+				 unsigned nvar,
 				 struct evalue_section_array *sections,
 				 struct barvinok_options *options)
 {
+    unsigned dim = P->Dimension;
+    unsigned new_dim, new_nparam;
+    Matrix *T = NULL, *CP = NULL;
+    evalue **subs;
+    evalue *sum;
+    int j;
+
+    if (emptyQ(P))
+	return evalue_zero();
+
+    assert(P->NbEq > 0);
+
+    remove_all_equalities(&P, NULL, &CP, &T, dim-nvar, options->MaxRays);
+
+    if (emptyQ(P)) {
+	Polyhedron_Free(P);
+	return evalue_zero();
+    }
+
+    new_nparam = CP ? CP->NbColumns-1 : dim - nvar;
+    new_dim = T ? T->NbColumns-1 : nvar + new_nparam;
+
+    /* We can avoid these substitutions if E is a constant */
+    subs = ALLOCN(evalue *, dim);
+    for (j = 0; j < nvar; ++j) {
+	if (T)
+	    subs[j] = affine2evalue(T->p[j], T->p[nvar+new_nparam][new_dim],
+				    new_dim);
+	else
+	    subs[j] = evalue_var(j);
+    }
+    for (j = 0; j < dim-nvar; ++j) {
+	if (CP)
+	    subs[nvar+j] = affine2evalue(CP->p[j], CP->p[dim-nvar][new_nparam],
+					 new_nparam);
+	else
+	    subs[nvar+j] = evalue_var(j);
+	evalue_shift_variables(subs[nvar+j], new_dim-new_nparam);
+    }
+
+    E = evalue_dup(E);
+    evalue_substitute(E, subs);
+    reduce_evalue(E);
+
+    for (j = 0; j < dim; ++j)
+	evalue_free(subs[j]);
+    free(subs);
+
+    if (new_dim-new_nparam > 0) {
+	sum = barvinok_sum_over_polytope(P, E, new_dim-new_nparam,
+					 sections, options);
+	evalue_free(E);
+	Polyhedron_Free(P);
+    } else {
+	sum = ALLOC(evalue);
+	value_init(sum->d);
+	sum->x.p = new_enode(partition, 2, new_dim);
+	EVALUE_SET_DOMAIN(sum->x.p->arr[0], P);
+	value_clear(sum->x.p->arr[1].d);
+	sum->x.p->arr[1] = *E;
+	free(E);
+    }
+
+    if (CP) {
+	evalue_backsubstitute(sum, CP, options->MaxRays);
+	Matrix_Free(CP);
+    }
+
+    if (T)
+	Matrix_Free(T);
+
+    return sum;
+}
+
+evalue *barvinok_sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
+				     struct evalue_section_array *sections,
+				     struct barvinok_options *options)
+{
+    if (P->NbEq)
+	return sum_over_polytope_with_equalities(P, E, nvar, sections, options);
+
     if (options->summation == BV_SUM_EULER)
 	return euler_summate(P, E, nvar, options);
     else if (options->summation == BV_SUM_LAURENT)
@@ -42,8 +127,8 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 	    evalue *tmp;
 	    D->next = NULL;
 
-	    tmp = sum_over_polytope(D, &e->x.p->arr[2*i+1], nvar,
-					&sections, options);
+	    tmp = barvinok_sum_over_polytope(D, &e->x.p->arr[2*i+1], nvar,
+					     &sections, options);
 	    assert(tmp);
 	    eadd(tmp, sum);
 	    evalue_free(tmp);
