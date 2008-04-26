@@ -27,6 +27,7 @@
 #include "volume.h"
 #include "bernoulli.h"
 #include "param_util.h"
+#include "summate.h"
 
 #ifdef NTL_STD_CXX
 using namespace NTL;
@@ -40,10 +41,6 @@ using std::string;
 using std::ostringstream;
 
 #define ALLOC(t,p) p = (t*)malloc(sizeof(*p))
-
-static evalue *barvinok_summate_unweighted(Polyhedron *P, Polyhedron *C,
-     evalue *(*summate)(evalue *, unsigned, struct barvinok_options *options),
-     struct barvinok_options *options);
 
 class dpoly_n {
 public:
@@ -456,8 +453,7 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
     }
     if (options->summation == BV_SUM_BERNOULLI) {
 	Polyhedron *C = Universe_Polyhedron(0);
-	evalue *sum = barvinok_summate_unweighted(P, C, Bernoulli_sum_evalue,
-						options);
+	evalue *sum = barvinok_summate_unweighted(P, C, options);
 	Polyhedron_Free(C);
 	evalue2value(sum, result);
 	evalue_free(sum);
@@ -1439,9 +1435,12 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
     P->next = NULL;
 
     if (options->approximation_method == BV_APPROX_BERNOULLI ||
-	options->summation == BV_SUM_BERNOULLI)
-	eres = barvinok_summate_unweighted(P, C, Bernoulli_sum_evalue, options);
-    else
+	options->summation == BV_SUM_BERNOULLI) {
+	    int summation = options->summation;
+	    options->summation = BV_SUM_BERNOULLI;
+	    eres = barvinok_summate_unweighted(P, C, options);
+	    options->summation = summation;
+    } else
 	eres = enumerate(P, C, options);
     Domain_Free(C);
 
@@ -1520,7 +1519,7 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
     bool do_scale = options->approximation_method == BV_APPROX_SCALE;
 
     if (options->summation == BV_SUM_EULER)
-	return barvinok_summate_unweighted(P, C, euler_summate, options);
+	return barvinok_summate_unweighted(P, C, options);
 
     if (options->approximation_method == BV_APPROX_VOLUME)
 	return Param_Polyhedron_Volume(P, C, options);
@@ -1564,48 +1563,4 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
     EP = *gf;
     delete gf;
     return EP;
-}
-
-evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
-{
-    if (options->summation == BV_SUM_EULER)
-	return euler_summate(e, nvar, options);
-    else if (options->summation == BV_SUM_LAURENT)
-	return laurent_summate(e, nvar, options);
-    else if (options->summation == BV_SUM_BERNOULLI)
-	return Bernoulli_sum_evalue(e, nvar, options);
-    else
-	return evalue_sum(e, nvar, options->MaxRays);
-}
-
-/* Turn unweighted counting problem into "weighted" counting problem
- * with weight equal to 1 and call "summate" on this weighted problem.
- */
-static evalue *barvinok_summate_unweighted(Polyhedron *P, Polyhedron *C,
-     evalue *(*summate)(evalue *, unsigned, struct barvinok_options *options),
-     struct barvinok_options *options)
-{
-    Polyhedron *CA, *D;
-    evalue e;
-    evalue *sum;
-
-    if (emptyQ(P) || emptyQ(C))
-	return evalue_zero();
-
-    CA = align_context(C, P->Dimension, options->MaxRays);
-    D = DomainIntersection(P, CA, options->MaxRays);
-    Domain_Free(CA);
-
-    if (emptyQ(D)) {
-	Domain_Free(D);
-	return evalue_zero();
-    }
-
-    value_init(e.d);
-    e.x.p = new_enode(partition, 2, P->Dimension);
-    EVALUE_SET_DOMAIN(e.x.p->arr[0], D);
-    evalue_set_si(&e.x.p->arr[1], 1, 1);
-    sum = summate(&e, P->Dimension - C->Dimension, options);
-    free_evalue_refs(&e);
-    return sum;
 }

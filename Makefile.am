@@ -145,6 +145,8 @@ libbarvinok_core_la_SOURCES = \
     scarf.cc \
     series.cc \
     $(TOPCOM) \
+    summate.c \
+    summate.h \
     volume.c \
     volume.h \
     mat_util.cc \
