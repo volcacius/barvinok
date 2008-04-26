@@ -919,7 +919,7 @@ static unsigned *active_constraints(Param_Polyhedron *PP, Param_Domain *D)
     return facets;
 }
 
-static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
+evalue *euler_summate(Polyhedron *P, evalue *e, unsigned nvar,
 				   struct barvinok_options *options)
 {
     Polyhedron *U;
@@ -930,16 +930,18 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
     struct evalue_section *s;
     Param_Domain *PD;
 
+    assert(nvar <= 2);
+
     MaxRays = options->MaxRays;
     POL_UNSET(options->MaxRays, POL_INTEGER);
 
-    U = Universe_Polyhedron(D->Dimension - nvar);
-    PP = Polyhedron2Param_Polyhedron(D, U, options);
+    U = Universe_Polyhedron(P->Dimension - nvar);
+    PP = Polyhedron2Param_Polyhedron(P, U, options);
 
     for (nd = 0, PD = PP->D; PD; ++nd, PD = PD->next);
     s = ALLOCN(struct evalue_section, nd);
 
-    Polyhedron *TC = true_context(D, U, MaxRays);
+    Polyhedron *TC = true_context(P, U, MaxRays);
     FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, PD, rVD)
 	unsigned *facets;
 
@@ -967,34 +969,6 @@ static evalue *summate_over_domain(evalue *e, int nvar, Polyhedron *D,
 
     res = evalue_from_section_array(s, nd);
     free(s);
-
-    return res;
-}
-
-evalue *euler_summate(evalue *e, unsigned nvar,
-			struct barvinok_options *options)
-{
-    int i;
-    evalue *res;
-
-    assert(nvar <= 2);
-
-    assert(nvar >= 0);
-    if (nvar == 0 || EVALUE_IS_ZERO(*e))
-	return evalue_dup(e);
-
-    assert(value_zero_p(e->d));
-    assert(e->x.p->type == partition);
-
-    res = evalue_zero();
-
-    for (i = 0; i < e->x.p->size/2; ++i) {
-	evalue *t;
-	t = summate_over_domain(&e->x.p->arr[2*i+1], nvar,
-				 EVALUE_DOMAIN(e->x.p->arr[2*i]), options);
-	eadd(t, res);
-	evalue_free(t);
-    }
 
     return res;
 }

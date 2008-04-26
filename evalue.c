@@ -16,6 +16,7 @@
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
+#include "summate.h"
 
 #ifndef value_pmodulus
 #define value_pmodulus(ref,val1,val2)  (mpz_fdiv_r((ref),(val1),(val2)))
@@ -951,7 +952,8 @@ static void _reduce_evalue_in_domain(evalue *e, Polyhedron *D, struct subst *s)
 void reduce_evalue_in_domain(evalue *e, Polyhedron *D)
 {
     struct subst s = { NULL, 0, 0 };
-    if (emptyQ2(D)) {
+    POL_ENSURE_VERTICES(D);
+    if (emptyQ(D)) {
 	if (EVALUE_IS_ZERO(*e))
 	    return;
 	free_evalue_refs(e);
@@ -3532,6 +3534,53 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     return res;
 }
 
+static Polyhedron_Insert(Polyhedron ***next, Polyhedron *Q)
+{
+    if (emptyQ(Q))
+	Polyhedron_Free(Q);
+    else {
+	**next = Q;
+	*next = &(Q->next);
+    }
+}
+
+static Polyhedron *Polyhedron_Split_Into_Orthants(Polyhedron *P,
+							unsigned MaxRays)
+{
+    int i = 0;
+    Polyhedron *D = P;
+    Vector *c = Vector_Alloc(1 + P->Dimension + 1);
+    value_set_si(c->p[0], 1);
+
+    if (P->Dimension == 0)
+	return Polyhedron_Copy(P);
+
+    for (i = 0; i < P->Dimension; ++i) {
+	Polyhedron *L = NULL;
+	Polyhedron **next = &L;
+	Polyhedron *I;
+
+	for (I = D; I; I = I->next) {
+	    Polyhedron *Q;
+	    value_set_si(c->p[1+i], 1);
+	    value_set_si(c->p[1+P->Dimension], 0);
+	    Q = AddConstraints(c->p, 1, I, MaxRays);
+	    Polyhedron_Insert(&next, Q);
+	    value_set_si(c->p[1+i], -1);
+	    value_set_si(c->p[1+P->Dimension], -1);
+	    Q = AddConstraints(c->p, 1, I, MaxRays);
+	    Polyhedron_Insert(&next, Q);
+	    value_set_si(c->p[1+i], 0);
+	}
+	if (D != P)
+	    Domain_Free(D);
+	D = L;
+    }
+    Vector_Free(c);
+    return D;
+}
+
+/* Make arguments of all floors non-negative */
 static void shift_floor_in_domain(evalue *e, Polyhedron *D)
 {
     Value d, m;
@@ -3593,57 +3642,28 @@ static void shift_floor_in_domain(evalue *e, Polyhedron *D)
     value_clear(m);
 }
 
-/* Make arguments of all floors non-negative */
-static void shift_floor_arguments(evalue *e)
+evalue *box_summate(Polyhedron *P, evalue *E, unsigned nvar, unsigned MaxRays)
 {
-    int i;
-
-    if (value_notzero_p(e->d) || e->x.p->type != partition)
-	return;
-
-    for (i = 0; i < e->x.p->size/2; ++i)
-	shift_floor_in_domain(&e->x.p->arr[2*i+1],
-				EVALUE_DOMAIN(e->x.p->arr[2*i]));
-}
-
-evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
-{
-    int i;
-    evalue *res = ALLOC(evalue);
-    value_init(res->d);
-
-    assert(nvar >= 0);
-    if (nvar == 0 || EVALUE_IS_ZERO(*e)) {
-	evalue_copy(res, e);
-	return res;
-    }
-
-    evalue_split_domains_into_orthants(e, MaxRays);
-    reduce_evalue(e);
-    evalue_frac2floor2(e, 0);
-    evalue_set_si(res, 0, 1);
-
-    assert(value_zero_p(e->d));
-    assert(e->x.p->type == partition);
-    shift_floor_arguments(e);
-
-    for (i = 0; i < e->x.p->size/2; ++i) {
+    evalue *sum = evalue_zero();
+    Polyhedron *D = Polyhedron_Split_Into_Orthants(P, MaxRays);
+    for (P = D; P; P = P->next) {
 	evalue *t;
-	t = esum_over_domain(&e->x.p->arr[2*i+1], nvar,
-			     EVALUE_DOMAIN(e->x.p->arr[2*i]), NULL, 0,
-			     MaxRays);
-	eadd(t, res);
-	evalue_free(t);
+	evalue *fe = evalue_dup(E);
+	Polyhedron *next = P->next;
+	P->next = NULL;
+	reduce_evalue_in_domain(fe, P);
+	evalue_frac2floor2(fe, 0);
+	shift_floor_in_domain(fe, P);
+	t = esum_over_domain(fe, nvar, P, NULL, NULL, MaxRays);
+	if (t) {
+	    eadd(t, sum);
+	    evalue_free(t);
+	}
+	evalue_free(fe);
+	P->next = next;
     }
-
-    reduce_evalue(res);
-
-    return res;
-}
-
-evalue *esum(evalue *e, int nvar)
-{
-    return evalue_sum(e, nvar, 0);
+    Domain_Free(D);
+    return sum;
 }
 
 /* Initial silly implementation */

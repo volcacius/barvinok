@@ -6,8 +6,8 @@ extern "C" {
 
 struct barvinok_options;
 
-evalue *euler_summate(evalue *e, unsigned nvar,
-		struct barvinok_options *options);
+evalue *euler_summate(Polyhedron *P, evalue *e, unsigned nvar,
+				   struct barvinok_options *options);
 
 #if defined(__cplusplus)
 }

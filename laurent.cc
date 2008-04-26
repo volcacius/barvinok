@@ -756,9 +756,8 @@ void laurent_summator::handle(const signed_cone& sc, barvinok_options *options)
     vc.clear();
 }
 
-static evalue *summate_over_domain(const evalue *e, unsigned nvar,
-				    Polyhedron *D,
-				    struct barvinok_options *options)
+evalue *laurent_summate(Polyhedron *P, evalue *e, unsigned nvar,
+				   struct barvinok_options *options)
 {
     Polyhedron *U, *TC;
     Param_Polyhedron *PP;
@@ -767,13 +766,13 @@ static evalue *summate_over_domain(const evalue *e, unsigned nvar,
     Param_Domain *PD;
     evalue *sum;
 
-    U = Universe_Polyhedron(D->Dimension - nvar);
-    PP = Polyhedron2Param_Polyhedron(D, U, options);
+    U = Universe_Polyhedron(P->Dimension - nvar);
+    PP = Polyhedron2Param_Polyhedron(P, U, options);
 
     for (nd = 0, PD = PP->D; PD; ++nd, PD = PD->next);
     s = ALLOCN(struct evalue_section, nd);
 
-    TC = true_context(D, U, options->MaxRays);
+    TC = true_context(P, U, options->MaxRays);
     FORALL_REDUCED_DOMAIN(PP, TC, nd, options, i, PD, rVD)
 	Param_Vertices *V;
 	laurent_summator ls(e, nvar, PP);
@@ -794,30 +793,4 @@ static evalue *summate_over_domain(const evalue *e, unsigned nvar,
     free(s);
 
     return sum;
-}
-
-evalue *laurent_summate(evalue *e, unsigned nvar,
-			struct barvinok_options *options)
-{
-    int i;
-    evalue *res;
-
-    assert(nvar >= 0);
-    if (nvar == 0 || EVALUE_IS_ZERO(*e))
-	return evalue_dup(e);
-
-    assert(value_zero_p(e->d));
-    assert(e->x.p->type == partition);
-
-    res = evalue_zero();
-
-    for (i = 0; i < e->x.p->size/2; ++i) {
-	evalue *t;
-	t = summate_over_domain(&e->x.p->arr[2*i+1], nvar,
-				 EVALUE_DOMAIN(e->x.p->arr[2*i]), options);
-	eadd(t, res);
-	evalue_free(t);
-    }
-
-    return res;
 }

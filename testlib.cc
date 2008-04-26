@@ -541,6 +541,9 @@ int test_bernoulli(struct barvinok_options *options)
 
 int test_bernoulli_sum(struct barvinok_options *options)
 {
+    int summation = options->summation;
+    options->summation = BV_SUM_BERNOULLI;
+
     unsigned nvar, nparam;
     char **all_vars;
     evalue *e, *sum1, *sum2;
@@ -549,7 +552,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
 				options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
 
-    sum1 = Bernoulli_sum_evalue(e, 1, options);
+    sum1 = barvinok_summate(e, 1, options);
     sum2 = evalue_read_from_str("n -1 >= 0\n\n (1/3 * n^3 + 2/3 * n)",
 				NULL, &all_vars, &nvar, &nparam,
 				options->MaxRays);
@@ -565,7 +568,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
 			     "i", &all_vars, &nvar, &nparam,
 				options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
-    sum1 = Bernoulli_sum_evalue(e, 1, options);
+    sum1 = barvinok_summate(e, 1, options);
     evalue_negate(sum1);
     eadd(sum2, sum1);
     reduce_evalue(sum1);
@@ -579,7 +582,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
 			     "i", &all_vars, &nvar, &nparam,
 				options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
-    sum1 = Bernoulli_sum_evalue(e, 1, options);
+    sum1 = barvinok_summate(e, 1, options);
     sum2 = evalue_read_from_str("n + 0 >= 0\n\n (1/2 * n^2 + 1/2 * n + (-10))\n"
 		    "n + 4 >= 0\n -n -1 >= 0\n\n (1/2 * n^2 + 1/2 * n + (-10))",
 				NULL, &all_vars, &nvar, &nparam,
@@ -598,7 +601,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
 			     "i,j,k", &all_vars, &nvar, &nparam,
 				options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
-    sum1 = Bernoulli_sum_evalue(e, 3, options);
+    sum1 = barvinok_summate(e, 3, options);
     sum2 = evalue_read_from_str("n -5 >= 0\n\n"
 				"1/6 * n^3 + 1/2 * n^2 + 1/3 * n + -20",
 				NULL, &all_vars, &nvar, &nparam,
@@ -611,6 +614,8 @@ int test_bernoulli_sum(struct barvinok_options *options)
     evalue_free(e);
     evalue_free(sum1);
     evalue_free(sum2);
+
+    options->summation = summation;
 }
 
 int test_hilbert(struct barvinok_options *options)
@@ -732,7 +737,10 @@ static int test_laurent(struct barvinok_options *options)
 			     options->MaxRays);
     Free_ParamNames(all_vars, nvar+nparam);
 
-    sum = laurent_summate(e, nvar, options);
+    int summation = options->summation;
+    options->summation = BV_SUM_LAURENT;
+    sum = barvinok_summate(e, nvar, options);
+    options->summation = summation;
 
     res = evalue_read_from_str("(6 * N + 4 * M)",
 			       "", &all_vars, &nvar, &nparam,

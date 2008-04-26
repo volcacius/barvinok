@@ -1,4 +1,5 @@
 #include <barvinok/evalue.h>
+#include "section_array.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -38,8 +39,9 @@ struct poly_list *faulhaber_compute(int n);
  */
 struct poly_list *bernoulli_compute(int n);
 
-evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
-			     struct barvinok_options *options);
+evalue *bernoulli_summate(Polyhedron *P, evalue *E, unsigned nvar,
+				 struct evalue_section_array *sections,
+				 struct barvinok_options *options);
 
 #if defined(__cplusplus)
 }

@@ -1,12 +1,13 @@
 #include <assert.h>
+#include <barvinok/barvinok.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "bernoulli.h"
 #include "lattice_point.h"
+#include "section_array.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
-#define REALLOCN(ptr,type,n) (type*)realloc(ptr, (n) * sizeof(type))
 
 static struct bernoulli_coef bernoulli_coef;
 static struct poly_list bernoulli;
@@ -243,9 +244,7 @@ static void bound_constraint(Value *c, unsigned dim,
 
 struct Bernoulli_data {
     struct barvinok_options *options;
-    struct evalue_section *s;
-    int size;
-    int ns;
+    struct evalue_section_array *sections;
     const evalue *e;
 };
 
@@ -324,11 +323,7 @@ static void Bernoulli_init(unsigned n, void *cb_data)
     int exact = data->options->approximation_method == BV_APPROX_NONE;
     int cases = exact ? 3 : 5;
 
-    if (cases * n <= data->size)
-	return;
-
-    data->size = cases * (n + 16);
-    data->s = REALLOCN(data->s, struct evalue_section, data->size);
+    evalue_section_array_ensure(data->sections, cases * n);
 }
 
 static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data);
@@ -418,6 +413,7 @@ static void transform_to_single_case(Matrix *M, Value *lower, Value *upper,
 static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 {
     struct Bernoulli_data *data = (struct Bernoulli_data *)cb_data;
+    struct evalue_section_array *sections = data->sections;
     Matrix *M2;
     Polyhedron *T;
     const evalue *factor = NULL;
@@ -431,7 +427,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 
     assert(lower);
     assert(upper);
-    assert(data->ns + cases <= data->size);
+    evalue_section_array_ensure(sections, sections->ns + cases);
 
     M2 = Matrix_Copy(M);
     T = Constraints2Polyhedron(M2, data->options->MaxRays);
@@ -482,9 +478,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     linear = linear_term(factor, lower, upper, row, tmp, exact);
 
     if (constant) {
-	data->s[data->ns].E = linear;
-	data->s[data->ns].D = T;
-	++data->ns;
+	evalue_section_array_add(sections, T, linear);
 	data->options->stats->bernoulli_sums++;
     } else {
 	evalue *poly_u = NULL, *poly_l = NULL;
@@ -523,9 +517,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    eadd(poly_u, extra);
 	    eadd(linear, extra);
 
-	    data->s[data->ns].E = extra;
-	    data->s[data->ns].D = D;
-	    ++data->ns;
+	    evalue_section_array_add(sections, D, extra);
 	    data->options->stats->bernoulli_sums++;
 	}
 
@@ -550,9 +542,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	    eadd(poly_l, extra);
 	    eadd(linear, extra);
 
-	    data->s[data->ns].E = extra;
-	    data->s[data->ns].D = D;
-	    ++data->ns;
+	    evalue_section_array_add(sections, D, extra);
 	    data->options->stats->bernoulli_sums++;
 	}
 
@@ -567,17 +557,17 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	if (emptyQ2(D))
 	    Polyhedron_Free(D);
 	else {
+	    evalue *e;
 	    poly_l = compute_poly_l(poly_l, lower, row, dim, faulhaber, data);
 	    poly_u = compute_poly_u(poly_u, upper, row, dim, tmp,
 					faulhaber, data);
 	
-	    data->s[data->ns].E = ALLOC(evalue);
-	    value_init(data->s[data->ns].E->d);
-	    evalue_copy(data->s[data->ns].E, poly_u);
-	    eadd(poly_l, data->s[data->ns].E);
-	    eadd(linear, data->s[data->ns].E);
-	    data->s[data->ns].D = D;
-	    ++data->ns;
+	    e = ALLOC(evalue);
+	    value_init(e->d);
+	    evalue_copy(e, poly_u);
+	    eadd(poly_l, e);
+	    eadd(linear, e);
+	    evalue_section_array_add(sections, D, e);
 	    data->options->stats->bernoulli_sums++;
 	}
 
@@ -598,10 +588,8 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 		poly_u = compute_poly_u(poly_u, upper, row, dim, tmp,
 					    faulhaber, data);
 		eadd(linear, poly_u);
-		data->s[data->ns].E = poly_u;
+		evalue_section_array_add(sections, D, poly_u);
 		poly_u = NULL;
-		data->s[data->ns].D = D;
-		++data->ns;
 		data->options->stats->bernoulli_sums++;
 	    }
 
@@ -621,10 +609,8 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 		poly_l = compute_poly_l(poly_l, lower, row, dim,
 					faulhaber, data);
 		eadd(linear, poly_l);
-		data->s[data->ns].E = poly_l;
+		evalue_section_array_add(sections, D, poly_l);
 		poly_l = NULL;
-		data->s[data->ns].D = D;
-		++data->ns;
 		data->options->stats->bernoulli_sums++;
 	    }
 	}
@@ -806,22 +792,25 @@ static void move_best_to_front(Polyhedron **P_p, evalue **E_p, unsigned nvar,
 }
 
 static evalue *sum_over_polytope_base(Polyhedron *P, evalue *E, unsigned nvar,
-				      struct Bernoulli_data *data,
+				      struct evalue_section_array *sections,
 				      struct barvinok_options *options)
 {
     evalue *res;
+    struct Bernoulli_data data;
 
     assert(P->NbEq == 0);
 
-    data->ns = 0;
-    data->e = E;
+    sections->ns = 0;
+    data.options = options;
+    data.sections = sections;
+    data.e = E;
 
-    for_each_lower_upper_bound(P, Bernoulli_init, Bernoulli_cb, data);
+    for_each_lower_upper_bound(P, Bernoulli_init, Bernoulli_cb, &data);
 
-    res = evalue_from_section_array(data->s, data->ns);
+    res = evalue_from_section_array(sections->s, sections->ns);
 
     if (nvar > 1) {
-	evalue *tmp = Bernoulli_sum_evalue(res, nvar-1, options);
+	evalue *tmp = barvinok_summate(res, nvar-1, options);
 	evalue_free(res);
 	res = tmp;
     }
@@ -829,13 +818,9 @@ static evalue *sum_over_polytope_base(Polyhedron *P, evalue *E, unsigned nvar,
     return res;
 }
 
-static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
-				 struct Bernoulli_data *data,
-				 struct barvinok_options *options);
-
 static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
 				 unsigned nvar,
-				 struct Bernoulli_data *data,
+				 struct evalue_section_array *sections,
 				 struct barvinok_options *options)
 {
     unsigned dim = P->Dimension;
@@ -887,7 +872,7 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
     free(subs);
 
     if (new_dim-new_nparam > 0) {
-	sum = sum_over_polytope(P, E, new_dim-new_nparam, data, options);
+	sum = bernoulli_summate(P, E, new_dim-new_nparam, sections, options);
 	evalue_free(E);
 	Polyhedron_Free(P);
     } else {
@@ -918,7 +903,7 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
 static evalue *sum_over_polytope_slices(Polyhedron *P, evalue *E,
 					unsigned nvar,
 					Value period,
-					struct Bernoulli_data *data,
+					struct evalue_section_array *sections,
 					struct barvinok_options *options)
 {
     evalue *sum = evalue_zero();
@@ -952,9 +937,9 @@ static evalue *sum_over_polytope_slices(Polyhedron *P, evalue *E,
 	reduce_evalue(e);
 
 	if (S->NbEq)
-	    tmp = sum_over_polytope_with_equalities(S, e, nvar, data, options);
+	    tmp = sum_over_polytope_with_equalities(S, e, nvar, sections, options);
 	else
-	    tmp = sum_over_polytope_base(S, e, nvar, data, options);
+	    tmp = sum_over_polytope_base(S, e, nvar, sections, options);
 
 	assert(tmp);
 	eadd(tmp, sum);
@@ -978,8 +963,8 @@ static evalue *sum_over_polytope_slices(Polyhedron *P, evalue *E,
     return sum;
 }
 
-static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
-				 struct Bernoulli_data *data,
+evalue *bernoulli_summate(Polyhedron *P, evalue *E, unsigned nvar,
+				 struct evalue_section_array *sections,
 				 struct barvinok_options *options)
 {
     Polyhedron *P_orig = P;
@@ -989,15 +974,15 @@ static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
     int exact = options->approximation_method == BV_APPROX_NONE;
 
     if (P->NbEq)
-	return sum_over_polytope_with_equalities(P, E, nvar, data, options);
+	return sum_over_polytope_with_equalities(P, E, nvar, sections, options);
 
     value_init(period);
 
     move_best_to_front(&P, &E, nvar, exact ? &period : NULL);
     if (exact && value_notone_p(period))
-	sum = sum_over_polytope_slices(P, E, nvar, period, data, options);
+	sum = sum_over_polytope_slices(P, E, nvar, period, sections, options);
     else
-	sum = sum_over_polytope_base(P, E, nvar, data, options);
+	sum = sum_over_polytope_base(P, E, nvar, sections, options);
 
     if (P != P_orig)
 	Polyhedron_Free(P);
@@ -1006,49 +991,5 @@ static evalue *sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
 
     value_clear(period);
 
-    return sum;
-}
-
-evalue *Bernoulli_sum_evalue(evalue *e, unsigned nvar,
-			 struct barvinok_options *options)
-{
-    struct Bernoulli_data data;
-    int i, j;
-    evalue *sum = evalue_zero();
-
-    if (EVALUE_IS_ZERO(*e))
-	return sum;
-
-    if (nvar == 0) {
-	eadd(e, sum);
-	return sum;
-    }
-
-    assert(value_zero_p(e->d));
-    assert(e->x.p->type == partition);
-
-    data.size = 16;
-    data.s = ALLOCN(struct evalue_section, data.size);
-    data.options = options;
-
-    for (i = 0; i < e->x.p->size/2; ++i) {
-	Polyhedron *D;
-	for (D = EVALUE_DOMAIN(e->x.p->arr[2*i]); D; D = D->next) {
-	    Polyhedron *next = D->next;
-	    evalue *tmp;
-	    D->next = NULL;
-
-	    tmp = sum_over_polytope(D, &e->x.p->arr[2*i+1], nvar, &data, options);
-	    assert(tmp);
-	    eadd(tmp, sum);
-	    evalue_free(tmp);
-
-	    D->next = next;
-	}
-    }
-
-    free(data.s);
-
-    reduce_evalue(sum);
     return sum;
 }
