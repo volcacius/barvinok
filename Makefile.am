@@ -267,12 +267,12 @@ EXTRA_barvinok_bound_SOURCES = fdstream.cc fdstream.h
 barvinok_bound_LDADD = \
 	libbarvinok-core.la libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
+	barvinok_summate.cc \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \
 	evalue_read.h \
 	$(FDSTREAM) \
-	summate.cc \
 	verify.h \
 	verify.c
 EXTRA_barvinok_summate_SOURCES = fdstream.cc fdstream.h
