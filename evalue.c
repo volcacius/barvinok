@@ -3324,6 +3324,21 @@ evalue *esum_over_domain_cst(int nvar, Polyhedron *D, Matrix *C)
     return t;
 }
 
+static void domain_signs(Polyhedron *D, int *signs)
+{
+    int j, k;
+
+    POL_ENSURE_VERTICES(D);
+    for (j = 0; j < D->Dimension; ++j) {
+	signs[j] = 0;
+	for (k = 0; k < D->NbRays; ++k) {
+	    signs[j] = value_sign(D->Ray[k][1+j]);
+	    if (signs[j])
+		break;
+	}
+    }
+}
+
 static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D, 
 			  int *signs, Matrix *C, unsigned MaxRays)
 {
@@ -3377,6 +3392,11 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    emul(e, t);
 
 	return t;
+    }
+
+    if (!signs) {
+	signs = alloca(sizeof(int) * D->Dimension);
+	domain_signs(D, signs);
     }
 
     switch (e->x.p->type) {
@@ -3512,21 +3532,6 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     return res;
 }
 
-static void domain_signs(Polyhedron *D, int *signs)
-{
-    int j, k;
-
-    POL_ENSURE_VERTICES(D);
-    for (j = 0; j < D->Dimension; ++j) {
-	signs[j] = 0;
-	for (k = 0; k < D->NbRays; ++k) {
-	    signs[j] = value_sign(D->Ray[k][1+j]);
-	    if (signs[j])
-		break;
-	}
-    }
-}
-
 static void shift_floor_in_domain(evalue *e, Polyhedron *D)
 {
     Value d, m;
@@ -3603,8 +3608,7 @@ static void shift_floor_arguments(evalue *e)
 
 evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
 {
-    int i, dim;
-    int *signs;
+    int i;
     evalue *res = ALLOC(evalue);
     value_init(res->d);
 
@@ -3623,16 +3627,10 @@ evalue *evalue_sum(evalue *e, int nvar, unsigned MaxRays)
     assert(e->x.p->type == partition);
     shift_floor_arguments(e);
 
-    assert(e->x.p->size >= 2);
-    dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
-
-    signs = alloca(sizeof(int) * dim);
-
     for (i = 0; i < e->x.p->size/2; ++i) {
 	evalue *t;
-	domain_signs(EVALUE_DOMAIN(e->x.p->arr[2*i]), signs);
 	t = esum_over_domain(&e->x.p->arr[2*i+1], nvar,
-			     EVALUE_DOMAIN(e->x.p->arr[2*i]), signs, 0,
+			     EVALUE_DOMAIN(e->x.p->arr[2*i]), NULL, 0,
 			     MaxRays);
 	eadd(t, res);
 	evalue_free(t);
