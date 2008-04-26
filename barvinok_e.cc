@@ -382,7 +382,7 @@ static evalue* enumerate_sum(Polyhedron *P,
 
     evalue_frac2floor(EP);
 
-    evalue *sum = evalue_sum(EP, nvar, options->MaxRays);
+    evalue *sum = barvinok_summate(EP, nvar, options);
 
     evalue_free(EP);
     EP = sum;
