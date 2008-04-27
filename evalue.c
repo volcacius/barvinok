@@ -793,6 +793,16 @@ you_lose:   	/* OK, lets not do it */
         }
     }
     else if (p->type == flooring) {
+	/* Replace floor(constant) by its value */
+	if (value_notzero_p(p->arr[0].d)) {
+	    evalue v;
+	    value_init(v.d);
+	    value_set_si(v.d, 1);
+	    value_init(v.x.n);
+	    mpz_fdiv_q(v.x.n, p->arr[0].x.n,  p->arr[0].d);
+	    reorder_terms_about(p, &v);
+	    _reduce_evalue(&p->arr[1], s, fract);
+	}
         /* Try to reduce the degree */
         for (i=p->size-1;i>=2;i--) {
 	    if (!EVALUE_IS_ZERO(p->arr[i]))
