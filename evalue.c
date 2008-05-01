@@ -4398,17 +4398,19 @@ evalue *evalue_from_section_array(struct evalue_section *s, int n)
     return res;
 }
 
-/* shift variables in polynomial n up */
-void evalue_shift_variables(evalue *e, int n)
+/* shift variables (>= first, 0-based) in polynomial n up (may be negative) */
+void evalue_shift_variables(evalue *e, int first, int n)
 {
     int i;
     if (value_notzero_p(e->d))
 	return;
-    assert(e->x.p->type == polynomial || e->x.p->type == fractional);
-    if (e->x.p->type == polynomial) {
+    assert(e->x.p->type == polynomial ||
+	   e->x.p->type == flooring ||
+	   e->x.p->type == fractional);
+    if (e->x.p->type == polynomial && e->x.p->pos >= first+1) {
 	assert(e->x.p->pos + n >= 1);
 	e->x.p->pos += n;
     }
     for (i = 0; i < e->x.p->size; ++i)
-	evalue_shift_variables(&e->x.p->arr[i], n);
+	evalue_shift_variables(&e->x.p->arr[i], first, n);
 }

@@ -742,7 +742,7 @@ void laurent_summator::handle(const signed_cone& sc, barvinok_options *options)
 		evalue_negate(f);
 	    for (int j = 0; j < dim; ++j)
 		evalue_mul(f, *factorial(terms[i].powers[j]));
-	    evalue_shift_variables(f, -dim);
+	    evalue_shift_variables(f, 0, -dim);
 	    emul(c, f);
 	    emul(t, f);
 	    if (!result)

@@ -50,7 +50,7 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
 					 new_nparam);
 	else
 	    subs[nvar+j] = evalue_var(j);
-	evalue_shift_variables(subs[nvar+j], new_dim-new_nparam);
+	evalue_shift_variables(subs[nvar+j], 0, new_dim-new_nparam);
     }
 
     E = evalue_dup(E);

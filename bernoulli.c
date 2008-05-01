@@ -158,7 +158,7 @@ static evalue *shifted_copy(const evalue *src)
     evalue *e = ALLOC(evalue);
     value_init(e->d);
     evalue_copy(e, src);
-    evalue_shift_variables(e, -1);
+    evalue_shift_variables(e, 0, -1);
     return e;
 }
 

@@ -129,7 +129,7 @@ evalue *affine2evalue(Value *coeff, Value denom, int nvar);
 void evalue_substitute(evalue *e, evalue **subs);
 void evalue_backsubstitute(evalue *e, Matrix *CP, unsigned MaxRays);
 evalue *evalue_polynomial(Vector *c, const evalue* X);
-void evalue_shift_variables(evalue *e, int n);
+void evalue_shift_variables(evalue *e, int first, int n);
 
 struct evalue_section {
     Polyhedron *D;
