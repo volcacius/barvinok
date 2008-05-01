@@ -456,6 +456,40 @@ static void reorder_terms(evalue *e)
     free(p);
 }
 
+static void evalue_reduce_size(evalue *e)
+{
+    int i, offset;
+    enode *p;
+    assert(value_zero_p(e->d));
+
+    p = e->x.p;
+    offset = type_offset(p);
+
+    /* Try to reduce the degree */
+    for (i = p->size-1; i >= offset+1; i--) {
+	if (!EVALUE_IS_ZERO(p->arr[i]))
+	    break;
+	free_evalue_refs(&p->arr[i]);
+    }
+    if (i+1 < p->size)
+	p->size = i+1;
+
+    /* Try to reduce its strength */
+    if (p->type == relation) {
+	if (p->size == 1) {
+	    free_evalue_refs(&p->arr[0]);
+	    evalue_set_si(e, 0, 1);
+	    free(p);
+	}
+    } else if (p->size == offset+1) {
+	value_clear(e->d);
+	memcpy(e, &p->arr[offset], sizeof(evalue));
+	if (offset == 1)
+	    free_evalue_refs(&p->arr[0]);
+	free(p);
+    }
+}
+
 void _reduce_evalue (evalue *e, struct subst *s, int fract) {
   
     enode *p;
@@ -563,22 +597,7 @@ you_lose:   	/* OK, lets not do it */
 	    }
 	}
 
-        /* Try to reduce the degree */
-        for (i=p->size-1;i>=1;i--) {
-            if (!(value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n)))
-		break;
-	    /* Zero coefficient */
-	    free_evalue_refs(&(p->arr[i]));
-        }
-        if (i+1<p->size)
-	    p->size = i+1;
-
-        /* Try to reduce its strength */
-        if (p->size == 1) {
-	    value_clear(e->d);
-            memcpy(e,&p->arr[0],sizeof(evalue));
-            free(p);
-        }
+	evalue_reduce_size(e);
     }
     else if (p->type==fractional) {
 	int reorder = 0;
@@ -775,23 +794,7 @@ you_lose:   	/* OK, lets not do it */
 	    _reduce_evalue(&p->arr[1], s, fract);
 	}
 
-        /* Try to reduce the degree */
-        for (i=p->size-1;i>=2;i--) {
-            if (!(value_one_p(p->arr[i].d) && value_zero_p(p->arr[i].x.n)))
-		break;
-	    /* Zero coefficient */
-	    free_evalue_refs(&(p->arr[i]));
-        }
-        if (i+1<p->size)
-	    p->size = i+1;
-
-        /* Try to reduce its strength */
-        if (p->size == 2) {
-	    value_clear(e->d);
-            memcpy(e,&p->arr[1],sizeof(evalue));
-	    free_evalue_refs(&(p->arr[0]));
-            free(p);
-        }
+	evalue_reduce_size(e);
     }
     else if (p->type == flooring) {
 	/* Replace floor(constant) by its value */
@@ -804,23 +807,7 @@ you_lose:   	/* OK, lets not do it */
 	    reorder_terms_about(p, &v);
 	    _reduce_evalue(&p->arr[1], s, fract);
 	}
-        /* Try to reduce the degree */
-        for (i=p->size-1;i>=2;i--) {
-	    if (!EVALUE_IS_ZERO(p->arr[i]))
-		break;
-	    /* Zero coefficient */
-	    free_evalue_refs(&(p->arr[i]));
-        }
-        if (i+1<p->size)
-	    p->size = i+1;
-
-        /* Try to reduce its strength */
-        if (p->size == 2) {
-	    value_clear(e->d);
-            memcpy(e,&p->arr[1],sizeof(evalue));
-	    free_evalue_refs(&(p->arr[0]));
-            free(p);
-        }
+	evalue_reduce_size(e);
     }
     else if (p->type == relation) {
 	if (p->size == 3 && eequal(&p->arr[1], &p->arr[2])) {
@@ -832,16 +819,10 @@ you_lose:   	/* OK, lets not do it */
 	    free(p);
 	    return;
 	}
-	if (p->size == 3 && EVALUE_IS_ZERO(p->arr[2])) {
-	    free_evalue_refs(&(p->arr[2]));
-	    p->size = 2;
-	}
-	if (p->size == 2 && EVALUE_IS_ZERO(p->arr[1])) {
-	    free_evalue_refs(&(p->arr[1]));
-	    free_evalue_refs(&(p->arr[0]));
-	    evalue_set_si(e, 0, 1);
-	    free(p);
-	} else {
+	evalue_reduce_size(e);
+	if (value_notzero_p(e->d) || p != e->x.p)
+	    return;
+	else {
 	    int reduced = 0;
 	    evalue *m;
 	    m = &p->arr[0];
