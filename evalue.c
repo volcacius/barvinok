@@ -438,21 +438,27 @@ static void reorder_terms(evalue *e)
 {
     enode *p;
     evalue f;
+    int offset;
 
     assert(value_zero_p(e->d));
     p = e->x.p;
-    assert(p->type == fractional);  /* for now */
+    assert(p->type == fractional ||
+	   p->type == flooring ||
+	   p->type == polynomial);  /* for now */
 
+    offset = type_offset(p);
     value_init(f.d);
     value_set_si(f.d, 0);
-    f.x.p = new_enode(fractional, 3, -1);
-    value_clear(f.x.p->arr[0].d);
-    f.x.p->arr[0] = p->arr[0];
-    evalue_set_si(&f.x.p->arr[1], 0, 1);
-    evalue_set_si(&f.x.p->arr[2], 1, 1);
+    f.x.p = new_enode(p->type, offset+2, p->pos);
+    if (offset == 1) {
+	value_clear(f.x.p->arr[0].d);
+	f.x.p->arr[0] = p->arr[0];
+    }
+    evalue_set_si(&f.x.p->arr[offset], 0, 1);
+    evalue_set_si(&f.x.p->arr[offset+1], 1, 1);
     reorder_terms_about(p, &f);
     value_clear(e->d);
-    *e = p->arr[1];
+    *e = p->arr[offset];
     free(p);
 }
 
@@ -4394,4 +4400,129 @@ void evalue_shift_variables(evalue *e, int first, int n)
     }
     for (i = 0; i < e->x.p->size; ++i)
 	evalue_shift_variables(&e->x.p->arr[i], first, n);
+}
+
+static const evalue *outer_floor(evalue *e, const evalue *outer)
+{
+    int i;
+
+    if (value_notzero_p(e->d))
+	return outer;
+    switch (e->x.p->type) {
+    case flooring:
+	if (!outer || evalue_level_cmp(outer, &e->x.p->arr[0]) > 0)
+	    return &e->x.p->arr[0];
+	else
+	    return outer;
+    case polynomial:
+    case fractional:
+    case relation:
+	for (i = type_offset(e->x.p); i < e->x.p->size; ++i)
+	    outer = outer_floor(&e->x.p->arr[i], outer);
+	return outer;
+    case partition:
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    outer = outer_floor(&e->x.p->arr[2*i+1], outer);
+	return outer;
+    default:
+	assert(0);
+    }
+}
+
+/* Find and return outermost floor argument or NULL if e has no floors */
+evalue *evalue_outer_floor(evalue *e)
+{
+    const evalue *floor = outer_floor(e, NULL);
+    return floor ? evalue_dup(floor): NULL;
+}
+
+static void evalue_set_to_zero(evalue *e)
+{
+    if (EVALUE_IS_ZERO(*e))
+	return;
+    if (value_zero_p(e->d)) {
+	free_evalue_refs(e);
+	value_init(e->d);
+	value_init(e->x.n);
+    }
+    value_set_si(e->d, 1);
+    value_set_si(e->x.n, 0);
+}
+
+/* Replace (outer) floor with argument "floor" by variable "var" (0-based)
+ * and drop terms not containing the floor.
+ * Returns true if e contains the floor.
+ */
+int evalue_replace_floor(evalue *e, const evalue *floor, int var)
+{
+    int i;
+    int contains = 0;
+    int reorder = 0;
+
+    if (value_notzero_p(e->d))
+	return 0;
+    switch (e->x.p->type) {
+    case flooring:
+	if (!eequal(floor, &e->x.p->arr[0]))
+	    return 0;
+	e->x.p->type = polynomial;
+	e->x.p->pos = 1 + var;
+	e->x.p->size--;
+	free_evalue_refs(&e->x.p->arr[0]);
+	for (i = 0; i < e->x.p->size; ++i)
+	    e->x.p->arr[i] = e->x.p->arr[i+1];
+	evalue_set_to_zero(&e->x.p->arr[0]);
+	return 1;
+    case polynomial:
+    case fractional:
+    case relation:
+	for (i = type_offset(e->x.p); i < e->x.p->size; ++i) {
+	    int c = evalue_replace_floor(&e->x.p->arr[i], floor, var);
+	    contains |= c;
+	    if (!c)
+		evalue_set_to_zero(&e->x.p->arr[i]);
+	    if (c && !reorder && evalue_level_cmp(&e->x.p->arr[i], e) < 0)
+		reorder = 1;
+	}
+	evalue_reduce_size(e);
+	if (reorder)
+	    reorder_terms(e);
+	return contains;
+    case partition:
+    default:
+	assert(0);
+    }
+}
+
+/* Replace (outer) floor with argument "floor" by variable zero */
+void evalue_drop_floor(evalue *e, const evalue *floor)
+{
+    int i;
+    enode *p;
+
+    if (value_notzero_p(e->d))
+	return;
+    switch (e->x.p->type) {
+    case flooring:
+	if (!eequal(floor, &e->x.p->arr[0]))
+	    return;
+	p = e->x.p;
+	free_evalue_refs(&p->arr[0]);
+	for (i = 2; i < p->size; ++i)
+	    free_evalue_refs(&p->arr[i]);
+	value_clear(e->d);
+	*e = p->arr[1];
+	free(p);
+	break;
+    case polynomial:
+    case fractional:
+    case relation:
+	for (i = type_offset(e->x.p); i < e->x.p->size; ++i)
+	    evalue_drop_floor(&e->x.p->arr[i], floor);
+	evalue_reduce_size(e);
+	break;
+    case partition:
+    default:
+	assert(0);
+    }
 }

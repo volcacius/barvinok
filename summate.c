@@ -5,6 +5,10 @@
 #include "summate.h"
 #include "section_array.h"
 
+extern evalue *evalue_outer_floor(evalue *e);
+extern int evalue_replace_floor(evalue *e, const evalue *floor, int var);
+extern void evalue_drop_floor(evalue *e, const evalue *floor);
+
 #define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -87,6 +91,102 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
     return sum;
 }
 
+/* Add two constraints corresponding to floor = floor(e/d),
+ *
+ *	 e - d t       >= 0
+ *	-e + d t + d-1 >= 0
+ *
+ * e is assumed to be an affine expression.
+ */
+Polyhedron *add_floor_var(Polyhedron *P, unsigned nvar, const evalue *floor,
+				     struct barvinok_options *options)
+{
+    int i;
+    unsigned dim = P->Dimension+1;
+    Matrix *M = Matrix_Alloc(P->NbConstraints+2, 2+dim);
+    Polyhedron *CP;
+    Value *d = &M->p[0][1+nvar];
+    evalue_extract_affine(floor, M->p[0]+1, M->p[0]+1+dim, d);
+    value_oppose(*d, *d);
+    value_set_si(M->p[0][0], 1);
+    value_set_si(M->p[1][0], 1);
+    Vector_Oppose(M->p[0]+1, M->p[1]+1, M->NbColumns-1);
+    value_subtract(M->p[1][1+dim], M->p[1][1+dim], *d);
+    value_decrement(M->p[1][1+dim], M->p[1][1+dim]);
+
+    for (i = 0; i < P->NbConstraints; ++i) {
+	Vector_Copy(P->Constraint[i], M->p[i+2], 1+nvar);
+	Vector_Copy(P->Constraint[i]+1+nvar, M->p[i+2]+1+nvar+1, dim-nvar-1+1);
+    }
+
+    CP = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+    return CP;
+}
+
+static evalue *evalue_add(evalue *a, evalue *b)
+{
+    if (!a)
+	return b;
+    if (!b)
+	return a;
+    eadd(a, b);
+    evalue_free(a);
+    return b;
+}
+
+/* Compute sum of a step-polynomial over a polytope by grouping
+ * terms containing the same floor-expressions and introducing
+ * new variables for each such expression.
+ * In particular, while there is any floor-expression left,
+ * the step-polynomial is split into a polynomial containing
+ * the expression, which is then converted to a new variable,
+ * and a polynomial not containing the expression.
+ */
+static evalue *sum_step_polynomial(Polyhedron *P, evalue *E, unsigned nvar,
+				     struct barvinok_options *options)
+{
+    evalue *floor;
+    evalue *cur = E;
+    evalue *sum = NULL;
+    evalue *t;
+
+    while ((floor = evalue_outer_floor(cur))) {
+	Polyhedron *CP;
+	evalue *converted = evalue_dup(cur);
+	evalue *converted_floor = evalue_dup(floor);
+
+	evalue_shift_variables(converted, nvar, 1);
+	evalue_shift_variables(converted_floor, nvar, 1);
+	evalue_replace_floor(converted, converted_floor, nvar);
+	CP = add_floor_var(P, nvar, converted_floor, options);
+	evalue_free(converted_floor);
+	t = sum_step_polynomial(CP, converted, nvar+1, options);
+	evalue_free(converted);
+	Polyhedron_Free(CP);
+	sum = evalue_add(t, sum);
+
+	if (cur == E)
+	    cur = evalue_dup(cur);
+	evalue_drop_floor(cur, floor);
+	evalue_free(floor);
+    }
+
+    if (EVALUE_IS_ZERO(*cur))
+	t = NULL;
+    else if (options->summation == BV_SUM_EULER)
+	t = euler_summate(P, cur, nvar, options);
+    else if (options->summation == BV_SUM_LAURENT)
+	t = laurent_summate(P, cur, nvar, options);
+    else
+	assert(0);
+
+    if (E != cur)
+	evalue_free(cur);
+
+    return evalue_add(t, sum);
+}
+
 evalue *barvinok_sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
 				     struct evalue_section_array *sections,
 				     struct barvinok_options *options)
@@ -94,14 +194,14 @@ evalue *barvinok_sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
     if (P->NbEq)
 	return sum_over_polytope_with_equalities(P, E, nvar, sections, options);
 
-    if (options->summation == BV_SUM_EULER)
-	return euler_summate(P, E, nvar, options);
-    else if (options->summation == BV_SUM_LAURENT)
-	return laurent_summate(P, E, nvar, options);
-    else if (options->summation == BV_SUM_BERNOULLI)
+    if (options->summation == BV_SUM_BERNOULLI)
 	return bernoulli_summate(P, E, nvar, sections, options);
-    else
+    else if (options->summation == BV_SUM_BARVINOK)
 	return box_summate(P, E, nvar, options->MaxRays);
+
+    evalue_frac2floor2(E, 0);
+
+    return sum_step_polynomial(P, E, nvar, options);
 }
 
 evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
