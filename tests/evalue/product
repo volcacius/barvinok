@@ -1,0 +1,9 @@
+#variables x,y,z
+	x >= 0
+	-x + N >= 0
+	y >= 0
+	-y + N >= 0
+	z >= 0
+	-z + N >= 0
+
+x^3*y^2 + N*y*z

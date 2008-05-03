@@ -381,10 +381,10 @@ check-evalue: @bv_barvinok_bound@ barvinok_summate$(EXEEXT)
 	    if test -f $$i; then \
 		echo $$i; \
 		if test -n "@bv_barvinok_bound@"; then \
-		    ./barvinok_bound$(EXEEXT) -T < $$i || exit; \
-		    echo $$i | ./test_bound$(EXEEXT) -q || exit; \
+		    ./barvinok_bound$(EXEEXT) -T -r30 < $$i || exit; \
+		    echo $$i | ./test_bound$(EXEEXT) -q -r30 || exit; \
 		fi; \
-		./barvinok_summate$(EXEEXT) -T < $$i || exit; \
+		./barvinok_summate$(EXEEXT) -T -r30 < $$i || exit; \
 	    fi \
 	done
 check-euler: barvinok_summate$(EXEEXT)
