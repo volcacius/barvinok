@@ -59,6 +59,7 @@ Polyhedron *remove_equalities_p(Polyhedron *P, unsigned nvar, Matrix **factor,
 void manual_count(Polyhedron *P, Value* result);
 Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 			      unsigned NbMaxRays);
+Polyhedron *Factor_Context(Polyhedron *F, unsigned nparam, unsigned MaxRays);
 void Line_Length(Polyhedron *P, Value *len);
 struct barvinok_options;
 evalue* ParamLine_Length(Polyhedron *P, Polyhedron *C,

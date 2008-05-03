@@ -1356,25 +1356,12 @@ out:
 
     Polyhedron *T = Polyhedron_Factor(P, nparam, NULL, options->MaxRays);
     if (T || (P->Dimension == nparam+1)) {
-	Polyhedron *Q;
-	Polyhedron *C2;
-	for (Q = T ? T : P; Q; Q = Q->next) {
-	    Polyhedron *next = Q->next;
-	    Q->next = NULL;
-
-	    Polyhedron *QC = Q;
-	    if (Q->Dimension != C->Dimension)
-		QC = Polyhedron_Project(Q, nparam);
-
-	    C2 = C;
-	    C = DomainIntersection(C, QC, options->MaxRays);
-	    if (C2 != Corig)
-		Polyhedron_Free(C2);
-	    if (QC != Q)
-		Polyhedron_Free(QC);
-
-	    Q->next = next;
-	}
+	Polyhedron *C2 = C;
+	Polyhedron *FC = Factor_Context(T ? T : P, nparam, options->MaxRays);
+	C = DomainIntersection(C, FC, options->MaxRays);
+	if (C2 != Corig)
+	    Polyhedron_Free(C2);
+	Polyhedron_Free(FC);
     }
     if (T) {
 	if (P != Porig)

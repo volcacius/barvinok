@@ -817,6 +817,34 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
     return F;
 }
 
+/* Computes the intersection of the contexts of a list of factors */
+Polyhedron *Factor_Context(Polyhedron *F, unsigned nparam, unsigned MaxRays)
+{
+    Polyhedron *Q;
+    Polyhedron *C = NULL;
+
+    for (Q = F; Q; Q = Q->next) {
+	Polyhedron *QC = Q;
+	Polyhedron *next = Q->next;
+	Q->next = NULL;
+
+	if (Q->Dimension != nparam)
+	    QC = Polyhedron_Project(Q, nparam);
+
+	if (!C)
+	    C = Q == QC ? Polyhedron_Copy(QC) : QC;
+	else {
+	    Polyhedron *C2 = C;
+	    C = DomainIntersection(C, QC, MaxRays);
+	    Polyhedron_Free(C2);
+	    if (QC != Q)
+		Polyhedron_Free(QC);
+	}
+	Q->next = next;
+    }
+    return C;
+}
+
 /*
  * Project on final dim dimensions
  */
