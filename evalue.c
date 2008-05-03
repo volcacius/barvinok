@@ -3291,6 +3291,35 @@ static void floor2frac(evalue *e, int nvar)
     reduce_evalue(e);
 }
 
+int evalue_floor2frac(evalue *e)
+{
+    int i;
+    int r = 0;
+
+    if (value_notzero_p(e->d))
+	return 0;
+
+    if (e->x.p->type == partition) {
+	for (i = 0; i < e->x.p->size/2; ++i)
+	    if (evalue_floor2frac(&e->x.p->arr[2*i+1]))
+		reduce_evalue(&e->x.p->arr[2*i+1]);
+	return 0;
+    }
+
+    for (i = type_offset(e->x.p); i < e->x.p->size; ++i)
+	r |= evalue_floor2frac(&e->x.p->arr[i]);
+
+    if (e->x.p->type == flooring) {
+	floor2frac(e, 0);
+	return 1;
+    }
+
+    if (r)
+	reorder_terms(e);
+
+    return r;
+}
+
 evalue *esum_over_domain_cst(int nvar, Polyhedron *D, Matrix *C)
 {
     evalue *t;
