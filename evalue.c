@@ -434,7 +434,7 @@ static void reorder_terms_about(enode *p, evalue *v)
     free_evalue_refs(v);
 }
 
-static void reorder_terms(evalue *e)
+void evalue_reorder_terms(evalue *e)
 {
     enode *p;
     evalue f;
@@ -3007,8 +3007,8 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
 	eadd(&f, &factor);
 
 	if (r) {
-	    reorder_terms(&rem);
-	    reorder_terms(e);
+	    evalue_reorder_terms(&rem);
+	    evalue_reorder_terms(e);
 	}
 
 	emul(&factor, e);
@@ -3026,7 +3026,7 @@ int evalue_range_reduction_in_domain(evalue *e, Polyhedron *D)
     } else {
 	_reduce_evalue(&p->arr[0], 0, 1);
 	if (r)
-	    reorder_terms(e);
+	    evalue_reorder_terms(e);
     }
 
     value_clear(d);
@@ -3315,7 +3315,7 @@ int evalue_floor2frac(evalue *e)
     }
 
     if (r)
-	reorder_terms(e);
+	evalue_reorder_terms(e);
 
     return r;
 }
@@ -4515,7 +4515,7 @@ int evalue_replace_floor(evalue *e, const evalue *floor, int var)
 	}
 	evalue_reduce_size(e);
 	if (reorder)
-	    reorder_terms(e);
+	    evalue_reorder_terms(e);
 	return contains;
     case partition:
     default:
