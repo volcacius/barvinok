@@ -24,8 +24,9 @@
 #include "vertices.h"
 #include "polyfunc.h"
 #include "convert.h"
+#include "version.h"
 
-#define CALC_VERSION_STRING "Omega Calculator v1.2"
+#define CALC_VERSION_STRING "Omega Counting Calculator v1.2"
 
 #define DEBUG_FILE_NAME "./oc.out"
 
@@ -1551,6 +1552,7 @@ int main(int argc, char **argv){
   int i;
   char * fileName = 0;
 
+  printf("# %s\n", GIT_HEAD_ID);
   printf("# %s (based on %s, %s):\n",CALC_VERSION_STRING, Omega_Library_Version, Omega_Library_Date);
 
   calc_all_debugging_off();
