@@ -153,9 +153,15 @@ static evalue *sum_step_polynomial(Polyhedron *P, evalue *E, unsigned nvar,
 
     while ((floor = evalue_outer_floor(cur))) {
 	Polyhedron *CP;
-	evalue *converted = evalue_dup(cur);
-	evalue *converted_floor = evalue_dup(floor);
+	evalue *converted;
+	evalue *converted_floor;
 
+	/* Ignore floors that do not depend on variables. */
+	if (value_notzero_p(floor->d) || floor->x.p->pos >= nvar+1)
+	    break;
+
+	converted = evalue_dup(cur);
+	converted_floor = evalue_dup(floor);
 	evalue_shift_variables(converted, nvar, 1);
 	evalue_shift_variables(converted_floor, nvar, 1);
 	evalue_replace_floor(converted, converted_floor, nvar);
@@ -169,6 +175,10 @@ static evalue *sum_step_polynomial(Polyhedron *P, evalue *E, unsigned nvar,
 	if (cur == E)
 	    cur = evalue_dup(cur);
 	evalue_drop_floor(cur, floor);
+	evalue_free(floor);
+    }
+    if (floor) {
+	evalue_floor2frac(cur);
 	evalue_free(floor);
     }
 
