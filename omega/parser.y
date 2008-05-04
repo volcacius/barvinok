@@ -126,6 +126,7 @@ static void evalue_print_and_free(Relation *r, evalue *EP)
 %token PROJECT_AWAY_SYMBOLS PROJECT_ON_SYMBOLS REACHABLE_FROM REACHABLE_OF
 %token ASSERT_UNSAT
 %token CARD USING BARVINOK PARKER RANKING COUNT_LEXSMALLER
+%token SUM
 %token VERTICES
 %token BMAX
 %token DUMP
@@ -148,6 +149,7 @@ static void evalue_print_and_free(Relation *r, evalue *EP)
 %left OMEGA_P9
 %left '('	OMEGA_P10
 %right CARD USING RANKING COUNT_LEXSMALLER
+%right SUM
 %right VERTICES
 %right DUMP
 
@@ -564,6 +566,19 @@ printf("was substantially faster on the limited domain it handled.\n");
 	    }
 		polyfunc ';' {
 	    maximize($3, *variableMap);
+	    delete $3;
+	    current_Declaration_Site = globalDecls;
+	    delete relationDecl;
+	    delete variableMap;
+	}
+	| SUM
+	    {
+		relationDecl = new Declaration_Site(); 
+		variableMap = new Map<Variable_Ref *, GiNaC::ex>(0);
+	    }
+		polyfunc ';' {
+	    evalue *s = summate($3, *variableMap);
+	    evalue_print_and_free(&$3->domain, s);
 	    delete $3;
 	    current_Declaration_Site = globalDecls;
 	    delete relationDecl;

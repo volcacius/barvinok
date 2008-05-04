@@ -200,6 +200,7 @@ void includeFile(char *s) {
 "assertUnsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "assert_unsatisfiable" 	{ BUFFER;  return ASSERT_UNSAT; }
 "card"     	{ BUFFER;  return CARD; }
+"sum"     	{ BUFFER;  return SUM; }
 "using"     	{ BUFFER;  return USING; }
 "barvinok"     	{ BUFFER;  return BARVINOK; }
 "parker"     	{ BUFFER;  return PARKER; }
