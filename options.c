@@ -190,7 +190,7 @@ static struct argp_option barvinok_argp_options[] = {
 	"[default: pip]",
 #endif
 	},
-    { "summation",	    BV_OPT_SUM,		"barvinok|bernoulli|euler|laurent", 0,
+    { "summation",	    BV_OPT_SUM,		"box|bernoulli|euler|laurent", 0,
 	"[default: laurent]" },
     { "bernstein-recurse",  BV_OPT_RECURSE,    "none|factors|intervals|full",    0,
 	"[default: factors]" },
@@ -353,8 +353,10 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	options->max_index = strtoul(arg, NULL, 0);
 	break;
     case BV_OPT_SUM:
-	if (!strcmp(arg, "barvinok"))
-	    options->summation = BV_SUM_BARVINOK;
+	if (!strcmp(arg, "box"))
+	    options->summation = BV_SUM_BOX;
+	else if (!strcmp(arg, "barvinok"))
+	    options->summation = BV_SUM_BOX;
 	else if (!strcmp(arg, "euler"))
 	    options->summation = BV_SUM_EULER;
 	else if (!strcmp(arg, "bernoulli"))

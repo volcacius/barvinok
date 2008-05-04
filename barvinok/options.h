@@ -90,6 +90,8 @@ struct barvinok_options {
     #define	BV_LP_PIP		4
     int		lp_solver;
 
+    #define	BV_SUM_BOX		0
+    /* deprecated */
     #define	BV_SUM_BARVINOK		0
     #define	BV_SUM_EULER		1
     #define	BV_SUM_BERNOULLI	2
