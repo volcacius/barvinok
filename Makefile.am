@@ -390,8 +390,11 @@ check-evalue: @bv_barvinok_bound@ barvinok_summate$(EXEEXT)
 check-euler: barvinok_summate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/euler/*; do \
 	    if test -f $$i; then \
-		echo $$i; \
-		./barvinok_summate$(EXEEXT) -T --summation=euler < $$i || exit; \
+		for method in 'euler' 'laurent'; do \
+		    opt="--summation=$$method"; \
+		    echo $$i $$opt; \
+		    ./barvinok_summate$(EXEEXT) -T $$opt < $$i || exit; \
+		done \
 	    fi \
 	done
 if HAVE_TOPCOM
