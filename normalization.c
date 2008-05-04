@@ -187,7 +187,6 @@ static void compute_shifts(Matrix *M, unsigned nvar, Vector *shifts)
 	else
 	    value_set_si(shifts->p[1+c], 0);
     }
-    return shifts;
 }
 
 /*
