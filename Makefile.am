@@ -143,6 +143,7 @@ libbarvinok_core_la_SOURCES = \
     scale.c \
     scale.h \
     scarf.cc \
+    section_array.h \
     series.cc \
     $(TOPCOM) \
     summate.c \
