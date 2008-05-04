@@ -91,7 +91,7 @@ void numeric2value(const numeric& n, Value& v)
     for (int i = 0; i < abs_sa; ++i) {
 	cln::cl_I digit = abs_n & mask;
 	v[0]._mp_d[i] = cl_I_to_limb(digit);
-	abs_n >> GMP_LIMB_BITS;
+	abs_n = abs_n >> GMP_LIMB_BITS;
     }
 
     v[0]._mp_size = n < 0 ? -abs_sa : abs_sa;
