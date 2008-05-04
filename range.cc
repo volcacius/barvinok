@@ -6,6 +6,7 @@
 #include <barvinok/polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/evalue.h>
+#include "ex_convert.h"
 #include "range.h"
 
 using namespace GiNaC;
@@ -15,7 +16,6 @@ using namespace barvinok;
 using std::cerr;
 using std::endl;
 
-#define ALLOC(type) (type*)malloc(sizeof(type))
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 struct range_data {
@@ -297,31 +297,6 @@ static void domain_signs(Polyhedron *D, int *signs)
     }
 }
 
-static evalue *ex2evalue(const ex& poly, const exvector& params, int pos)
-{
-    if (pos >= params.size()) {
-	evalue *c = ALLOC(evalue);
-	value_init(c->d);
-	value_init(c->x.n);
-	assert(is_a<numeric>(poly));
-	numeric2value(ex_to<numeric>(poly).numer(), c->x.n);
-	numeric2value(ex_to<numeric>(poly).denom(), c->d);
-	return c;
-    }
-
-    evalue *v = evalue_var(pos);
-    evalue *sum = ex2evalue(poly.coeff(params[pos], poly.degree(params[pos])),
-			    params, pos+1);
-    for (int i = poly.degree(params[pos])-1; i >= 0; --i) {
-	evalue *t = ex2evalue(poly.coeff(params[pos], i), params, pos+1);
-	emul(v, sum);
-	eadd(t, sum);
-	evalue_free(t);
-    }
-    evalue_free(v);
-    return sum;
-}
-
 /* Returns true is poly is no better than any of those from begin to end */
 static int is_no_better(const ex& poly, const lst::const_iterator& begin,
 			const lst::const_iterator& end, const exvector& params,
@@ -334,7 +309,7 @@ static int is_no_better(const ex& poly, const lst::const_iterator& begin,
     for (k = begin; k != end; ++k) {
 	ex diff = *k - poly;
 	diff = diff.expand();
-	evalue *e = ex2evalue(diff, params, 0);
+	evalue *e = ex2evalue(diff, params);
 	no_better = has_sign(D, e, sign, signs, options);
 	evalue_free(e);
 	if (no_better)
