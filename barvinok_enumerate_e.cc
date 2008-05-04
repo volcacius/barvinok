@@ -93,7 +93,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 #ifdef HAVE_OMEGA
 
 Polyhedron *Omega_simplify(Polyhedron *P, 
-			    unsigned exist, unsigned nparam, char **parms,
+			    unsigned exist, unsigned nparam, const char **parms,
 			    unsigned MaxRays)
 {
     varvector varv;
@@ -104,7 +104,7 @@ Polyhedron *Omega_simplify(Polyhedron *P,
 }
 #else
 Polyhedron *Omega_simplify(Polyhedron *P, 
-			    unsigned exist, unsigned nparam, char **parms,
+			    unsigned exist, unsigned nparam, const char **parms,
 			    unsigned MaxRays)
 {
     return P;
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 {
     Polyhedron *A;
     Matrix *MA;
-    char **param_name;
+    const char **param_name;
     int exist, nparam, nvar;
     char s[128];
     evalue *EP = NULL;

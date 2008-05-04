@@ -189,13 +189,13 @@ static void evalue_coset(const evalue *src, const Vector *coset, evalue *dst)
 
 #ifndef USE_FDSTREAM
 static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
-				     char **params)
+				     const char **params)
 {
 	cerr << "not supported" << endl;
 }
 #else
 static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
-				     char **params)
+				     const char **params)
 {
     Lattice *L;
     L = extract_common_lattice(e, NULL, nparam);
@@ -231,7 +231,8 @@ static void evalue_print_list_evalue(FILE *out, evalue *e, int nparam,
 }
 #endif
 
-static void evalue_print_list(FILE *out, evalue *e, int nparam, char **params)
+static void evalue_print_list(FILE *out, evalue *e, int nparam,
+				const char **params)
 {
     int i;
     assert(value_zero_p(e->d));
@@ -244,7 +245,7 @@ static void evalue_print_list(FILE *out, evalue *e, int nparam, char **params)
 }
 
 static void print_domain_latex(std::ostream& o, Polyhedron *D, int nparam,
-			       char **params)
+			       const char **params)
 {
     int fr = 1;
     for (int i = 0; i < D->NbConstraints; ++i) {
@@ -281,12 +282,12 @@ static void print_domain_latex(std::ostream& o, Polyhedron *D, int nparam,
 static void evalue_print_latex(std::ostream& o, const evalue *e,
 			       int first, int nested,
 			       const string& suffix1, const string& suffix2,
-			       int nparam, char **params);
+			       int nparam, const char **params);
 
 static void evalue_print_poly_latex1(std::ostream& o, const evalue *e,
 				     int first, int nested, const string& base,
 				     const string& suffix1, const string& suffix2,
-				     int nparam, char **params)
+				     int nparam, const char **params)
 {
     int offset = type_offset(e->x.p);
     for (int i = e->x.p->size-1; i >= offset; --i) {
@@ -305,7 +306,7 @@ static void evalue_print_poly_latex1(std::ostream& o, const evalue *e,
 static void evalue_print_poly_latex2(std::ostream& o, const evalue *e,
 				     int first, int nested, const string& base,
 				     const string& suffix1, const string& suffix2,
-				     int nparam, char **params)
+				     int nparam, const char **params)
 {
     int offset = type_offset(e->x.p);
     for (int i = e->x.p->size-1; i >= offset; --i) {
@@ -324,7 +325,7 @@ static void evalue_print_poly_latex2(std::ostream& o, const evalue *e,
 static void evalue_print_latex(std::ostream& o, const evalue *e,
 			       int first, int nested,
 			       const string& suffix1, const string &suffix2,
-			       int nparam, char **params)
+			       int nparam, const char **params)
 {
     if (value_notzero_p(e->d)) {
 	if (value_zero_p(e->x.n)) {
@@ -396,13 +397,13 @@ static void evalue_print_latex(std::ostream& o, const evalue *e,
 
 #ifndef USE_FDSTREAM
 static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
-			       char **params)
+			       const char **params)
 {
 	cerr << "not supported" << endl;
 }
 #else
 static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
-			       char **params)
+			       const char **params)
 {
     fdostream os(dup(fileno(out)));
     evalue_print_latex(os, e, 1, 0, "", "", nparam, params);
@@ -410,7 +411,7 @@ static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
 #endif
 
 int evalue_convert(evalue *EP, struct convert_options *options,
-		   int verbose, unsigned nparam, char **params)
+		   int verbose, unsigned nparam, const char **params)
 {
     int printed = 0;
     if (options->combine)

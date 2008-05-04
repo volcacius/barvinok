@@ -283,7 +283,7 @@ int main(int argc, char **argv)
     Matrix *M;
     evalue *EP = NULL;
     skewed_gen_fun *gf = NULL;
-    char **param_name;
+    const char **param_name;
     int print_solution = 1;
     int result = 0;
     struct arguments options;

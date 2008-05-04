@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 {
 	Matrix *a, *b;
 	Polyhedron *A, *B;		// initial matrices
-	char **param_name;	// name of the parameters
+	const char **param_name;	// name of the parameters
 	exvector params, vars;
 	ex polynomial;
 	piecewise_lst *exp_all, *exp_min, *exp_max;

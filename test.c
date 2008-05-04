@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 	case 8: {
 	    evalue *EP;
 	    Matrix *M = Matrix_Read();
-	    char **param_name;
+	    const char **param_name;
 	    C = Constraints2Polyhedron(M, options->MaxRays);
 	    Matrix_Free(M);
 	    Polyhedron_Print(stdout, P_VALUE_FMT, A);
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
 	case 11: {
 	    evalue *expected, *computed;
 	    unsigned nvar, nparam;
-	    char **pp;
+	    const char **pp;
 
 	    expected = evalue_read_from_file(stdin, NULL, &pp, &nvar, &nparam,
 					     options->MaxRays);

@@ -9,7 +9,7 @@ int main(int argc, char **argv)
     Polyhedron *A;
     Matrix *M;
     Polyhedron *D, *P, *N;
-    char **param_name;
+    const char **param_name;
     int exist, nparam, nvar;
     char s[128];
     evalue sum;

@@ -204,7 +204,7 @@ static int number_of_polynomials(piecewise_lst *pl)
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
 {
     evalue *EP, *upper, *lower;
-    char **all_vars = NULL;
+    const char **all_vars = NULL;
     unsigned nvar;
     unsigned nparam;
     Polyhedron *U;

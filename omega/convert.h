@@ -7,7 +7,7 @@ typedef std::vector<Variable_ID> varvector;
 Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params,
 				unsigned MaxRays);
 Relation Polyhedron2relation(Polyhedron *P,
-			  unsigned exist, unsigned nparam, char **params);
+			  unsigned exist, unsigned nparam, const char **params);
 Relation Domain2relation(Polyhedron *D, unsigned nvar, unsigned nparam,
-			 char **params);
+			 const char **params);
 void dump(Relation& r);

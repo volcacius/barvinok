@@ -173,7 +173,7 @@ int main(int argc,char *argv[])
     Polyhedron *P, *D, *C;
     Polyhedron *SP, *SD;
     int nb_parms;
-    char **param_name = NULL;
+    const char **param_name = NULL;
     evalue *EP;
     Enumeration *en;
     Vector *zP, *zD, *zE;

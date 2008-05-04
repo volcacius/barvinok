@@ -5,7 +5,7 @@
 using std::endl;
 
 void skewed_gen_fun::print(std::ostream& os, unsigned int nparam,
-			    char **param_name) const
+			    const char **param_name) const
 {
     mat_ZZ m;
     if (T) {

@@ -1114,7 +1114,8 @@ Bool isIdentity(Matrix *M)
     return True;
 }
 
-void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
+void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP,
+				const char **param_names)
 {
   Param_Domain *P;
   Param_Vertices *V;
@@ -1138,7 +1139,7 @@ void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names)
   }
 }
 
-void Enumeration_Print(FILE *Dst, Enumeration *en, const char * const *params)
+void Enumeration_Print(FILE *Dst, Enumeration *en, const char **params)
 {
     for (; en; en = en->next) {
 	Print_Domain(Dst, en->ValidityDomain, params);
@@ -1177,13 +1178,6 @@ size_t Enumeration_size(Enumeration *en)
 	s += evalue_size(&en->EP);
     }
     return s;
-}
-
-void Free_ParamNames(char **params, int m)
-{
-    while (--m >= 0)
-	free(params[m]);
-    free(params);
 }
 
 /* Check whether every set in D2 is included in some set of D1 */

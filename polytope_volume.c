@@ -6,7 +6,7 @@ int main(int argc, char **argv)
     Polyhedron *A, *C;
     Matrix *M;
     evalue *EP = NULL;
-    char **param_name;
+    const char **param_name;
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
     M = Matrix_Read();

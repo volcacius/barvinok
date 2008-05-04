@@ -35,7 +35,7 @@ struct option options[] = {
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C, *U;
-    char **param_name;
+    const char **param_name;
     int c, ind = 0;
     int convert = 0;
     int floor = 0;

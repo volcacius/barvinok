@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     Matrix *M;
     Polyhedron *C, *D = NULL;
     int i, npol;
-    char **param_name;
+    const char **param_name;
     char s[128];
     int c, ind = 0;
     int series = 0;

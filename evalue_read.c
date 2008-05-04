@@ -774,13 +774,13 @@ struct section {
     struct section	*next;
 };
 
-static char **extract_parameters(struct parameter *p, unsigned *nparam)
+static const char **extract_parameters(struct parameter *p, unsigned *nparam)
 {
     int i;
-    char **params;
+    const char **params;
 
     *nparam = p ? p->pos+1 : 0;
-    params = ALLOCN(char *, *nparam);
+    params = ALLOCN(const char *, *nparam);
     for (i = 0; i < *nparam; ++i) {
 	struct parameter *next = p->next;
 	params[p->pos] = p->name;
@@ -823,7 +823,7 @@ static Polyhedron *constraints2domain(struct constraint *constraints,
 }
 
 static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
-				     char ***ppp,
+				     const char ***ppp,
 				     unsigned *nparam, unsigned MaxRays)
 {
     struct section *part = NULL;
@@ -871,7 +871,8 @@ static evalue *evalue_read_partition(struct stream *s, struct parameter *p,
     return e;
 }
 
-static evalue *evalue_read(struct stream *s, const char *var_list, char ***ppp,
+static evalue *evalue_read(struct stream *s, const char *var_list,
+			   const char ***ppp,
 			   unsigned *nvar, unsigned *nparam, unsigned MaxRays)
 {
     struct token *tok;
@@ -948,7 +949,8 @@ static evalue *evalue_read(struct stream *s, const char *var_list, char ***ppp,
     return e;
 }
 
-evalue *evalue_read_from_file(FILE *in, const char *var_list, char ***ppp,
+evalue *evalue_read_from_file(FILE *in, const char *var_list,
+			      const char ***ppp,
 			      unsigned *nvar, unsigned *nparam, unsigned MaxRays)
 {
     evalue *e;
@@ -958,7 +960,8 @@ evalue *evalue_read_from_file(FILE *in, const char *var_list, char ***ppp,
     return e;
 }
 
-evalue *evalue_read_from_str(const char *str, const char *var_list, char ***ppp,
+evalue *evalue_read_from_str(const char *str, const char *var_list,
+			     const char ***ppp,
 			     unsigned *nvar, unsigned *nparam, unsigned MaxRays)
 {
     evalue *e;

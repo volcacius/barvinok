@@ -346,8 +346,8 @@ static piecewise_lst *optimize(evalue *EP, unsigned nvar, Polyhedron *C,
     return pl;
 }
 
-static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
-		    struct options *options)
+static int optimize(evalue *EP, const char **all_vars,
+		    unsigned nvar, unsigned nparam, struct options *options)
 {
     Polyhedron *U;
     piecewise_lst *pl = NULL;
@@ -385,7 +385,7 @@ static int optimize(evalue *EP, char **all_vars, unsigned nvar, unsigned nparam,
 int main(int argc, char **argv)
 {
     evalue *EP;
-    char **all_vars = NULL;
+    const char **all_vars = NULL;
     unsigned nvar;
     unsigned nparam;
     struct options options;

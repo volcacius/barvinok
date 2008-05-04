@@ -294,7 +294,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     int i;
     Polyhedron *A, *C;
     Matrix *M;
-    char **param_name;
+    const char **param_name;
     evalue *EP[nr_methods];
 
     M = Matrix_File_Read(in);

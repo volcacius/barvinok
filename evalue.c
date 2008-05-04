@@ -992,7 +992,7 @@ void reduce_evalue (evalue *e) {
 	free(s.fixed);
 }
 
-static void print_evalue_r(FILE *DST, const evalue *e, const char *const *pname)
+static void print_evalue_r(FILE *DST, const evalue *e, const char **pname)
 {
     if (EVALUE_IS_NAN(*e)) {
 	fprintf(DST, "NaN");
@@ -1014,14 +1014,14 @@ static void print_evalue_r(FILE *DST, const evalue *e, const char *const *pname)
   return;
 } /* print_evalue */
 
-void print_evalue(FILE *DST, const evalue *e, const char * const *pname)
+void print_evalue(FILE *DST, const evalue *e, const char **pname)
 {
     print_evalue_r(DST, e, pname);
     if (value_notzero_p(e->d))
 	fprintf(DST, "\n");
 }
 
-void print_enode(FILE *DST, enode *p, const char *const *pname)
+void print_enode(FILE *DST, enode *p, const char **pname)
 {
   int i;
   
@@ -1089,7 +1089,7 @@ void print_enode(FILE *DST, enode *p, const char *const *pname)
     break;
   case partition: {
     char **new_names = NULL;
-    const char *const *names = pname;
+    const char **names = pname;
     int maxdim = EVALUE_DOMAIN(p->arr[0])->Dimension;
     if (!pname || p->pos < maxdim) {
 	new_names = ALLOCN(char *, maxdim);

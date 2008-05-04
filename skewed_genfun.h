@@ -30,7 +30,8 @@ struct skewed_gen_fun {
 	delete gf;
     }
 
-    void print(std::ostream& os, unsigned int nparam, char **param_name) const;
+    void print(std::ostream& os, unsigned int nparam,
+		const char **param_name) const;
     operator evalue *() const {
 	assert(T == NULL && eq == NULL); /* other cases not supported for now */
 	return *gf;

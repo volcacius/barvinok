@@ -740,7 +740,7 @@ void gen_fun::divide(const vec_ZZ& power)
 }
 
 static void print_power(std::ostream& os, const QQ& c, const vec_ZZ& p, 
-			unsigned int nparam, char **param_name)
+			unsigned int nparam, const char **param_name)
 {
     bool first = true;
 
@@ -777,7 +777,8 @@ static void print_power(std::ostream& os, const QQ& c, const vec_ZZ& p,
     }
 }
 
-void short_rat::print(std::ostream& os, unsigned int nparam, char **param_name) const
+void short_rat::print(std::ostream& os, unsigned int nparam,
+			const char **param_name) const
 {
     QQ mone(-1, 1);
     os << "(";
@@ -800,7 +801,8 @@ void short_rat::print(std::ostream& os, unsigned int nparam, char **param_name) 
     os << ")";
 }
 
-void gen_fun::print(std::ostream& os, unsigned int nparam, char **param_name) const
+void gen_fun::print(std::ostream& os, unsigned int nparam,
+			const char **param_name) const
 {
     for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i) {
 	if (i != term.begin())

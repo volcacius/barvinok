@@ -64,7 +64,7 @@ static int test_equalities(struct barvinok_options *options)
 int test_evalue_read(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *e1, *e2;
 
     e1 = evalue_read_from_str("(1 * aa + 2 * a)",
@@ -100,7 +100,7 @@ static void evalue_check_disjoint(evalue *e)
 static int test_eadd(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *e1, *e2;
 
     e1 = evalue_read_from_str("         d  -1 = 0\n"
@@ -135,7 +135,7 @@ static int test_eadd(struct barvinok_options *options)
 int test_evalue(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *poly1, poly2;
 
     poly1 = evalue_read_from_str("(1/4 * n^4 + 1/2 * n^3 + 1/4 * n^2)",
@@ -156,7 +156,7 @@ int test_evalue(struct barvinok_options *options)
 int test_substitute(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     const char *vars = "a,b";
     evalue *e1, *e2;
     evalue *subs[2];
@@ -199,7 +199,7 @@ int test_substitute(struct barvinok_options *options)
 int test_split_periods(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *e;
 
     e = evalue_read_from_str("U + 2V + 3 >= 0\n- U -2V  >= 0\n- U  10 >= 0\n"
@@ -275,7 +275,7 @@ int test_lattice_points(struct barvinok_options *options)
     evalue *point[4];
 
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     point[0] = evalue_read_from_str("( -7/4 * a + ( 7/4 * c + "
 		    "( 7 * {( 1/4 * a + ( 3/4 * c + 3/4 ) ) } + -21/4 ) ) )",
 		    "a,b,c", &all_vars, &nvar, &nparam, options->MaxRays);
@@ -521,7 +521,7 @@ int test_bernoulli(struct barvinok_options *options)
     assert(value_cmp_si(bernoulli->poly[6]->p[7], 42) == 0);
 
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *base, *sum1, *sum2;
     base = evalue_read_from_str("(1 * n + 1)", NULL, &all_vars, &nvar, &nparam,
 				options->MaxRays);
@@ -545,7 +545,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
     options->summation = BV_SUM_BERNOULLI;
 
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *e, *sum1, *sum2;
     e = evalue_read_from_str("i + -1 >= 0\n -i + n >= 0\n\n 1 + (-1 *i) + i^2",
 			     "i", &all_vars, &nvar, &nparam,
@@ -725,7 +725,7 @@ int test_hull(struct barvinok_options *options)
 static int test_laurent(struct barvinok_options *options)
 {
     unsigned nvar, nparam;
-    char **all_vars;
+    const char **all_vars;
     evalue *e, *sum, *res;
 
     e = evalue_read_from_str("         x1 >= 0\n"

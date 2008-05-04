@@ -24,7 +24,7 @@ void vertices(Relation& r)
 	param_names[i] = params[i]->char_name();
 
     PP = Polyhedron2Param_Polyhedron(D, ctx, options);
-    Param_Polyhedron_Print(stdout, PP, (char **)param_names);
+    Param_Polyhedron_Print(stdout, PP, param_names);
 
     delete [] param_names;
 

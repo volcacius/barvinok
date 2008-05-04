@@ -84,7 +84,7 @@ Polyhedron *relation2Domain(Relation& r, varvector& vv, varvector& params,
 typedef std::vector<Global_Var_Decl *> globalvector;
 
 static void create_globals(globalvector& globals, unsigned nparam,
-				char **params)
+				const char **params)
 {
     for (int i = 0; i < nparam; ++i)
 	globals.push_back(new Global_Var_Decl(params[i]));
@@ -122,7 +122,7 @@ Relation Polyhedron2relation(Polyhedron *P,
 }
 
 Relation Polyhedron2relation(Polyhedron *P,
-			  unsigned exist, unsigned nparam, char **params)
+			  unsigned exist, unsigned nparam, const char **params)
 {
     globalvector globals;
     create_globals(globals, nparam, params);
@@ -130,7 +130,7 @@ Relation Polyhedron2relation(Polyhedron *P,
 }
 
 Relation Domain2relation(Polyhedron *D, unsigned nvar, unsigned nparam,
-			 char **params)
+			 const char **params)
 {
     globalvector globals;
     create_globals(globals, nparam, params);

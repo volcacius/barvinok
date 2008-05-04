@@ -68,12 +68,12 @@ void Extended_Euclid(Value a, Value b, Value *x, Value *y, Value *g);
 int unimodular_complete(Matrix *M, int row);
 void neg_left_hermite(Matrix *A, Matrix **H_p, Matrix **Q_p, Matrix **U_p);
 Bool isIdentity(Matrix *M);
-void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP, char **param_names);
-void Enumeration_Print(FILE *Dst, Enumeration *en, const char * const *params);
+void Param_Polyhedron_Print(FILE* DST, Param_Polyhedron *PP,
+				const char **param_names);
+void Enumeration_Print(FILE *Dst, Enumeration *en, const char **params);
 void Enumeration_Free(Enumeration *en);
 void Enumeration_mod2table(Enumeration *en, unsigned nparam);
 size_t Enumeration_size(Enumeration *en);
-void Free_ParamNames(char **params, int m);
 int DomainIncludes(Polyhedron *Pol1, Polyhedron *Pol2);
 int line_minmax(Polyhedron *I, Value *min, Value *max);
 void count_points_e (int pos, Polyhedron *P, int exist, int nparam,

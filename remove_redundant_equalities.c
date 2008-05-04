@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     Polyhedron *A, *C;
     Matrix *M;
     Enumeration *en;
-    char **param_name;
+    const char **param_name;
     int i;
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 

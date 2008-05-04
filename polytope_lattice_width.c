@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 {
     Polyhedron *P, *C;
     Matrix *M;
-    char **param_name;
+    const char **param_name;
     struct arguments arguments;
     static struct argp_child argp_children[] = {
 	{ &barvinok_argp,    0,	0,  0 },

@@ -20,7 +20,7 @@ static evalue *vertex2evalue(Value *vertex, int nparam)
 }
 
 static void matrix_print(evalue ***matrix, int dim, int *cols,
-			 const char * const *param_names)
+			 const char **param_names)
 {
     int i, j;
 
