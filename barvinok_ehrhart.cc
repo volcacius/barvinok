@@ -3,7 +3,9 @@
 #include <strings.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "config.h"
+#include "argp.h"
+#include "progname.h"
+#include "evalue_convert.h"
 
 /* The input of this example program is a polytope in PolyLib notation,
  * i.e., an n by d+2 matrix of the n constraints A x + b >= 0 defining
@@ -19,53 +21,60 @@
  * should always be 1.
  */
 
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-struct option options[] = {
-    { "convert",   no_argument,  0,  'c' },
-    { "floor",     no_argument,  0,  'f' },
-    { "series",    no_argument,  0,  's' },
-    { "version",   no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+struct argp_option argp_options[] = {
+    { "series",    's', 0, 0, "compute rational generating function" },
+    { 0 }
 };
-#endif
+
+struct arguments {
+    int series;
+    struct barvinok_options	*barvinok;
+    struct convert_options   convert;
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *options = (struct arguments*) state->input;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = options->barvinok;
+	state->child_inputs[1] = &options->convert;
+	options->series = 0;
+	break;
+    case 's':
+	options->series = 1;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C, *U;
     const char **param_name;
-    int c, ind = 0;
-    int convert = 0;
-    int floor = 0;
-    int series = 0;
+    int print_solution = 1;
+    struct arguments options;
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    	0,	0,  		0 },
+	{ &convert_argp,    	0,	"output conversion",    BV_GRP_LAST+1 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
     barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
-    while ((c = getopt_long(argc, argv, "sfcV", options, &ind)) != -1) {
-	switch (c) {
-	case 's':
-	    series = 1;
-	    break;
-	case 'c':
-	    convert = 1;
-	    break;
-	case 'f':
-	    floor = 1;
-	    break;
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    options.barvinok = bv_options;
+    set_program_name(argv[0]);
+    argp_parse(&argp, argc, argv, 0, 0, &options);
 
     A = Polyhedron_Read(bv_options->MaxRays);
     param_name = Read_ParamNames(stdin, 1);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     C = Cone_over_Polyhedron(A);
     U = Universe_Polyhedron(1);
-    if (series) {
+    if (options.series) {
 	gen_fun *gf;
 	gf = barvinok_series_with_options(C, U, bv_options);
 	gf->print(std::cout, U->Dimension, param_name);
@@ -79,15 +88,12 @@ int main(int argc, char **argv)
 	 * them through Polyhedron2Param_SimplifiedDomain.
 	 */
 	EP = barvinok_enumerate_with_options(C, U, bv_options);
-	print_evalue(stdout, EP, param_name);
-	if (floor) {
-	    fprintf(stderr, "WARNING: floor conversion not supported\n");
-	    evalue_frac2floor(EP);
+	assert(EP);
+	if (evalue_convert(EP, &options.convert, bv_options->verbose,
+			   C->Dimension, param_name))
+	    print_solution = 0;
+	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
-	} else if (convert) {
-	    evalue_mod2table(EP, C->Dimension);
-	    print_evalue(stdout, EP, param_name);
-	}
 	evalue_free(EP);
     }
     Free_ParamNames(param_name, 1);

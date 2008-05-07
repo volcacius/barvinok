@@ -300,7 +300,7 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	state->child_inputs[0] = options;
 	break;
     case 'v':
-	options->verbose = 1;
+	options->verbose++;
 	break;
     case 'V':
 	printf(barvinok_version());

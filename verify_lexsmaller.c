@@ -1,29 +1,49 @@
 #include <assert.h>
+#include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "config.h"
+#include "argp.h"
+#include "progname.h"
 
-#define MAXRAYS    POL_NO_DUAL
-
-#include "config.h"
-#ifndef HAVE_GETOPT_H
-#define getopt_long(a,b,c,d,e) getopt(a,b,c)
-#else
-#include <getopt.h>
-struct option options[] = {
-    { "continue",  no_argument,  0,  'k' },
-    { "max",  no_argument,  0,  'M' },
-    { "live",  no_argument,  0,  'l' },
-    { "verbose",  no_argument,  0,  'v' },
-    { "version",   no_argument,  0,  'V' },
-    { 0, 0, 0, 0 }
+struct argp_option argp_options[] = {
+    { "continue",  'k' },
+    { "max",       'M' },
+    { "live",      'l' },
+    { 0 }
 };
-#endif
 
-static int live = 0;
-static int print_max = 0;
-static int verbose = 0;
-static int keep_going = 0;
-static Value max;
+struct arguments {
+    int live;
+    int print_max;
+    int keep_going;
+    Value max;
+    struct barvinok_options	*barvinok;
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *options = (struct arguments*) state->input;
+
+    switch (key) {
+    case ARGP_KEY_INIT:
+	state->child_inputs[0] = options->barvinok;
+	options->keep_going = 0;
+	options->print_max = 0;
+	options->live = 0;
+	break;
+    case 'k':
+	options->keep_going = 1;
+	break;
+    case 'M':
+	options->print_max = 1;
+	break;
+    case 'l':
+	options->live = 1;
+	break;
+    default:
+	return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
 
 #define LS_OK	    1
 #define LS_P	    2	    /* continue searching P */
@@ -31,7 +51,7 @@ static Value max;
 
 static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 			 int pos, int nvar, Value *zP, Value *zD, Value *zE,
-			 Value *count)
+			 Value *count, struct arguments *options)
 {
     int i;
     int ok;
@@ -87,7 +107,7 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 	    value_clear(*ctmp);
 	    free(ctmp);
 
-	    if (verbose >= 2) {
+	    if (options->barvinok->verbose >= 2) {
 		printf("EP( ");
 		value_print(stdout, VALUE_FMT, zE[0]);
 		for (i = 1; i < nvar; ++i) {
@@ -119,7 +139,7 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 		ok = 0;
 	    }
 
-	    if (live)
+	    if (options->live)
 		value_decrement(*count, *count);
 
 	    ok &= ~LS_D;
@@ -128,25 +148,28 @@ static int check_lexsmaller(Polyhedron *SP, Polyhedron *SD, Enumeration *en,
 	if (pos < nvar-1)
 	    ok &= check_lexsmaller(inP ? SP->next : NULL, 
 				   inD ? SD->next : NULL, 
-				   en, pos+1, nvar, zP, zD, zE, count);
+				   en, pos+1, nvar, zP, zD, zE, count,
+				   options);
 	else {
 	    ok &= check_lexsmaller(NULL, inD ? SD->next : NULL, 
-				   en, pos+1, nvar, zP, zD, zE, count)
+				   en, pos+1, nvar, zP, zD, zE, count,
+				   options)
 	       &  check_lexsmaller(inP ? SP->next : NULL, NULL, 
-				   en, pos+1, nvar, zP, zD, zE, count);
+				   en, pos+1, nvar, zP, zD, zE, count,
+				   options);
 	    if (pos >= nvar && !(ok & LS_D))
 		break;
 	    if (pos >= nvar && !(ok & LS_P))
 		break;
 	}
 
-	if (!ok && !keep_going)
+	if (!ok && !options->keep_going)
 	    goto end;
 
 	if (inP && !SP->next) {
 	    value_increment(*count, *count);
-	    if (value_gt(*count, max))
-		value_assign(max, *count);
+	    if (value_gt(*count, options->max))
+		value_assign(options->max, *count);
 	    ok &= ~LS_P;
 	}
     }
@@ -178,36 +201,26 @@ int main(int argc,char *argv[])
     Enumeration *en;
     Vector *zP, *zD, *zE;
     Value count;
-    int c, ind = 0;
     char s[128];
     unsigned dim;
+    struct arguments options;
+    static struct argp_child argp_children[] = {
+	{ &barvinok_argp,    	0,	0,  		0 },
+	{ 0 }
+    };
+    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
+    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
-    while ((c = getopt_long(argc, argv, "klMvV", options, &ind)) != -1) {
-	switch (c) {
-	case 'k':
-	    keep_going = 1;
-	    break;
-	case 'M':
-	    print_max = 1;
-	case 'l':
-	    live = 1;
-	    break;
-	case 'v':
-	    ++verbose;
-	    break;
-	case 'V':
-	    printf(barvinok_version());
-	    exit(0);
-	    break;
-	}
-    }
+    options.barvinok = bv_options;
+    set_program_name(argv[0]);
+    argp_parse(&argp, argc, argv, 0, 0, &options);
 
     M = Matrix_Read();
-    P = Constraints2Polyhedron(M, MAXRAYS);
+    P = Constraints2Polyhedron(M, bv_options->MaxRays);
     assert(P != NULL);
     Matrix_Free(M);
     M = Matrix_Read();
-    D = Constraints2Polyhedron(M, MAXRAYS);
+    D = Constraints2Polyhedron(M, bv_options->MaxRays);
     assert(D != NULL);
     Matrix_Free(M);
 
@@ -216,18 +229,18 @@ int main(int argc,char *argv[])
 	fgets(s, 128, stdin);
 
     M = Matrix_Read();
-    C = Constraints2Polyhedron(M, MAXRAYS);
+    C = Constraints2Polyhedron(M, bv_options->MaxRays);
     assert(C != NULL);
     Matrix_Free(M);
 
     nb_parms = D->Dimension;
     param_name = Read_ParamNames(stdin, nb_parms);
 
-    EP = barvinok_lexsmaller_ev(P, D, dim, C, MAXRAYS);
-    if (live) {
+    EP = barvinok_lexsmaller_ev(P, D, dim, C, bv_options->MaxRays);
+    if (options.live) {
 	evalue mone;
-	evalue *EC = barvinok_lexsmaller_ev(D, D, dim, C, MAXRAYS);
-	if (verbose >= 2) {
+	evalue *EC = barvinok_lexsmaller_ev(D, D, dim, C, bv_options->MaxRays);
+	if (options.barvinok->verbose >= 2) {
 	    puts("EP");
 	    print_evalue(stdout, EP, (const char **)param_name);
 	    puts("EC");
@@ -241,7 +254,7 @@ int main(int argc,char *argv[])
 	evalue_free(EC);
 	reduce_evalue(EP);
     }
-    if (verbose >= 1) {
+    if (bv_options->verbose >= 1) {
 	puts("Enumeration");
 	print_evalue(stdout, EP, (const char **)param_name);
     }
@@ -250,8 +263,8 @@ int main(int argc,char *argv[])
     assert(C->Dimension == 0); /* for now */
 
     /* S = scanning list of polyhedra */
-    SP = Polyhedron_Scan(P, C, MAXRAYS);
-    SD = Polyhedron_Scan(D, C, MAXRAYS);
+    SP = Polyhedron_Scan(P, C, bv_options->MaxRays);
+    SD = Polyhedron_Scan(D, C, bv_options->MaxRays);
 
     zP = Vector_Alloc(1+P->Dimension+1);
     value_set_si(zP->p[1+P->Dimension], 1);
@@ -259,17 +272,17 @@ int main(int argc,char *argv[])
     value_set_si(zD->p[1+D->Dimension], 1);
     zE = Vector_Alloc(dim+C->Dimension);
 
-    if (print_max)
-	value_init(max);
+    if (options.print_max)
+	value_init(options.max);
     value_init(count);
-    check_lexsmaller(SP, SD, en, 0, dim, zP->p, zD->p, zE->p, &count);
+    check_lexsmaller(SP, SD, en, 0, dim, zP->p, zD->p, zE->p, &count, &options);
     value_clear(count);
 
-    if (print_max) {
+    if (options.print_max) {
 	printf("max = ");
-	value_print(stdout, VALUE_FMT, max);
+	value_print(stdout, VALUE_FMT, options.max);
 	printf("\n");
-	value_clear(max);
+	value_clear(options.max);
     }
 
     Enumeration_Free(en);
@@ -282,4 +295,6 @@ int main(int argc,char *argv[])
     Vector_Free(zP);
     Vector_Free(zD);
     Vector_Free(zE);
+    barvinok_options_free(bv_options);
+    return 0;
 }
