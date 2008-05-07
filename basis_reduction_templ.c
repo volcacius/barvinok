@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <barvinok/basis_reduction.h>
 #include <barvinok/options.h>
 
