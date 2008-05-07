@@ -251,11 +251,17 @@ if test "$ntl_package" = "no"; then
     AC_MSG_ERROR(Need ntl)
 fi
 
+AC_SUBST(NTL_CPPFLAGS)
+AC_SUBST(NTL_LDFLAGS)
 if test "$ntl_package" != "yes"; then
-    CPPFLAGS="-I$ntl_package/include $CPPFLAGS"
-    LDFLAGS="-L$ntl_package/lib $LDFLAGS"
+    NTL_CPPFLAGS="-I$ntl_package/include"
+    NTL_LDFLAGS="-L$ntl_package/lib"
 fi
 
+SAVE_CPPFLAGS="$CPPFLAGS"
+SAVE_LDFLAGS="$LDFLAGS"
+CPPFLAGS="$NTL_CPPFLAGS $CPPFLAGS"
+LDFLAGS="$NTL_LDFLAGS $LDFLAGS"
 AC_EGREP_CPP(yes, [
     #include <NTL/ZZ.h>
     #ifdef NTL_GMP_LIP
@@ -266,6 +272,8 @@ AC_EGREP_CPP(yes, [
 AC_CHECK_LIB(ntl, main,[],[
     AC_MSG_ERROR(Need ntl)
 ])
+CPPFLAGS="$SAVE_CPPFLAGS"
+LDFLAGS="$SAVE_LDFLAGS"
 
 AC_SUBST(bv_cone_hilbert_basis)
 AC_MSG_CHECKING(whether to compile zsolve)

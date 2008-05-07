@@ -31,8 +31,9 @@ parker/libparker.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C parker libparker.la
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
-	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@
-AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@
+	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@ \
+	      @NTL_CPPFLAGS@
+AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
 
 lib_LTLIBRARIES = libbarvinok-core.la libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
@@ -186,7 +187,8 @@ endif
 libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			     $(PIPLIB_LA) @PIPLIB_LIBS@ \
 			     $(ZSOLVE_LA) lib/libgnu.la
-libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
+libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
+				$(AM_LDFLAGS)
 if HAVE_GINAC
     BERNSTEIN_CC = bernstein.cc ex_convert.cc range.cc
 endif
@@ -196,7 +198,8 @@ if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
 libbarvinok_la_LIBADD = libbarvinok-core.la $(BERNSTEIN_LA)
-libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@
+libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
+				$(AM_LDFLAGS)
 LDADD = libbarvinok-core.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 test_SOURCES = \
