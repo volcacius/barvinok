@@ -355,7 +355,9 @@ if test "$omega_package" != "no"; then
 
     AC_LANG_PUSH(C++)
     SAVE_CPPFLAGS="$CPPFLAGS"
+    SAVE_LDFLAGS="$LDFLAGS"
     CPPFLAGS="$OMEGA_CPPFLAGS $CPPFLAGS"
+    LDFLAGS="$OMEGA_LDFLAGS $LDFLAGS"
     AC_CHECK_HEADERS([omega.h],[
 	if test x$have_ginac = xtrue; then
 		AC_CHECK_LIB(code_gen,main,[
@@ -367,6 +369,7 @@ if test "$omega_package" != "no"; then
 	have_omega=true
     ],[AC_MSG_WARN(Omega not found)])
     CPPFLAGS="$SAVE_CPPFLAGS"
+    LDFLAGS="$SAVE_LDFLAGS"
     AC_LANG_POP
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
