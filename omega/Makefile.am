@@ -30,9 +30,10 @@ EXTRA_DIST = \
 
 YACC_FLAGS = -d
 
-y.tab.hh y.tab.cc: parser.y
-	$(YACC) -o y.tab.cc -v -d $<
+y.tab.h y.tab.cc: parser.y
+	$(YACC) -v -d $<
+	mv y.tab.c y.tab.cc
 
-lex.yy.cc: parser.l y.tab.hh
+lex.yy.cc: parser.l y.tab.h
 	$(LEX) -olex.yy.cc -i $<
 

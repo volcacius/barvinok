@@ -6,7 +6,7 @@
 #include <basic/Dynamic_Array.h>
 #include <code_gen/mmap-codegen.h>
 #include "polyfunc.h"
-#include "y.tab.hh"
+#include "y.tab.h"
 #include <omega/calc_debug.h>
 #ifdef WIN32
 #include <io.h>
