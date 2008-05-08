@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <alloca.h>
 #include <bernstein/bernstein.h>
 #include <bernstein/piecewise_lst.h>
 #include <barvinok/bernstein.h>
