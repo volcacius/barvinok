@@ -1558,6 +1558,12 @@ void printUsage(FILE *outf, char **argv) {
 int omega_calc_debug;
 extern FILE *yyin;
 
+#ifdef SPEED
+#define ANY_DEBUG 0
+#else
+#define ANY_DEBUG any_debug
+#endif
+
 int main(int argc, char **argv){
   redundant_conj_level = 2;
   current_Declaration_Site = globalDecls = new Global_Declaration_Site();
@@ -1566,27 +1572,14 @@ int main(int argc, char **argv){
 #endif
   int i;
   char * fileName = 0;
+  int any_debug = 0;
 
   printf("# %s\n", GIT_HEAD_ID);
   printf("# %s (based on %s, %s):\n",CALC_VERSION_STRING, Omega_Library_Version, Omega_Library_Date);
 
   calc_all_debugging_off();
 
-#ifdef SPEED
-  DebugFile = fopen("/dev/null","w");
-  assert(DebugFile);
-#else
-  DebugFile = fopen(DEBUG_FILE_NAME, "w");
-  if (!DebugFile) {
-    fprintf(stderr, "Can't open debug file %s\n", DEBUG_FILE_NAME);
-    DebugFile = stderr;
-  }
-  setbuf(DebugFile,0);
-#endif
-
   closure_presburger_debug = 0;
-
-  setOutputFile(DebugFile);
 
   // Process flags
   for(i=1; i<argc; i++) {
@@ -1595,6 +1588,7 @@ int main(int argc, char **argv){
       while((c=argv[i][j++]) != 0) {
 	switch(c) {
 	case 'D':
+	    any_debug = 1;
 	    if (! process_calc_debugging_flags(argv[i],j)) {
 		printUsage(stderr,argv);
 		Exit(1);
@@ -1640,6 +1634,19 @@ int main(int argc, char **argv){
      }
    }
 
+  if (!ANY_DEBUG) {
+      DebugFile = fopen("/dev/null","w");
+      assert(DebugFile);
+  } else {
+      DebugFile = fopen(DEBUG_FILE_NAME, "w");
+      if (!DebugFile) {
+	fprintf(stderr, "Can't open debug file %s\n", DEBUG_FILE_NAME);
+	DebugFile = stderr;
+      }
+      setbuf(DebugFile,0);
+  }
+
+  setOutputFile(DebugFile);
 
   initializeOmega();
   initializeScanBuffer();
