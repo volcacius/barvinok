@@ -154,7 +154,7 @@ AC_SUBST(POLYLIB_LDFLAGS)
 AC_SUBST(POLYLIB_LIBS)
 if test "$with_polylib" = "bundled"; then
 	bv_configure_args="$bv_configure_args --with-polylib-builddir=../polylib"
-	POLYLIB_CPPFLAGS="-Ipolylib/include -I$srcdir/polylib/include"
+	POLYLIB_CPPFLAGS="-I\$(top_builddir)/polylib/include -I\$(top_srcdir)/polylib/include"
 else
 	POLYLIB_LIBS="-lpolylibgmp"
 	if test "x$with_polylib_prefix" != "x"; then
