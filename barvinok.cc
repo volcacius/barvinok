@@ -659,8 +659,7 @@ void enumerator::handle(const signed_cone& sc, barvinok_options *options)
 	    evalue *EV = evalue_polynomial(c, num.E[i]);
 	    eadd(EV, vE[vert]);
 	    evalue_free(EV);
-	    free_evalue_refs(num.E[i]);
-	    delete num.E[i];
+	    evalue_free(num.E[i]);
 	}
 	delete [] num.E; 
     } else {
