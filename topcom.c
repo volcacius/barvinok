@@ -261,6 +261,7 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
     Param_Polyhedron *PP = ALLOC(Param_Polyhedron);
     unsigned MaxRays = options->MaxRays;
 
+    PP->Rays = NULL;
     PP->nbV = 0;
     PP->Constraints = Polyhedron2Constraints(P);
     /* We need the exact facets, because we may make some of them open later */

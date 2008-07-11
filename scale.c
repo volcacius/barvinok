@@ -597,6 +597,7 @@ static Param_Polyhedron *Param_Polyhedron_Domain(Param_Polyhedron *PP,
     PP_D->D->Domain = Domain_Copy(rVD);
     PP_D->V = NULL;
     PP_D->Constraints = Matrix_Copy(PP->Constraints);
+    PP_D->Rays = NULL;
 
     nv = (PP->nbV - 1)/(8*sizeof(int)) + 1;
     PP_D->D->F = ALLOCN(unsigned, nv);
