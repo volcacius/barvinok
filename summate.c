@@ -401,7 +401,7 @@ static Polyhedron *Polyhedron_Insert_Columns(Polyhedron *P, unsigned pos,
  * context C, the placeholder variables are added, and then
  * e is summed over the resulting parametric polytope.
  *
- * If there is more than one factor left, we create to polynomials
+ * If there is more than one factor left, we create two polynomials
  * in a new placeholder variable (which is placed after the regular
  * parameters, but before any previously introduced placeholder
  * variables) that has the factors of the variables in the first
