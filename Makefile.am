@@ -159,14 +159,9 @@ libbarvinok_core_la_SOURCES = \
     barvinok_e.cc \
     $(BR_CDD) \
     $(BR_GLPK)
-EXTRA_libbarvinok_la_SOURCES = \
+EXTRA_libbarvinok_core_la_SOURCES = \
     basis_reduction_cdd.cc \
     basis_reduction_glpk.c \
-    ex_convert.cc \
-    ex_convert.h \
-    range.cc \
-    range.h \
-    bernstein.cc \
     hilbert.c \
     polysign_cddf.cc \
     polysign_cdd.cc \
@@ -194,6 +189,12 @@ if HAVE_GINAC
 endif
 libbarvinok_la_SOURCES = \
     $(BERNSTEIN_CC)
+EXTRA_libbarvinok_la_SOURCES = \
+    ex_convert.cc \
+    ex_convert.h \
+    range.cc \
+    range.h \
+    bernstein.cc
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
