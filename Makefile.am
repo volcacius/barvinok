@@ -186,6 +186,8 @@ libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
 if HAVE_GINAC
     BERNSTEIN_CC = bernstein.cc ex_convert.cc range.cc
+else
+    BERNSTEIN_CC = dummy.c
 endif
 libbarvinok_la_SOURCES = \
     $(BERNSTEIN_CC)
@@ -194,7 +196,8 @@ EXTRA_libbarvinok_la_SOURCES = \
     ex_convert.h \
     range.cc \
     range.h \
-    bernstein.cc
+    bernstein.cc \
+    dummy.c
 if HAVE_GINAC
     BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
 endif
