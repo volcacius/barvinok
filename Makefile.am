@@ -7,6 +7,10 @@ endif
 if BUNDLED_PIPLIB
     MAYBE_PIPLIB = piplib
 endif
+if BUNDLED_OMEGA
+    MAYBE_OMEGA = omega
+    OMEGA_LA = $(top_builddir)/omega/omega_lib/libomega.la
+endif
 if USE_ZSOLVE
     MAYBE_ZSOLVE = zsolve
 endif
@@ -14,6 +18,7 @@ if USE_PARKER
     MAYBE_PARKER = parker
 endif
 SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) \
+		$(MAYBE_OMEGA) \
 		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega_interface doc
 
 FORCE:
@@ -25,6 +30,8 @@ polylib/libpolylibgmp.la: FORCE
 	cd polylib; $(MAKE) $(AM_MAKEFLAGS) libpolylibgmp.la
 piplib/libpiplibMP.la: FORCE
 	cd piplib; $(MAKE) $(AM_MAKEFLAGS) libpiplibMP.la
+omega/omega_lib/libomega.la: FORCE
+	cd omega/omega_lib; $(MAKE) $(AM_MAKEFLAGS) libomega.la
 zsolve/libzsolve.la: FORCE
 	cd zsolve; $(MAKE) $(AM_MAKEFLAGS) libzsolve.la
 parker/libparker.la: FORCE
@@ -271,7 +278,7 @@ barvinok_enumerate_e_CPPFLAGS = \
 	$(PARKERCPPFLAGS) @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = $(PARKERLDFLAGS) @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
-	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ libbarvinok-core.la \
+	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok-core.la \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
 	evalue_convert.cc \

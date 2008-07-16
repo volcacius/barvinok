@@ -58,10 +58,6 @@ if test "${with_default_prefix+set}" = set; then
 	   -f "$with_default_prefix/include/NTL/ZZ.h"; then
 		with_ntl=$with_default_prefix
 	fi
-	if test "${with_omega+set}" != set -a \
-	   -f "$with_default_prefix/include/omega/omega.h"; then
-		with_omega=$with_default_prefix
-	fi
 	if test "${with_cddlib+set}" != set -a \
 	   -f "$with_default_prefix/include/cddmp.h"; then
 		with_cddlib=$with_default_prefix
@@ -112,14 +108,29 @@ AC_CHECK_DECL(mpz_divisible_p,[],[AC_LIBOBJ(mpz_divisible_p)],[#include <gmp.h>]
 
 # BV_SUBMODULE(SUBMODULE)
 AC_DEFUN([BV_SUBMODULE],[
+	AC_ARG_WITH($1,
+		[AS_HELP_STRING([--with-$1=bundled|system],
+				[Which $1 to use])])
+	AC_ARG_WITH($1_prefix,
+		[AS_HELP_STRING([--with-$1-prefix=DIR],
+				[Location of system $1])])
+	if test "x$with_$1_prefix" != "x"; then
+		if test "x$with_$1" != "x" -a "x$with_$1" != "xsystem"; then
+			AC_MSG_ERROR([Setting $with_$1_prefix implies use of system $1])
+		fi
+		with_$1="system"
+	fi
 	case "$with_$1" in
 	no)
-		AC_MSG_ERROR(Need $1)
+		if test "$2" = "required"; then
+			AC_MSG_ERROR(Need $1)
+		fi
 		;;
 	bundled|system)
 		;;
 	*)
 		if test -d $srcdir/.git -a \
+			-d $srcdir/$1 -a \
 			! -d $srcdir/$1/.git; then
 			AC_MSG_WARN(
 [git repo detected, but submodule $1 not initialized])
@@ -130,22 +141,16 @@ AC_DEFUN([BV_SUBMODULE],[
 		fi
 		if test -f $srcdir/$1/configure; then
 			with_$1="bundled"
-		else
+		elif test "$2" = "required"; then
 			with_$1="system"
+		else
+			with_$1="no"
 		fi
 		;;
 	esac
 ])
 
-AC_ARG_WITH(polylib,
-	[AS_HELP_STRING([--with-polylib=bundled|system],[Which PolyLib to use])])
-AC_ARG_WITH(polylib_prefix,
-	[AS_HELP_STRING([--with-polylib-prefix=DIR],[Location of system PolyLib])])
-
-if test "x$with_polylib_prefix" != "x"; then
-	with_polylib="system"
-fi
-BV_SUBMODULE(polylib)
+BV_SUBMODULE(polylib,required)
 AC_MSG_CHECKING([which PolyLib to use])
 AC_MSG_RESULT($with_polylib)
 
@@ -171,15 +176,7 @@ fi
 
 AM_CONDITIONAL(BUNDLED_POLYLIB, test $with_polylib = bundled)
 
-AC_ARG_WITH(piplib,
-	[AS_HELP_STRING([--with-piplib=bundled|system],[Which piplib to use])])
-AC_ARG_WITH(piplib_prefix,
-	[AS_HELP_STRING([--with-piplib-prefix=DIR],[Location of system piplib])])
-
-if test "x$with_piplib_prefix" != "x"; then
-	with_piplib="system"
-fi
-BV_SUBMODULE(piplib)
+BV_SUBMODULE(piplib,required)
 AC_MSG_CHECKING([which piplib to use])
 AC_MSG_RESULT($with_piplib)
 
@@ -331,17 +328,25 @@ if test "$with_bernstein" != "no"; then
 fi
 AM_CONDITIONAL(HAVE_GINAC, test x$have_ginac = xtrue)
 
-AC_MSG_CHECKING(whether to use Omega)
-AC_ARG_WITH(omega, [AS_HELP_STRING([--with-omega=DIR],[DIR Location of Omega])],
-            [ omega_package=$withval],  [ omega_package=yes ])
-AC_MSG_RESULT($omega_package)
+BV_SUBMODULE(omega,optional)
+AC_MSG_CHECKING([which omega to use])
+AC_MSG_RESULT($with_omega)
 
 AC_SUBST(OMEGA_CPPFLAGS)
 AC_SUBST(OMEGA_LDFLAGS)
 AC_SUBST(OMEGA_LIBS)
+AC_SUBST(OMEGA_CODEGEN_LIBS)
 AC_SUBST(bv_omega_programs)
 have_omega=false
-if test "$omega_package" != "no"; then
+case "$with_omega" in
+bundled)
+	have_omega=true
+	OMEGA_CPPFLAGS="-I\$(top_srcdir)/omega/omega_lib/include"
+	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/basic/include"
+	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/code_gen/include"
+	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/omega_calc/include"
+	;;
+system)
     if test "x$omega_package" != "xyes"; then
 	OMEGA_CPPFLAGS="-I$omega_package/include/omega"
 	OMEGA_LDFLAGS="-L$omega_package/lib"
@@ -359,20 +364,25 @@ if test "$omega_package" != "no"; then
     CPPFLAGS="$OMEGA_CPPFLAGS $CPPFLAGS"
     LDFLAGS="$OMEGA_LDFLAGS $LDFLAGS"
     AC_CHECK_HEADERS([omega.h],[
-	if test x$have_ginac = xtrue; then
-		AC_CHECK_LIB(code_gen,main,[
-			bv_omega_programs="occ $bv_omega_programs"
-		])
-	fi
-	AC_DEFINE(HAVE_OMEGA,[],[use omega])
 	OMEGA_LIBS="-lomega"
+	OMEGA_CODEGEN_LIBS="-lcode_gen -lomega"
 	have_omega=true
     ],[AC_MSG_WARN(Omega not found)])
     CPPFLAGS="$SAVE_CPPFLAGS"
     LDFLAGS="$SAVE_LDFLAGS"
     AC_LANG_POP
+    ;;
+esac
+if test "$have_omega" = true; then
+	AC_DEFINE(HAVE_OMEGA,[],[use omega])
+	if test x$have_ginac = xtrue; then
+		AC_CHECK_LIB(code_gen,main,[
+			bv_omega_programs="occ $bv_omega_programs"
+		])
+	fi
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
+AM_CONDITIONAL(BUNDLED_OMEGA, test $with_omega = bundled)
 
 use_parker=false
 AC_MSG_CHECKING(whether to compile parker)
@@ -562,6 +572,9 @@ if test $with_piplib = bundled; then
 fi
 if test x$have_ginac = xtrue; then
     AC_CONFIG_SUBDIRS(bernstein)
+fi
+if test $with_omega = bundled; then
+	AC_CONFIG_SUBDIRS(omega)
 fi
 AC_CONFIG_COMMANDS_POST([
 	dnl pass on arguments to subdir configures, but don't

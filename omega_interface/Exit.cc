@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <basic/Exit.h>
 
+namespace omega {
+
 List<exit_func> Exit_hooks;
 
 void Exit(int e) 
@@ -9,3 +11,5 @@ void Exit(int e)
 
     exit(e);
     }
+
+}

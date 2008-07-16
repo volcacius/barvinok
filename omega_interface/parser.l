@@ -4,6 +4,7 @@
 #include <ginac/ginac.h>
 #include <omega/AST.h>
 #include <basic/Dynamic_Array.h>
+#include <basic/Exit.h>
 #include <code_gen/mmap-codegen.h>
 #include "polyfunc.h"
 #include "y.tab.h"
@@ -17,6 +18,7 @@
 
 extern "C" int yywrap() {return 1;};
 
+using namespace omega;
 
 #if defined BRAIN_DAMAGED_FREE
 void free(void *p);

@@ -11,3 +11,6 @@ if test -f piplib/autogen.sh; then
 	(cd piplib; ./autogen.sh)
 fi
 (cd bernstein; ./autogen.sh)
+if test -f omega/autogen.sh; then
+	(cd omega; ./autogen.sh)
+fi

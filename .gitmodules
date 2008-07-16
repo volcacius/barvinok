@@ -4,3 +4,6 @@
 [submodule "piplib"]
 	path = piplib
 	url = git://repo.or.cz/piplib.git
+[submodule "omega"]
+	path = omega
+	url = git://repo.or.cz/omega.git

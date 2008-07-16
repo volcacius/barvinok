@@ -1370,7 +1370,7 @@ argumentList :
 exp : INT 		{$$ = new Exp($1);}
 	| INT simpleExp  %prec '*' {$$ = multiply($1,$2);}
 	| simpleExp	{ $$ = $1; }
-	| '-' exp %prec '*'   { $$ = negate($2);}
+	| '-' exp %prec '*'   { $$ = omega::negate($2);}
 	| exp '+' exp  { $$ = add($1,$3);}
 	| exp '-' exp  { $$ = subtract($1,$3);}
 	| exp '*' exp  { $$ = multiply($1,$3);}
@@ -1555,7 +1555,12 @@ void printUsage(FILE *outf, char **argv) {
     fprintf(outf, "usage: %s {-R} {-D[facility][level]...} infile\n  -R means skip redundant conjunct elimination\n  -D sets debugging level as follows:\n    a = all debugging flags\n    g = code generation\n    l = calculator\n    c = omega core\n    p = presburger functions\n    r = relational operators\n    t = transitive closure\nAll debugging output goes to %s\n",argv[0],DEBUG_FILE_NAME);
 }
 
+namespace omega {
+
 int omega_calc_debug;
+
+}
+
 extern FILE *yyin;
 
 #ifdef SPEED
