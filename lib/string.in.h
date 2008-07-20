@@ -28,6 +28,20 @@
 /* The definition of GL_LINK_WARNING is copied here.  */
 
 
+/* GCC 2.95 and later have "__restrict"; C99 compilers have
+   "restrict", and "configure" may have defined "restrict".
+   Other compilers use __restrict, __restrict__, and _Restrict, and
+   'configure' might #define 'restrict' to those words.  */
+#ifndef __restrict
+# if ! (2 < __GNUC__ || (2 == __GNUC__ && 95 <= __GNUC_MINOR__))
+#  if 199901L <= __STDC_VERSION__
+#   define __restrict restrict
+#  else
+#   define __restrict
+#  endif
+# endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,7 +64,7 @@ extern void *memmem (void const *__haystack, size_t __haystack_len,
    last written byte.  */
 #if @GNULIB_MEMPCPY@
 # if ! @HAVE_MEMPCPY@
-extern void *mempcpy (void *restrict __dest, void const *restrict __src,
+extern void *mempcpy (void *__restrict __dest, void const *__restrict __src,
 		      size_t __n);
 # endif
 #elif defined GNULIB_POSIXCHECK
@@ -77,7 +91,7 @@ extern void *memrchr (void const *, int, size_t);
 /* Copy SRC to DST, returning the address of the terminating '\0' in DST.  */
 #if @GNULIB_STPCPY@
 # if ! @HAVE_STPCPY@
-extern char *stpcpy (char *restrict __dst, char const *restrict __src);
+extern char *stpcpy (char *__restrict __dst, char const *__restrict __src);
 # endif
 #elif defined GNULIB_POSIXCHECK
 # undef stpcpy
@@ -92,7 +106,7 @@ extern char *stpcpy (char *restrict __dst, char const *restrict __src);
 #if @GNULIB_STPNCPY@
 # if ! @HAVE_STPNCPY@
 #  define stpncpy gnu_stpncpy
-extern char *stpncpy (char *restrict __dst, char const *restrict __src,
+extern char *stpncpy (char *__restrict __dst, char const *__restrict __src,
 		      size_t __n);
 # endif
 #elif defined GNULIB_POSIXCHECK
@@ -294,7 +308,7 @@ extern char *strpbrk (char const *__s, char const *__accept);
    See also strtok_r().  */
 #if @GNULIB_STRSEP@
 # if ! @HAVE_STRSEP@
-extern char *strsep (char **restrict __stringp, char const *restrict __delim);
+extern char *strsep (char **__restrict __stringp, char const *__restrict __delim);
 # endif
 # if defined GNULIB_POSIXCHECK
 #  undef strsep
@@ -368,8 +382,8 @@ extern char *strcasestr (const char *haystack, const char *needle);
    See also strsep().  */
 #if @GNULIB_STRTOK_R@
 # if ! @HAVE_DECL_STRTOK_R@
-extern char *strtok_r (char *restrict s, char const *restrict delim,
-		       char **restrict save_ptr);
+extern char *strtok_r (char *__restrict s, char const *__restrict delim,
+		       char **__restrict save_ptr);
 # endif
 # if defined GNULIB_POSIXCHECK
 #  undef strtok_r
