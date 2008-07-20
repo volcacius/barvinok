@@ -1,5 +1,5 @@
 # DO NOT EDIT! GENERATED AUTOMATICALLY!
-# Copyright (C) 2004-2006 Free Software Foundation, Inc.
+# Copyright (C) 2004-2007 Free Software Foundation, Inc.
 #
 # This file is free software, distributed under the terms of the GNU
 # General Public License.  As a special exception to the GNU General
@@ -49,27 +49,39 @@ AC_SUBST([LTALLOCA])
   gl_DOUBLE_SLASH_ROOT
   gl_ERROR
   gl_EXITFAIL
-  dnl gl_USE_SYSTEM_EXTENSIONS must be added quite early to configure.ac.
+  gl_FLOAT_H
   gl_GETOPT
+  AC_SUBST([LIBINTL])
+  AC_SUBST([LTLIBINTL])
   gl_INLINE
   AC_FUNC_MALLOC
-  gl_MBCHAR
-  gl_MBITER
-  gl_FUNC_MEMCHR
+  gl_FUNC_MALLOC_POSIX
+  gl_STDLIB_MODULE_INDICATOR([malloc-posix])
   gl_FUNC_MEMPCPY
-  gl_MINMAX
+  gl_STRING_MODULE_INDICATOR([mempcpy])
   gl_SIZE_MAX
+  gl_FUNC_SLEEP
+  gl_UNISTD_MODULE_INDICATOR([sleep])
   AM_STDBOOL_H
+  gl_STDINT_H
+  gl_STDIO_H
+  gl_STDLIB_H
   gl_STRCASE
   gl_FUNC_STRCHRNUL
+  gl_STRING_MODULE_INDICATOR([strchrnul])
+  gl_FUNC_STRERROR
+  gl_STRING_MODULE_INDICATOR([strerror])
+  gl_HEADER_STRING_H
   gl_FUNC_STRNDUP
+  gl_STRING_MODULE_INDICATOR([strndup])
   gl_FUNC_STRNLEN
+  gl_STRING_MODULE_INDICATOR([strnlen])
   gl_SYSEXITS
-  gl_HEADER_UNISTD
+  gl_UNISTD_H
   gl_FUNC_VASNPRINTF
   gl_FUNC_VSNPRINTF
-  gl_WCTYPE_H
-  gl_FUNC_WCWIDTH
+  gl_STDIO_MODULE_INDICATOR([vsnprintf])
+  gl_WCHAR_H
   gl_XALLOC
   gl_XSIZE
   gl_XSTRNDUP
@@ -94,24 +106,38 @@ AC_SUBST([LTALLOCA])
 
 # Like AC_LIBOBJ, except that the module name goes
 # into gl_LIBOBJS instead of into LIBOBJS.
-AC_DEFUN([gl_LIBOBJ],
-  [gl_LIBOBJS="$gl_LIBOBJS $1.$ac_objext"])
+AC_DEFUN([gl_LIBOBJ], [
+  AS_LITERAL_IF([$1], [gl_LIBSOURCES([$1.c])])dnl
+  gl_LIBOBJS="$gl_LIBOBJS $1.$ac_objext"
+])
 
 # Like AC_REPLACE_FUNCS, except that the module name goes
 # into gl_LIBOBJS instead of into LIBOBJS.
-AC_DEFUN([gl_REPLACE_FUNCS],
-  [AC_CHECK_FUNCS([$1], , [gl_LIBOBJ($ac_func)])])
+AC_DEFUN([gl_REPLACE_FUNCS], [
+  m4_foreach_w([gl_NAME], [$1], [AC_LIBSOURCES(gl_NAME[.c])])dnl
+  AC_CHECK_FUNCS([$1], , [gl_LIBOBJ($ac_func)])
+])
 
-# Like AC_LIBSOURCES, except that it does nothing.
-# We rely on EXTRA_lib..._SOURCES instead.
-AC_DEFUN([gl_LIBSOURCES],
-  [])
+# Like AC_LIBSOURCES, except the directory where the source file is
+# expected is derived from the gnulib-tool parametrization,
+# and alloca is special cased (for the alloca-opt module).
+# We could also entirely rely on EXTRA_lib..._SOURCES.
+AC_DEFUN([gl_LIBSOURCES], [
+  m4_foreach([_gl_NAME], [$1], [
+    m4_if(_gl_NAME, [alloca.c], [], [
+      m4_syscmd([test -r lib/]_gl_NAME[ || test ! -d lib])dnl
+      m4_if(m4_sysval, [0], [],
+        [AC_FATAL([missing lib/]_gl_NAME)])
+    ])
+  ])
+])
 
 # This macro records the list of files which have been installed by
 # gnulib-tool and may be removed by future gnulib-tool invocations.
 AC_DEFUN([gl_FILE_LIST], [
+  build-aux/link-warning.h
   lib/alloca.c
-  lib/alloca_.h
+  lib/alloca.in.h
   lib/argp-ba.c
   lib/argp-eexst.c
   lib/argp-fmtstream.c
@@ -131,22 +157,17 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/dirname.h
   lib/error.c
   lib/error.h
-  lib/exit.h
   lib/exitfail.c
   lib/exitfail.h
+  lib/float+.h
+  lib/float.in.h
   lib/getopt.c
+  lib/getopt.in.h
   lib/getopt1.c
-  lib/getopt_.h
   lib/getopt_int.h
   lib/gettext.h
   lib/malloc.c
-  lib/mbchar.c
-  lib/mbchar.h
-  lib/mbuiter.h
-  lib/memchr.c
   lib/mempcpy.c
-  lib/mempcpy.h
-  lib/minmax.h
   lib/printf-args.c
   lib/printf-args.h
   lib/printf-parse.c
@@ -154,26 +175,25 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/progname.c
   lib/progname.h
   lib/size_max.h
-  lib/stdbool_.h
-  lib/strcase.h
+  lib/sleep.c
+  lib/stdbool.in.h
+  lib/stdint.in.h
+  lib/stdio.in.h
+  lib/stdlib.in.h
   lib/strcasecmp.c
   lib/strchrnul.c
-  lib/strchrnul.h
+  lib/strerror.c
+  lib/string.in.h
   lib/stripslash.c
   lib/strncasecmp.c
   lib/strndup.c
-  lib/strndup.h
   lib/strnlen.c
-  lib/strnlen.h
-  lib/strnlen1.c
-  lib/strnlen1.h
-  lib/sysexit_.h
+  lib/sysexits.in.h
+  lib/unistd.in.h
   lib/vasnprintf.c
   lib/vasnprintf.h
   lib/vsnprintf.c
-  lib/vsnprintf.h
-  lib/wctype_.h
-  lib/wcwidth.h
+  lib/wchar.in.h
   lib/xalloc-die.c
   lib/xalloc.h
   lib/xmalloc.c
@@ -190,33 +210,37 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/error.m4
   m4/exitfail.m4
   m4/extensions.m4
+  m4/float_h.m4
   m4/getopt.m4
+  m4/gnulib-common.m4
+  m4/include_next.m4
   m4/inline.m4
   m4/intmax_t.m4
   m4/inttypes_h.m4
-  m4/longdouble.m4
   m4/longlong.m4
-  m4/mbchar.m4
-  m4/mbiter.m4
-  m4/mbrtowc.m4
-  m4/memchr.m4
+  m4/malloc.m4
   m4/mempcpy.m4
-  m4/minmax.m4
   m4/onceonly_2_57.m4
   m4/size_max.m4
+  m4/sleep.m4
   m4/stdbool.m4
+  m4/stdint.m4
   m4/stdint_h.m4
+  m4/stdio_h.m4
+  m4/stdlib_h.m4
   m4/strcase.m4
   m4/strchrnul.m4
+  m4/strerror.m4
+  m4/string_h.m4
   m4/strndup.m4
   m4/strnlen.m4
   m4/sysexits.m4
+  m4/ulonglong.m4
   m4/unistd_h.m4
   m4/vasnprintf.m4
   m4/vsnprintf.m4
+  m4/wchar.m4
   m4/wchar_t.m4
-  m4/wctype.m4
-  m4/wcwidth.m4
   m4/wint_t.m4
   m4/xalloc.m4
   m4/xsize.m4
