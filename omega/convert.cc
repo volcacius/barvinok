@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "omega/convert.h"
 
 static void max_index(Constraint_Handle c, varvector& vv, varvector& params)
