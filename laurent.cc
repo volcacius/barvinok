@@ -610,7 +610,7 @@ const evalue *reciprocal::get_coefficient()
 	    int nz = first_non_zero(left);
 	    if (nz == -1)
 		c = add(c);
-	    if (left[nz] < 0) {
+	    else if (left[nz] < 0) {
 		level = vc.dim-1;
 		p = vc.dim-1;
 		continue;
