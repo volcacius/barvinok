@@ -26,7 +26,7 @@ using std::vector;
 
 namespace __gnu_cxx
 {
-        template<> struct hash< const std::vector<int> >
+        template<> struct hash< std::vector<int> >
         {
                 size_t operator()( const std::vector<int>& x ) const
                 {
@@ -222,14 +222,14 @@ struct todd_product {
     /* For each variable, the last ray that has a non-zero coefficient */
     vector<int> last_level;
 
-    HASH_MAP<const vector<int>, const evalue *> cache;
+    HASH_MAP<vector<int>, const evalue *> cache;
 
     todd_product(vertex_cone &vc);
     evalue *add(evalue *sum);
     const evalue *get_coefficient(const vector<int> &powers);
 
     ~todd_product() {
-	HASH_MAP<const vector<int>, const evalue *>::iterator j;
+	HASH_MAP<vector<int>, const evalue *>::iterator j;
 	for (j = cache.begin(); j != cache.end(); ++j)
 	    if ((*j).second)
 		evalue_free(const_cast<evalue *>((*j).second));
@@ -326,7 +326,7 @@ const evalue *todd_product::get_coefficient(const vector<int> &powers)
 {
     evalue *c = NULL;
 
-    HASH_MAP<const vector<int>, const evalue *>::iterator i;
+    HASH_MAP<vector<int>, const evalue *>::iterator i;
     i = cache.find(powers);
     if (i != cache.end())
 	return (*i).second;
@@ -409,7 +409,7 @@ struct reciprocal {
     /* The powers of each variable that still need to be selected */
     vector<int> left;
 
-    HASH_MAP<const vector<int>, const evalue *> cache;
+    HASH_MAP<vector<int>, const evalue *> cache;
 
     reciprocal(vertex_cone &vc);
     void start(vector<int> &power);
@@ -418,7 +418,7 @@ struct reciprocal {
     evalue *add(evalue *sum);
     const evalue *get_coefficient();
     ~reciprocal() {
-	HASH_MAP<const vector<int>, const evalue *>::iterator j;
+	HASH_MAP<vector<int>, const evalue *>::iterator j;
 	for (j = cache.begin(); j != cache.end(); ++j)
 	    if ((*j).second)
 		evalue_free(const_cast<evalue *>((*j).second));
@@ -579,7 +579,7 @@ const evalue *reciprocal::get_coefficient()
     for (int j = 0; j < vc.dim; ++j)
 	left[j] = base_power[j] - power[j];
 
-    HASH_MAP<const vector<int>, const evalue *>::iterator i;
+    HASH_MAP<vector<int>, const evalue *>::iterator i;
     i = cache.find(left);
     if (i != cache.end())
 	return (*i).second;
