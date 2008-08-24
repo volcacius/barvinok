@@ -17,7 +17,7 @@ static void time_diff(struct tms *before, struct tms *after)
 
 #else
 
-struct tms {};
+struct tms { int dummy; };
 static void times(struct tms* time)
 {
 }

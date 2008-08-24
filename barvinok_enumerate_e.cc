@@ -115,6 +115,7 @@ evalue *barvinok_enumerate_parker(Polyhedron *P,
 					unsigned MaxRays)
 {
     assert(0);
+    return NULL;
 }
 #endif
 
