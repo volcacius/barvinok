@@ -18,17 +18,17 @@ SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) \
 
 FORCE:
 lib/libgnu.la: FORCE
-	$(MAKE) $(AM_MAKEFLAGS) -C lib libgnu.la
+	cd lib; $(MAKE) $(AM_MAKEFLAGS) libgnu.la
 bernstein/libbernstein.la: FORCE
-	$(MAKE) $(AM_MAKEFLAGS) -C bernstein libbernstein.la
+	cd bernstein; $(MAKE) $(AM_MAKEFLAGS) libbernstein.la
 polylib/libpolylibgmp.la: FORCE
-	$(MAKE) $(AM_MAKEFLAGS) -C polylib libpolylibgmp.la
+	cd polylib; $(MAKE) $(AM_MAKEFLAGS) libpolylibgmp.la
 piplib/libpiplibMP.la: FORCE
-	$(MAKE) $(AM_MAKEFLAGS) -C piplib libpiplibMP.la
+	cd piplib; $(MAKE) $(AM_MAKEFLAGS) libpiplibMP.la
 zsolve/libzsolve.la: FORCE
-	$(MAKE) $(AM_MAKEFLAGS) -C zsolve libzsolve.la
+	cd zsolve; $(MAKE) $(AM_MAKEFLAGS) libzsolve.la
 parker/libparker.la: FORCE
-	$(MAKE) $(AM_MAKEFLAGS) -C parker libparker.la
+	cd parker; $(MAKE) $(AM_MAKEFLAGS) libparker.la
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib -Ilib \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@ \
