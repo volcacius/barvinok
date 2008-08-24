@@ -5,6 +5,7 @@
 #include "laurent.h"
 #include "summate.h"
 #include "section_array.h"
+#include "remove_equalities.h"
 
 extern evalue *evalue_outer_floor(evalue *e);
 extern int evalue_replace_floor(evalue *e, const evalue *floor, int var);
