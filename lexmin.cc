@@ -863,13 +863,16 @@ struct indicator;
 struct partial_order {
     indicator *ind;
 
-    std::set<const indicator_term *, smaller_it > head;
-    map<const indicator_term *, int, smaller_it > pred;
-    map<const indicator_term *, vector<const indicator_term * >, smaller_it > lt;
-    map<const indicator_term *, vector<const indicator_term * >, smaller_it > le;
-    map<const indicator_term *, vector<const indicator_term * >, smaller_it > eq;
+    typedef std::set<const indicator_term *, smaller_it > head_type;
+    head_type head;
+    typedef map<const indicator_term *, int, smaller_it > pred_type;
+    pred_type pred;
+    typedef map<const indicator_term *, vector<const indicator_term * >, smaller_it > order_type;
+    order_type lt;
+    order_type le;
+    order_type eq;
 
-    map<const indicator_term *, vector<const indicator_term * >, smaller_it > pending;
+    order_type pending;
 
     order_cache	    cache;
 
@@ -877,12 +880,12 @@ struct partial_order {
     void copy(const partial_order& order, 
 	      map< const indicator_term *, indicator_term * > old2new);
     void resort() {
-	map<const indicator_term *, vector<const indicator_term * > >::iterator i;
-	map<const indicator_term *, int >::iterator j;
-	std::set<const indicator_term *>::iterator k;
+	order_type::iterator i;
+	pred_type::iterator j;
+	head_type::iterator k;
 
 	if (head.key_comp().requires_resort) {
-	    typeof(head) new_head;
+	    head_type new_head;
 	    for (k = head.begin(); k != head.end(); ++k)
 		new_head.insert(*k);
 	    head.swap(new_head);
@@ -890,7 +893,7 @@ struct partial_order {
 	}
 
 	if (pred.key_comp().requires_resort) {
-	    typeof(pred) new_pred;
+	    pred_type new_pred;
 	    for (j = pred.begin(); j != pred.end(); ++j)
 		new_pred[(*j).first] = (*j).second;
 	    pred.swap(new_pred);
@@ -898,7 +901,7 @@ struct partial_order {
 	}
 
 	if (lt.key_comp().requires_resort) {
-	    typeof(lt) m;
+	    order_type m;
 	    for (i = lt.begin(); i != lt.end(); ++i)
 		m[(*i).first] = (*i).second;
 	    lt.swap(m);
@@ -906,7 +909,7 @@ struct partial_order {
 	}
 
 	if (le.key_comp().requires_resort) {
-	    typeof(le) m;
+	    order_type m;
 	    for (i = le.begin(); i != le.end(); ++i)
 		m[(*i).first] = (*i).second;
 	    le.swap(m);
@@ -914,7 +917,7 @@ struct partial_order {
 	}
 
 	if (eq.key_comp().requires_resort) {
-	    typeof(eq) m;
+	    order_type m;
 	    for (i = eq.begin(); i != eq.end(); ++i)
 		m[(*i).first] = (*i).second;
 	    eq.swap(m);
@@ -922,7 +925,7 @@ struct partial_order {
 	}
 
 	if (pending.key_comp().requires_resort) {
-	    typeof(pending) m;
+	    order_type m;
 	    for (i = pending.begin(); i != pending.end(); ++i)
 		m[(*i).first] = (*i).second;
 	    pending.swap(m);
@@ -962,7 +965,7 @@ struct partial_order {
  */
 void partial_order::replace(const indicator_term* orig, indicator_term* replacement)
 {
-    std::set<const indicator_term *>::iterator k;
+    head_type::iterator k;
     k = head.find(orig);
     bool is_head = k != head.end();
     int orig_pred;
@@ -976,7 +979,7 @@ void partial_order::replace(const indicator_term* orig, indicator_term* replacem
     vector<const indicator_term * > orig_le;
     vector<const indicator_term * > orig_eq;
     vector<const indicator_term * > orig_pending;
-    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
+    order_type::iterator i;
     bool in_lt = ((i = lt.find(orig)) != lt.end());
     if (in_lt) {
 	orig_lt = (*i).second;
@@ -1043,7 +1046,7 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
 
     const indicator_term *base = a;
 
-    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
+    order_type::iterator i;
 
     for (int j = 0; j < eq[b].size(); ++j) {
 	eq[base].push_back(eq[b][j]);
@@ -1104,9 +1107,9 @@ void partial_order::copy(const partial_order& order,
 {
     cache.copy(order.cache);
 
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
-    map<const indicator_term *, int >::const_iterator j;
-    std::set<const indicator_term *>::const_iterator k;
+    order_type::const_iterator i;
+    pred_type::const_iterator j;
+    head_type::const_iterator k;
 
     for (k = order.head.begin(); k != order.head.end(); ++k)
 	head.insert(old2new[*k]);
@@ -1243,10 +1246,10 @@ private:
 
 void partial_order::sanity_check() const
 {
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator i;
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator prev;
-    map<const indicator_term *, vector<const indicator_term * > >::const_iterator l;
-    map<const indicator_term *, int >::const_iterator k, prev_k;
+    order_type::const_iterator i;
+    order_type::const_iterator prev;
+    order_type::const_iterator l;
+    pred_type::const_iterator k, prev_k;
 
     for (k = pred.begin(); k != pred.end(); prev_k = k, ++k)
 	if (k != pred.begin())
@@ -1566,7 +1569,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 
 bool partial_order::compared(const indicator_term* a, const indicator_term* b)
 {
-    map<const indicator_term *, vector<const indicator_term * > >::iterator j;
+    order_type::iterator j;
 
     j = lt.find(a);
     if (j != lt.end() && find(lt[a].begin(), lt[a].end(), b) != lt[a].end())
@@ -1585,12 +1588,12 @@ void partial_order::add(const indicator_term* it,
     if (eq.find(it) != eq.end() && eq[it].size() == 1)
 	return;
 
-    typeof(head) head_copy(head);
+    head_type head_copy(head);
 
     if (!filter)
 	head.insert(it);
 
-    std::set<const indicator_term *>::iterator i;
+    head_type::iterator i;
     for (i = head_copy.begin(); i != head_copy.end(); ++i) {
 	if (*i == it)
 	    continue;
@@ -1627,7 +1630,7 @@ void partial_order::add(const indicator_term* it,
 void partial_order::remove(const indicator_term* it)
 {
     std::set<const indicator_term *> filter;
-    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
+    order_type::iterator i;
 
     assert(head.find(it) != head.end());
 
@@ -1717,9 +1720,9 @@ void partial_order::remove(const indicator_term* it)
 
 void partial_order::print(ostream& os, char **p)
 {
-    map<const indicator_term *, vector<const indicator_term * > >::iterator i;
-    map<const indicator_term *, int >::iterator j;
-    std::set<const indicator_term *>::iterator k;
+    order_type::iterator i;
+    pred_type::iterator j;
+    head_type::iterator k;
     for (k = head.begin(); k != head.end(); ++k) {
 	(*k)->print(os, p);
 	os << endl;
@@ -1840,7 +1843,7 @@ void indicator::remove_initial_rational_vertices()
 {
     do {
 	const indicator_term *initial = NULL;
-	std::set<const indicator_term *>::iterator i;
+	partial_order::head_type::iterator i;
 	for (i = order.head.begin(); i != order.head.end(); ++i) {
 	    if ((*i)->sign != 0)
 		continue;
@@ -2376,7 +2379,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 				    vector<int> loc)
 {
     vector<max_term*> maxima;
-    std::set<const indicator_term *>::iterator i;
+    partial_order::head_type::iterator i;
     vector<int> best_score;
     vector<int> second_score;
     vector<int> neg_score;
