@@ -1019,12 +1019,12 @@ void partial_order::replace(const indicator_term* orig, indicator_term* replacem
 void partial_order::unset_le(const indicator_term *a, const indicator_term *b)
 {
     vector<const indicator_term *>::iterator i;
-    i = find(le[a].begin(), le[a].end(), b);
+    i = std::find(le[a].begin(), le[a].end(), b);
     le[a].erase(i);
     if (le[a].size() == 0)
 	le.erase(a);
     dec_pred(b);
-    i = find(pending[a].begin(), pending[a].end(), b);
+    i = std::find(pending[a].begin(), pending[a].end(), b);
     if (i != pending[a].end())
 	pending[a].erase(i);
 }
@@ -1057,9 +1057,9 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
     i = lt.find(b);
     if (i != lt.end()) {
 	for (int j = 0; j < lt[b].size(); ++j) {
-	    if (find(eq[base].begin(), eq[base].end(), lt[b][j]) != eq[base].end())
+	    if (std::find(eq[base].begin(), eq[base].end(), lt[b][j]) != eq[base].end())
 		dec_pred(lt[b][j]);
-	    else if (find(lt[base].begin(), lt[base].end(), lt[b][j])
+	    else if (std::find(lt[base].begin(), lt[base].end(), lt[b][j])
 			!= lt[base].end())
 		dec_pred(lt[b][j]);
 	    else
@@ -1071,9 +1071,9 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
     i = le.find(b);
     if (i != le.end()) {
 	for (int j = 0; j < le[b].size(); ++j) {
-	    if (find(eq[base].begin(), eq[base].end(), le[b][j]) != eq[base].end())
+	    if (std::find(eq[base].begin(), eq[base].end(), le[b][j]) != eq[base].end())
 		dec_pred(le[b][j]);
-	    else if (find(le[base].begin(), le[base].end(), le[b][j])
+	    else if (std::find(le[base].begin(), le[base].end(), le[b][j])
 			!= le[base].end())
 		dec_pred(le[b][j]);
 	    else
@@ -1087,7 +1087,7 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
 	vector<const indicator_term * > old = pending[base];
 	pending[base].clear();
 	for (int j = 0; j < old.size(); ++j) {
-	    if (find(eq[base].begin(), eq[base].end(), old[j]) == eq[base].end())
+	    if (std::find(eq[base].begin(), eq[base].end(), old[j]) == eq[base].end())
 		pending[base].push_back(old[j]);
 	}
     }
@@ -1095,7 +1095,7 @@ void partial_order::set_equal(const indicator_term *a, const indicator_term *b)
     i = pending.find(b);
     if (i != pending.end()) {
 	for (int j = 0; j < pending[b].size(); ++j) {
-	    if (find(eq[base].begin(), eq[base].end(), pending[b][j]) == eq[base].end())
+	    if (std::find(eq[base].begin(), eq[base].end(), pending[b][j]) == eq[base].end())
 		pending[base].push_back(pending[b][j]);
 	}
 	pending.erase(b);
@@ -1572,11 +1572,11 @@ bool partial_order::compared(const indicator_term* a, const indicator_term* b)
     order_type::iterator j;
 
     j = lt.find(a);
-    if (j != lt.end() && find(lt[a].begin(), lt[a].end(), b) != lt[a].end())
+    if (j != lt.end() && std::find(lt[a].begin(), lt[a].end(), b) != lt[a].end())
 	return true;
 
     j = le.find(a);
-    if (j != le.end() && find(le[a].begin(), le[a].end(), b) != le[a].end())
+    if (j != le.end() && std::find(le[a].begin(), le[a].end(), b) != le[a].end())
 	return true;
 
     return false;
@@ -1643,14 +1643,14 @@ void partial_order::remove(const indicator_term* it)
 	    eq.erase(it);
 
 	    vector<const indicator_term * >::iterator j;
-	    j = find(eq[base].begin(), eq[base].end(), it);
+	    j = std::find(eq[base].begin(), eq[base].end(), it);
 	    assert(j != eq[base].end());
 	    eq[base].erase(j);
 	} else {
 	    /* "it" may no longer be the smallest, since the order
 	     * structure may have been copied from another one.
 	     */
-	    sort(eq[it].begin()+1, eq[it].end(), pred.key_comp());
+	    std::sort(eq[it].begin()+1, eq[it].end(), pred.key_comp());
 	    assert(eq[it][0] == it);
 	    eq[it].erase(eq[it].begin());
 	    base = eq[it][0];
@@ -1814,7 +1814,7 @@ void indicator::add(const indicator_term* it)
 void indicator::remove(const indicator_term* it)
 {
     vector<indicator_term *>::iterator i;
-    i = find(term.begin(), term.end(), it);
+    i = std::find(term.begin(), term.end(), it);
     assert(i!= term.end());
     order.remove(it);
     term.erase(i);
