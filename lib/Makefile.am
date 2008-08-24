@@ -157,14 +157,6 @@ libgnu_la_SOURCES += gettext.h
 
 ## end   gnulib module gettext-h
 
-## begin gnulib module link-warning
-
-LINK_WARNING_H=$(top_srcdir)/./link-warning.h
-
-EXTRA_DIST += $(top_srcdir)/./link-warning.h
-
-## end   gnulib module link-warning
-
 ## begin gnulib module malloc
 
 

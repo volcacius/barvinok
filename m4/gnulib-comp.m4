@@ -135,7 +135,6 @@ AC_DEFUN([gl_LIBSOURCES], [
 # This macro records the list of files which have been installed by
 # gnulib-tool and may be removed by future gnulib-tool invocations.
 AC_DEFUN([gl_FILE_LIST], [
-  build-aux/link-warning.h
   lib/alloca.c
   lib/alloca.in.h
   lib/argp-ba.c
