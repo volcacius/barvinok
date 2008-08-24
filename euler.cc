@@ -803,7 +803,7 @@ evalue *summate_over_1d_pdomain(evalue *e,
     int nbV = 0;
     Param_Vertices *vertex[2];
     unsigned nparam = PP->V->Vertex->NbColumns-2;
-    evalue *subs_0d[1+nparam];
+    evalue **subs_0d = new evalue *[1+nparam];
     evalue *a[2];
     evalue *t[2];
     unsigned degree = total_degree(e, 1);
@@ -892,6 +892,7 @@ evalue *summate_over_1d_pdomain(evalue *e,
 
     for (int i = 0; i < nparam; ++i)
 	evalue_free(subs_0d[1+i]);
+    delete [] subs_0d;
 
     for (int i = 0; i < 2; ++i) {
 	evalue_free(a[i]);

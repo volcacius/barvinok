@@ -2171,7 +2171,7 @@ void max_term::substitute(Matrix *T, barvinok_options *options)
 
     vec_ZZ v;
     v.SetLength(inv->NbColumns);
-    evalue* subs[inv->NbRows-1];
+    evalue **subs = new evalue *[inv->NbRows-1];
     for (int i = 0; i < inv->NbRows-1; ++i) {
 	values2zz(inv->p[i], v, v.length());
 	subs[i] = multi_monom(v);
@@ -2191,6 +2191,7 @@ void max_term::substitute(Matrix *T, barvinok_options *options)
 	free_evalue_refs(subs[i]);
 	delete subs[i];
     }
+    delete [] subs;
     Matrix_Free(inv);
 }
 

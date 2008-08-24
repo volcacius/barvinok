@@ -125,15 +125,16 @@ struct dpoly_r_scanner {
 	}
     }
     bool next() {
-	int pos[rc->len];
+	int *pos;
 	int len = 0;
 
 	for (int i = 0; i < rc->len; ++i) {
 	    if (iter[i] == rc->c[i].end())
 		continue;
-	    if (!len)
+	    if (!len) {
+		pos = new int[rc->len];
 		pos[len++] = i;
-	    else {
+	    } else {
 		if ((*iter[i])->powers < (*iter[pos[0]])->powers) {
 		    pos[0] = i;
 		    len = 1;
@@ -160,6 +161,7 @@ struct dpoly_r_scanner {
 	    ++iter[pos[i]];
 	}
 
+	delete [] pos;
 	return true;
     }
     ~dpoly_r_scanner() {
@@ -241,7 +243,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 	    if (den_p[k] == 0)
 		break;
 
-	dpoly *n[num_s.length()];
+	dpoly **n = new dpoly *[num_s.length()];
 	for (int i = 0; i < num_s.length(); ++i) {
 	    zz2value(num_s[i], tz);
 	    n[i] = new dpoly(no_param, tz);
@@ -377,6 +379,7 @@ void reducer::reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f)
 	}
 	for (int i = 0; i < num_s.length(); ++i)
 	    delete n[i];
+	delete [] n;
     }
 }
 

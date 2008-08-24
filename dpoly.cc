@@ -173,7 +173,7 @@ dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
     len = num.coeff->Size;
     c = new dpoly_r_term_list[len];
     this->dim = dim;
-    int powers[dim];
+    int *powers = new int[dim];
     ZZ coeff;
 
     for (int i = 0; i < len; ++i) {
@@ -195,6 +195,7 @@ dpoly_r::dpoly_r(dpoly& num, dpoly& den, int pos, int dim)
 	    }
 	}
     }
+    delete [] powers;
     //dump();
 }
 

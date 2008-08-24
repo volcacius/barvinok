@@ -302,7 +302,7 @@ void bf_reducer::reduce(barvinok_options *options)
 	    vec_ZZ extra_num;
 	    extra_num.SetLength(d-1);
 	    int changes = 0;
-	    int npowers[nnf];
+	    int *npowers = new int[nnf];
 	    for (int k = 0; k < nnf; ++k)
 		npowers[k] = 0;
 	    for (int k = 0; k < nf; ++k) {
@@ -319,6 +319,7 @@ void bf_reducer::reduce(barvinok_options *options)
 		bf->set_factor(v[i], k, changes % 2);
 		bf->add_term(t, v[i]->terms[k], extra_num);
 	    }
+	    delete [] npowers;
 	} else {
 	    // powers of "constant" part
 	    for (int k = 0; k < nnf; ++k)

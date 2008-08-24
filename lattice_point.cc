@@ -607,7 +607,7 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	value_init(f.d);
 	value_init(f.x.n);
 
-	evalue *remainders[dim];
+	evalue **remainders = new evalue *[dim];
 	for (int i = 0; i < dim; ++i)
 	    remainders[i] = ceil(L->p[i], nparam+1, V->Vertex->p[0][nparam+1],
 				 options);
@@ -641,6 +641,7 @@ void lattice_point(Param_Vertices *V, const mat_ZZ& rays, vec_ZZ& num,
 	}
 	for (int i = 0; i < dim; ++i)
 	    evalue_free(remainders[i]); 
+	delete [] remainders;
 
 	free_evalue_refs(&f); 
 
