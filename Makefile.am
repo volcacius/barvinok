@@ -30,7 +30,7 @@ zsolve/libzsolve.la: FORCE
 parker/libparker.la: FORCE
 	$(MAKE) $(AM_MAKEFLAGS) -C parker libparker.la
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib \
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib -Ilib \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@ \
 	      @NTL_CPPFLAGS@
 AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
