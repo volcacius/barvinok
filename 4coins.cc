@@ -53,18 +53,6 @@ void static scan(gen_fun *S)
     Vector_Free(params);
 }
 
-bool is_indicator(gen_fun *gf, barvinok_options *options)
-{
-    gen_fun *test;
-    QQ mone(-1, 1);
-
-    test = gf->Hadamard_product(gf, options);
-    test->add(mone, gf, options);
-
-    test->print(std::cerr, 0, NULL);
-    cerr << endl;
-}
-
 int main(int argc, char **argv)
 {
     Matrix *M;
