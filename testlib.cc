@@ -59,6 +59,7 @@ static int test_equalities(struct barvinok_options *options)
     if (P != Q)
 	Polyhedron_Free(Q);
     Polyhedron_Free(P);
+    return 0;
 }
 
 int test_evalue_read(struct barvinok_options *options)
@@ -76,6 +77,7 @@ int test_evalue_read(struct barvinok_options *options)
     assert(!eequal(e1, e2));
     evalue_free(e1);
     evalue_free(e2);
+    return 0;
 }
 
 static void evalue_check_disjoint(evalue *e)
@@ -130,6 +132,7 @@ static int test_eadd(struct barvinok_options *options)
     evalue_check_disjoint(e1);
     evalue_free(e1);
     evalue_free(e2);
+    return 0;
 }
 
 int test_evalue(struct barvinok_options *options)
@@ -151,6 +154,7 @@ int test_evalue(struct barvinok_options *options)
     assert(EVALUE_IS_ZERO(*poly1));
     evalue_free(poly1);
     free_evalue_refs(&poly2);
+    return 0;
 }
 
 int test_substitute(struct barvinok_options *options)
@@ -194,6 +198,7 @@ int test_substitute(struct barvinok_options *options)
 
     evalue_free(e1);
     evalue_free(e2);
+    return 0;
 }
 
 int test_split_periods(struct barvinok_options *options)
@@ -217,6 +222,7 @@ int test_split_periods(struct barvinok_options *options)
     assert(value_zero_p(e->x.p->arr[3].d));
     assert(e->x.p->arr[3].x.p->type == polynomial);
     evalue_free(e);
+    return 0;
 }
 
 int test_specialization(struct barvinok_options *options)
@@ -259,6 +265,7 @@ int test_specialization(struct barvinok_options *options)
 
     value_clear(v);
     mpq_clear(count);
+    return 0;
 }
 
 int test_lattice_points(struct barvinok_options *options)
@@ -302,6 +309,7 @@ int test_lattice_points(struct barvinok_options *options)
 	evalue_free(num.E[i]);
     }
     delete [] num.E; 
+    return 0;
 }
 
 static int test_icounter(struct barvinok_options *options)
@@ -316,6 +324,7 @@ static int test_icounter(struct barvinok_options *options)
     cnt.reduce(n_coeff, n_power, d_power);
     assert(value_cmp_si(mpq_numref(cnt.count), -1) == 0);
     assert(value_cmp_si(mpq_denref(cnt.count), 1) == 0);
+    return 0;
 }
 
 static int test_infinite_counter(struct barvinok_options *options)
@@ -492,6 +501,7 @@ int test_todd(struct barvinok_options *options)
     assert(value_cmp_si(mpq_denref(t.count), 1) == 0);
 
     Vector_Free(vertex);
+    return 0;
 }
 
 int test_bernoulli(struct barvinok_options *options)
@@ -537,6 +547,7 @@ int test_bernoulli(struct barvinok_options *options)
     evalue_free(base);
     evalue_free(sum1);
     evalue_free(sum2);
+    return 0;
 }
 
 int test_bernoulli_sum(struct barvinok_options *options)
@@ -616,6 +627,7 @@ int test_bernoulli_sum(struct barvinok_options *options)
     evalue_free(sum2);
 
     options->summation = summation;
+    return 0;
 }
 
 int test_hilbert(struct barvinok_options *options)
@@ -640,6 +652,7 @@ int test_hilbert(struct barvinok_options *options)
 
     Polyhedron_Free(P);
 #endif
+    return 0;
 }
 
 int test_ilp(struct barvinok_options *options)
@@ -671,6 +684,7 @@ int test_ilp(struct barvinok_options *options)
     value_clear(max);
     Vector_Free(obj);
     Polyhedron_Free(P);
+    return 0;
 }
 
 int test_hull(struct barvinok_options *options)
@@ -720,6 +734,7 @@ int test_hull(struct barvinok_options *options)
     Polyhedron_Free(P);
     assert(hull->NbRows == 0);
     Matrix_Free(hull);
+    return 0;
 }
 
 static int test_laurent(struct barvinok_options *options)
@@ -756,6 +771,7 @@ static int test_laurent(struct barvinok_options *options)
     evalue_free(e);
     evalue_free(sum);
     evalue_free(res);
+    return 0;
 }
 
 int main(int argc, char **argv)
