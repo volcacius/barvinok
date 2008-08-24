@@ -203,10 +203,8 @@ static Polyhedron *Polyhedron_Remove_Columns(Polyhedron *P, unsigned pos,
     unsigned NbRays = 0;
     Polyhedron *Q;
 
-    if (!P)
-	return;
     if (n == 0)
-	return;
+	return P;
 
     assert(pos <= P->Dimension);
 
@@ -352,9 +350,9 @@ static Polyhedron *Polyhedron_Insert_Columns(Polyhedron *P, unsigned pos,
     Polyhedron *Q;
 
     if (!P)
-	return;
+	return P;
     if (n == 0)
-	return;
+	return P;
 
     assert(pos <= P->Dimension);
 
