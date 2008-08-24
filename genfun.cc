@@ -819,10 +819,12 @@ std::ostream & operator<< (std::ostream & os, const short_rat& r)
     return os;
 }
 
+extern "C" typedef void (*gmp_free_t)(void *, size_t);
+
 std::ostream & operator<< (std::ostream & os, const Polyhedron& P)
 {
     char *str;
-    void (*gmp_free)(void *, size_t);
+    gmp_free_t gmp_free;
     mp_get_memory_functions(NULL, NULL, &gmp_free);
     os << P.NbConstraints << " " << P.Dimension+2 << endl;
     for (int i = 0; i < P.NbConstraints; ++i) {
