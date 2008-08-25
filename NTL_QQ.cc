@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdlib.h>	// needed for abort hidden in NTL_vector_impl
 #include <barvinok/NTL_QQ.h>
 
 NTL_vector_impl(QQ,vec_QQ);
