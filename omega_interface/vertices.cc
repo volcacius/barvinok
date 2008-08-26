@@ -2,7 +2,7 @@
 #include <omega.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "omega/convert.h"
+#include "omega_interface/convert.h"
 #include "vertices.h"
 #include "param_util.h"
 #include "config.h"

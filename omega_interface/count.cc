@@ -3,7 +3,7 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include <omega.h>
-#include "omega/convert.h"
+#include "omega_interface/convert.h"
 #include "normalization.h"
 #include "count.h"
 #include "config.h"

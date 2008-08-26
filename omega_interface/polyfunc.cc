@@ -6,7 +6,7 @@
 #include "ex_convert.h"
 #include "polyfunc.h"
 #include "param_util.h"
-#include "omega/convert.h"
+#include "omega_interface/convert.h"
 
 using namespace GiNaC;
 using namespace bernstein;

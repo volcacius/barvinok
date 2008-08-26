@@ -14,7 +14,7 @@ if USE_PARKER
     MAYBE_PARKER = parker
 endif
 SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) \
-		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega doc
+		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega_interface doc
 
 FORCE:
 lib/libgnu.la: FORCE
@@ -222,7 +222,10 @@ barvinok_ehrhart_SOURCES = \
 	$(FDSTREAM)
 barvinok_union_SOURCES = barvinok_union.cc
 if HAVE_OMEGA
-BEEO_SOURCES = omega/Exit.cc omega/convert.cc omega/count.cc
+BEEO_SOURCES = \
+	omega_interface/Exit.cc \
+	omega_interface/convert.cc \
+	omega_interface/count.cc
 else
 BEEO_SOURCES = 
 endif

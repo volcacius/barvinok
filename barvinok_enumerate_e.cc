@@ -8,8 +8,8 @@
 #include "error.h"
 #include "config.h"
 #ifdef HAVE_OMEGA
-#include "omega/convert.h"
-#include "omega/count.h"
+#include "omega_interface/convert.h"
+#include "omega_interface/count.h"
 #endif
 #include "skewed_genfun.h"
 #include "verify.h"
