@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -123,6 +124,20 @@ static void verify_results(Polyhedron *P, evalue *EP, gen_fun *gf,
 			   int exist, int nparam,
 			   arguments *options);
 
+static char *next_line(FILE *input, char *line, unsigned len)
+{
+	char *p;
+
+	do {
+		if (!(p = fgets(line, len, input)))
+			return NULL;
+		while (isspace(*p) && *p != '\n')
+			++p;
+	} while (*p == '#' || *p == '\n');
+
+	return p;
+}
+
 int main(int argc, char **argv)
 {
     Polyhedron *A;
@@ -158,13 +173,17 @@ int main(int argc, char **argv)
     A = Constraints2Polyhedron(MA, options->MaxRays);
     Matrix_Free(MA);
 
-    fgets(s, 128, stdin);
-    while ((*s=='#') || (sscanf(s, "E %d", &exist)<1))
-	fgets(s, 128, stdin);
+    exist = -1;
+    while (next_line(stdin, s, sizeof(s)))
+	if (sscanf(s, "E %d", &exist) == 1)
+	    break;
+    assert(exist >= 0);
 
-    fgets(s, 128, stdin);
-    while ((*s=='#') || (sscanf(s, "P %d", &nparam)<1))
-	fgets(s, 128, stdin);
+    nparam = -1;
+    while (next_line(stdin, s, sizeof(s)))
+	if (sscanf(s, "P %d", &nparam) == 1)
+	    break;
+    assert(nparam >= 0);
 
     /******* Read the options: initialize Min and Max ********/
 
