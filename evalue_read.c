@@ -214,6 +214,7 @@ static struct token *stream_next_token(struct stream *s)
 	return tok;
     }
     if (c == '>') {
+	int c;
 	if ((c = stream_getc(s)) == '=') {
 	    tok = token_new(line, col, old_line != line);
 	    tok->type = TOKEN_GE;
@@ -223,6 +224,7 @@ static struct token *stream_next_token(struct stream *s)
 	    stream_ungetc(s, c);
     }
     if (c == '!') {
+	int c;
 	if ((c = stream_getc(s)) == '=') {
 	    tok = token_new(line, col, old_line != line);
 	    tok->type = TOKEN_NE;
