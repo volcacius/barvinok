@@ -179,7 +179,7 @@ void addeliminatedparams_enum(evalue *e, Matrix *CT, Polyhedron *CEq,
 	addeliminatedparams_evalue(&p->arr[2*i+1], CT);
 }
 
-static int mod_rational_smaller(evalue *e1, evalue *e2)
+static int mod_rational_cmp(evalue *e1, evalue *e2)
 {
     int r;
     Value m;
@@ -192,47 +192,46 @@ static int mod_rational_smaller(evalue *e1, evalue *e2)
     value_multiply(m, e1->x.n, e2->d);
     value_multiply(m2, e2->x.n, e1->d);
     if (value_lt(m, m2))
-	r = 1;
-    else if (value_gt(m, m2))
-	r = 0;
-    else 
 	r = -1;
+    else if (value_gt(m, m2))
+	r = 1;
+    else 
+	r = 0;
     value_clear(m);
     value_clear(m2);
 
     return r;
 }
 
-static int mod_term_smaller_r(evalue *e1, evalue *e2)
+static int mod_term_cmp_r(evalue *e1, evalue *e2)
 {
     if (value_notzero_p(e1->d)) {
 	int r;
 	if (value_zero_p(e2->d))
-	    return 1;
-	r = mod_rational_smaller(e1, e2);
-	return r == -1 ? 0 : r;
+	    return -1;
+	return mod_rational_cmp(e1, e2);
     }
     if (value_notzero_p(e2->d))
-	return 0;
-    if (e1->x.p->pos < e2->x.p->pos)
 	return 1;
+    if (e1->x.p->pos < e2->x.p->pos)
+	return -1;
     else if (e1->x.p->pos > e2->x.p->pos)
-	return 0;
+	return 1;
     else {
-	int r = mod_rational_smaller(&e1->x.p->arr[1], &e2->x.p->arr[1]);
-	return r == -1 
-		 ? mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0])
+	int r = mod_rational_cmp(&e1->x.p->arr[1], &e2->x.p->arr[1]);
+	return r == 0 
+		 ? mod_term_cmp_r(&e1->x.p->arr[0], &e2->x.p->arr[0])
 		 : r;
     }
 }
 
-static int mod_term_smaller(const evalue *e1, const evalue *e2)
+static int mod_term_cmp(const evalue *e1, const evalue *e2)
 {
     assert(value_zero_p(e1->d));
     assert(value_zero_p(e2->d));
     assert(e1->x.p->type == fractional || e1->x.p->type == flooring);
     assert(e2->x.p->type == fractional || e2->x.p->type == flooring);
-    return mod_term_smaller_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
+    return mod_term_cmp_r(&e1->x.p->arr[0], &e2->x.p->arr[0]);
 }
 
 static void check_order(const evalue *e)
@@ -255,7 +254,7 @@ static void check_order(const evalue *e)
 		continue;
 	    switch (a->x.p->type) {
 	    case relation:
-		assert(mod_term_smaller(&e->x.p->arr[0], &a->x.p->arr[0]));
+		assert(mod_term_cmp(&e->x.p->arr[0], &a->x.p->arr[0]) < 0);
 		break;
 	    case partition:
 		assert(0);
@@ -688,7 +687,7 @@ you_lose:   	/* OK, lets not do it */
 	    for ( ; i < p->size; ++i)
 		if (value_zero_p(p->arr[i].d) && 
 			p->arr[i].x.p->type == fractional &&
-			!mod_term_smaller(e, &p->arr[i]))
+			mod_term_cmp(e, &p->arr[i]) >= 0)
 		    break;
 	    if (i < p->size) {
 		value_init(v.d);
@@ -1151,10 +1150,7 @@ static int evalue_level_cmp(const evalue *e1, const evalue *e2)
     if (e1->x.p->type == relation && e2->x.p->type == relation) {
 	if (eequal(&e1->x.p->arr[0], &e2->x.p->arr[0]))
 	    return 0;
-	if (mod_term_smaller(&e1->x.p->arr[0], &e2->x.p->arr[0]))
-	    return -1;
-	else
-	    return 1;
+	return mod_term_cmp(&e1->x.p->arr[0], &e2->x.p->arr[0]);
     }
     if (e1->x.p->type == relation)
 	return -1;
@@ -1173,10 +1169,7 @@ static int evalue_level_cmp(const evalue *e1, const evalue *e2)
     assert(e1->x.p->type == e2->x.p->type);
     if (eequal(&e1->x.p->arr[0], &e2->x.p->arr[0]))
 	return 0;
-    if (mod_term_smaller(e1, e2))
-	return -1;
-    else
-	return 1;
+    return mod_term_cmp(e1, e2);
 }
 
 static void eadd_rev(const evalue *e1, evalue *res)
