@@ -43,6 +43,13 @@ void evalue_set(evalue *ev, Value n, Value d) {
     value_assign(ev->x.n, n);
 }
 
+void evalue_set_reduce(evalue *ev, Value n, Value d) {
+    value_init(ev->x.n);
+    value_gcd(ev->x.n, n, d);
+    value_divexact(ev->d, d, ev->x.n);
+    value_divexact(ev->x.n, n, ev->x.n);
+}
+
 evalue* evalue_zero()
 {
     evalue *EP = ALLOC(evalue);
@@ -4164,9 +4171,7 @@ static evalue *term(int param, Value c, Value den)
     value_set_si(EP->d,0);
     EP->x.p = new_enode(polynomial, 2, param + 1);
     evalue_set_si(&EP->x.p->arr[0], 0, 1);
-    value_init(EP->x.p->arr[1].x.n);
-    value_assign(EP->x.p->arr[1].d, den);
-    value_assign(EP->x.p->arr[1].x.n, c);
+    evalue_set_reduce(&EP->x.p->arr[1], c, den);
     return EP;
 }
 
@@ -4175,7 +4180,7 @@ evalue *affine2evalue(Value *coeff, Value denom, int nvar)
     int i;
     evalue *E = ALLOC(evalue);
     value_init(E->d);
-    evalue_set(E, coeff[nvar], denom);
+    evalue_set_reduce(E, coeff[nvar], denom);
     for (i = 0; i < nvar; ++i) {
 	evalue *t;
 	if (value_zero_p(coeff[i]))
