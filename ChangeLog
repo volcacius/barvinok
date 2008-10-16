@@ -1,3 +1,9 @@
+version: 0.28
+date: Thu Oct 16 21:56:01 CEST 2008
+changes:
+    - add omega as submodule
+    - minor compilation and bug fixes
+---
 version: 0.27
 date: Sun May  4 23:42:49 CEST 2008
 changes:
