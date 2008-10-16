@@ -24,6 +24,7 @@ occ_SOURCES = \
 	vertices.cc \
 	vertices.h \
 	y.tab.cc \
+	y.tab.h \
 	omega_calc/yylex.h
 if USE_PARKER
     PARKER_LA = ../parker/libparker.la
