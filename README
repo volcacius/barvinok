@@ -29,12 +29,6 @@ That is, you have to specify
 Suppose you want to put everything in /opt,
 Then you configure/compile NTL using
 
-./configure --prefix=/opt
-make
-make install
-
-For NTL,
-
 cd src
 ./configure NTL_GMP_LIP=on PREFIX=/opt GMP_PREFIX=/path/to/gmp
 make
