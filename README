@@ -20,7 +20,8 @@ to get the submodules and create the configure scripts.
 
 Additionally, the following packages can optionally be used
 - GLPK (http://www.gnu.org/software/glpk/)
-- GiNaC (http://www.ginac.de/) (needed for the bernstein library)
+- GiNaC (http://www.ginac.de/) (needed for the bernstein library and the
+    Omega interface)
 
 NTL needs to have been compiled with GMP support.
 That is, you have to specify
