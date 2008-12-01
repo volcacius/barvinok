@@ -338,9 +338,11 @@ AC_SUBST(OMEGA_LIBS)
 AC_SUBST(OMEGA_CODEGEN_LIBS)
 AC_SUBST(bv_omega_programs)
 have_omega=false
+have_codegen=false
 case "$with_omega" in
 bundled)
 	have_omega=true
+	have_codegen=true
 	OMEGA_CPPFLAGS="-I\$(top_srcdir)/omega/omega_lib/include"
 	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/basic/include"
 	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/code_gen/include"
@@ -365,7 +367,10 @@ system)
     LDFLAGS="$OMEGA_LDFLAGS $LDFLAGS"
     AC_CHECK_HEADERS([omega.h],[
 	OMEGA_LIBS="-lomega"
-	OMEGA_CODEGEN_LIBS="-lcode_gen -lomega"
+	AC_CHECK_LIB(code_gen,main,[
+		OMEGA_CODEGEN_LIBS="-lcode_gen -lomega"
+		have_codegen=true
+	])
 	have_omega=true
     ],[AC_MSG_WARN(Omega not found)])
     CPPFLAGS="$SAVE_CPPFLAGS"
@@ -375,11 +380,9 @@ system)
 esac
 if test "$have_omega" = true; then
 	AC_DEFINE(HAVE_OMEGA,[],[use omega])
-	if test x$have_ginac = xtrue; then
-		AC_CHECK_LIB(code_gen,main,[
-			bv_omega_programs="occ $bv_omega_programs"
-		])
-	fi
+fi
+if test "$have_codegen" = true -a x$have_ginac = xtrue; then
+	bv_omega_programs="occ $bv_omega_programs"
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
 AM_CONDITIONAL(BUNDLED_OMEGA, test $with_omega = bundled)
