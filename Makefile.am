@@ -52,7 +52,7 @@ noinst_PROGRAMS = test testlib randomtest \
 		  polyhedron_sample 4coins lexmin @bv_barvinok_bound@ \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
-		  polyhedron_integer_hull
+		  polyhedron_integer_hull vector_partition_chambers
 EXTRA_PROGRAMS = barvinok_bound test_bound cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
