@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
-#include <sys/times.h>
 #include <bernstein/bernstein.h>
 #include <barvinok/options.h>
 #include <barvinok/bernstein.h>
@@ -11,6 +10,32 @@
 #include "evalue_read.h"
 #include "verify.h"
 #include "range.h"
+
+#ifdef HAVE_SYS_TIMES_H
+
+#include <sys/times.h>
+
+typedef clock_t		my_clock_t;
+
+static my_clock_t time_diff(struct tms *before, struct tms *after)
+{
+	return after->tms_utime - before->tms_utime;
+}
+
+#else
+
+typedef int		my_clock_t;
+
+struct tms {};
+static void times(struct tms* time)
+{
+}
+static my_clock_t time_diff(struct tms *before, struct tms *after)
+{
+	return 0;
+}
+
+#endif
 
 using std::cout;
 using std::cerr;
@@ -64,7 +89,7 @@ struct result_data {
     Value		    n;
     double		    RE_sum[nr_methods];
 
-    clock_t		    ticks[nr_methods];
+    my_clock_t		    ticks[nr_methods];
     size_t		    size[nr_methods];
 };
 
@@ -250,7 +275,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	    }
 	}
 	times(&en_cpu);
-	result->ticks[i] = en_cpu.tms_utime - st_cpu.tms_utime;
+	result->ticks[i] = time_diff(&en_cpu, &st_cpu);
 	if (options->barvinok->verbose)
 	    for (int j = 0; j < 2; ++j)
 		cerr << *pl[2*i+j] << endl;

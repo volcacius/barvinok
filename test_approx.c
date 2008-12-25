@@ -1,10 +1,35 @@
 #include <assert.h>
 #include <limits.h>
-#include <sys/times.h>
 #include <barvinok/barvinok.h>
 #include "verify.h"
 #include "argp.h"
 #include "progname.h"
+
+#ifdef HAVE_SYS_TIMES_H
+
+#include <sys/times.h>
+
+typedef clock_t		my_clock_t;
+
+static my_clock_t time_diff(struct tms *before, struct tms *after)
+{
+	return after->tms_utime - before->tms_utime;
+}
+
+#else
+
+typedef int		my_clock_t;
+
+struct tms {};
+static void times(struct tms* time)
+{
+}
+static my_clock_t time_diff(struct tms *before, struct tms *after)
+{
+	return 0;
+}
+
+#endif
 
 struct {
     int	    sign;
@@ -90,7 +115,7 @@ struct result_data {
     Value		    n;
     double		    RE_sum[nr_methods];
 
-    clock_t		    ticks[nr_methods];
+    my_clock_t		    ticks[nr_methods];
     size_t		    size[nr_methods];
 };
 
@@ -318,7 +343,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	times(&st_cpu);
 	EP[i] = barvinok_enumerate_with_options(A, C, options->barvinok);
 	times(&en_cpu);
-	result->ticks[i] = en_cpu.tms_utime - st_cpu.tms_utime;
+	result->ticks[i] = time_diff(&en_cpu, &st_cpu);
 	/*
 	print_evalue(stdout, EP[i], param_name);
 	*/
