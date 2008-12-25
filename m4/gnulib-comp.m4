@@ -51,6 +51,8 @@ AC_SUBST([LTALLOCA])
   gl_EXITFAIL
   gl_FLOAT_H
   gl_GETOPT
+  gl_FUNC_GETSUBOPT
+  gl_STDLIB_MODULE_INDICATOR([getsubopt])
   AC_SUBST([LIBINTL])
   AC_SUBST([LTLIBINTL])
   gl_INLINE
@@ -164,6 +166,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/getopt.in.h
   lib/getopt1.c
   lib/getopt_int.h
+  lib/getsubopt.c
   lib/gettext.h
   lib/malloc.c
   lib/mempcpy.c
@@ -211,6 +214,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/extensions.m4
   m4/float_h.m4
   m4/getopt.m4
+  m4/getsubopt.m4
   m4/gnulib-common.m4
   m4/include_next.m4
   m4/inline.m4
