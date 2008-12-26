@@ -29,7 +29,9 @@
 // not in <cstdio> (in a POSIX conforming implementation they will be declared in <stdio.h>
 // and will be linkable from the C library)
 extern "C" std::FILE* fdopen(int, const char*);
+#ifndef fileno
 extern "C" int fileno(std::FILE*);
+#endif
 
 fdoutbuf::fdoutbuf(): stream_p(0) {
   error_condition.error = false;
