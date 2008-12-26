@@ -2205,6 +2205,9 @@ int in_domain(Polyhedron *P, Value *list_args)
   Value v; /* value of the constraint of a row when
 	       parameters are instantiated*/
 
+  if (P->Dimension == 0)
+    return !emptyQ(P);
+
   value_init(v); 
   
   for (row = 0; row < P->NbConstraints; row++) {
