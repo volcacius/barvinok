@@ -95,39 +95,6 @@ public:
     }
 };
 
-const int MAX_TRY=10;
-/*
- * Searches for a vector that is not orthogonal to any
- * of the rays in rays.
- */
-static void nonorthog(mat_ZZ& rays, vec_ZZ& lambda)
-{
-    int dim = rays.NumCols();
-    bool found = false;
-    lambda.SetLength(dim);
-    if (dim == 0)
-	return;
-
-    for (int i = 2; !found && i <= 50*dim; i+=4) {
-	for (int j = 0; j < MAX_TRY; ++j) {
-	    for (int k = 0; k < dim; ++k) {
-		int r = random_int(i)+2;
-		int v = (2*(r%2)-1) * (r >> 1);
-		lambda[k] = v;
-	    }
-	    int k = 0;
-	    for (; k < rays.NumRows(); ++k)
-		if (lambda * rays[k] == 0)
-		    break;
-	    if (k == rays.NumRows()) {
-		found = true;
-		break;
-	    }
-	}
-    }
-    assert(found);
-}
-
 static void add_rays(mat_ZZ& rays, Polyhedron *i, int *r, int nvar = -1, 
 		     bool all = false)
 {
