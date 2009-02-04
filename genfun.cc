@@ -819,7 +819,7 @@ std::ostream & operator<< (std::ostream & os, const short_rat& r)
     return os;
 }
 
-extern "C" typedef void (*gmp_free_t)(void *, size_t);
+extern "C" { typedef void (*gmp_free_t)(void *, size_t); }
 
 std::ostream & operator<< (std::ostream & os, const Polyhedron& P)
 {
