@@ -5,6 +5,7 @@ AC_SUBST(versioninfo)
 versioninfo=1:0:0
 
 AC_CANONICAL_HOST
+AC_PROG_CXX
 AC_PROG_LIBTOOL
 
 AC_ARG_WITH(default-prefix,
