@@ -2,8 +2,8 @@ noinst_PROGRAMS = @bv_omega_programs@
 EXTRA_PROGRAMS = occ
 
 if BUNDLED_OMEGA
-    OMEGA_CODEGEN_LA = $(top_builddir)/omega/omega_lib/libomega.la \
-		       $(top_builddir)/omega/code_gen/libcode_gen.la
+    OMEGA_CODEGEN_LA = $(top_builddir)/omega/code_gen/libcode_gen.la \
+			$(top_builddir)/omega/omega_lib/libomega.la
 endif
 
 FORCE:
