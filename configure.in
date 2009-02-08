@@ -382,6 +382,8 @@ if test "$have_omega" = true; then
 	AC_DEFINE(HAVE_OMEGA,[],[use omega])
 fi
 if test "$have_codegen" = true -a x$have_ginac = xtrue; then
+	AC_CHECK_HEADERS([sys/resource.h], [],
+		[AC_DEFINE([OMIT_GETRUSAGE], [], [Don't use getrusage in occ])])
 	bv_omega_programs="occ\$(EXEEXT) $bv_omega_programs"
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)

@@ -25,6 +25,7 @@
 #include "polyfunc.h"
 #include "convert.h"
 #include "version.h"
+#include "config.h"
 
 #define CALC_VERSION_STRING "Omega Counting Calculator v1.2"
 
