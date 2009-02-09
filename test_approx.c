@@ -20,7 +20,7 @@ static my_clock_t time_diff(struct tms *before, struct tms *after)
 
 typedef int		my_clock_t;
 
-struct tms {};
+struct tms { int dummy; };
 static void times(struct tms* time)
 {
 }
