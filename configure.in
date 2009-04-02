@@ -185,7 +185,7 @@ AC_SUBST(PIPLIB_LDFLAGS)
 AC_SUBST(PIPLIB_LIBS)
 if test "$with_piplib" = "bundled"; then
 	bv_configure_args="$bv_configure_args --with-piplib-builddir=../piplib"
-	bv_configure_args="$bv_configure_args --enable-mp-version"
+	bv_configure_args="$bv_configure_args --with-bits=gmp"
 	PIPLIB_CPPFLAGS="-I$srcdir/piplib/include"
 else
 	PIPLIB_LIBS="-lpiplibMP"
