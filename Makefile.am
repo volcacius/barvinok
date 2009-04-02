@@ -477,6 +477,11 @@ check-test: test$(EXEEXT)
 		    done \
 		done \
 	    fi \
+	done; \
+	for i in $(top_srcdir)/tests/sample/*; do \
+	    echo -n $$i; \
+	    ./test$(EXEEXT) < $$i || echo -n " NOT"; \
+	    echo " ok"; \
 	done
 check-lw: test$(EXEEXT)
 	@for i in $(top_srcdir)/tests/lattice_width/*; do \

@@ -708,7 +708,6 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 	for ( ; j < H->NbRows; ++j)
 	    if (value_notzero_p(H->p[j][i]))
 		break;
-	assert (j < H->NbRows);
 	pos[i] = j;
     }
     for (i = 0; i < nvar; ++i) {
@@ -716,6 +715,8 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 	cnt[i] = 1;
     }
     for (i = 0; i < H->NbColumns && cnt[0] < nvar; ++i) {
+	if (pos[i] == H->NbRows)
+	    continue; /* A line direction */
 	if (rowgroup[pos[i]] == -1)
 	    rowgroup[pos[i]] = i;
 	for (j = pos[i]+1; j <  H->NbRows; ++j) {

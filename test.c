@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
+#include <barvinok/sample.h>
 #include "argp.h"
 #include "progname.h"
 #include "config.h"
@@ -226,6 +227,21 @@ int main(int argc, char **argv)
 	    evalue_free(computed);
 	    evalue_free(expected);
 	    break;
+	}
+	case 12: {
+	    Vector *sample;
+	    int has_sample;
+	    fgets(s, 128, stdin);
+	    sscanf(s, "%d", &has_sample);
+
+	    sample = Polyhedron_Sample(A, options);
+	    if (!sample && has_sample)
+		return -1;
+	    if (sample && !has_sample)
+		return -1;
+	    if (sample && !in_domain(A, sample->p))
+		return -1;
+	    Vector_Free(sample);
 	}
 	}
 	Domain_Free(A);
