@@ -8,6 +8,8 @@ pkginclude_HEADERS = \
 AM_CPPFLAGS = -I$(srcdir)/include @POLYLIB_CPPFLAGS@ @ginac_CFLAGS@
 AM_LDFLAGS = @POLYLIB_LDFLAGS@
 
+ACLOCAL_AMFLAGS = -I m4
+
 libbernstein_la_SOURCES = \
     src/bernstein.cpp \
     src/maximize.cpp \
