@@ -271,6 +271,9 @@ static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
     struct width_direction_array *dirs;
     Polyhedron *U;
 
+    if (n == 0)
+	return barvinok_enumerate_series(P, P->Dimension, options);
+
     up.SetLength(P->Dimension - (n-1));
     up[0] = 1;
     for (int i = 1; i < P->Dimension - (n-1); ++i)
