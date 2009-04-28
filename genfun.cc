@@ -409,6 +409,11 @@ struct parallel_polytopes {
 	    return true;
 	}
 
+	if (Q->Dimension == 0) {
+	    Polyhedron_Free(Q);
+	    return false;
+	}
+
 	if (Q->NbEq != 0) {
 	    Matrix *Q_CP;
 	    Polyhedron *R = Q;
@@ -417,7 +422,7 @@ struct parallel_polytopes {
 				  options->MaxRays);
 
 	    POL_ENSURE_VERTICES(Q);
-	    if (emptyQ(Q) || Q->NbEq > 0) {
+	    if (emptyQ(Q) || Q->NbEq > 0 || Q->Dimension == 0) {
 		if (Q_CP)
 		    Matrix_Free(Q_CP);
 		Polyhedron_Free(R);
@@ -446,11 +451,6 @@ struct parallel_polytopes {
 		return false;
 	    }
 	    reduced_nparam = nparam;
-	}
-
-	if (Q->Dimension == 0) {
-	    Polyhedron_Free(Q);
-	    return false;
 	}
 
 	if (First_Non_Zero(Q->Constraint[Q->NbConstraints-1]+1, Q->Dimension) == -1)
