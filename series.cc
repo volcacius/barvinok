@@ -379,7 +379,10 @@ gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
 	Polyhedron *Q = P;
 	remove_all_equalities(&P, NULL, &CP, NULL, nvar+nparam,
 				options->MaxRays);
-	exist = P->Dimension - (CP->NbColumns-1);
+	if (CP)
+	    exist = P->Dimension - (CP->NbColumns-1);
+	else
+	    exist = P->Dimension - (nvar + nparam);
 	if (Q != P_orig)
 	    Polyhedron_Free(Q);
     }
