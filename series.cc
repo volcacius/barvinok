@@ -262,7 +262,7 @@ static bool more_shifts_needed(int j, int n,
 /* Return gf of P projected on last dim(P)-n coordinates, i.e.,
  * project out the first n coordinates.
  */
-gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
+static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
 {
     QQ one(1, 1);
     QQ mone(-1, 1);
