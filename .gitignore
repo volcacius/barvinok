@@ -12,5 +12,7 @@ missing
 tags
 *.bak
 *~
+*.lo
+*.o
 
 config.h.in
