@@ -24,7 +24,7 @@ static bool Polyhedron_has_positive_rays(Polyhedron *P, unsigned nparam)
     return true;
 }
 
-gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
+static gen_fun *enumerate_series(Polyhedron *P, unsigned nparam,
 				    barvinok_options *options)
 {
     Matrix *CP = NULL;
@@ -34,9 +34,6 @@ gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
     if (emptyQ2(P))
 	return new gen_fun(Empty_Polyhedron(nparam));
 
-    assert(!Polyhedron_is_unbounded(P, nparam, options->MaxRays));
-    assert(P->NbBid == 0);
-    assert(Polyhedron_has_revlex_positive_rays(P, nparam));
     if (P->NbEq != 0)
 	remove_all_equalities(&P, NULL, &CP, NULL, nparam, options->MaxRays);
     assert(emptyQ2(P) || P->NbEq == 0);
@@ -52,7 +49,7 @@ gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
     } else {
 	POL_ENSURE_VERTICES(P);
 	if (P->NbEq)
-	    gf = barvinok_enumerate_series(P, nparam, options);
+	    gf = enumerate_series(P, nparam, options);
 	else {
 	    gf_base *red;
 	    red = gf_base::create(Polyhedron_Project(P, nparam),
@@ -69,6 +66,18 @@ gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
     if (P != P_orig)
 	Polyhedron_Free(P);
     return gf;
+}
+
+gen_fun *barvinok_enumerate_series(Polyhedron *P, unsigned nparam,
+				    barvinok_options *options)
+{
+    if (emptyQ2(P))
+	return new gen_fun(Empty_Polyhedron(nparam));
+
+    assert(!Polyhedron_is_unbounded(P, nparam, options->MaxRays));
+    assert(P->NbBid == 0);
+    assert(Polyhedron_has_revlex_positive_rays(P, nparam));
+    return enumerate_series(P, nparam, options);
 }
 
 gen_fun * barvinok_series_with_options(Polyhedron *P, Polyhedron* C,
