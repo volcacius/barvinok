@@ -259,10 +259,16 @@ static bool more_shifts_needed(int j, int n,
     return !empty;
 }
 
+static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options,
+			int free_P);
+
 /* Return gf of P projected on last dim(P)-n coordinates, i.e.,
  * project out the first n coordinates.
+ *
+ * Assumes P has no equalities.
  */
-static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
+static gen_fun *project_full_dim(Polyhedron *P, unsigned n,
+	barvinok_options *options)
 {
     QQ one(1, 1);
     QQ mone(-1, 1);
@@ -312,8 +318,7 @@ static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
 	Pi = put_direction_last(R, dirs->wd[i].dir, options->MaxRays);
 	Polyhedron_Free(R);
 
-	S = project(Pi, n-1, options);
-	Polyhedron_Free(Pi);
+	S = project(Pi, n-1, options, 1);
 
 	S_shift = new gen_fun(S);
 	S_divide = new gen_fun(S);
@@ -347,10 +352,45 @@ static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options)
     return gf;
 }
 
+/* Return gf of P projected on last dim(P)-n coordinates, i.e.,
+ * project out the first n coordinates.
+ */
+static gen_fun *project(Polyhedron *P, unsigned n, barvinok_options *options,
+			int free_P)
+{
+    Matrix *CP = NULL;
+    gen_fun *proj;
+    unsigned nparam = P->Dimension - n;
+
+    if (P->NbEq != 0) {
+	Polyhedron *Q = P;
+	remove_all_equalities(&P, NULL, &CP, NULL, nparam, options->MaxRays);
+	if (CP)
+	    nparam = CP->NbColumns - 1;
+	n = P->Dimension - nparam;
+	if (free_P)
+	    Polyhedron_Free(Q);
+	free_P = 1;
+    }
+
+    if (emptyQ(P))
+	proj = new gen_fun(Empty_Polyhedron(nparam));
+    else
+	proj = project_full_dim(P, n, options);
+    if (CP) {
+	proj->substitute(CP);
+	Matrix_Free(CP);
+    }
+
+    if (free_P)
+	Polyhedron_Free(P);
+    
+    return proj;
+}
+
 gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
 		  unsigned exist, unsigned nparam, barvinok_options *options)
 {
-    Matrix *CP = NULL;
     Polyhedron *P_orig = P;
     gen_fun *gf, *proj;
     unsigned nvar = P->Dimension - exist - nparam;
@@ -378,26 +418,7 @@ gen_fun *barvinok_enumerate_e_series(Polyhedron *P,
 	P = Polyhedron_Image(P, T, options->MaxRays);
 	Matrix_Free(T);
     }
-    if (P->NbEq != 0) {
-	Polyhedron *Q = P;
-	remove_all_equalities(&P, NULL, &CP, NULL, nvar+nparam,
-				options->MaxRays);
-	if (CP)
-	    exist = P->Dimension - (CP->NbColumns-1);
-	else
-	    exist = P->Dimension - (nvar + nparam);
-	if (Q != P_orig)
-	    Polyhedron_Free(Q);
-    }
-
-    proj = project(P, exist, options);
-    if (CP) {
-	proj->substitute(CP);
-	Matrix_Free(CP);
-    }
-
-    if (P != P_orig)
-	Polyhedron_Free(P);
+    proj = project(P, exist, options, P != P_orig);
 
     if (!nvar)
 	gf = proj;
