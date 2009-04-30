@@ -52,7 +52,8 @@ noinst_PROGRAMS = test testlib randomtest \
 		  polyhedron_sample 4coins lexmin @bv_barvinok_bound@ \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
-		  polyhedron_integer_hull vector_partition_chambers
+		  polyhedron_integer_hull vector_partition_chambers \
+		  semigroup_holes
 EXTRA_PROGRAMS = barvinok_bound test_bound cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
@@ -303,6 +304,7 @@ barvinok_summate_SOURCES = \
 	verify.c
 EXTRA_barvinok_summate_SOURCES = fdstream.cc fdstream.h
 4coins_SOURCES = 4coins.cc
+semigroup_holes_SOURCES = semigroup_holes.cc
 lexmin_SOURCES = \
 	lexmin.h \
 	lexmin.cc \
