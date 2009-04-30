@@ -1012,3 +1012,17 @@ bool gen_fun::summate(Value *sum) const
     value_assign(*sum, mpq_numref(cnt.count[0]));
     return true;
 }
+
+bool gen_fun::is_zero() const
+{
+    bool empty;
+    Value c;
+
+    value_init(c);
+
+    empty = summate(&c) && value_zero_p(c);
+
+    value_clear(c);
+
+    return empty;
+}

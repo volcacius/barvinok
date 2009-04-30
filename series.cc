@@ -235,7 +235,6 @@ static bool more_shifts_needed(int j, int n,
 {
     bool empty;
     gen_fun *hp;
-    Value c;
 
     /* For the 2-dimensional case, we need to subtract at most once */
     if (n == 2 && j > 0)
@@ -249,12 +248,8 @@ static bool more_shifts_needed(int j, int n,
 
     hp = S->Hadamard_product(S_divide, options);
 
-    value_init(c);
-
-    empty = hp->summate(&c) && value_zero_p(c);
+    empty = hp->is_zero();
     delete hp;
-
-    value_clear(c);
 
     return !empty;
 }

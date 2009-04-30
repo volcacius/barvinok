@@ -62,6 +62,7 @@ struct gen_fun {
     void coefficient(Value* params, Value* c) const;
     gen_fun *summate(int nvar, barvinok_options *options) const;
     bool summate(Value *sum) const;
+    bool is_zero() const;
 
     gen_fun(const gen_fun *gf) {
 	QQ one(1, 1);
