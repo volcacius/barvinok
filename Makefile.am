@@ -468,31 +468,56 @@ check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
 	    fi \
 	done
 check-test: test$(EXEEXT)
-	@for i in $(top_srcdir)/tests/*; do \
+	@failed=0; \
+	for i in $(top_srcdir)/tests/*; do \
 	    if test -f $$i; then \
 		for options in '--index=10' '--primal --index=10'; do \
 		    for spec in 'random' 'bf' 'df' 'todd'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo -n $$i $$opt; \
-			./test$(EXEEXT) $$opt < $$i || echo -n " NOT"; \
-			echo " ok"; \
+			./test$(EXEEXT) $$opt < $$i; \
+			if test "$$?" -ne "0"; then \
+			    failed=`expr $$failed + 1`; \
+			    echo " NOT ok"; \
+			else \
+			    echo " ok"; \
+			fi; \
 		    done \
 		done \
 	    fi \
 	done; \
 	for i in $(top_srcdir)/tests/sample/*; do \
 	    echo -n $$i; \
-	    ./test$(EXEEXT) < $$i || echo -n " NOT"; \
-	    echo " ok"; \
-	done
+	    ./test$(EXEEXT) < $$i; \
+	    if test "$$?" -ne "0"; then \
+		failed=`expr $$failed + 1`; \
+		echo " NOT ok"; \
+	    else \
+		echo " ok"; \
+	    fi; \
+	done; \
+	if test $$failed != 0; then \
+		echo "$$failed tests failed"; \
+		exit -1; \
+	fi
 check-lw: test$(EXEEXT)
-	@for i in $(top_srcdir)/tests/lattice_width/*; do \
+	@failed=0; \
+	for i in $(top_srcdir)/tests/lattice_width/*; do \
 	    if test -f $$i; then \
 		echo -n $$i; \
-		./test$(EXEEXT) < $$i || echo -n " NOT"; \
-		echo " ok"; \
+		./test$(EXEEXT) < $$i; \
+		if test "$$?" -ne "0"; then \
+		    failed=`expr $$failed + 1`; \
+		    echo " NOT ok"; \
+		else \
+		    echo " ok"; \
+		fi; \
 	    fi \
-	done
+	done; \
+	if test $$failed != 0; then \
+		echo "$$failed tests failed"; \
+		exit -1; \
+	fi
 if HAVE_GLPK
 check-lexmin: lexmin$(EXEEXT)
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
