@@ -629,6 +629,14 @@ void Line_Length(Polyhedron *P, Value *len)
 
     assert(P->Dimension == 1);
 
+    if (P->NbEq > 0) {
+	if (mpz_divisible_p(P->Constraint[0][2], P->Constraint[0][1]))
+	    value_set_si(*len, 1);
+	else
+	    value_set_si(*len, 0);
+	return;
+    }
+
     value_init(tmp);
     value_init(pos);
     value_init(neg);
