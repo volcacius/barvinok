@@ -21,6 +21,10 @@ struct counter_base: public np_base {
 	zz2values(l, lambda->p);
     }
 
+    virtual void reset() {
+	mpq_set_si(count, 0, 0);
+    }
+
     ~counter_base() {
 	Matrix_Free(num);
 	Matrix_Free(den);
@@ -42,10 +46,6 @@ struct counter_base: public np_base {
 struct counter : public counter_base {
     counter(unsigned dim, unsigned long max_index) :
 	counter_base(dim, max_index) {}
-
-    virtual void reset() {
-	mpq_set_si(count, 0, 0);
-    }
 
     virtual void add_lattice_points(int sign);
 };
