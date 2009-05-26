@@ -744,11 +744,11 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 		    if (group[i] < group[k]) {
 			cnt[group[i]] += cnt[group[k]];
 			cnt[group[k]] = 0;
-			group[k] = group[i];
+			group[group[k]] = group[i];
 		    } else {
 			cnt[group[k]] += cnt[group[i]];
 			cnt[group[i]] = 0;
-			group[i] = group[k];
+			group[group[i]] = group[k];
 		    }
 		}
 	    }
