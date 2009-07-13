@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>	// needed for EOF hidden in NTL_io_vector_impl
 #include <stdlib.h>	// needed for abort hidden in NTL_vector_impl
 #include <barvinok/NTL_QQ.h>
 
