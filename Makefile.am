@@ -157,6 +157,8 @@ libbarvinok_core_la_SOURCES = \
     $(TOPCOM) \
     summate.c \
     summate.h \
+    vertex_cone.cc \
+    vertex_cone.h \
     volume.c \
     volume.h \
     mat_util.cc \
