@@ -128,6 +128,8 @@ libbarvinok_core_la_SOURCES = \
     lattice_width.h \
     laurent.cc \
     laurent.h \
+    laurent_old.cc \
+    laurent_old.h \
     normalization.c \
     normalization.h \
     options.c \
@@ -420,7 +422,7 @@ check-evalue: @bv_barvinok_bound@ barvinok_summate$(EXEEXT)
 check-euler: barvinok_summate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/euler/*; do \
 	    if test -f $$i; then \
-		for method in 'euler' 'laurent'; do \
+		for method in 'euler' 'laurent_old' 'laurent'; do \
 		    opt="--summation=$$method"; \
 		    echo $$i $$opt; \
 		    ./barvinok_summate$(EXEEXT) -T $$opt < $$i || exit; \

@@ -3426,10 +3426,12 @@ the integer points of $P(n)$}
 
 \end{example}
 
-\subsection{Summation through exponential substitution and Laurent expansions}
-\label{s:laurent}
+\subsection{Summation through exponential substitution and Laurent expansions (old)}
+\label{s:laurent:old}
 
-This section was inspired by \shortciteN{Baldoni2008}.
+This section was inspired by \shortciteN{Baldoni2008} and
+presents the old implemenation of the \ai[\tt]{laurent}
+summation method.  The implementation is described in \autoref{s:laurent}.
 
 Let $f(\vec x)$ be the generating function of a polytope $P$,
 i.e.,
@@ -3463,19 +3465,20 @@ of a monomial in the Laurent expansions does not reduce to computing
 the coefficient of a single higher-degree monomial in a Taylor expansion.
 
 Consider now one of the terms $g(\vec x) = f_{ik}(\vec x)$ in~\eqref{eq:rgf},
-$$
+\begin{equation}
+\label{eq:exp:term}
 g(\vec e^{\vec y}) =
 	\frac{e^{\sum_{j=1}^d s_j(\vec p) \sp{b_j}y}}
 	     {\prod_{j=1}^{d}\left(1-e^{\sp{b_j}y}\right)}
 ,
-$$
+\end{equation}
 with $\vec w_{ij}(\vec p) = \sum_{j=1}^d s_j(\vec p) \vec b_j$ written
 in terms of the $\vec b_j$, which are assumed to form a basis
 and where we have made explicit the only place where the
 parameters $\vec p$ appear.
 We rewrite this equation as
 \begin{equation}
-\label{eq:laurent}
+\label{eq:laurent:old}
 g(\vec e^{\vec y}) =
 	\left(\prod_{j=1}^d \frac{-1}{\sp{b_j}y}\right)
 	\left(\prod_{j=1}^d \frac{-\sp{b_j}y \, e^{s_j(\vec p)\sp{b_j}y}}
@@ -3533,9 +3536,9 @@ of each of its factors,
 \\
 &= \sum_{\vec n \ge \vec 0}
 	{\sum n_k \choose \vec n}
-		(-1)^{\sum n_k+1}
-		    \frac{{\vec b'_j}^{\vec n}}{b_{jf}^{\sum n_k+1}}
-		    \frac{{\vec y'}^{\vec n}}{y_f^{\sum n_k+1}}
+		(-1)^{1+\sum n_k}
+		    \frac{{\vec b'_j}^{\vec n}}{b_{jf}^{1+\sum n_k}}
+		    \frac{{\vec y'}^{\vec n}}{y_f^{1+\sum n_k}}
 \label{eq:laurent:reciprocal}
 ,
 \end{align}
@@ -3582,6 +3585,7 @@ $\gamma_{\vec N}$ and $\delta_{\vec m - \vec N}(\vec p)$
 only need to be computed once.
 
 \begin{example}
+\label{ex:laurent:old}
 Consider once more the \rgf/
 $$
 \f T x =
@@ -3610,7 +3614,8 @@ b(3,s) &= \frac 1 2 \left(s -3 s^2 + 2 s^3\right)
 \\
 b(4,s) & = \frac 1{30} \left(-1 + 30 s^2 -60 s^3 + 30 s^4\right)
 \end{align*}
-For the first term, substitution yields
+For the first term, we have $(2,0) = -2 \, (-1,0) + 0 \, (-1, 1)$
+and substitution yields
 \begin{align*}
 h(\vec y)
 =&
@@ -3721,6 +3726,218 @@ we obtain a grand total of
 $$
 12.
 $$
+\end{example}
+
+\subsection{Summation through exponential substitution and Laurent expansions}
+\label{s:laurent}
+
+This section was inspired by \shortciteN{Baldoni2009}.
+
+As in \autoref{s:laurent:old}, we want to compute
+$\vec n!$ times the coefficient of the $\vec y^{\vec n}$ term
+in the Taylor expansion of $f(\vec e^{\vec y})$.
+However, we do not write \eqref{eq:exp:term}, i.e.,
+$$
+g(\vec e^{\vec y}) =
+	\frac{e^{\sum_{j=1}^d s_j(\vec p) \sp{b_j}y}}
+	     {\prod_{j=1}^{d}\left(1-e^{\sp{b_j}y}\right)}
+$$
+as in \eqref{eq:laurent:old},
+but as
+$$
+g(\vec e^{\vec y}) =
+	\prod_{j=1}^d \left(-\frac 1 {\sp{b_j}y} + 
+	    \left(\frac 1 {\sp{b_j}y} + 
+	    \frac{e^{s_j(\vec p)\sp{b_j}y}}
+				 {1-e^{\sp{b_j}y}} \right)\right)
+$$
+instead.
+The second term in each factor is of the form
+\begin{align*}
+\frac 1 x +
+\frac{e^{ux}}{1-e^x}
+& =
+\frac 1 x +
+\frac 1 x \frac{x \, e^{ux}}{1-e^x}
+\\
+& =
+\frac 1 x
+- \sum_{k=0}^{\infty} \frac{b(k,u)}{k!} \, x^{k-1}
+\\
+& =
+- \sum_{k=1}^{\infty} \frac{b(k,u)}{k!} \, x^{k-1}
+\\
+& =
+- \sum_{k=0}^{\infty} \frac{b(k+1,u)}{(k+1)!} \, x^{k}
+,
+\end{align*}
+with $b(k,u)$ the \ai{Bernoulli polynomial}s.
+The second line follows from \eqref{eq:bernoulli}
+and the third line follows from $b(0,u) = 1$.
+We therefore have
+\begin{align*}
+g(\vec e^{\vec y})
+&=
+\prod_{j=1}^d \left(
+	- \frac 1 {\sp{b_j}y} 
+	- \sum_{k=0}^{\infty}
+		\frac{b(k+1,s_j(\vec p))}{(k+1)!} \, {\sp{b_j}y}^{k}
+     \right)
+\\
+&=
+\prod_{j=1}^d \left(
+	\left(
+    \sum_{\vec n \ge \vec 0}
+		(-1)^{1+\sum n_k}
+	{\sum n_k \choose \vec n}
+		    \frac{{\vec b'_j}^{\vec n}}{b_{jf_j}^{1+\sum n_k}}
+		    \frac{{\vec y'}^{\vec n}}{y_{f_j}^{1+\sum n_k}}
+	\right)
+    - \sum_{\vec n \ge \vec 0}
+	    \frac{b(1+\sum n_k,s_j(\vec p))}{(1+\sum n_k)\prod n_k!} \,
+		\vec b_j^{\vec n} \vec y^{\vec n}
+     \right)
+,
+\end{align*}
+where $b_{jf_j}$ is the first non-zero coefficient of $\vec b_j$
+and the vector $\vec b_j'$ contains
+the subsequent $d-f_j$ coefficients of $\vec b_j$.
+The expansion of the first term follows from \eqref{eq:laurent:reciprocal},
+while the expansion of the second term follows from \eqref{eq:laurent:todd}.
+Note, however, that unlike \autoref{s:laurent:old}, each factor is
+now a {\em sum} of two series instead of a product of two series.
+In particular, there are two kinds of (non-overlapping) terms.
+In the first kind of terms, there is exactly one variable $y_{f_j}$
+with a negative exponent, where $f_j$ is such that $b_{jf_j}$ is the first
+non-zero coefficient of $\vec b_j$, and the sum of all exponents is $-1$.
+Let $\vec n$ contain the non-negative exponents, then the coefficient
+of such a term is
+\begin{equation}
+\label{eq:laurent:term:1}
+		(-1)^{1+\sum n_k}
+	{\sum n_k \choose \vec n}
+		    \frac{{\vec b'_j}^{\vec n}}{b_{jf}^{1+\sum n_k}}
+.
+\end{equation}
+In the second kind of terms, all exponents are non-negative and
+the coefficient is given by
+\begin{equation}
+\label{eq:laurent:term:2}
+    - \sum_{\vec n \ge \vec 0}
+	    \frac{b(1+\sum n_k,s_j(\vec p))}{(1+\sum n_k)\prod n_k!} \,
+		\vec b_j^{\vec n}
+.
+\end{equation}
+
+Given, as before, a polynomial
+$$
+q(\vec y, \vec p) = \sum_{\vec m} \beta_{\vec m}(\vec p) \, \vec y^{\vec m}
+$$
+that we wish to sum over the integer points of a polytope $P$, we perform
+the following operations for each unimodular cone in the decomposition
+of each vertex cone.
+\begin{itemize}
+\item For each $\vec m$ with $\beta_{\vec m}(\vec p) \ne 0$
+\begin{itemize}
+\item Consider all decomposition $\vec m = \sum_j {\vec n_j}$
+such that each $\vec n_j$ corresponds to one of the two kinds of terms,
+i.e., either $n_{jf_j} < 0$ and $\sum_k n_{jk} = -1$ or $\vec n_j \ge \vec 0$.
+\item For each such decomposition, compute the coefficient
+$\alpha_{\vec m}(\vec p)$ of
+$\vec y^{\vec m}$ as the product of the corresponding
+coefficients from \eqref{eq:laurent:term:1}
+and \eqref{eq:laurent:term:2}.
+\end{itemize}
+\item The contribution of the cone is the sum of
+$$
+\vec m! \, \alpha(\vec m)
+$$
+over all these $\vec m$.
+\end{itemize}
+
+\begin{example}
+As in Example~\ref{ex:laurent:old}, let us compute
+$$
+\sum_{\vec y \in T\cap \ZZ^2} y_1^2 + y_2^2
+,
+$$
+with $T$ a triangle with generating function
+$$
+\f T x =
+\frac{x_1^2}{(1-x_1^{-1})(1-x_1^{-1}x_2)}
++
+\frac{x_2^2}{(1-x_2^{-1})(1-x_1 x_2^{-1})}
++
+\frac1{(1-x_1)(1-x_2)}
+.
+$$
+Consider the first term.  As before, we write the exponent of
+the numerator of this term as
+$(2,0) = -2 \, (-1,0) + 0 \, (-1, 1)$ and so we obtain
+\begin{align*}
+h(\vec y)
+=&
+\left(
+\frac 1{y_1}
++ \left(
+\frac 1{-y_1}
++
+\frac {e^{(-2)(-y_1)}}{1-e^{-y_1}}
+\right)
+\right)
+\left(
+\frac 1{y_1-y_2}
++ \left(
+\frac 1{-y_1+y_2}
++
+\frac {e^{0(-y_1+y_2)}}{1-e^{-y_1+y_2}}
+\right)
+\right)
+\\
+=&
+\left(
+\frac 1 {y_1} + \sum_{n=0}^{\infty} \frac{b(n+1,-2)}{(n+1)n!} (-1)^{n+1} y_1^n
+\right)
+\\
+&
+\left(
+\sum_{n\ge 0} (-1)^{n+1} {n \choose n} \frac {1^n}{{-1}^{1+n}}
+					\frac {y_2^{n}}{y_1^{1+n}}
++ \sum_{\vec n \ge 0} \frac{b(1+n_1+n_2,0)}{(1+n_1+n_2)n_1!n_2!}
+	(-1)^{n_1} 1^{n_2} y_1^{n_1} y_2^{n_2}
+\right)
+\\
+=&
+\left(
+\frac 1 {y_1} + \frac 5 2 + \frac {37}{12} y_1 + \frac 5 2 y_1^2
++ \frac {1079}{702} y_1^3 + \ldots
+\right)
+\\
+&
+\left(
+\frac 1 {y_1} + \frac {y_2}{y_1^2} + \frac {y_2^2}{y_1^3} + \ldots
++
+\frac 1 2
++ \frac 1 {12} y_1
+- \frac 1 {12} y_2
++ 0 y_1^2
++ \frac 1 6 y_1 y_2
+- \frac 1 {12} y_2^2
+- \frac 1 {720} y_1^3
++ \frac 1 {240} y_1^2 y_2
+% - \frac 1 {240} y_1 y_2^2
++ \ldots
+\right)
+.
+\end{align*}
+The coefficient of $y_1^2$ is then
+$$
+1(-\frac 1 {720}) + 0 + \frac{37}{12}\frac 1{12} + \frac 5 2\frac 1 2
++ \frac{1079}{720} 1 = \frac{721}{240}
+,
+$$
+which is the same value as the one we found in
+Example~\ref{ex:laurent:old}.
 \end{example}
 
 \subsection{Conversion to ``standard form''}

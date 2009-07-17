@@ -116,6 +116,8 @@ static evalue *sum_base(Polyhedron *P, evalue *E, unsigned nvar,
 	return euler_summate(P, E, nvar, options);
     else if (options->summation == BV_SUM_LAURENT)
 	return laurent_summate(P, E, nvar, options);
+    else if (options->summation == BV_SUM_LAURENT_OLD)
+	return laurent_summate_old(P, E, nvar, options);
     assert(0);
 }
 

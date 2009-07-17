@@ -363,6 +363,8 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	    options->summation = BV_SUM_BERNOULLI;
 	else if (!strcmp(arg, "laurent"))
 	    options->summation = BV_SUM_LAURENT;
+	else if (!strcmp(arg, "laurent_old"))
+	    options->summation = BV_SUM_LAURENT_OLD;
 	else
 	    argp_error(state, "unknown summation method '%s'\n", arg);
 	break;
