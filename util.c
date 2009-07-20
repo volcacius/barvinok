@@ -1862,3 +1862,14 @@ void Polyhedron_Matrix_View(Polyhedron *P, Matrix *M, unsigned rows)
     M->p_Init = P->p_Init;
     M->p = P->Constraint;
 }
+
+int Last_Non_Zero(Value *p, unsigned len)
+{
+	int i;
+
+	for (i = len - 1; i >= 0; --i)
+		if (value_notzero_p(p[i]))
+			return i;
+
+	return -1;
+}

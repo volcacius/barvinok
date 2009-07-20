@@ -108,6 +108,8 @@ void Polyhedron_ExchangeColumns(Polyhedron *P, int Column1, int Column2);
 
 void Matrix_Transposition(Matrix *M);
 
+int Last_Non_Zero(Value *p, unsigned len);
+
 /* n is the total number of times fn will be called */
 typedef void (*for_each_lower_upper_bound_init)(unsigned n, void *data);
 /* M contains the constraints on the remaining variables

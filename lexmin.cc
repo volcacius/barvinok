@@ -2198,14 +2198,6 @@ void max_term::substitute(Matrix *T, barvinok_options *options)
     Matrix_Free(inv);
 }
 
-int Last_Non_Zero(Value *p, unsigned len)
-{
-    for (int i = len-1; i >= 0; --i)
-	if (value_notzero_p(p[i]))
-	    return i;
-    return -1;
-}
-
 Vector *max_term::eval(Value *val, unsigned MaxRays) const
 {
     if (!domain->contains(val, domain->dimension()))
