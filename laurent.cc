@@ -6,6 +6,7 @@
 #include "conversion.h"
 #include "decomposer.h"
 #include "laurent.h"
+#include "param_polynomial.h"
 #include "param_util.h"
 #include "reduce_domain.h"
 #include "vertex_cone.h"
@@ -480,79 +481,19 @@ const evalue *reciprocal::get_coefficient()
     return c;
 }
 
-/* A term in the input polynomial */
-struct term {
-    vector<int> powers;
-    const evalue *coeff;
-};
-
-static void collect_terms_r(vector<struct term> &terms, vector<int> &powers,
-			    const evalue *polynomial, unsigned nvar)
-{
-    if (EVALUE_IS_ZERO(*polynomial))
-	return;
-
-    if (value_zero_p(polynomial->d))
-	assert(polynomial->x.p->type == ::polynomial);
-    if (value_notzero_p(polynomial->d) || polynomial->x.p->pos > nvar) {
-	struct term t;
-	t.powers = powers;
-	t.coeff = polynomial;
-	terms.push_back(t);
-	return;
-    }
-
-    for (int i = polynomial->x.p->size-1; i >= 0; --i) {
-	powers[polynomial->x.p->pos-1] = i;
-	collect_terms_r(terms, powers, &polynomial->x.p->arr[i], nvar);
-    }
-}
-
-/* Expand "polynomial" as a sum of powers of the "nvar" variables,
- * collect the terms in "terms" and return the maximal total degree.
- */
-static unsigned collect_terms(vector<struct term> &terms,
-			  const evalue *polynomial, unsigned nvar)
-{
-    vector<int> powers(nvar);
-    for (int i = 0; i < nvar; ++i)
-	powers[i] = 0;
-    collect_terms_r(terms, powers, polynomial, nvar);
-
-    unsigned max_degree = 0;
-    for (int i = 0; i < terms.size(); ++i) {
-	int sum = 0;
-	for (int j = 0; j < nvar; ++j)
-	    sum += terms[i].powers[j];
-	if (sum > max_degree)
-	    max_degree = sum;
-    }
-    return max_degree;
-}
-
-/*
-static void dump_terms(const vector<struct term> &terms)
-{
-    for (int i = 0; i < terms.size(); ++i) {
-	cerr << terms[i].powers;
-	print_evalue(stderr, terms[i].coeff, test);
-    }
-}
-*/
-
 struct laurent_summator : public signed_cone_consumer,
 			  public vertex_decomposer {
     const evalue *polynomial;
     unsigned dim;
     vertex_cone vc;
-    vector<struct term> terms;
+    param_polynomial poly;
     evalue *result;
     unsigned max_power;
 
     laurent_summator(const evalue *e, unsigned dim, Param_Polyhedron *PP) :
 			polynomial(e), dim(dim), vertex_decomposer(PP, *this),
-			vc(dim) {
-	max_power = dim + collect_terms(terms, polynomial, dim);
+			vc(dim), poly(e, dim) {
+	max_power = dim + poly.degree();
 	result = NULL;
     }
     ~laurent_summator() {
@@ -577,8 +518,8 @@ void laurent_summator::handle(const signed_cone& sc, barvinok_options *options)
     vc.init(sc.rays, V, max_power);
     reciprocal recip(vc);
     todd_product tp(vc);
-    for (int i = 0; i < terms.size(); ++i) {
-	recip.start(terms[i].powers);
+    for (int i = 0; i < poly.terms.size(); ++i) {
+	recip.start(poly.terms[i].powers);
 	do {
 	    const evalue *c = recip.get_coefficient();
 	    if (!c)
@@ -586,11 +527,11 @@ void laurent_summator::handle(const signed_cone& sc, barvinok_options *options)
 
 	    const evalue *t = tp.get_coefficient(recip.power);
 
-	    evalue *f = evalue_dup(terms[i].coeff);
+	    evalue *f = evalue_dup(poly.terms[i].coeff);
 	    if (sc.sign < 0)
 		evalue_negate(f);
 	    for (int j = 0; j < dim; ++j)
-		evalue_mul(f, *factorial(terms[i].powers[j]));
+		evalue_mul(f, *factorial(poly.terms[i].powers[j]));
 	    evalue_shift_variables(f, 0, -dim);
 	    emul(c, f);
 	    emul(t, f);

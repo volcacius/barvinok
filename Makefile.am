@@ -131,6 +131,8 @@ libbarvinok_core_la_SOURCES = \
     normalization.c \
     normalization.h \
     options.c \
+    param_polynomial.cc \
+    param_polynomial.h \
     param_util.c \
     param_util.h \
     piputil.h \
