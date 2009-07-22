@@ -1,0 +1,98 @@
+%%
+%% This is file `glosstex.std',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% glosstex.dtx  (with options: `std')
+%% 
+%%    GlossTeX, a tool for the automatic preparation of glossaries.
+%%    Copyright (C) 1997 Volkan Yavuz
+%% 
+%%    This program is free software; you can redistribute it and/or
+%%    modify it under the terms of the GNU General Public License
+%%    as published by the Free Software Foundation; either version 2
+%%    of the License, or (at your option) any later version.
+%% 
+%%    This program is distributed in the hope that it will be useful,
+%%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%%    GNU General Public License for more details.
+%% 
+%%    You should have received a copy of the GNU General Public License
+%%    along with this program; if not, write to the Free Software
+%%    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+%% 
+%%    Volkan Yavuz, yavuzv@rumms.uni-mannheim.de
+%% 
+%%    Please note, that if you modify these files, do NOT distribute them
+%%    unless you have renamed the files and clearly stated, WHO has
+%%    modified the file and WHAT was modified.
+%% 
+%%    You are explicitly allowed to modify the file "`glosstex.std"' to
+%%    incorporate site-specific modifications. But do NOT distribute that
+%%    file unless you have renamed it and clearly stated, WHO has
+%%    modified the file and WHAT was modified.
+%% 
+%% \CharacterTable
+%%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%%   Digits        \0\1\2\3\4\5\6\7\8\9
+%%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%%   Dollar        \$     Percent       \%     Ampersand     \&
+%%   Acute accent  \'     Left paren    \(     Right paren   \)
+%%   Asterisk      \*     Plus          \+     Comma         \,
+%%   Minus         \-     Point         \.     Solidus       \/
+%%   Colon         \:     Semicolon     \;     Less than     \<
+%%   Equals        \=     Greater than  \>     Question mark \?
+%%   Commercial at \@     Left bracket  \[     Backslash     \\
+%%   Right bracket \]     Circumflex    \^     Underscore    \_
+%%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%%   Right brace   \}     Tilde         \~}
+%%
+\def\filename{glosstex}
+\def\fileversion{0.4}
+\def\filedate{1997/12/13}
+\let\docdate=\filedate
+\newcommand{\GLX@output@short}[3]{#3}
+\newcommand{\GLX@output@long}[3]{#3}
+\newcommand{\glosstexpage}[1]{\nobreak{\itshape\pagename~#1}\nobreak}
+\glxgldefault{glo}{p}
+\glxacdefault{acr}{n}
+\glxitemorderdefault{glo}{}
+\glxitemplacementdefault{glo}{}
+\glxitemorderdefault{acr}{}
+\glxitemplacementdefault{acr}{}
+\newcommand{\GLX@benv@glo}{\begin{description}}
+\newcommand{\GLX@eenv@glo}{\end{description}}
+\newcommand{\GLX@item@glo}[7]{%
+  \item[#2]\ifx#3\empty\else\emph{#3}\space\fi#4\space#7}
+\newcommand{\GLX@item@acr@label}[1]{\mbox{#1}\dotfill}
+\newcommand{\GLX@benv@acr}{
+  \begin{list}{}{%
+      \renewcommand{\makelabel}{\GLX@item@acr@label}%
+      \setlength{\labelwidth}{7em}%
+      \leftmargin\labelwidth \advance\leftmargin by \labelsep}}
+\newcommand{\GLX@eenv@acr}{\end{list}}
+\newcommand{\GLX@item@acr}[7]{%
+  \item[\textsc{#2}]%
+    \ifx#3\empty\else#3\quad\fi\ifx#4\empty\else#4\space\fi#7}
+\ifx\glossaryname\@undefined
+  \def\glossaryname{Glossary}
+\fi
+\ifx\listacronymname\@undefined
+  \def\listacronymname{List of Acronyms}
+\fi
+\ifx\pagename\@undefined
+  \def\pagename{page}
+\fi
+\ifx\chapter\@undefined
+  \glxheading{glo}{\section*{\glossaryname}}
+  \glxheading{acr}{\section*{\listacronymname}}
+\else
+  \glxheading{glo}{\chapter*{\glossaryname}}
+  \glxheading{acr}{\chapter*{\listacronymname}}
+\fi
+\endinput
+%%
+%% End of file `glosstex.std'.

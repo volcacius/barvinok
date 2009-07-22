@@ -9,7 +9,7 @@ barvinok.dvi: FORCE
 	makeindex barvinok.idx
 	makeindex barvinok.glo -o barvinok.gls -s nomencl.ist
 	glosstex barvinok.aux $(srcdir)/barvinok.gdf
-	makeindex barvinok.gxs -o barvinok.glx -s glosstex.ist
+	makeindex barvinok.gxs -o barvinok.glx -s $(srcdir)/glosstex.ist
 	latex barvinok.tex
 	latex barvinok.tex
 

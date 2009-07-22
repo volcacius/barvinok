@@ -1,0 +1,599 @@
+%%
+%% This is file `glosstex.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% glosstex.dtx  (with options: `package')
+%% 
+%%    GlossTeX, a tool for the automatic preparation of glossaries.
+%%    Copyright (C) 1997 Volkan Yavuz
+%% 
+%%    This program is free software; you can redistribute it and/or
+%%    modify it under the terms of the GNU General Public License
+%%    as published by the Free Software Foundation; either version 2
+%%    of the License, or (at your option) any later version.
+%% 
+%%    This program is distributed in the hope that it will be useful,
+%%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%%    GNU General Public License for more details.
+%% 
+%%    You should have received a copy of the GNU General Public License
+%%    along with this program; if not, write to the Free Software
+%%    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+%% 
+%%    Volkan Yavuz, yavuzv@rumms.uni-mannheim.de
+%% 
+%%    Please note, that if you modify these files, do NOT distribute them
+%%    unless you have renamed the files and clearly stated, WHO has
+%%    modified the file and WHAT was modified.
+%% 
+%%    You are explicitly allowed to modify the file "`glosstex.std"' to
+%%    incorporate site-specific modifications. But do NOT distribute that
+%%    file unless you have renamed it and clearly stated, WHO has
+%%    modified the file and WHAT was modified.
+%% 
+%% \CharacterTable
+%%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%%   Digits        \0\1\2\3\4\5\6\7\8\9
+%%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%%   Dollar        \$     Percent       \%     Ampersand     \&
+%%   Acute accent  \'     Left paren    \(     Right paren   \)
+%%   Asterisk      \*     Plus          \+     Comma         \,
+%%   Minus         \-     Point         \.     Solidus       \/
+%%   Colon         \:     Semicolon     \;     Less than     \<
+%%   Equals        \=     Greater than  \>     Question mark \?
+%%   Commercial at \@     Left bracket  \[     Backslash     \\
+%%   Right bracket \]     Circumflex    \^     Underscore    \_
+%%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%%   Right brace   \}     Tilde         \~}
+%%
+\def\filename{glosstex}
+\def\fileversion{0.4}
+\def\filedate{1997/12/13}
+\let\docdate=\filedate
+\NeedsTeXFormat{LaTeX2e}[1996/12/01] \ProvidesPackage{glosstex}
+[\filedate\space\fileversion\space GlossTeX package]
+\RequirePackage{ifthen}
+\newif\if@GLX@pagerefmode
+\newif\if@GLX@itemfirst
+\newif\if@GLX@footnote
+\newif\if@GLX@roundparen
+\newif\if@GLX@squareparen
+\newcommand{\GlossTeX}{Gloss\TeX}
+\AtBeginDocument{%
+  \glxheading{GLX@Null@List}{}%
+  \printglosstex(GLX@Null@List)}
+\AtEndDocument{%
+  \ifx\GLX@undefined@term\@undefined\else %
+    \PackageWarningNoLine{glosstex}%
+    {There were undefined terms.\MessageBreak
+      You should (re)run GlossTeX}\fi}
+\newcommand{\GlossTeXPage}[2]{\ignorespaces%
+  \ifthenelse{\boolean{@GLX@pagerefmode}}%
+    {% refpage true
+      \ifthenelse{%
+        \equal{\GLX@theglosstex@pagerefmode}{a}}{\glosstexpage{#2}}{%
+        \ifthenelse{\equal{\GLX@theglosstex@pagerefmode}{n}}{}{%
+          \ifthenelse{\equal{#1}{a}}{\glosstexpage{#2}}{}%
+          \ifthenelse{\equal{#1}{p}}{\glosstexpage{#2}}{}%
+          \ifthenelse{\equal{#1}{n}}{}{}}}}%
+    {% refpage false
+      \ifthenelse{%
+        \equal{\GLX@theglosstex@pagerefmode}{a}}{\glosstexpage{#2}}{%
+        \ifthenelse{\equal{\GLX@theglosstex@pagerefmode}{n}}{}{%
+          \ifthenelse{\equal{#1}{a}}{\glosstexpage{#2}}{}%
+          \ifthenelse{\equal{#1}{p}}{}{}%
+          \ifthenelse{\equal{#1}{n}}{}{}}}}%
+    }%
+\DeclareOption{refpage}{\@GLX@pagerefmodetrue}
+\DeclareOption{norefpage}{\@GLX@pagerefmodefalse}
+\DeclareOption{itemfirst}{\@GLX@itemfirsttrue}
+\DeclareOption{longfirst}{\@GLX@itemfirstfalse}
+\DeclareOption{text}{\@GLX@footnotefalse}
+\DeclareOption{footnote}{\@GLX@footnotetrue}
+\DeclareOption{roundparen}{\gdef\GLX@paren@l{(}\gdef\GLX@paren@r{)}}
+\DeclareOption{squareparen}{\gdef\GLX@paren@l{[}\gdef\GLX@paren@r{]}}
+\ExecuteOptions{norefpage,itemfirst,text,roundparen}
+\ProcessOptions
+\newcommand{\GlossTeXNull}[1]{}
+\DeclareRobustCommand\glosstex{\GLX@glosstex}
+\newcommand{\GLX@glosstex}{%
+  \@ifnextchar({\GLX@@glosstexr}{%
+    \@ifnextchar[{\GLX@@glosstexs(\GLX@gldef@list)}{%
+      \GLX@@@glosstex(\GLX@gldef@list)[\GLX@gldef@page]}}}
+\newcommand{\GLX@@glosstexr}{}
+\def\GLX@@glosstexr(#1){%
+  \@ifnextchar[{\GLX@@glosstexs(#1)}{\GLX@@@glosstex(#1)[\GLX@gldef@page]}}
+\newcommand{\GLX@@glosstexs}{}
+\def\GLX@@glosstexs(#1)[#2]{%
+  \GLX@@@glosstex(#1)[#2]}
+\newcommand{\GLX@@@glosstex}{}
+\def\GLX@@@glosstex(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{a}}
+\DeclareRobustCommand\acronym{\GLX@acronym}
+\newcommand{\GLX@acronym}{%
+  \@ifnextchar({\GLX@@acronymr}{%
+    \@ifnextchar[{\GLX@@acronyms(\GLX@acdef@list)}{%
+      \GLX@@@acronym(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acronymr}{}
+\def\GLX@@acronymr(#1){%
+  \@ifnextchar[{\GLX@@acronyms(#1)}{\GLX@@@acronym(#1)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acronyms}{}
+\def\GLX@@acronyms(#1)[#2]{%
+  \GLX@@@acronym(#1)[#2]}
+\newcommand{\GLX@@@acronym}{}
+\def\GLX@@@acronym(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{a}}
+\DeclareRobustCommand\gls{%
+  \@ifstar{\GLX@glsS}{\GLX@gls}}
+\newcommand{\GLX@gls}{%
+  \@ifnextchar({\GLX@@glsr}{%
+    \@ifnextchar[{\GLX@@glss(\GLX@gldef@list)}{%
+      \GLX@@@gls(\GLX@gldef@list)[\GLX@gldef@page]}}}
+\newcommand{\GLX@@glsr}{}
+\def\GLX@@glsr(#1){%
+  \@ifnextchar[{\GLX@@glss(#1)}{\GLX@@@gls(#1)[\GLX@gldef@page]}}
+\newcommand{\GLX@@glss}{}
+\def\GLX@@glss(#1)[#2]{%
+  \GLX@@@gls(#1)[#2]}
+\newcommand{\GLX@@@gls}{}
+\def\GLX@@@gls(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{a}\GLX@do@acs{#3}{#1}}
+\newcommand{\GLX@glsS}{%
+  \@ifnextchar({\GLX@@glsSr}{%
+    \@ifnextchar[{\GLX@@glsSs(\GLX@gldef@list)}{%
+      \GLX@@@glsS(\GLX@gldef@list)[\GLX@gldef@page]}}}
+\newcommand{\GLX@@glsSr}{}
+\def\GLX@@glsSr(#1){%
+  \@ifnextchar[{\GLX@@glsSs(#1)}{\GLX@@@glsS(#1)[\GLX@gldef@page]}}
+\newcommand{\GLX@@glsSs}{}
+\def\GLX@@glsSs(#1)[#2]{%
+  \GLX@@@glsS(#1)[#2]}
+\newcommand{\GLX@@@glsS}{}
+\def\GLX@@@glsS(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{n}\GLX@do@acs{#3}{#1}}
+\DeclareRobustCommand\ac{%
+  \@ifstar{\GLX@acS}{\GLX@ac}}
+\newcommand{\GLX@ac}{%
+  \@ifnextchar,{\GLX@@acc}{%
+    \@ifnextchar<{\GLX@@aca,\relax,\relax,}{%
+      \@ifnextchar({\GLX@@acr,\relax,\relax,<>}{%
+        \@ifnextchar[{\GLX@@acs,\relax,\relax,<>(\GLX@acdef@list)}{%
+          \GLX@@@ac,\relax,\relax,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}}
+\newcommand{\GLX@@acc}{}
+\def\GLX@@acc,#1,#2,{%
+  \@ifnextchar<{\GLX@@aca,#1,#2,}{%
+    \@ifnextchar({\GLX@@acr,#1,#2,<>}{%
+      \@ifnextchar[{\GLX@@acs,#1,#2,<>(\GLX@acdef@list)}{%
+        \GLX@@@ac,#1,#2,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}
+\newcommand{\GLX@@aca}{}
+\def\GLX@@aca,#1,#2,<#3>{%
+  \@ifnextchar({\GLX@@acr,#1,#2,<#3>}{%
+    \@ifnextchar[{\GLX@@acs,#1,#2,<#3>(\GLX@acdef@list)}{%
+      \GLX@@@ac,#1,#2,<#3>(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acr}{}
+\def\GLX@@acr,#1,#2,<#3>(#4){%
+  \@ifnextchar[{\GLX@@acs,#1,#2,<#3>(#4)}{%
+    \GLX@@@ac,#1,#2,<#3>(#4)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acs}{}
+\def\GLX@@acs,#1,#2,<#3>(#4)[#5]{%
+  \GLX@@@ac,#1,#2,<#3>(#4)[#5]}
+\newcommand{\GLX@@@ac}{}
+\def\GLX@@@ac,#1,#2,<#3>(#4)[#5]#6{%
+  \GLX@do@glosstex{#6}{#5}{#4}{a}\GLX@do@ac{#6}{#4}{#3}{#1}{#2}}
+\newcommand{\GLX@acS}{%
+  \@ifnextchar,{\GLX@@acSc}{%
+    \@ifnextchar<{\GLX@@acSa,\relax,\relax,}{%
+      \@ifnextchar({\GLX@@acSr,\relax,\relax,<>}{%
+        \@ifnextchar[{\GLX@@acSs,\relax,\relax,<>(\GLX@acdef@list)}{%
+          \GLX@@@acS,\relax,\relax,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}}
+\newcommand{\GLX@@acSc}{}
+\def\GLX@@acSc,#1,#2,{%
+  \@ifnextchar<{\GLX@@acSa,#1,#2,}{%
+    \@ifnextchar({\GLX@@acSr,#1,#2,<>}{%
+      \@ifnextchar[{\GLX@@acSs,#1,#2,<>(\GLX@acdef@list)}{%
+        \GLX@@@acS,#1,#2,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}
+\newcommand{\GLX@@acSa}{}
+\def\GLX@@acSa,#1,#2,<#3>{%
+  \@ifnextchar({\GLX@@acSr,#1,#2,<#3>}{%
+    \@ifnextchar[{\GLX@@acSs,#1,#2,<#3>(\GLX@acdef@list)}{%
+      \GLX@@@acS,#1,#2,<#3>(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acSr}{}
+\def\GLX@@acSr,#1,#2,<#3>(#4){%
+  \@ifnextchar[{\GLX@@acSs,#1,#2,<#3>(#4)}{%
+    \GLX@@@acS,#1,#2,<#3>(#4)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acSs}{}
+\def\GLX@@acSs,#1,#2,<#3>(#4)[#5]{%
+  \GLX@@@acS,#1,#2,<#3>(#4)[#5]}
+\newcommand{\GLX@@@acS}{}
+\def\GLX@@@acS,#1,#2,<#3>(#4)[#5]#6{%
+  \GLX@do@glosstex{#6}{#5}{#4}{n}\GLX@do@ac{#6}{#4}{#3}{#1}{#2}}
+\DeclareRobustCommand\acs{%
+  \@ifstar{\GLX@acsS}{\GLX@acs}}
+\newcommand{\GLX@acs}{%
+  \@ifnextchar({\GLX@@acsr}{%
+    \@ifnextchar[{\GLX@@acss(\GLX@acdef@list)}{%
+      \GLX@@@acs(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acsr}{}
+\def\GLX@@acsr(#1){%
+  \@ifnextchar[{\GLX@@acss(#1)}{\GLX@@@acs(#1)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acss}{}
+\def\GLX@@acss(#1)[#2]{%
+  \GLX@@@acs(#1)[#2]}
+\newcommand{\GLX@@@acs}{}
+\def\GLX@@@acs(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{a}\GLX@do@acs{#3}{#1}}
+\newcommand{\GLX@acsS}{%
+  \@ifnextchar({\GLX@@acsSr}{%
+    \@ifnextchar[{\GLX@@acsSs(\GLX@acdef@list)}{%
+      \GLX@@@acsS(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acsSr}{}
+\def\GLX@@acsSr(#1){%
+  \@ifnextchar[{\GLX@@acsSs(#1)}{\GLX@@@acsS(#1)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acsSs}{}
+\def\GLX@@acsSs(#1)[#2]{%
+  \GLX@@acsS(#1)[#2]}
+\newcommand{\GLX@@@acsS}{}
+\def\GLX@@@acsS(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{n}\GLX@do@acs{#3}{#1}}
+\DeclareRobustCommand\acl{%
+  \@ifstar{\GLX@aclS}{\GLX@acl}}
+\newcommand{\GLX@acl}{%
+  \@ifnextchar({\GLX@@aclr}{%
+    \@ifnextchar[{\GLX@@acls(\GLX@acdef@list)}{%
+      \GLX@@@acl(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@aclr}{}
+\def\GLX@@aclr(#1){%
+  \@ifnextchar[{\GLX@@acls(#1)}{\GLX@@@acl(#1)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acls}{}
+\def\GLX@@acls(#1)[#2]{%
+  \GLX@@@acl(#1)[#2]}
+\newcommand{\GLX@@@acl}{}
+\def\GLX@@@acl(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{a}\GLX@do@acl{#3}{#1}}
+\newcommand{\GLX@aclS}{%
+  \@ifnextchar({\GLX@@aclSr}{%
+    \@ifnextchar[{\GLX@@aclSs(\GLX@acdef@list)}{%
+      \GLX@@@aclS(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@aclSr}{}
+\def\GLX@@aclSr(#1){%
+  \@ifnextchar[{\GLX@@aclSs(#1)}{\GLX@@@aclS(#1)[\GLX@acdef@page]}}
+\newcommand{\GLX@@aclSs}{}
+\def\GLX@@aclSs(#1)[#2]{%
+  \GLX@@@aclS(#1)[#2]}
+\newcommand{\GLX@@@aclS}{}
+\def\GLX@@@aclS(#1)[#2]#3{\GLX@do@glosstex{#3}{#2}{#1}{n}\GLX@do@acl{#3}{#1}}
+\DeclareRobustCommand\acf{%
+  \@ifstar{\GLX@acfS}{\GLX@acf}}
+\newcommand{\GLX@acf}{%
+  \@ifnextchar,{\GLX@@acfc}{%
+    \@ifnextchar<{\GLX@@acfa,\relax,\relax,}{%
+      \@ifnextchar({\GLX@@acfr,\relax,\relax,<>}{%
+        \@ifnextchar[{\GLX@@acfs,\relax,\relax,<>(\GLX@acdef@list)}{%
+          \GLX@@@acf,\relax,\relax,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}}
+\newcommand{\GLX@@acfc}{}
+\def\GLX@@acfc,#1,#2,{%
+  \@ifnextchar<{\GLX@@acfa,#1,#2,}{%
+    \@ifnextchar({\GLX@@acfr,#1,#2,<>}{%
+      \@ifnextchar[{\GLX@@acfs,#1,#2,<>(\GLX@acdef@list)}{%
+        \GLX@@@acf,#1,#2,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}
+\newcommand{\GLX@@acfa}{}
+\def\GLX@@acfa,#1,#2,<#3>{%
+  \@ifnextchar({\GLX@@acfr,#1,#2,<#3>}{%
+    \@ifnextchar[{\GLX@@acfs,#1,#2,<#3>(\GLX@acdef@list)}{%
+      \GLX@@@acf,#1,#2,<#3>(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acfr}{}
+\def\GLX@@acfr,#1,#2,<#3>(#4){%
+  \@ifnextchar[{\GLX@@acfs,#1,#2,<#3>(#4)}{%
+    \GLX@@@acf,#1,#2,<#3>(#4)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acfs}{}
+\def\GLX@@acfs,#1,#2,<#3>(#4)[#5]{%
+  \GLX@@@acf,#1,#2,<#3>(#4)[#5]}
+\newcommand{\GLX@@@acf}{}
+\def\GLX@@@acf,#1,#2,<#3>(#4)[#5]#6{%
+  \GLX@do@glosstex{#6}{#5}{#4}{a}\GLX@do@acf{#6}{#4}{#3}{#1}{#2}}
+\newcommand{\GLX@acfS}{%
+  \@ifnextchar,{\GLX@@acfSc}{%
+    \@ifnextchar<{\GLX@@acfSa,\relax,\relax,}{%
+      \@ifnextchar({\GLX@@acfSr,\relax,\relax,<>}{%
+        \@ifnextchar[{\GLX@@acfSs,\relax,\relax,<>(\GLX@acdef@list)}{%
+          \GLX@@@acfS,\relax,\relax,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}}
+\newcommand{\GLX@@acfSc}{}
+\def\GLX@@acfSc,#1,#2,{%
+  \@ifnextchar<{\GLX@@acfSa,#1,#2,}{%
+    \@ifnextchar({\GLX@@acfSr,#1,#2,<>}{%
+      \@ifnextchar[{\GLX@@acfSs,#1,#2,<>(\GLX@acdef@list)}{%
+        \GLX@@@acfS,#1,#2,<>(\GLX@acdef@list)[\GLX@acdef@page]}}}}
+\newcommand{\GLX@@acfSa}{}
+\def\GLX@@acfSa,#1,#2,<#3>{%
+  \@ifnextchar({\GLX@@acfSr,#1,#2,<#3>}{%
+    \@ifnextchar[{\GLX@@acfSs,#1,#2,<#3>(\GLX@acdef@list)}{%
+      \GLX@@@acfS,#1,#2,<#3>(\GLX@acdef@list)[\GLX@acdef@page]}}}
+\newcommand{\GLX@@acfSr}{}
+\def\GLX@@acfSr,#1,#2,<#3>(#4){%
+  \@ifnextchar[{\GLX@@acfSs,#1,#2,<#3>(#4)}{%
+    \GLX@@@acfS,#1,#2,<#3>(#4)[\GLX@acdef@page]}}
+\newcommand{\GLX@@acfSs}{}
+\def\GLX@@acfSs,#1,#2,<#3>(#4)[#5]{%
+  \GLX@@@acfS,#1,#2,<#3>(#4)[#5]}
+\newcommand{\GLX@@@acfS}{}
+\def\GLX@@@acfS,#1,#2,<#3>(#4)[#5]#6{%
+  \GLX@do@glosstex{#6}{#5}{#4}{n}\GLX@do@acf{#6}{#4}{#3}{#1}{#2}}
+\newcommand{\GLX@entry}[5]{\relax}
+\newcommand{\GLX@do@glosstex}[4]{%
+  \protected@write\@auxout{}%
+  {\string\GLX@entry{#1}{#2}{#3}{#4}{\thepage}}}
+\newcommand{\GLX@do@acs}[2]{%
+  \expandafter\ifx\csname GLX@term@#1\endcsname\relax%
+    \textbf{#1!}%
+    \PackageWarning{glosstex}{Term `#1' is not defined}%
+    \gdef\GLX@undefined@term{x}%
+    \expandafter\gdef\csname GLX@term@#1\endcsname{\textbf{#1!}}%
+  \else%
+    \GLX@output@short{#1}{#2}{\csname GLX@term@#1\endcsname}%
+  \fi}
+\newcommand{\GLX@do@acl}[2]{%
+  \expandafter\ifx\csname GLX@term@@#1\endcsname\relax%
+    \textbf{#1!}%
+    \PackageWarning{glosstex}{Term `#1' has no long form}%
+    \expandafter\gdef\csname GLX@term@@#1\endcsname{\textbf{#1!}}%
+  \else%
+    \GLX@output@long{#1}{#2}{\csname GLX@term@@#1\endcsname}%
+  \fi}
+\newcommand{\GLX@do@acf}[5]{%
+  \begingroup%
+  \ifthenelse{\equal{#3}{i}}{\def\GLX@il{i}\def\GLX@tf{-}}{%
+    \ifthenelse{\equal{#3}{l}}{\def\GLX@il{l}\def\GLX@tf{-}}{%
+      \ifthenelse{\equal{#3}{it}}{\def\GLX@il{i}\def\GLX@tf{t}}{%
+        \ifthenelse{\equal{#3}{if}}{\def\GLX@il{i}\def\GLX@tf{f}}{%
+          \ifthenelse{\equal{#3}{lt}}{\def\GLX@il{l}\def\GLX@tf{t}}{%
+            \ifthenelse{\equal{#3}{lf}}{\def\GLX@il{l}\def\GLX@tf{f}}{%
+              \ifthenelse{\equal{#3}{t}}{\def\GLX@il{-}\def\GLX@tf{t}}{%
+                \ifthenelse{\equal{#3}{f}}{\def\GLX@il{-}\def\GLX@tf{f}}{%
+                  \def\GLX@il{-}\def\GLX@tf{-}}%
+                }}}}}}}%
+  \ifthenelse{\boolean{@GLX@itemfirst}}%
+  {% itemfirst true
+    \ifthenelse{%
+      \equal{\GLX@itemorder{#2}}{i}}{\def\GLX@itemorder@{i}}{%
+      \ifthenelse{\equal{\GLX@itemorder{#2}}{l}}{\def\GLX@itemorder@{l}}{%
+        \ifthenelse{\equal{\GLX@il}{i}}{\def\GLX@itemorder@{i}}{}%
+        \ifthenelse{\equal{\GLX@il}{-}}{\def\GLX@itemorder@{i}}{}%
+        \ifthenelse{\equal{\GLX@il}{l}}{\def\GLX@itemorder@{l}}{}}}}%
+  {% itemfirst false
+    \ifthenelse{%
+      \equal{\GLX@itemorder{#2}}{i}}{\def\GLX@itemorder@{i}}{%
+      \ifthenelse{\equal{\GLX@itemorder{#2}}{l}}{\def\GLX@itemorder@{l}}{%
+        \ifthenelse{\equal{\GLX@il}{i}}{\def\GLX@itemorder@{i}}{}%
+        \ifthenelse{\equal{\GLX@il}{-}}{\def\GLX@itemorder@{l}}{}%
+        \ifthenelse{\equal{\GLX@il}{l}}{\def\GLX@itemorder@{l}}{}}}}%
+  \ifthenelse{\boolean{@GLX@footnote}}%
+  {% footnote true
+    \ifthenelse{%
+      \equal{\GLX@itemplacement{#2}}{t}}{\def\GLX@itemplacement@{t}}{%
+      \ifthenelse{\equal{\GLX@itemplacement{#2}}{f}}{\def\GLX@itemplacement@{f}}{%
+        \ifthenelse{\equal{\GLX@tf}{t}}{\def\GLX@itemplacement@{t}}{}%
+        \ifthenelse{\equal{\GLX@tf}{-}}{\def\GLX@itemplacement@{f}}{}%
+        \ifthenelse{\equal{\GLX@tf}{f}}{\def\GLX@itemplacement@{f}}{}}}}%
+  {% footnote false
+    \ifthenelse{%
+      \equal{\GLX@itemplacement{#2}}{t}}{\def\GLX@itemplacement@{t}}{%
+      \ifthenelse{\equal{\GLX@itemplacement{#2}}{f}}{\def\GLX@itemplacement@{f}}{%
+        \ifthenelse{\equal{\GLX@tf}{t}}{\def\GLX@itemplacement@{t}}{}%
+        \ifthenelse{\equal{\GLX@tf}{-}}{\def\GLX@itemplacement@{t}}{}%
+        \ifthenelse{\equal{\GLX@tf}{f}}{\def\GLX@itemplacement@{f}}{}}}}%
+  %
+  \ifthenelse{\equal{\GLX@itemorder@}{i}}%
+  {% itemorder i
+    \ifthenelse{\equal{\GLX@itemplacement@}{f}}%
+    {\GLX@do@acf@if{#1}{#2}}%
+    {\GLX@do@acf@it{#1}{#2}{#4}{#5}}}%
+  {% itemorder l
+    \ifthenelse{\equal{\GLX@itemplacement@}{f}}%
+    {\GLX@do@acf@lf{#1}{#2}}%
+    {\GLX@do@acf@lt{#1}{#2}{#4}{#5}}}%
+  \endgroup}%
+\newcommand{\GLX@do@ac}[5]{%
+  \begingroup%
+  \ifthenelse{\equal{#3}{i}}{\def\GLX@il{i}\def\GLX@tf{-}}{%
+    \ifthenelse{\equal{#3}{l}}{\def\GLX@il{l}\def\GLX@tf{-}}{%
+      \ifthenelse{\equal{#3}{it}}{\def\GLX@il{i}\def\GLX@tf{t}}{%
+        \ifthenelse{\equal{#3}{if}}{\def\GLX@il{i}\def\GLX@tf{f}}{%
+          \ifthenelse{\equal{#3}{lt}}{\def\GLX@il{l}\def\GLX@tf{t}}{%
+            \ifthenelse{\equal{#3}{lf}}{\def\GLX@il{l}\def\GLX@tf{f}}{%
+              \ifthenelse{\equal{#3}{t}}{\def\GLX@il{-}\def\GLX@tf{t}}{%
+                \ifthenelse{\equal{#3}{f}}{\def\GLX@il{-}\def\GLX@tf{f}}{%
+                  \def\GLX@il{-}\def\GLX@tf{-}}%
+                }}}}}}}%
+  \ifthenelse{\boolean{@GLX@itemfirst}}%
+  {% itemfirst true
+    \ifthenelse{%
+      \equal{\GLX@itemorder{#2}}{i}}{\def\GLX@itemorder@{i}}{%
+      \ifthenelse{\equal{\GLX@itemorder{#2}}{l}}{\def\GLX@itemorder@{l}}{%
+        \ifthenelse{\equal{\GLX@il}{i}}{\def\GLX@itemorder@{i}}{}%
+        \ifthenelse{\equal{\GLX@il}{-}}{\def\GLX@itemorder@{i}}{}%
+        \ifthenelse{\equal{\GLX@il}{l}}{\def\GLX@itemorder@{l}}{}}}}%
+  {% itemfirst false
+    \ifthenelse{%
+      \equal{\GLX@itemorder{#2}}{i}}{\def\GLX@itemorder@{i}}{%
+      \ifthenelse{\equal{\GLX@itemorder{#2}}{l}}{\def\GLX@itemorder@{l}}{%
+        \ifthenelse{\equal{\GLX@il}{i}}{\def\GLX@itemorder@{i}}{}%
+        \ifthenelse{\equal{\GLX@il}{-}}{\def\GLX@itemorder@{l}}{}%
+        \ifthenelse{\equal{\GLX@il}{l}}{\def\GLX@itemorder@{l}}{}}}}%
+  \ifthenelse{\boolean{@GLX@footnote}}%
+  {% footnote true
+    \ifthenelse{%
+      \equal{\GLX@itemplacement{#2}}{t}}{\def\GLX@itemplacement@{t}}{%
+      \ifthenelse{\equal{\GLX@itemplacement{#2}}{f}}{\def\GLX@itemplacement@{f}}{%
+        \ifthenelse{\equal{\GLX@tf}{t}}{\def\GLX@itemplacement@{t}}{}%
+        \ifthenelse{\equal{\GLX@tf}{-}}{\def\GLX@itemplacement@{f}}{}%
+        \ifthenelse{\equal{\GLX@tf}{f}}{\def\GLX@itemplacement@{f}}{}}}}%
+  {% footnote false
+    \ifthenelse{%
+      \equal{\GLX@itemplacement{#2}}{t}}{\def\GLX@itemplacement@{t}}{%
+      \ifthenelse{\equal{\GLX@itemplacement{#2}}{f}}{\def\GLX@itemplacement@{f}}{%
+        \ifthenelse{\equal{\GLX@tf}{t}}{\def\GLX@itemplacement@{t}}{}%
+        \ifthenelse{\equal{\GLX@tf}{-}}{\def\GLX@itemplacement@{t}}{}%
+        \ifthenelse{\equal{\GLX@tf}{f}}{\def\GLX@itemplacement@{f}}{}}}}%
+  %
+  \ifthenelse{\equal{\GLX@itemorder@}{i}}%
+  {% itemorder i
+    \ifthenelse{\equal{\GLX@itemplacement@}{f}}%
+    {\expandafter\ifx\csname GLX@terml@#1\endcsname\relax%
+        \GLX@do@acf@if{#1}{#2}%
+        \expandafter\gdef\csname GLX@terml@#1\endcsname{x}%
+      \else%
+        \GLX@do@acs{#1}{#2}%
+      \fi}%
+    {\expandafter\ifx\csname GLX@terml@#1\endcsname\relax%
+        \GLX@do@acf@it{#1}{#2}{#4}{#5}%
+        \expandafter\gdef\csname GLX@terml@#1\endcsname{x}%
+      \else%
+        \GLX@do@acs{#1}{#2}%
+      \fi}}%
+  {% itemorder l
+    \ifthenelse{\equal{\GLX@itemplacement@}{f}}%
+    {\expandafter\ifx\csname GLX@terml@#1\endcsname\relax%
+        \GLX@do@acf@lf{#1}{#2}%
+        \expandafter\gdef\csname GLX@terml@#1\endcsname{x}%
+      \else%
+        \GLX@do@acs{#1}{#2}%
+      \fi}%
+    {\expandafter\ifx\csname GLX@terml@#1\endcsname\relax%
+        \GLX@do@acf@lt{#1}{#2}{#4}{#5}%
+        \expandafter\gdef\csname GLX@terml@#1\endcsname{x}%
+      \else%
+        \GLX@do@acs{#1}{#2}%
+      \fi}}%
+  \endgroup}
+\newcommand{\GLX@do@acf@it}[4]{%
+  \GLX@do@acs{#1}{#2}%
+  \expandafter\ifx\csname GLX@term@@#1\endcsname\relax%
+  \else\nolinebreak[3]\space%
+  \ifthenelse{\equal{#3}{\relax}}{%
+    \expandafter\ifx\csname GLX@paren@l@#2\endcsname\relax%
+      \GLX@paren@l%
+    \else%
+      \expandafter\csname GLX@paren@l@#2\endcsname%
+    \fi}{#3}%
+  \GLX@do@acl{#1}{#2}%
+  \ifthenelse{\equal{#4}{\relax}}{%
+    \expandafter\ifx\csname GLX@paren@r@#2\endcsname\relax%
+      \GLX@paren@r%
+    \else%
+      \expandafter\csname GLX@paren@r@#2\endcsname%
+    \fi}{#4}%
+  \fi}%
+\newcommand{\GLX@do@acf@if}[2]{%
+  \GLX@do@acs{#1}{#2}%
+  \expandafter\ifx\csname GLX@term@@#1\endcsname\relax%
+  \else\nolinebreak[3]\footnote{\GLX@do@acl{#1}{#2}}\fi}%
+\newcommand{\GLX@do@acf@lt}[4]{%
+  \expandafter\ifx\csname GLX@term@@#1\endcsname\relax%
+  \else\GLX@do@acl{#1}{#2}\fi%
+  \nolinebreak[3]\space%
+  \ifthenelse{\equal{#3}{\relax}}{%
+    \expandafter\ifx\csname GLX@paren@l@#2\endcsname\relax%
+      \GLX@paren@l%
+    \else%
+      \expandafter\csname GLX@paren@l@#2\endcsname%
+    \fi}{#3}%
+  \GLX@do@acs{#1}{#2}%
+  \ifthenelse{\equal{#4}{\relax}}{%
+    \expandafter\ifx\csname GLX@paren@r@#2\endcsname\relax%
+      \GLX@paren@r%
+    \else%
+      \expandafter\csname GLX@paren@r@#2\endcsname%
+    \fi}{#4}}%
+\newcommand{\GLX@do@acf@lf}[2]{%
+  \expandafter\ifx\csname GLX@term@@#1\endcsname\relax%
+  \else\GLX@do@acl{#1}{#2}\fi%
+  \footnote{\GLX@do@acs{#1}{#2}}}%
+\newcommand{\GLX@newterm}[3]{%
+  \expandafter\gdef\csname GLX@term@#1\endcsname{#2}%
+  \ifx#3\empty%
+  \else\expandafter\gdef\csname GLX@term@@#1\endcsname{#3}\fi}%
+\newenvironment{theglosstex}[2]{%
+  \gdef\GLX@theglosstex@list{#1}%
+  \gdef\GLX@theglosstex@pagerefmode{#2}%
+  \csname GLX@benv@#1\endcsname%
+  \DeclareRobustCommand{\glxref}{%
+    \@ifstar{\GLX@glxrefS}{\GLX@glxref}}%
+  \newcommand{\GLX@glxref}[1]{%
+    \GLX@do@glosstex{##1}{n}{\GLX@theglosstex@list}{a}%
+    \GLX@do@acs{##1}{\GLX@theglosstex@list}}%
+  \newcommand{\GLX@glxrefS}[1]{%
+    \GLX@do@glosstex{##1}{n}{\GLX@theglosstex@list}{a}}%
+  \newcommand{\GlossTeXEntry}[7]{%
+    \GLX@newterm{##1}{##2}{##3}%
+    \write\@auxout{\string\GLX@newterm{##1}{##2}{##3}}%
+    \ifthenelse{\equal{#1}{##5}}{%
+      \ifthenelse{\equal{a}{##6}}{%
+        \csname GLX@item@#1\endcsname%
+        {##1}{##2}{##3}{##4}{##5}{##6}{##7}}{}%
+      }{}}}{%
+  \csname GLX@eenv@\GLX@theglosstex@list\endcsname}%
+\DeclareRobustCommand\printglosstex{\GLX@printglosstex}
+\newcommand{\GLX@printglosstex}{%
+  \@ifnextchar({\GLX@@printglosstexr}{%
+    \@ifnextchar[{\GLX@@printglosstexs(glo)}{%
+      \GLX@@@printglosstex[p](glo)}}}
+\newcommand{\GLX@@printglosstexr}{}
+\def\GLX@@printglosstexr(#1){%
+  \@ifnextchar[{\GLX@@printglosstexs(#1)}{%
+    \GLX@@@printglosstex(#1)[p]}}
+\newcommand{\GLX@@printglosstexs}{}
+\def\GLX@@printglosstexs(#1)[#2]{%
+  \GLX@@@printglosstex(#1)[#2]}
+\newcommand{\GLX@@@printglosstex}{}
+\def\GLX@@@printglosstex(#1)[#2]{\GLX@do@printglosstex{#1}{#2}}
+\newcommand{\GLX@do@printglosstex}[2]{%
+  \expandafter\ifx\csname GLX@heading@#1\endcsname\relax%
+    \textbf{#1!}%
+    \PackageWarning{glosstex}{Heading for list `#1' is not defined}%
+    \expandafter\gdef\csname GLX@heading@#1\endcsname{\textbf{#1!}}%
+  \else%
+    \csname GLX@heading@#1\endcsname%
+    \IfFileExists{\jobname.glx}{%
+      \begin{theglosstex}{#1}{#2}%
+        \input{\jobname.glx}%
+      \end{theglosstex}}%
+    {\typeout{No file \jobname.glx}}%
+  \fi}
+\newcommand{\glxgldefault}[2]{%
+  \gdef\GLX@gldef@list{#1}%
+  \gdef\GLX@gldef@page{#2}}
+\newcommand{\glxacdefault}[2]{%
+  \gdef\GLX@acdef@list{#1}%
+  \gdef\GLX@acdef@page{#2}}
+\newcommand{\glxitemorderdefault}[2]{%
+  \expandafter\gdef\csname GLX@itemorder@#1\endcsname{#2}}
+\newcommand{\glxitemplacementdefault}[2]{%
+  \expandafter\gdef\csname GLX@itemplacement@#1\endcsname{#2}}
+\newcommand{\GLX@itemorder}[1]{%
+  \expandafter\ifx\csname GLX@itemorder@#1\endcsname\relax%
+    \PackageWarning{glosstex}{Item order for list `#1' not defined}%
+    \expandafter\gdef\csname GLX@itemorder@#1\endcsname{\textbf{#1!}}%
+  \else%
+    \csname GLX@itemorder@#1\endcsname%
+  \fi}
+\newcommand{\GLX@itemplacement}[1]{%
+  \expandafter\ifx\csname GLX@itemplacement@#1\endcsname\relax%
+    \PackageWarning{glosstex}{Item placement for list `#1' not defined}%
+    \expandafter\gdef\csname GLX@itemplacement@#1\endcsname{\textbf{#1!}}%
+  \else%
+    \csname GLX@itemplacement@#1\endcsname%
+  \fi}
+\newcommand{\glxparendefault}[2]{%
+  \gdef\GLX@paren@l{#1}%
+  \gdef\GLX@paren@r{#2}}
+\newcommand{\glxparenlistdefault}[3]{%
+  \expandafter\gdef\csname GLX@paren@l@#1\endcsname{#2}%
+  \expandafter\gdef\csname GLX@paren@r@#1\endcsname{#3}}
+\newcommand*{\glxheading}[2]{%
+  \expandafter\gdef\csname GLX@heading@#1\endcsname{#2}}
+\InputIfFileExists{glosstex.std}{%
+  \typeout{Using the standard configuration file glosstex.std}}{%
+  \PackageWarning{glosstex}{%
+    File glosstex.std not found. I can't stand it no more}}
+\InputIfFileExists{glosstex.cfg}{%
+  \typeout{Using the configuration file glosstex.cfg}}{}
+\endinput
+%%
+%% End of file `glosstex.sty'.
