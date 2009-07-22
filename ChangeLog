@@ -1,3 +1,10 @@
+version: 0.29
+date: Wed Jul 22 15:14:01 CEST 2009
+    - new version of Laurent expansion based exact summation
+    - minor compilation and bug fixes
+    - add semigroup_holes application
+    - add vector_partition_chambers application
+---
 version: 0.28
 date: Thu Oct 16 21:56:01 CEST 2008
 changes:
