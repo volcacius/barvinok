@@ -2710,7 +2710,7 @@ int main(int argc, char **argv)
 	{ &verify_argp,    	0,	"verification",	1 },
 	{ 0 }
     };
-    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
+    static struct argp argp = { argp_options, &parse_opt, 0, 0, argp_children };
     struct barvinok_options *bv_options;
 
     bv_options = barvinok_options_new_with_defaults();
@@ -2819,7 +2819,7 @@ struct check_poly_lexmin_data : public check_poly_data {
     check_poly_lexmin_data(Polyhedron *S, Value *z,
 			   vector<max_term*>& maxima) : S(S), maxima(maxima) {
 	this->z = z;
-	this->check = check_poly_lexmin;
+	this->check = &check_poly_lexmin;
     }
 };
 
