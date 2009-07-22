@@ -3940,6 +3940,38 @@ which is the same value as the one we found in
 Example~\ref{ex:laurent:old}.
 \end{example}
 
+To compare the difference between the old implementation described
+in \autoref{s:laurent:old} and the new implementation described here,
+we repeat the experiments of \shortciteN{Verdoolaege2008weighted}.
+The new experiments were performed on the same hardware (Intel Core2)
+as the old experiments, but using barvinok version
+{\tt barvinok-0.28-45-ga380232}.
+It should be noted that the running times reported by
+\shortciteN{Verdoolaege2008weighted} had been mistakenly scaled down
+by a factor of $0.6$.
+The experiments were cut off at 10 minutes (600 seconds).
+The new results are shown in Figures~\ref{f:sum} and~\ref{f:sum:p}.
+The time measuring resolution is 0.01s, so very short execution times are not
+measured very accurately, resulting in some anomalies in the graphs.
+In the non-parametric triangle experiment in \autoref{f:sum},
+the new Laurent methods is by far the best.
+For the parametric triangle, Euler-Maclaurin still beats Laurent,
+but the new version is getting much closer than the old version.
+
+\begin{figure}
+\includegraphics[width=0.9\textwidth]{sum}
+\caption{Execution times for summing a monomial over a diffiuclt
+non-parametric triangle}
+\label{f:sum}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=0.9\textwidth]{sum_p}
+\caption{Execution times for summing a monomial over a difficult
+parametric triangle}
+\label{f:sum:p}
+\end{figure}
+
 \subsection{Conversion to ``standard form''}
 \label{s:standard}
 
