@@ -522,10 +522,10 @@ void neg_left_hermite(Matrix *A, Matrix **H_p, Matrix **Q_p, Matrix **U_p)
  */
 Polyhedron *remove_equalities(Polyhedron *P, unsigned MaxRays)
 {
+    Matrix M;
+    Matrix *T;
     Polyhedron *Q = Polyhedron_Copy(P);
     unsigned dim = P->Dimension;
-    Matrix *m1, *m2;
-    int i;
 
     if (Q->NbEq == 0)
 	return Q;
@@ -534,21 +534,16 @@ Polyhedron *remove_equalities(Polyhedron *P, unsigned MaxRays)
     if (emptyQ2(Q))
 	return Q;
 
-    m1 = Matrix_Alloc(dim, dim);
-    for (i = 0; i < Q->NbEq; ++i)
-	Vector_Copy(Q->Constraint[i]+1, m1->p[i], dim);
+    Polyhedron_Matrix_View(Q, &M, Q->NbEq);
+    T = compress_variables(&M, 0);
 
-    /* m1 may not be unimodular, but we won't be throwing anything away */
-    unimodular_complete(m1, Q->NbEq);
+    if (!T)
+	P = NULL;
+    else {
+	P = Polyhedron_Preimage(Q, T, MaxRays);
+	Matrix_Free(T);
+    }
 
-    m2 = Matrix_Alloc(dim+1-Q->NbEq, dim+1);
-    for (i = Q->NbEq; i < dim; ++i)
-	Vector_Copy(m1->p[i], m2->p[i-Q->NbEq], dim);
-    value_set_si(m2->p[dim-Q->NbEq][dim], 1);
-    Matrix_Free(m1);
-
-    P = Polyhedron_Image(Q, m2, MaxRays);
-    Matrix_Free(m2);
     Polyhedron_Free(Q);
 
     return P;
