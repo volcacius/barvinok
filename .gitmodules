@@ -7,3 +7,9 @@
 [submodule "omega"]
 	path = omega
 	url = git://repo.or.cz/omega.git
+[submodule "isl"]
+	path = isl
+	url = git://repo.or.cz/isl.git
+[submodule "isl-polylib"]
+	path = isl-polylib
+	url = git://repo.or.cz/isl-polylib.git

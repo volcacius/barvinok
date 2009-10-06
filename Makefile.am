@@ -7,6 +7,14 @@ endif
 if BUNDLED_PIPLIB
     MAYBE_PIPLIB = piplib
 endif
+if BUNDLED_ISL
+    MAYBE_ISL = isl
+    ISL_LA = $(top_builddir)/isl/libisl.la
+endif
+if BUNDLED_ISL_POLYLIB
+    MAYBE_ISL = isl-polylib
+    ISL_POLYLIB_LA = $(top_builddir)/isl-polylib/libisl-polylib.la
+endif
 if BUNDLED_OMEGA
     MAYBE_OMEGA = omega
     OMEGA_LA = $(top_builddir)/omega/omega_lib/libomega.la
@@ -17,8 +25,8 @@ endif
 if USE_PARKER
     MAYBE_PARKER = parker
 endif
-SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_BERNSTEIN) \
-		$(MAYBE_OMEGA) \
+SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POYLIB) \
+		$(MAYBE_BERNSTEIN) $(MAYBE_OMEGA) \
 		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega_interface doc
 
 FORCE:
@@ -30,6 +38,10 @@ polylib/libpolylibgmp.la: FORCE
 	cd polylib; $(MAKE) $(AM_MAKEFLAGS) libpolylibgmp.la
 piplib/libpiplibMP.la: FORCE
 	cd piplib; $(MAKE) $(AM_MAKEFLAGS) libpiplibMP.la
+isl/libisl.la: FORCE
+	cd isl; $(MAKE) $(AM_MAKEFLAGS) libisl.la
+isl-polylib/libisl-polylib.la: FORCE
+	cd isl-polylib; $(MAKE) $(AM_MAKEFLAGS) libisl-polylib.la
 omega/omega_lib/libomega.la: FORCE
 	cd omega/omega_lib; $(MAKE) $(AM_MAKEFLAGS) libomega.la
 zsolve/libzsolve.la: FORCE
@@ -39,8 +51,11 @@ parker/libparker.la: FORCE
 
 AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib -Ilib \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@ \
-	      @NTL_CPPFLAGS@
+	      @NTL_CPPFLAGS@ @ISL_CFLAGS@ @ISL_POLYLIB_CFLAGS@
 AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
+
+LIB_ISL = $(ISL_LA) @ISL_LIBS@
+LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
 
 lib_LTLIBRARIES = libbarvinok-core.la libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
@@ -193,7 +208,8 @@ endif
 if USE_ZSOLVE
     ZSOLVE_LA = zsolve/libzsolve.la
 endif
-libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(POLYLIB_LA) @POLYLIB_LIBS@ \
+libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
+			     $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			     $(PIPLIB_LA) @PIPLIB_LIBS@ \
 			     $(ZSOLVE_LA) lib/libgnu.la
 libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
@@ -218,7 +234,8 @@ endif
 libbarvinok_la_LIBADD = libbarvinok-core.la $(BERNSTEIN_LA)
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
-LDADD = libbarvinok-core.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
+LDADD = libbarvinok-core.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 test_SOURCES = \
 	evalue_read.c \
@@ -286,7 +303,7 @@ barvinok_enumerate_e_CPPFLAGS = \
 barvinok_enumerate_e_LDFLAGS = $(PARKERLDFLAGS) @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
 	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok-core.la \
-	@POLYLIB_LIBS@ @PIPLIB_LIBS@
+	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
 	evalue_convert.cc \
 	evalue_convert.h \
@@ -298,7 +315,8 @@ barvinok_bound_SOURCES = \
 	verify.c
 EXTRA_barvinok_bound_SOURCES = fdstream.cc fdstream.h
 barvinok_bound_LDADD = \
-	libbarvinok-core.la libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
+	libbarvinok-core.la libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
 	barvinok_summate.cc \
 	evalue_convert.cc \
@@ -337,7 +355,8 @@ test_bound_SOURCES = \
 	verify.c
 EXTRA_test_bound_SOURCES = fdstream.cc fdstream.h
 test_bound_LDADD = \
-	libbarvinok-core.la libbarvinok.la @POLYLIB_LIBS@ @PIPLIB_LIBS@
+	libbarvinok-core.la libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 

@@ -10,6 +10,12 @@ fi
 if test -f piplib/autogen.sh; then
 	(cd piplib; ./autogen.sh)
 fi
+if test -f isl/autogen.sh; then
+	(cd isl; ./autogen.sh)
+fi
+if test -f isl-polylib/autogen.sh; then
+	(cd isl-polylib; ./autogen.sh)
+fi
 (cd bernstein; ./autogen.sh)
 if test -f omega/autogen.sh; then
 	(cd omega; ./autogen.sh)

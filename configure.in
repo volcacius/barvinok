@@ -163,6 +163,42 @@ else
 fi
 AM_CONDITIONAL(BUNDLED_PIPLIB, test $with_piplib = bundled)
 
+AX_SUBMODULE(isl,build|bundled|system,bundled)
+
+AC_SUBST(ISL_CFLAGS)
+AC_SUBST(ISL_LIBS)
+case "$with_isl" in
+bundled)
+	ISL_CFLAGS="-I\$(top_srcdir)/isl/include -I\$(top_builddir)/isl/include"
+	bv_configure_args="$bv_configure_args --with-isl-builddir=../isl"
+	;;
+build)
+	with_isl_builddir=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
+	ISL_CFLAGS="-I$isl_srcdir/include -I$with_isl_builddir/include"
+	ISL_LIBS="$with_isl_builddir/libisl.la"
+	;;
+system)
+	PKG_CHECK_MODULES([ISL], [isl])
+esac
+AM_CONDITIONAL(BUNDLED_ISL, test $with_isl = bundled)
+
+AX_SUBMODULE(isl-polylib,build|bundled|system,bundled)
+
+AC_SUBST(ISL_POLYLIB_CFLAGS)
+AC_SUBST(ISL_POLYLIB_LIBS)
+case "$with_isl_polylib" in
+bundled)
+	ISL_POLYLIB_CFLAGS="-I\$(top_srcdir)/isl-polylib/include -I\$(top_builddir)/isl-polylib/include"
+	;;
+build)
+	ISL_POLYLIB_CFLAGS="-I$isl_polylib_srcdir/include -I$with_isl_polylib_builddir/include"
+	ISL_POLYLIB_LIBS="$with_isl_polylib_builddir/libisl-polylib.la"
+	;;
+system)
+	PKG_CHECK_MODULES([ISL_POLYLIB], [isl-polylib])
+esac
+AM_CONDITIONAL(BUNDLED_ISL_POLYLIB, test $with_isl_polylib = bundled)
+
 AC_MSG_CHECKING(if the fractional representation should be used)
 AC_ARG_ENABLE(fractional, [AS_HELP_STRING([--disable-fractional],
 					  [Don't use fractional representation])],
@@ -525,6 +561,12 @@ if test $with_polylib = bundled; then
 fi
 if test $with_piplib = bundled; then
 	AC_CONFIG_SUBDIRS(piplib)
+fi
+if test $with_isl = bundled; then
+	AC_CONFIG_SUBDIRS(isl)
+fi
+if test $with_isl_polylib = bundled; then
+	AC_CONFIG_SUBDIRS(isl-polylib)
 fi
 if test x$have_ginac = xtrue; then
     AC_CONFIG_SUBDIRS(bernstein)
