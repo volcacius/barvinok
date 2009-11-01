@@ -353,15 +353,18 @@ For more information we refer to~\citeN[Section~4.4.3]{Verdoolaege2005PhD}.
 \label{a:data}
 
 Internally, we do not represent our \ai{quasi-polynomial}s
-as step-polynomials, but, similarly to \shortciteN{Loechner1999},
-as polynomials with periodic numbers for coefficients.
-However, we also allow our periodic numbers to be represented by
-fractional parts of degree-$1$ polynomials rather than
-an explicit enumeration using the \ai[\tt]{periodic} type.
+as step-polynomials, but instead as polynomials of
+fractional parts of degree-$1$ polynomials.
+However, we also allow our quasi-polynomials to be represented
+as polynomials with periodic numbers for coefficients,
+similarly to \shortciteN{Loechner1999}.
 By default, the current version of \barvinok/ uses
-\ai[\tt]{periodic}s, but this can be changed through
-the \ai[\tt]{--enable-fractional} configure option.
-In the latter case, the quasi-polynomial using fractional
+\ai[\tt]{fractional}s, but this can be changed through
+the \ai[\tt]{--disable-fractional} configure option.
+When this option is specified, the periodic numbers
+are represented as
+an explicit enumeration using the \ai[\tt]{periodic} type.
+A quasi-polynomial based on fractional
 parts can also be converted to an actual step-polynomial
 using \ai[\tt]{evalue\_frac2floor}, but this is not fully
 supported yet.
