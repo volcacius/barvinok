@@ -286,11 +286,16 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
     fclose(fin);
 
     fout = fdopen(out, "r");
-    while (fscanf(fout, "T[%d]:={", &i) == 1) {
+    while (fscanf(fout, "T[%d]:=", &i) == 1) {
+	int a, b, c;
 	struct domain *domain = ALLOC(struct domain);
 	memset(domain, 0, sizeof(*domain));
 	domain->domain.F = calloc(vertex_words, sizeof(unsigned));
 	domain->F_len = vertex_words;
+
+	c = fgetc(fout);
+	if (c == '[')
+		fscanf(fout, "%d,%d:{", &a, &b);
 
 	while (fgetc(fout) == '{') {	/* '{' or closing '}' */
 	    int c;
@@ -314,6 +319,8 @@ static Param_Polyhedron *points2triangs(Matrix *K, Polyhedron *P, Polyhedron *C,
 	}
 	if (domain->F_len)
 	    vertex_words = domain->F_len;
+	if (c == '[')
+		fgetc(fout); /* ] */
 	fgetc(fout); /* ; */
 	fgetc(fout); /* \n */
 	if (bit_vector_count(domain->domain.F, domain->F_len) > 0)
