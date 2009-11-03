@@ -299,8 +299,14 @@ convert \ai[\tt]{fractional}s to \ai[\tt]{periodic}s
 use \Omegalib/ as a preprocessor
 \\
 \ai[\tt]{--pip} & \ai[\tt]{-p} & 
+\begin{minipage}[t]{0.7\textwidth}
 \raggedright
 call \ai[\tt]{barvinok\_enumerate\_pip} instead of \ai[\tt]{barvinok\_enumerate\_e}
+\end{minipage}
+\\
+\ai[\tt]{--isl} & \ai[\tt]{-i} & 
+\raggedright
+call \ai[\tt]{barvinok\_enumerate\_isl} instead of \ai[\tt]{barvinok\_enumerate\_e}
 \end{tabular}
 
 \subsection{\texorpdfstring{\protect\ai[\tt]{barvinok\_union}}

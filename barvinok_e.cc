@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <isl_set_polylib.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
@@ -1166,6 +1167,40 @@ evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
     }
 
     return EP;
+}
+
+evalue *barvinok_enumerate_isl(Polyhedron *P,
+	  unsigned exist, unsigned nparam, struct barvinok_options *options)
+{
+	isl_ctx *ctx = isl_ctx_alloc();
+	isl_dim *dims;
+	isl_basic_set *bset;
+	isl_set *set;
+	evalue *EP = evalue_zero();
+	Polyhedron *D, *Q, *N;
+	Polyhedron *U = Universe_Polyhedron(nparam);
+
+	dims = isl_dim_set_alloc(ctx, nparam, P->Dimension - nparam - exist);
+	bset = isl_basic_set_new_from_polylib(P, dims);
+
+	set = isl_basic_set_compute_divs(bset);
+
+	D = isl_set_to_polylib(set);
+	for (Q = D; Q; Q = N) {
+		N = Q->next;
+		Q->next = 0;
+		evalue *E;
+		E = barvinok_enumerate_with_options(Q, U, options);
+		Polyhedron_Free(Q);
+		eadd(E, EP);
+		evalue_free(E);
+	}
+
+	Polyhedron_Free(U);
+	isl_set_free(set);
+	isl_ctx_free(ctx);
+
+	return EP;
 }
 
 static bool is_single(Value *row, int pos, int len)

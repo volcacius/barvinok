@@ -471,7 +471,7 @@ check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
 	@for dir in $(BEE_TESTDIRS); do \
 	    for i in $(top_srcdir)/tests/$$dir/*; do \
 		if test -f $$i; then \
-		    for options in '' '--pip' '--pip --omega'; do \
+		    for options in '' '--pip' '--pip --omega' '--isl'; do \
 			for spec in 'random' 'bf' 'df'; do \
 			    opt="--specialization=$$spec $$options"; \
 			    echo $$i $$opt; \

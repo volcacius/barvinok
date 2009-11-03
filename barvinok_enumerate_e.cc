@@ -28,6 +28,7 @@
  */
 
 struct argp_option argp_options[] = {
+    { "isl",      	    'i',    0,      0 },
     { "omega",      	    'o',    0,      0 },
     { "parker", 	    'P',    0,      0 },
     { "pip",   	    	    'p',    0,      0 },
@@ -41,6 +42,7 @@ struct argp_option argp_options[] = {
 struct arguments {
     struct verify_options    verify;
     struct convert_options   convert;
+    int isl;
     int omega;
     int parker;
     int pip;
@@ -81,6 +83,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 #else
 	error(0, 0, "--parker option not supported");
 #endif
+	break;
+    case 'i':
+	arguments->isl = 1;
 	break;
     case 'p':
 	arguments->pip = 1;
@@ -159,6 +164,7 @@ int main(int argc, char **argv)
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     arguments.verify.barvinok = options;
+    arguments.isl = 0;
     arguments.omega = 0;
     arguments.parker = 0;
     arguments.pip = 0;
@@ -224,6 +230,8 @@ int main(int argc, char **argv)
 						nparam, options->MaxRays);
 	else if (arguments.scarf)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
+	else if (arguments.isl && exist > 0)
+	    EP = barvinok_enumerate_isl(A, exist, nparam, options);
 	else if (arguments.pip && exist > 0)
 	    EP = barvinok_enumerate_pip_with_options(A, exist, nparam, options);
 	else

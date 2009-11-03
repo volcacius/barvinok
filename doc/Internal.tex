@@ -933,10 +933,11 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P,
 \end{verbatim}
 
 For enumerating parametric sets with existentially quantified variables,
-we provide two functions:
-\ai[\tt]{barvinok\_enumerate\_e}
+we provide three functions:
+\ai[\tt]{barvinok\_enumerate\_e},
+\ai[\tt]{barvinok\_enumerate\_pip}
 and
-\ai[\tt]{barvinok\_enumerate\_pip}.
+\ai[\tt]{barvinok\_enumerate\_isl}.
 \begin{verbatim}
 evalue* barvinok_enumerate_e(Polyhedron *P,
           unsigned exist, unsigned nparam, unsigned MaxRays);
@@ -946,6 +947,9 @@ evalue* barvinok_enumerate_e_with_options(Polyhedron *P,
 evalue *barvinok_enumerate_pip(Polyhedron *P,
           unsigned exist, unsigned nparam, unsigned MaxRays);
 evalue* barvinok_enumerate_pip_with_options(Polyhedron *P, 
+          unsigned exist, unsigned nparam,
+          struct barvinok_options *options);
+evalue *barvinok_enumerate_isl(Polyhedron *P, 
           unsigned exist, unsigned nparam,
           struct barvinok_options *options);
 evalue *barvinok_enumerate_scarf(Polyhedron *P,
