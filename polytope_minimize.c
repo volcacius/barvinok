@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     if (obj->Size == P->Dimension) {
 	affine = Vector_Alloc(P->Dimension+1);
 	Vector_Copy(obj->p, affine->p, P->Dimension);
-	value_set_si(affine->p[P->Dimension], 1);
+	value_set_si(affine->p[P->Dimension], 0);
     } else if (obj->Size == P->Dimension+1)
 	affine = obj;
     else
