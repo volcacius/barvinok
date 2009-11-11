@@ -661,6 +661,20 @@ void Line_Length(Polyhedron *P, Value *len)
     value_clear(neg);
 }
 
+/* Update group[k] to the group column k belongs to.
+ * When merging two groups, only the group of the current
+ * group leader is changed.  Here we change the group of
+ * the other members to also point to the group that the
+ * old group leader now points to.
+ */
+static void update_group(int *group, int *cnt, int k)
+{
+	int g = group[k];
+	while (cnt[g] == 0)
+		g = group[g];
+	group[k] = g;
+}
+
 /*
  * Factors the polyhedron P into polyhedra Q_i such that
  * the number of integer points in P is equal to the product
@@ -729,10 +743,8 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 		continue;
 	    rowgroup[j] = group[i];
 	    for (k = i+1; k < H->NbColumns && j >= pos[k]; ++k) {
-		int g = group[k];
-		while (cnt[g] == 0)
-		    g = group[g];
-		group[k] = g;
+		update_group(group, cnt, k);
+		update_group(group, cnt, i);
 		if (group[k] != group[i] && value_notzero_p(H->p[j][k])) {
 		    assert(cnt[group[k]] != 0);
 		    assert(cnt[group[i]] != 0);
