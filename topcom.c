@@ -164,15 +164,20 @@ static void compute_domain(struct domain *domain, Param_Vertices *vertices,
 			   Polyhedron *C, unsigned MaxRays)
 {
     unsigned bx;
-    int i, ix, j;
+    int ix, j;
     int nbV = bit_vector_count(domain->domain.F, domain->F_len);
-    unsigned cols = vertices->Domain->NbColumns;
-    unsigned rows = vertices->Domain->NbRows;
-    Matrix *Constraints = Matrix_Alloc(nbV * rows + C->NbConstraints, cols);
+    unsigned cols;
+    unsigned rows;
+    Matrix *Constraints;
 
-    for (i = 0, j = 0, ix = 0, bx = MSB;
-	    vertices;
-	    vertices = vertices->next, ++i) {
+    for (ix = 0, bx = MSB; !vertices->Domain; vertices = vertices->next)
+	NEXT(ix, bx);
+
+    cols = vertices->Domain->NbColumns;
+    rows = vertices->Domain->NbRows;
+    Constraints = Matrix_Alloc(nbV * rows + C->NbConstraints, cols);
+
+    for (j = 0; vertices; vertices = vertices->next) {
 	if ((domain->domain.F[ix] & bx) == bx)
 	    Vector_Copy(vertices->Domain->p[0],
 			Constraints->p[(j++)*rows], rows * cols);
