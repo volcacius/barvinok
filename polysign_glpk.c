@@ -124,6 +124,21 @@ static int constraints_affine_minmax_sign(int dir, Matrix *C, Matrix *T,
     return sign;
 }
 
+enum order_sign glpk_polyhedron_affine_sign_0D(Polyhedron *D, Matrix *T)
+{
+
+	int sgn;
+
+	POL_ENSURE_VERTICES(D);
+
+	if (emptyQ(D))
+		return order_undefined;
+
+	sgn = value_sign(T->p[0][0]);
+
+	return sgn < 0 ? order_lt : sgn == 0 ? order_eq : order_gt;
+}
+
 enum order_sign glpk_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {
@@ -132,6 +147,9 @@ enum order_sign glpk_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 
     if (emptyQ2(D))
 	return order_undefined;
+
+    if (D->Dimension == 0)
+	return glpk_polyhedron_affine_sign_0D(D, T);
 
     Polyhedron_Matrix_View(D, &M, D->NbConstraints);
     int min = constraints_affine_minmax_sign(LPX_MIN, &M, T, rational);
