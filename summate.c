@@ -378,8 +378,8 @@ static Polyhedron *Polyhedron_Insert_Columns(Polyhedron *P, unsigned pos,
 	for (i = 0; i < n; ++i)
 	    value_set_si(Q->Ray[i][1+pos+i], 1);
 	for (i = 0; i < P->NbRays; ++i) {
-	    Vector_Copy(P->Constraint[i], Q->Constraint[n+i], 1+pos);
-	    Vector_Copy(P->Constraint[i]+1+pos, Q->Constraint[n+i]+1+pos+n,
+	    Vector_Copy(P->Ray[i], Q->Ray[n+i], 1+pos);
+	    Vector_Copy(P->Ray[i]+1+pos, Q->Ray[n+i]+1+pos+n,
 			P->Dimension-pos+1);
 	}
     }
