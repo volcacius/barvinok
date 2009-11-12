@@ -3,6 +3,7 @@
 #include "bernoulli.h"
 #include "euler.h"
 #include "laurent.h"
+#include "laurent_old.h"
 #include "summate.h"
 #include "section_array.h"
 #include "remove_equalities.h"
