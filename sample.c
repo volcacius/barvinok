@@ -264,6 +264,7 @@ static Vector *product_sample(Polyhedron *P, Matrix *T,
 	Polyhedron *next = P->next;
 	P->next = NULL;
 	P_sample = Polyhedron_Sample(P, options);
+	P->next = next;
 	if (!P_sample) {
 	    Vector_Free(tmp);
 	    tmp = NULL;
@@ -272,7 +273,6 @@ static Vector *product_sample(Polyhedron *P, Matrix *T,
 	Vector_Copy(P_sample->p, tmp->p+i, P->Dimension);
 	Vector_Free(P_sample);
 	i += P->Dimension;
-	P->next = next;
     }
     if (tmp) {
 	sample = Vector_Alloc(T->NbRows + 1);
