@@ -393,12 +393,13 @@ void barvinok_count_with_options(Polyhedron *P, Value* result,
 	Q = NULL;
 	do {
 	    P = remove_equalities(P, options->MaxRays);
-	    P = DomainConstraintSimplify(P, options->MaxRays);
+	    if (P)
+		P = DomainConstraintSimplify(P, options->MaxRays);
 	    if (Q)
 		Polyhedron_Free(Q);
 	    Q = P;
-	} while (!emptyQ(P) && P->NbEq != 0);
-	if (emptyQ(P)) {
+	} while (P && !emptyQ(P) && P->NbEq != 0);
+	if (!P || emptyQ(P)) {
 	    Polyhedron_Free(P);
 	    value_set_si(*result, 0);
 	    return;
