@@ -3074,6 +3074,10 @@ Enumeration* partition2enumeration(evalue *EP)
 	return res;
     }
 
+    assert(value_zero_p(EP->d));
+    assert(EP->x.p->type == partition);
+    assert(EP->x.p->size >= 2);
+
     for (i = 0; i < EP->x.p->size/2; ++i) {
 	assert(EP->x.p->pos == EVALUE_DOMAIN(EP->x.p->arr[2*i])->Dimension);
 	en = (Enumeration *)malloc(sizeof(Enumeration));
