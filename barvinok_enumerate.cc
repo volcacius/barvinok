@@ -308,6 +308,7 @@ int main(int argc, char **argv)
     assert(M);
     C = Constraints2Polyhedron(M, bv_options->MaxRays);
     Matrix_Free(M);
+    assert(A->Dimension >= C->Dimension);
     param_name = Read_ParamNames(stdin, C->Dimension);
 
     if (options.verify.verify) {
