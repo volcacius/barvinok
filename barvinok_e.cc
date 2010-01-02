@@ -7,6 +7,8 @@
 #include "reduce_domain.h"
 #include "config.h"
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
+
 Polyhedron *unfringe (Polyhedron *P, unsigned MaxRays)
 {
     int len = P->Dimension+2;
@@ -1214,6 +1216,21 @@ evalue* barvinok_enumerate_e(Polyhedron *P, unsigned exist, unsigned nparam,
     return E;
 }
 
+static evalue *universal_zero(unsigned nparam)
+{
+    evalue *eres;
+
+    eres = ALLOC(evalue);
+    value_init(eres->d);
+    value_set_si(eres->d, 0);
+    eres->x.p = new_enode(partition, 2, nparam);
+    EVALUE_SET_DOMAIN(eres->x.p->arr[0], Universe_Polyhedron(nparam));
+    value_set_si(eres->x.p->arr[1].d, 1);
+    value_init(eres->x.p->arr[1].x.n);
+
+    return eres;
+}
+
 static evalue* barvinok_enumerate_e_r(Polyhedron *P, 
 			  unsigned exist, unsigned nparam, barvinok_options *options)
 {
@@ -1237,10 +1254,10 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 	return evalue_zero();
 
     if (nvar == 0 && nparam == 0) {
-	evalue *EP = evalue_zero();
-	barvinok_count_with_options(P, &EP->x.n, options);
-	if (value_pos_p(EP->x.n))
-	    value_set_si(EP->x.n, 1);
+	evalue *EP = universal_zero(nparam);
+	barvinok_count_with_options(P, &EP->x.p->arr[1].x.n, options);
+	if (value_pos_p(EP->x.p->arr[1].x.n))
+	    value_set_si(EP->x.p->arr[1].x.n, 1);
 	return EP;
     }
 
@@ -1261,8 +1278,8 @@ static evalue* barvinok_enumerate_e_r(Polyhedron *P,
 		break;
 	}
     if (r <  P->NbRays) {
-	evalue *EP = evalue_zero();
-	value_set_si(EP->x.n, -1);
+	evalue *EP = universal_zero(nparam);
+	value_set_si(EP->x.p->arr[1].x.n, -1);
 	return EP;
     }
 
