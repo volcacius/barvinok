@@ -140,6 +140,10 @@ int remove_all_equalities(Polyhedron **P, Polyhedron **C, Matrix **CPP, Matrix *
     if (D && D->NbEq) {
 	Polyhedron_Matrix_View(D, &M, D->NbEq);
 	CP = compress_variables(&M, 0);
+	if (!CP) {
+	    *C = replace_by_empty_polyhedron(D, D != *C);
+	    return 1;
+	}
 	transform(&Q, &D, CP, Q != *P, MaxRays);
 	nparam = CP->NbColumns-1;
     }
