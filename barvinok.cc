@@ -1246,6 +1246,10 @@ static evalue* barvinok_enumerate_cst(Polyhedron *P, Polyhedron* C,
 	value_set_si(eres->x.p->arr[1].x.n, 0);
     else
 	barvinok_count_with_options(P, &eres->x.p->arr[1].x.n, options);
+    if (value_mone_p(eres->x.p->arr[1].x.n)) {
+	value_clear(eres->x.p->arr[1].x.n);
+	value_set_si(eres->x.p->arr[1].d, -2);	/* NaN */
+    }
 
     return eres;
 }
