@@ -129,6 +129,7 @@ libbarvinok_core_la_SOURCES = \
     dpoly.h \
     euler.cc \
     euler.h \
+    evalue_isl.c \
     genfun_constructor.cc \
     genfun_constructor.h \
     $(HILBERT_C) \

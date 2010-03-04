@@ -2,12 +2,11 @@
 #define UTIL_H
 
 #include <barvinok/polylib.h>
+#include <barvinok/evalue.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#include <barvinok/evalue.h>
 
 #ifdef POL_NO_DUAL
 #define emptyQ2(P)							\

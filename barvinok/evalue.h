@@ -1,6 +1,7 @@
 #ifndef EVALUE_H
 #define EVALUE_H
 
+#include <isl_polynomial.h>
 #include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
@@ -42,6 +43,8 @@ typedef struct _evalue {
     Polyhedron *D;	/* domain    (if denominator == -1) */
   } x;
 } evalue;
+
+__isl_give isl_pw_qpolynomial *evalue2isl(__isl_take isl_dim *dim, const evalue *e);
 
 #define EVALUE_DOMAIN(ev)   	((ev).x.D)
 #define EVALUE_SET_DOMAIN(ev, D)		\

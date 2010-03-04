@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sstream>
+#include <isl_dim.h>
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "evalue_convert.h"
@@ -22,6 +23,7 @@ static struct argp_option argp_options[] = {
     { "floor",     	    'f', 0, 0, "convert fractionals to floorings" },
     { "list",   	    'l', 0, 0 },
     { "latex",   	    'L', 0, 0 },
+    { "to-isl",   	    'I', 0, 0 },
     { "range-reduction",    'R',    0,	    0 },
     0
 };
@@ -38,6 +40,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->range = 0;
 	options->list = 0;
 	options->latex = 0;
+	options->isl = 0;
 	break;
     case ARGP_KEY_FINI:
 	break;
@@ -58,6 +61,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case 'R':
 	options->range = 1;
+	break;
+    case 'I':
+	options->isl = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -410,6 +416,26 @@ static void evalue_print_latex(FILE *out, const evalue *e, int nparam,
 }
 #endif
 
+static void evalue_print_isl(FILE *out, const evalue *e, int nparam,
+			       const char **params)
+{
+	int i;
+	isl_ctx *ctx = isl_ctx_alloc();
+	isl_dim *dim = isl_dim_set_alloc(ctx, nparam, 0);
+	isl_pw_qpolynomial *pwqp;
+
+	for (i = 0; i < nparam; ++i)
+		dim = isl_dim_set_name(dim, isl_dim_param, i, params[i]);
+
+	pwqp = evalue2isl(dim, e);
+
+	isl_pw_qpolynomial_print(pwqp, out, ISL_FORMAT_ISL);
+
+	isl_pw_qpolynomial_free(pwqp);
+
+	isl_ctx_free(ctx);
+}
+
 int evalue_convert(evalue *EP, struct convert_options *options,
 		   int verbose, unsigned nparam, const char **params)
 {
@@ -432,6 +458,9 @@ int evalue_convert(evalue *EP, struct convert_options *options,
 	printed = 1;
     } else if (options->latex && params) {
 	evalue_print_latex(stdout, EP, nparam, params);
+	printed = 1;
+    } else if (options->isl && params) {
+	evalue_print_isl(stdout, EP, nparam, params);
 	printed = 1;
     } else if (options->convert) {
 	evalue_mod2table(EP, nparam);

@@ -567,6 +567,15 @@ operations on \ai[\tt]{evalue}s provided by the
 Some of these operations are extensions
 of the functions from \PolyLib/ with the same name.
 
+Most of these operation are also provided by \isl/ on
+\ai[\tt]{isl\_pw\_qpolynomial}s, which are set to replace
+\ai[\tt]{evalue}s.  Use \ai[\tt]{evalue2isl} to convert
+from \ai[\tt]{evalue}s to \ai[\tt]{isl\_pw\_qpolynomial}s.
+\begin{verbatim}
+__isl_give isl_pw_qpolynomial *evalue2isl(__isl_take isl_dim *dim,
+                                          const evalue *e);
+\end{verbatim}
+
 \begin{verbatim}
 void eadd(const evalue *e1,evalue *res);
 void emul(const evalue *e1, evalue *res);
