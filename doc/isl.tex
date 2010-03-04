@@ -22,3 +22,84 @@ Compute a closed form expression for the number of image elements
 associated to any element in the domain of the given \ai[\tt]{isl\_map}.
 The union of the cells in the resulting \ai[\tt]{isl\_pw\_qpolynomial}
 is equal to the domain of the input \ai[\tt]{isl\_map}.
+
+\subsection{Calculator}
+
+The \ai[\tt]{iscc} calculator offers an interface to some
+of the functionality provided by the \isl/ and \barvinok/
+libraries.
+The unary operations are shown in \autoref{t:iscc:unary},
+while the binary operations are shown in \autoref{t:iscc:binary}.
+Here is a small example:
+\begin{verbatim}
+P := [n, m] -> { [i,j] : 0 <= i <= n and i <= j <= m };
+card P;
+\end{verbatim}
+
+\begin{table}
+\begin{tabular}{lllp{0.5\textwidth}}
+Name & Argument type & Result type & Meaning
+\\
+\hline
+\ai[\tt]{card} & set & pw quasipolynomial &
+number of elements in the set
+\\
+\ai[\tt]{card} & map & pw quasipolynomial &
+number of elements in the image of a domain element
+\\
+\ai[\tt]{dom} & map & set &
+domain of map
+\\
+\ai[\tt]{ran} & map & set &
+range of map
+\\
+\ai[\tt]{lexmin} & set & set &
+lexicographically minimal element of a set
+\\
+\ai[\tt]{lexmin} & map & map &
+lexicographically minimal image element
+\\
+\ai[\tt]{lexmax} & set & set &
+lexicographically maximal element of a set
+\\
+\ai[\tt]{lexmax} & map & map &
+lexicographically maximal image element
+\\
+\ai[\tt]{sample} & set & set &
+a sample element of the set
+\\
+\ai[\tt]{sample} & map & map &
+a sample element of the map
+\\
+\end{tabular}
+\caption{\protect\ai[\tt]{iscc} unary operations}
+\label{t:iscc:unary}
+\end{table}
+
+\begin{table}
+\begin{tabular}{llllp{0.5\textwidth}}
+LHS type & Name & RHS type & Result type & Meaning
+\\
+\hline
+set & \ai{$+$} & set & set & union
+\\
+map & \ai{$+$} & map & map & union
+\\
+pwqp & \ai{$+$} & pwqp & pwqp & sum
+\\
+set & \ai{$-$} & set & set & set difference
+\\
+map & \ai{$-$} & map & map & set difference
+\\
+pwqp & \ai{$-$} & pwqp & pwqp & difference
+\\
+set & \ai{$*$} & set & set & intersection
+\\
+map & \ai{$*$} & map & map & intersection
+\\
+pwqp & \ai{$*$} & pwqp & pwqp & product
+\\
+\end{tabular}
+\caption{\protect\ai[\tt]{iscc} binary operations}
+\label{t:iscc:binary}
+\end{table}

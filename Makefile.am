@@ -59,7 +59,7 @@ LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
 
 lib_LTLIBRARIES = libbarvinok-core.la libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
-		  barvinok_ehrhart polytope_scan
+		  barvinok_ehrhart polytope_scan iscc
 noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
