@@ -1,11 +1,16 @@
 #ifndef BARVINOK_H
 #define BARVINOK_H
 
+#include <isl_polynomial.h>
+#include <isl_set.h>
 #include <barvinok/evalue.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+__isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set);
+__isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map);
 
 #include <barvinok/options.h>
 
