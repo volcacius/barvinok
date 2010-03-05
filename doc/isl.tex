@@ -38,10 +38,13 @@ of the functionality provided by the \isl/ and \barvinok/
 libraries.
 The unary operations are shown in \autoref{t:iscc:unary},
 while the binary operations are shown in \autoref{t:iscc:binary}.
-Here is a small example:
+Here are some examples:
 \begin{verbatim}
 P := [n, m] -> { [i,j] : 0 <= i <= n and i <= j <= m };
 card P;
+
+f := [n,m] -> { [i,j] -> i*j + n*i*i*j : i,j >= 0 and 5i + 27j <= n+m };
+sum f;
 \end{verbatim}
 
 \begin{table}
@@ -78,6 +81,9 @@ a sample element of the set
 \\
 \ai[\tt]{sample} & map & map &
 a sample element of the map
+\\
+\ai[\tt]{sum} & pw qp & pw qp &
+sum over all integer points in the domain
 \\
 \end{tabular}
 \caption{\protect\ai[\tt]{iscc} unary operations}

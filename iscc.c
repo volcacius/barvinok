@@ -87,6 +87,8 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &set_sample } },
 	{"sample",	{ -1,	isl_obj_map,	isl_obj_map,
 		(isc_un_op_fn) &map_sample } },
+	{"sum",		{ -1,	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
+		(isc_un_op_fn) &isl_pw_qpolynomial_sum } },
 	NULL
 };
 
