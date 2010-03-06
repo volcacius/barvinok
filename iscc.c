@@ -5,6 +5,11 @@
 #include <isl_stream.h>
 #include <barvinok/barvinok.h>
 
+#include "config.h"
+#ifdef HAVE_GINAC
+#include <barvinok/bernstein.h>
+#endif
+
 typedef void *(*isc_bin_op_fn)(void *lhs, void *rhs);
 struct isc_bin_op {
 	enum isl_token_type	op;
@@ -89,6 +94,10 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &map_sample } },
 	{"sum",		{ -1,	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
 		(isc_un_op_fn) &isl_pw_qpolynomial_sum } },
+#ifdef HAVE_GINAC
+	{"ub",		{ -1,	isl_obj_pw_qpolynomial, isl_obj_pw_qpolynomial_fold,
+		(isc_un_op_fn) &isl_pw_qpolynomial_upper_bound } },
+#endif
 	NULL
 };
 

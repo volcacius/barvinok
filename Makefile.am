@@ -365,6 +365,9 @@ evalue_convert_SOURCES = \
 	evalue_read.c \
 	evalue_read.h \
 	$(FDSTREAM)
+iscc_LDADD = \
+	libbarvinok.la libbarvinok-core.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
