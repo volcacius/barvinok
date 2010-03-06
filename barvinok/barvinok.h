@@ -11,6 +11,8 @@ extern "C" {
 
 __isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set);
 __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map);
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
+	__isl_take isl_pw_qpolynomial *pwqp);
 
 #include <barvinok/options.h>
 

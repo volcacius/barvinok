@@ -1,3 +1,4 @@
+#include <isl_set_polylib.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "bernoulli.h"
@@ -680,6 +681,103 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 
     reduce_evalue(sum);
     return sum;
+}
+
+static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *qp,
+	void *user)
+{
+	Polyhedron *D, *P;
+	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **) user;
+	struct barvinok_options *options;
+	struct evalue_section_array sections;
+	isl_dim *dim = NULL;
+	int nvar;
+	evalue *e;
+
+	options = barvinok_options_new_with_defaults();
+
+	if (!set || !qp)
+		goto error;
+
+	e = isl_qpolynomial_to_evalue(qp);
+	if (!e)
+		goto error;
+
+	dim = isl_set_get_dim(set);
+	nvar = isl_dim_size(dim, isl_dim_set);
+	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+
+	evalue_section_array_init(&sections);
+
+	set = isl_set_make_disjoint(set);
+	D = isl_set_to_polylib(set);
+
+	for (P = D; P; P = P->next) {
+		Polyhedron *next = P->next;
+		evalue *tmp;
+		isl_pw_qpolynomial *pwqp;
+
+		P->next = NULL;
+
+		tmp = barvinok_sum_over_polytope(P, e, nvar, &sections, options);
+		assert(tmp);
+		pwqp = isl_pw_qpolynomial_from_evalue(isl_dim_copy(dim), tmp);
+		evalue_free(tmp);
+		*sum = isl_pw_qpolynomial_add(*sum, pwqp);
+
+		P->next = next;
+	}
+
+	Domain_Free(D);
+
+	free(sections.s);
+
+	isl_dim_free(dim);
+
+	evalue_free(e);
+
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+
+	barvinok_options_free(options);
+
+	return 0;
+error:
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+	barvinok_options_free(options);
+	return -1;
+}
+
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
+	__isl_take isl_pw_qpolynomial *pwqp)
+{
+	int nvar;
+	isl_dim *dim = NULL;
+	isl_pw_qpolynomial *sum;
+
+	if (!pwqp)
+		return NULL;
+
+	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
+	if (nvar == 0)
+		return pwqp;
+
+	dim = isl_pw_qpolynomial_get_dim(pwqp);
+	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+
+	sum = isl_pw_qpolynomial_zero(dim);
+
+	if (isl_pw_qpolynomial_foreach_lifted_piece(pwqp, add_guarded_qp, &sum) < 0)
+		goto error;
+
+	isl_pw_qpolynomial_free(pwqp);
+
+	return sum;
+error:
+	isl_pw_qpolynomial_free(pwqp);
+	isl_pw_qpolynomial_free(sum);
+	return NULL;
 }
 
 evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays)
