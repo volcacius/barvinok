@@ -362,7 +362,7 @@ static void read_line(struct isl_stream *s, struct isl_hash_table *table)
 	}
 
 	obj = read_expr(s, table);
-	if (obj.type == isl_obj_none)
+	if (obj.type == isl_obj_none || obj.v == NULL)
 		goto error;
 	if (isl_stream_eat(s, ';'))
 		goto error;
