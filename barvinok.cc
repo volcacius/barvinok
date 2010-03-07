@@ -1541,7 +1541,7 @@ static int basic_set_card(__isl_take isl_basic_set *bset, void *user)
 	P = isl_basic_set_to_polylib(bset);
 	E = barvinok_enumerate_with_options(P, U, options);
 
-	pwqp = evalue2isl(dim, E);
+	pwqp = isl_pw_qpolynomial_from_evalue(dim, E);
 	*sum = isl_pw_qpolynomial_add(*sum, pwqp);
 
 	evalue_free(E);

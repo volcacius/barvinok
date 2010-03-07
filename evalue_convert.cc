@@ -427,7 +427,7 @@ static void evalue_print_isl(FILE *out, const evalue *e, int nparam,
 	for (i = 0; i < nparam; ++i)
 		dim = isl_dim_set_name(dim, isl_dim_param, i, params[i]);
 
-	pwqp = evalue2isl(dim, e);
+	pwqp = isl_pw_qpolynomial_from_evalue(dim, e);
 
 	isl_pw_qpolynomial_print(pwqp, out, ISL_FORMAT_ISL);
 

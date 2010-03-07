@@ -249,7 +249,7 @@ static int verify_isl(Polyhedron *P, Polyhedron *C,
 	}
 
 	vpd.set = set;
-	vpd.pwqp = evalue2isl(isl_set_get_dim(set_C), EP);
+	vpd.pwqp = isl_pw_qpolynomial_from_evalue(isl_set_get_dim(set_C), EP);
 	vpd.error = 0;
 	if (r == 0)
 		isl_set_foreach_point(set_C, verify_point, &vpd);

@@ -191,7 +191,7 @@ static __isl_give isl_pw_qpolynomial *guarded_evalue2pwqp(__isl_take isl_set *se
 	return isl_pw_qpolynomial_alloc(set, qp);
 }
 
-__isl_give isl_pw_qpolynomial *evalue2isl(__isl_take isl_dim *dim, const evalue *e)
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_dim *dim, const evalue *e)
 {
 	int i;
 	isl_pw_qpolynomial *pwqp;

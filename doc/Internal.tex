@@ -569,11 +569,11 @@ of the functions from \PolyLib/ with the same name.
 
 Most of these operation are also provided by \isl/ on
 \ai[\tt]{isl\_pw\_qpolynomial}s, which are set to replace
-\ai[\tt]{evalue}s.  Use \ai[\tt]{evalue2isl} to convert
+\ai[\tt]{evalue}s.  Use \ai[\tt]{isl\_pw\_qpolynomial\_from\_evalue} to convert
 from \ai[\tt]{evalue}s to \ai[\tt]{isl\_pw\_qpolynomial}s.
 \begin{verbatim}
-__isl_give isl_pw_qpolynomial *evalue2isl(__isl_take isl_dim *dim,
-                                          const evalue *e);
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(
+        __isl_take isl_dim *dim, const evalue *e);
 \end{verbatim}
 
 \begin{verbatim}
