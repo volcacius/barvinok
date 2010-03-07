@@ -45,11 +45,15 @@ card P;
 
 f := [n,m] -> { [i,j] -> i*j + n*i*i*j : i,j >= 0 and 5i + 27j <= n+m };
 sum f;
+s := sum f;
+s @ [n,m] -> { [] : 0 <= n,m <= 20 };
 
 f := [n] -> { [i] -> 2*n*i - n*n + 3*n - 1/2*i*i - 3/2*i-1 :
                 (exists j : 0 <= i < 4*n-1 and 0 <= j < n and
                             2*n-1 <= i+j <= 4*n-2 and i <= 2*n-1 ) };
 ub f;
+u := ub f;
+u @ [n] -> { [] : 0 <= n <= 10 };
 \end{verbatim}
 
 \begin{table}
@@ -123,6 +127,18 @@ set & \ai{$*$} & set & set & intersection
 map & \ai{$*$} & map & map & intersection
 \\
 pwqp & \ai{$*$} & pwqp & pwqp & product
+\\
+pwqp & \ai{@} & set & pwqp &
+evaluate the piecewise quasipolynomial in each element
+of the set and return a piecewise quasipolynomial
+mapping each of the individual elements to the resulting
+constant
+\\
+pw qp fold & \ai{@} & set & pwqp &
+evaluate the piecewise quasipolynomial fold in each element
+of the set and return a piecewise quasipolynomial
+mapping each of the individual elements to the resulting
+constant
 \\
 \end{tabular}
 \caption{\protect\ai[\tt]{iscc} binary operations}

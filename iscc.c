@@ -19,6 +19,79 @@ struct isc_bin_op {
 	isc_bin_op_fn		fn;
 };
 
+struct iscc_at {
+	isl_pw_qpolynomial *pwqp;
+	isl_pw_qpolynomial *res;
+};
+
+static int eval_at(__isl_take isl_point *pnt, void *user)
+{
+	struct iscc_at *at = (struct iscc_at *) user;
+	isl_qpolynomial *qp;
+	isl_set *set;
+
+	set = isl_set_from_point(isl_point_copy(pnt));
+	qp = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(at->pwqp), pnt);
+
+	at->res = isl_pw_qpolynomial_add_disjoint(at->res,
+			isl_pw_qpolynomial_alloc(set, qp));
+
+	return 0;
+}
+
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_at(
+	__isl_take isl_pw_qpolynomial *pwqp, __isl_take isl_set *set)
+{
+	struct iscc_at at;
+
+	at.pwqp = pwqp;
+	at.res = isl_pw_qpolynomial_zero(isl_set_get_dim(set));
+
+	isl_set_foreach_point(set, eval_at, &at);
+
+	isl_pw_qpolynomial_free(pwqp);
+	isl_set_free(set);
+
+	return at.res;
+}
+
+struct iscc_fold_at {
+	isl_pw_qpolynomial_fold *pwf;
+	isl_pw_qpolynomial *res;
+};
+
+static int eval_fold_at(__isl_take isl_point *pnt, void *user)
+{
+	struct iscc_fold_at *at = (struct iscc_fold_at *) user;
+	isl_qpolynomial *qp;
+	isl_set *set;
+
+	set = isl_set_from_point(isl_point_copy(pnt));
+	qp = isl_pw_qpolynomial_fold_eval(isl_pw_qpolynomial_fold_copy(at->pwf),
+						pnt);
+
+	at->res = isl_pw_qpolynomial_add_disjoint(at->res,
+			isl_pw_qpolynomial_alloc(set, qp));
+
+	return 0;
+}
+
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_fold_at(
+	__isl_take isl_pw_qpolynomial_fold *pwf, __isl_take isl_set *set)
+{
+	struct iscc_fold_at at;
+
+	at.pwf = pwf;
+	at.res = isl_pw_qpolynomial_zero(isl_set_get_dim(set));
+
+	isl_set_foreach_point(set, eval_fold_at, &at);
+
+	isl_pw_qpolynomial_fold_free(pwf);
+	isl_set_free(set);
+
+	return at.res;
+}
+
 struct isc_bin_op bin_ops[] = {
 	{ '+',	isl_obj_set,	isl_obj_set,
 		isl_obj_set,
@@ -47,6 +120,12 @@ struct isc_bin_op bin_ops[] = {
 	{ '*',	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
 		isl_obj_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_pw_qpolynomial_mul },
+	{ '@',	isl_obj_pw_qpolynomial, isl_obj_set,
+		isl_obj_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_pw_qpolynomial_at },
+	{ '@',	isl_obj_pw_qpolynomial_fold, isl_obj_set,
+		isl_obj_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_pw_qpolynomial_fold_at },
 	0
 };
 
