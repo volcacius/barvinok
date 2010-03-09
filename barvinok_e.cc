@@ -857,8 +857,6 @@ static evalue* enumerate_vd(Polyhedron **PA,
     int nvar = P->Dimension - exist - nparam;
     Param_Polyhedron *PP = NULL;
     Polyhedron *C = Universe_Polyhedron(nparam);
-    Polyhedron *CEq;
-    Matrix *CT;
     Polyhedron *PR = P;
     PP = Polyhedron2Param_Polyhedron(PR, C, options);
     Polyhedron_Free(C);
@@ -1121,10 +1119,6 @@ static evalue* enumerate_vd(Polyhedron **PA,
 	value_clear(f);
     }
 
-    if (CEq)
-	Polyhedron_Free(CEq);
-    if (CT)
-	Matrix_Free(CT);
     if (PP)
 	Param_Polyhedron_Free(PP);
     *PA = P;
