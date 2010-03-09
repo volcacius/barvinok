@@ -2,6 +2,7 @@
 #include <vector>
 #include <bernstein/bernstein.h>
 #include <bernstein/piecewise_lst.h>
+#include <isl_set_polylib.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
@@ -10,6 +11,7 @@
 
 using namespace GiNaC;
 using namespace bernstein;
+using namespace barvinok;
 
 using std::pair;
 using std::vector;
@@ -692,4 +694,206 @@ piecewise_lst *evalue_bernstein_coefficients(piecewise_lst *pl_all, evalue *e,
     return pl_all;
 }
 
+static __isl_give isl_qpolynomial *qp_from_ex(__isl_take isl_dim *dim,
+	const GiNaC::ex ex, const GiNaC::exvector &params, int i)
+{
+	isl_qpolynomial *qp;
+	isl_qpolynomial *base;
+	int deg;
+	int j;
+
+	if (is_a<numeric>(ex)) {
+		numeric r = ex_to<numeric>(ex);
+		isl_int n;
+		isl_int d;
+		isl_int_init(n);
+		isl_int_init(d);
+		numeric2value(r.numer(), n);
+		numeric2value(r.denom(), d);
+		qp = isl_qpolynomial_rat_cst(dim, n, d);
+		isl_int_clear(n);
+		isl_int_clear(d);
+		return qp;
+	}
+
+	deg = ex.degree(params[i]);
+	if (deg == 0)
+		return qp_from_ex(dim, ex, params, i + 1);
+
+	base = isl_qpolynomial_var(isl_dim_copy(dim), isl_dim_param, i);
+	qp = qp_from_ex(isl_dim_copy(dim), ex.coeff(params[i], deg),
+			params, i + 1);
+
+	for (j = deg - 1; j >= 0; --j) {
+		qp = isl_qpolynomial_mul(qp, isl_qpolynomial_copy(base));
+		qp = isl_qpolynomial_add(qp,
+			    qp_from_ex(isl_dim_copy(dim), ex.coeff(params[i], j),
+					params, i + 1));
+	}
+
+	isl_qpolynomial_free(base);
+	isl_dim_free(dim);
+
+	return qp;
+}
+
+__isl_give isl_qpolynomial *isl_qpolynomial_from_ginac(__isl_take isl_dim *dim,
+	const GiNaC::ex &ex, const GiNaC::exvector &params)
+{
+	if (!dim)
+		return NULL;
+
+	return qp_from_ex(dim, ex, params, 0);
+error:
+	isl_dim_free(dim);
+	return NULL;
+}
+
+__isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_from_ginac(
+	__isl_take isl_dim *dim, enum isl_fold type, const GiNaC::lst &lst,
+	const GiNaC::exvector &params)
+{
+	isl_qpolynomial_fold *fold;
+	lst::const_iterator j;
+
+	fold = isl_qpolynomial_fold_empty(type, isl_dim_copy(dim));
+	for (j = lst.begin(); j != lst.end(); ++j) {
+		isl_qpolynomial *qp;
+		isl_qpolynomial_fold *fold_i;
+
+		qp = isl_qpolynomial_from_ginac(isl_dim_copy(dim), *j, params);
+		fold_i = isl_qpolynomial_fold_alloc(type, qp);
+		fold = isl_qpolynomial_fold_fold(fold, fold_i);
+	}
+	isl_dim_free(dim);
+	return fold;
+}
+
+__isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_fold_from_ginac(
+	__isl_take isl_dim *dim, bernstein::piecewise_lst *pl,
+	const GiNaC::exvector &params)
+{
+	enum isl_fold type;
+	isl_pw_qpolynomial_fold *pwf;
+
+	pwf = isl_pw_qpolynomial_fold_zero(isl_dim_copy(dim));
+
+	type = pl->sign > 0 ? isl_fold_max
+			    : pl->sign < 0 ? isl_fold_min : isl_fold_list;
+
+	for (int i = 0; i < pl->list.size(); ++i) {
+		isl_pw_qpolynomial_fold *pwf_i;
+		isl_qpolynomial_fold *fold;
+		isl_set *set;
+
+		set = isl_set_new_from_polylib(pl->list[i].first,
+				isl_dim_copy(dim));
+		fold = isl_qpolynomial_fold_from_ginac(isl_dim_copy(dim),
+				type, pl->list[i].second, params);
+		pwf_i = isl_pw_qpolynomial_fold_alloc(set, fold);
+		pwf = isl_pw_qpolynomial_fold_add_disjoint(pwf, pwf_i);
+	}
+
+	isl_dim_free(dim);
+
+	return pwf;
+}
+
+}
+
+struct isl_bound {
+	piecewise_lst *pl;
+	Polyhedron *U;
+	exvector vars;
+	exvector params;
+	exvector allvars;
+};
+
+static int guarded_qp_bernstein_coefficients(__isl_take isl_set *set,
+	__isl_take isl_qpolynomial *qp, void *user)
+{
+	struct isl_bound *bound = (struct isl_bound *)user;
+	Polyhedron *D;
+	struct barvinok_options *options;
+	evalue *e;
+
+	options = barvinok_options_new_with_defaults();
+
+	if (!set || !qp)
+		goto error;
+
+	e = isl_qpolynomial_to_evalue(qp);
+	if (!e)
+		goto error;
+
+	set = isl_set_make_disjoint(set);
+	D = isl_set_to_polylib(set);
+
+	bound->pl = bernstein_coefficients_relation(bound->pl, D, e, bound->U,
+			bound->allvars, bound->vars, bound->params, options);
+
+	Domain_Free(D);
+	evalue_free(e);
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+	barvinok_options_free(options);
+
+	return 0;
+error:
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+	barvinok_options_free(options);
+	return -1;
+}
+
+__isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_upper_bound(
+	__isl_take isl_pw_qpolynomial *pwqp)
+{
+	isl_dim *dim = NULL;
+	unsigned nvar;
+	unsigned nparam;
+	struct isl_bound bound;
+	struct isl_pw_qpolynomial_fold *pwf;
+
+	if (!pwqp)
+		return NULL;
+
+	dim = isl_pw_qpolynomial_get_dim(pwqp);
+	nvar = isl_dim_size(dim, isl_dim_set);
+	if (nvar == 0) {
+		isl_dim_free(dim);
+		return isl_pw_qpolynomial_fold_from_pw_qpolynomial(isl_fold_max,
+									pwqp);
+	}
+
+	nparam = isl_dim_size(dim, isl_dim_param);
+	bound.pl = NULL;
+	bound.U = Universe_Polyhedron(nparam);
+	bound.params = constructVariableVector(nparam, "p");
+	bound.vars = constructVariableVector(nvar, "v");
+	bound.allvars = bound.vars;
+	bound.allvars.insert(bound.allvars.end(),
+				bound.params.begin(), bound.params.end());
+
+	if (isl_pw_qpolynomial_foreach_lifted_piece(pwqp,
+				    guarded_qp_bernstein_coefficients, &bound))
+		goto error;
+
+	bound.pl->maximize();
+
+	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+
+	bound.pl->sign = 1;
+	pwf = isl_pw_qpolynomial_fold_from_ginac(dim, bound.pl, bound.params);
+
+	Polyhedron_Free(bound.U);
+	delete bound.pl;
+
+	isl_pw_qpolynomial_free(pwqp);
+
+	return pwf;
+error:
+	isl_pw_qpolynomial_free(pwqp);
+	isl_dim_free(dim);
+	return NULL;
 }
