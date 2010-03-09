@@ -230,3 +230,231 @@ error:
 	isl_dim_free(dim);
 	return NULL;
 }
+
+static evalue *evalue_pow(evalue *e, int exp)
+{
+	evalue *pow;
+
+	if (exp == 1)
+		return e;
+
+	pow = evalue_dup(e);
+	while (--exp > 0)
+		emul(e, pow);
+
+	evalue_free(e);
+
+	return pow;
+}
+
+static evalue *div2evalue(__isl_take isl_div *div)
+{
+	int i;
+	isl_vec *vec;
+	unsigned dim;
+	unsigned nparam;
+	evalue *e;
+	evalue *aff;
+
+	if (!div)
+		return NULL;
+
+	dim = isl_div_dim(div, isl_dim_set);
+	nparam = isl_div_dim(div, isl_dim_param);
+
+	vec = isl_vec_alloc(div->ctx, 1 + dim + nparam + 1);
+	if (!vec)
+		goto error;
+	for (i = 0; i < dim; ++i)
+		isl_div_get_coefficient(div, isl_dim_set, i, &vec->el[1 + i]);
+	for (i = 0; i < nparam; ++i)
+		isl_div_get_coefficient(div, isl_dim_param, i,
+					&vec->el[1 + dim + i]);
+	isl_div_get_denominator(div, &vec->el[0]);
+	isl_div_get_constant(div, &vec->el[1 + dim + nparam]);
+
+	e = isl_alloc_type(set->ctx, evalue);
+	if (!e)
+		goto error;
+	value_init(e->d);
+	value_set_si(e->d, 0);
+	e->x.p = new_enode(flooring, 3, -1);
+	evalue_set_si(&e->x.p->arr[1], 0, 1);
+	evalue_set_si(&e->x.p->arr[2], 1, 1);
+	value_clear(e->x.p->arr[0].d);
+	aff = affine2evalue(vec->el + 1, vec->el[0], dim + nparam);
+	e->x.p->arr[0] = *aff;
+	free(aff);
+	isl_vec_free(vec);
+	isl_div_free(div);
+	return e;
+error:
+	isl_vec_free(vec);
+	isl_div_free(div);
+	return NULL;
+}
+
+static int add_term(__isl_take isl_term *term, void *user)
+{
+	int i;
+	evalue *sum = (evalue *)user;
+	unsigned nparam;
+	unsigned dim;
+	unsigned n_div;
+	isl_ctx *ctx;
+	isl_int n, d;
+	evalue *e;
+
+	if (!term)
+		return -1;
+
+	nparam = isl_term_dim(term, isl_dim_param);
+	dim = isl_term_dim(term, isl_dim_set);
+	n_div = isl_term_dim(term, isl_dim_div);
+
+	ctx = isl_term_get_ctx(term);
+	e = isl_alloc_type(ctx, evalue);
+	if (!e)
+		goto error;
+
+	isl_int_init(n);
+	isl_int_init(d);
+
+	isl_term_get_num(term, &n);
+	isl_term_get_den(term, &d);
+	value_init(e->d);
+	evalue_set(e, n, d);
+
+	for (i = 0; i < dim; ++i) {
+		evalue *pow;
+		int exp = isl_term_get_exp(term, isl_dim_set, i);
+
+		if (!exp)
+			continue;
+
+		pow = evalue_pow(evalue_var(i), exp);
+		emul(pow, e);
+		evalue_free(pow);
+	}
+
+	for (i = 0; i < nparam; ++i) {
+		evalue *pow;
+		int exp = isl_term_get_exp(term, isl_dim_param, i);
+
+		if (!exp)
+			continue;
+
+		pow = evalue_pow(evalue_var(dim + i), exp);
+		emul(pow, e);
+		evalue_free(pow);
+	}
+
+	for (i = 0; i < n_div; ++i) {
+		evalue *pow;
+		evalue *floor;
+		isl_div *div;
+		int exp = isl_term_get_exp(term, isl_dim_div, i);
+
+		if (!exp)
+			continue;
+
+		div = isl_term_get_div(term, i);
+		floor = div2evalue(div);
+		pow = evalue_pow(floor, exp);
+		emul(pow, e);
+		evalue_free(pow);
+	}
+
+	eadd(e, sum);
+	evalue_free(e);
+
+	isl_int_clear(n);
+	isl_int_clear(d);
+
+	isl_term_free(term);
+
+	return 0;
+error:
+	isl_term_free(term);
+	return -1;
+}
+
+evalue *isl_qpolynomial_to_evalue(__isl_keep isl_qpolynomial *qp)
+{
+	evalue *e;
+
+	e = evalue_zero();
+	if (!e)
+		return NULL;
+
+	if (isl_qpolynomial_foreach_term(qp, add_term, e) < 0)
+		goto error;
+
+	return e;
+error:
+	evalue_free(e);
+	return NULL;
+}
+
+static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *qp,
+	void *user)
+{
+	Polyhedron *D;
+	evalue *e = NULL;
+	evalue *f;
+	evalue *sum = (evalue *)user;
+	unsigned dim;
+
+	e = isl_alloc_type(set->ctx, evalue);
+	if (!e)
+		goto error;
+
+	D = isl_set_to_polylib(set);
+	if (!D)
+		goto error;
+
+	f = isl_qpolynomial_to_evalue(qp);
+	if (!e) {
+		Domain_Free(D);
+		goto error;
+	}
+
+	dim = isl_set_dim(set, isl_dim_param) + isl_set_dim(set, isl_dim_set);
+	value_init(e->d);
+	e->x.p = new_enode(partition, 2, D->Dimension);
+	EVALUE_SET_DOMAIN(e->x.p->arr[0], D);
+
+	value_clear(e->x.p->arr[1].d);
+	e->x.p->arr[1] = *f;
+	free(f);
+
+	eadd(e, sum);
+	evalue_free(e);
+
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+
+	return 0;
+error:
+	free(e);
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+	return -1;
+}
+
+evalue *isl_pw_qpolynomial_to_evalue(__isl_keep isl_pw_qpolynomial *pwqp)
+{
+	evalue *e;
+
+	if (!pwqp)
+		return NULL;
+	e = evalue_zero();
+
+	if (isl_pw_qpolynomial_foreach_piece(pwqp, add_guarded_qp, e))
+		goto error;
+
+	return e;
+error:
+	evalue_free(e);
+	return NULL;
+}
