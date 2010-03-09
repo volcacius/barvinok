@@ -967,7 +967,6 @@ void reduce_evalue (evalue *e) {
 
     if (e->x.p->type == partition) {
 	int i;
-	unsigned dim = -1;
 	for (i = 0; i < e->x.p->size/2; ++i) {
 	    Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2*i]);
 
