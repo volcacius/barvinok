@@ -3556,7 +3556,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     return res;
 }
 
-static Polyhedron_Insert(Polyhedron ***next, Polyhedron *Q)
+static void Polyhedron_Insert(Polyhedron ***next, Polyhedron *Q)
 {
     if (emptyQ(Q))
 	Polyhedron_Free(Q);
