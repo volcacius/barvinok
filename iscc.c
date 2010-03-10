@@ -3,12 +3,52 @@
 #include <string.h>
 #include <isl_obj.h>
 #include <isl_stream.h>
+#include <isl_obj_list.h>
 #include <barvinok/barvinok.h>
 
 #include "config.h"
 #ifdef HAVE_GINAC
 #include <barvinok/bernstein.h>
 #endif
+
+static int isl_bool_false = 0;
+static int isl_bool_true = 1;
+static int isl_bool_error = -1;
+
+static void *isl_obj_bool_copy(void *v)
+{
+	return v;
+}
+
+static void isl_obj_bool_free(void *v)
+{
+}
+
+static void isl_obj_bool_print(void *v, FILE *out)
+{
+	if (v == &isl_bool_true)
+		fprintf(out, "True");
+	else if (v == &isl_bool_false)
+		fprintf(out, "False");
+	else
+		fprintf(out, "Error");
+}
+
+static void *isl_obj_bool_add(void *v1, void *v2)
+{
+	return v1;
+}
+
+struct isl_obj_vtable isl_obj_bool_vtable = {
+	isl_obj_bool_copy,
+	isl_obj_bool_add,
+	isl_obj_bool_print,
+	isl_obj_bool_free
+};
+#define isl_obj_bool		(&isl_obj_bool_vtable)
+
+extern struct isl_obj_vtable isl_obj_list_vtable;
+#define isl_obj_list		(&isl_obj_list_vtable)
 
 typedef void *(*isc_bin_op_fn)(void *lhs, void *rhs);
 struct isc_bin_op {
@@ -370,6 +410,65 @@ error:
 	return obj;
 }
 
+static struct isl_obj transitive_closure(struct isl_ctx *ctx, struct isl_obj obj)
+{
+	struct isl_list *list;
+	int exact;
+
+	isl_assert(ctx, obj.type == isl_obj_map, goto error);
+	list = isl_list_alloc(ctx, 2);
+	if (!list)
+		goto error;
+
+	list->obj[0].type = isl_obj_map;
+	list->obj[0].v = isl_map_transitive_closure(obj.v, &exact);
+	list->obj[1].type = isl_obj_bool;
+	list->obj[1].v = exact ? &isl_bool_true : &isl_bool_false;
+	obj.v = list;
+	obj.type = isl_obj_list;
+	if (exact < 0 || !list->obj[0].v)
+		goto error;
+
+	return obj;
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
+static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
+{
+	struct isl_list *list = obj.v;
+	struct isl_token *tok;
+	int i;
+
+	tok = isl_stream_next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_VALUE) {
+		isl_stream_error(s, tok, "expecting index");
+		if (tok)
+			isl_stream_push_token(s, tok);
+		goto error;
+	}
+	i = isl_int_get_si(tok->u.v);
+	isl_token_free(tok);
+	isl_assert(s, i < list->n, goto error);
+	if (isl_stream_eat(s, ']'))
+		goto error;
+
+	obj = list->obj[i];
+	obj.v = obj.type->copy(obj.v);
+
+	isl_list_free(list);
+
+	return obj;
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -381,20 +480,26 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		obj = read_expr(s, table);
 		if (isl_stream_eat(s, ')'))
 			goto error;
-		return obj;
-	}
-
-	op = read_prefix_un_op_if_available(s);
-	if (op)
-		return read_un_op_expr(s, table, op);
-
-	name = isl_stream_read_ident_if_available(s);
-	if (name) {
-		obj = stored_obj(s->ctx, table, name);
 	} else {
-		obj = isl_stream_read_obj(s);
-		assert(obj.v);
+		op = read_prefix_un_op_if_available(s);
+		if (op)
+			return read_un_op_expr(s, table, op);
+
+		name = isl_stream_read_ident_if_available(s);
+		if (name) {
+			obj = stored_obj(s->ctx, table, name);
+		} else {
+			obj = isl_stream_read_obj(s);
+			assert(obj.v);
+		}
 	}
+
+	if (isl_stream_eat_if_available(s, '^')) {
+		if (isl_stream_eat(s, '+'))
+			goto error;
+		obj = transitive_closure(s->ctx, obj);
+	} else if (obj.type == isl_obj_list && isl_stream_eat_if_available(s, '['))
+		obj = obj_at_index(s, obj);
 
 	return obj;
 error:

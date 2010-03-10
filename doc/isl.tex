@@ -36,8 +36,7 @@ quasipolynomial that only involves the parameters.
 The \ai[\tt]{iscc} calculator offers an interface to some
 of the functionality provided by the \isl/ and \barvinok/
 libraries.
-The unary operations are shown in \autoref{t:iscc:unary},
-while the binary operations are shown in \autoref{t:iscc:binary}.
+The supported operations are shown in \autoref{t:iscc}.
 Here are some examples:
 \begin{verbatim}
 P := [n, m] -> { [i,j] : 0 <= i <= n and i <= j <= m };
@@ -54,93 +53,97 @@ f := [n] -> { [i] -> 2*n*i - n*n + 3*n - 1/2*i*i - 3/2*i-1 :
 ub f;
 u := ub f;
 u @ [n] -> { [] : 0 <= n <= 10 };
+
+m := [n] -> { [i,j] -> [i+1,j+1] : 1 <= i,j < n;
+              [i,j] -> [i+1,j-1] : 1 <= i < n and 2 <= j <= n };
+m^+;
+(m^+)[0];
 \end{verbatim}
 
 \begin{table}
-\begin{tabular}{lllp{0.5\textwidth}}
-Name & Argument type & Result type & Meaning
+\begin{tabular}{llp{0.5\textwidth}}
+Syntax & Result type & Meaning
 \\
 \hline
-\ai[\tt]{card} & set & pw quasipolynomial &
+\ai[\tt]{card} {\it set } & pw quasipolynomial &
 number of elements in the set
 \\
-\ai[\tt]{card} & map & pw quasipolynomial &
+\ai[\tt]{card} {\it map } & pw quasipolynomial &
 number of elements in the image of a domain element
 \\
-\ai[\tt]{dom} & map & set &
+\ai[\tt]{dom} {\it map } & set &
 domain of map
 \\
-\ai[\tt]{ran} & map & set &
+\ai[\tt]{ran} {\it map } & set &
 range of map
 \\
-\ai[\tt]{lexmin} & set & set &
+\ai[\tt]{lexmin} {\it set } & set &
 lexicographically minimal element of a set
 \\
-\ai[\tt]{lexmin} & map & map &
+\ai[\tt]{lexmin} {\it map } & map &
 lexicographically minimal image element
 \\
-\ai[\tt]{lexmax} & set & set &
+\ai[\tt]{lexmax} {\it set } & set &
 lexicographically maximal element of a set
 \\
-\ai[\tt]{lexmax} & map & map &
+\ai[\tt]{lexmax} {\it map } & map &
 lexicographically maximal image element
 \\
-\ai[\tt]{sample} & set & set &
+\ai[\tt]{sample} {\it set } & set &
 a sample element of the set
 \\
-\ai[\tt]{sample} & map & map &
+\ai[\tt]{sample} {\it map } & map &
 a sample element of the map
 \\
-\ai[\tt]{sum} & pw qp & pw qp &
+\ai[\tt]{sum} {\it pw\_qp } & pw qp &
 sum over all integer points in the domain
 \\
-\ai[\tt]{ub} & pw qp & pw qp fold &
+\ai[\tt]{ub} {\it pwqp } & pw qp fold &
 upper bound on the quasipolynomial over
 all integer points in the domain.
 This operation is only available if
 \ai[\tt]{GiNaC} support was compiled in.
 \\
-\end{tabular}
-\caption{\protect\ai[\tt]{iscc} unary operations}
-\label{t:iscc:unary}
-\end{table}
-
-\begin{table}
-\begin{tabular}{llllp{0.5\textwidth}}
-LHS type & Name & RHS type & Result type & Meaning
+{\it set} \ai{$+$} {\it set} & set & union
 \\
-\hline
-set & \ai{$+$} & set & set & union
+{\it map} \ai{$+$} {\it map} & map & union
 \\
-map & \ai{$+$} & map & map & union
+{\it pwqp} \ai{$+$} {\it pwqp} & pwqp & sum
 \\
-pwqp & \ai{$+$} & pwqp & pwqp & sum
+{\it set} \ai{$-$} {\it set} & set & set difference
 \\
-set & \ai{$-$} & set & set & set difference
+{\it map} \ai{$-$} {\it map} & map & set difference
 \\
-map & \ai{$-$} & map & map & set difference
+{\it pwqp} \ai{$-$} {\it pwqp} & pwqp & difference
 \\
-pwqp & \ai{$-$} & pwqp & pwqp & difference
+{\it set} \ai{$*$} {\it set} & set & intersection
 \\
-set & \ai{$*$} & set & set & intersection
+{\it map} \ai{$*$} {\it map} & map & intersection
 \\
-map & \ai{$*$} & map & map & intersection
+{\it pwqp} \ai{$*$} {\it pwqp} & pwqp & product
 \\
-pwqp & \ai{$*$} & pwqp & pwqp & product
-\\
-pwqp & \ai{@} & set & pwqp &
+{\it pwqp} \ai{@} {\it set} & pwqp &
 evaluate the piecewise quasipolynomial in each element
 of the set and return a piecewise quasipolynomial
 mapping each of the individual elements to the resulting
 constant
 \\
-pw qp fold & \ai{@} & set & pwqp &
+{\it pwqpfold} \ai{@} {\it set} & pwqp &
 evaluate the piecewise quasipolynomial fold in each element
 of the set and return a piecewise quasipolynomial
 mapping each of the individual elements to the resulting
 constant
 \\
+{\it map} \ai[\tt]{\^{}+} & list &
+compute an overapproximation of the transitive closure
+and return a list containing the overapproximation
+and a boolean that is true if the overapproximation
+is known to be exact
+\\
+{\it list} [{\it int}] & &
+the element at the given position in the list
+\\
 \end{tabular}
-\caption{\protect\ai[\tt]{iscc} binary operations}
-\label{t:iscc:binary}
+\caption{\protect\ai[\tt]{iscc} operations}
+\label{t:iscc}
 \end{table}

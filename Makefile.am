@@ -365,6 +365,10 @@ evalue_convert_SOURCES = \
 	evalue_read.c \
 	evalue_read.h \
 	$(FDSTREAM)
+iscc_SOURCES =	\
+	isl_obj_list.h \
+	isl_obj_list.c \
+	iscc.c
 iscc_LDADD = \
 	libbarvinok.la libbarvinok-core.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
