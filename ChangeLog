@@ -1,5 +1,14 @@
+version: 0.30
+date: Wed Mar 10 18:10:33 CET 2010
+changes:
+    - add isl interface and new isl based calculator
+    - barvinok_enumerate now returns NaN on infinite problems
+    - minor compilation and bug fixes
+    - support newer versions of TOPCOM
+---
 version: 0.29
 date: Wed Jul 22 15:14:01 CEST 2009
+changes:
     - new version of Laurent expansion based exact summation
     - minor compilation and bug fixes
     - add semigroup_holes application
