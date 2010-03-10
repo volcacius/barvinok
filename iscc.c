@@ -462,6 +462,7 @@ static void read_line(struct isl_stream *s, struct isl_hash_table *table)
 			return;
 	} else {
 		obj.type->print(obj.v, stdout);
+		printf("\n");
 		free_obj(obj);
 	}
 
