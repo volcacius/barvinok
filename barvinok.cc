@@ -581,7 +581,7 @@ struct enumerator : public signed_cone_consumer, public vertex_decomposer,
 
     enumerator(Polyhedron *P, unsigned dim, Param_Polyhedron *PP) :
 		vertex_decomposer(PP, *this), enumerator_base(dim, this) {
-	randomvector(P, lambda, dim);
+	randomvector(P, lambda, dim, 0);
 	den.SetLength(dim);
 	c = Vector_Alloc(dim+2);
 

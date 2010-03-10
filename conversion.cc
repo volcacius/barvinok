@@ -132,10 +132,10 @@ void rays(Polyhedron *C, mat_ZZ& rays)
     }
 }
 
-void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
+void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar, int n_try)
 {
     Value tmp;
-    int max = 10 * 16;
+    int max = 5 * 16;
     unsigned int dim = P->Dimension;
     value_init(tmp);
 
@@ -156,6 +156,8 @@ void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar)
 	}
     }
     value_clear(tmp);
+
+    max += max << n_try;
 
     lambda.SetLength(nvar);
     for (int k = 0; k < nvar; ++k) {

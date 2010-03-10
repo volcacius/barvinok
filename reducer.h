@@ -38,7 +38,7 @@ struct np_base : public signed_cone_consumer {
 	this->factor = factor;
 	barvinok_decompose(Cone, *this, options);
     }
-    virtual void init(Polyhedron *P) {
+    virtual void init(Polyhedron *P, int n_try) {
     }
     virtual void reset() {
 	assert(0);

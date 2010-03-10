@@ -15,4 +15,4 @@ Matrix *rays(Polyhedron *C);
 Matrix *rays2(Polyhedron *C);
 Matrix *zz2matrix(const mat_ZZ& rays);
 void rays(Polyhedron *C, mat_ZZ& rays);
-void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar);
+void randomvector(Polyhedron *P, vec_ZZ& lambda, int nvar, int n_try);

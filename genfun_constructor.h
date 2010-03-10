@@ -51,8 +51,8 @@ struct partial_reducer : public reducer, public gf_base {
 
 	tmp.SetLength(dim - nparam);
     }
-    virtual void init(Polyhedron *P) {
-	randomvector(P, lambda, dim - lower);
+    virtual void init(Polyhedron *P, int n_try) {
+	randomvector(P, lambda, dim - lower, n_try);
     }
     virtual void reset() {
 	gf->clear_terms();

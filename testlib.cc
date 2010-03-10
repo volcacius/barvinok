@@ -335,7 +335,7 @@ static int test_infinite_counter(struct barvinok_options *options)
 
     /* (1 -1/2 x^5 - 1/2 x^7)/(1-x) */
     infinite_counter *cnt = new infinite_counter(1, 1);
-    cnt->init(ctx);
+    cnt->init(ctx, 0);
     vec_QQ n_coeff;
     mat_ZZ n_power;
     mat_ZZ d_power;
@@ -356,7 +356,7 @@ static int test_infinite_counter(struct barvinok_options *options)
 
     /* (1 - xy)/((1-x)(1-xy)) */
     cnt = new infinite_counter(2, 3);
-    cnt->init(ctx);
+    cnt->init(ctx, 0);
     set_from_string(n_coeff, "[1/1 -1/1]");
     set_from_string(n_power, "[[0 0][1 1]]");
     set_from_string(d_power, "[[1 0][1 1]]");
@@ -369,7 +369,7 @@ static int test_infinite_counter(struct barvinok_options *options)
     delete cnt;
 
     cnt = new infinite_counter(2, 2);
-    cnt->init(ctx);
+    cnt->init(ctx, 0);
     set_from_string(n_coeff, "[-1/2 1/1 -1/3]");
     set_from_string(n_power, "[[2 6][3 6]]");
     d_power.SetDims(0, 2);
@@ -383,7 +383,7 @@ static int test_infinite_counter(struct barvinok_options *options)
     delete cnt;
 
     cnt = new infinite_counter(2, 2);
-    cnt->init(ctx);
+    cnt->init(ctx, 0);
     set_from_string(n_coeff, "[1/1]");
     set_from_string(n_power, "[[0 11]]");
     set_from_string(d_power, "[[0 1]]");

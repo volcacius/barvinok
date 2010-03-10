@@ -464,7 +464,7 @@ struct parallel_polytopes {
 	    else
 		reduced_context = Polyhedron_Copy(context);
 	    red = gf_base::create(reduced_context, dim, reduced_nparam, options);
-	    red->base->init(Q);
+	    red->base->init(Q, 0);
 	    Constraints = Matrix_Alloc(Q->NbConstraints, Q->Dimension);
 	    for (int i = 0; i < Q->NbConstraints; ++i) {
 		Vector_Copy(Q->Constraint[i]+1, Constraints->p[i], Q->Dimension);
@@ -970,13 +970,15 @@ gen_fun *gen_fun::summate(int nvar, barvinok_options *options) const
     } else
     	red = new partial_reducer(Polyhedron_Project(context, nparam), dim, nparam);
     for (;;) {
+	int n_try = 0;
 	try {
-	    red->init(context);
+	    red->init(context, n_try);
 	    for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
 		red->reduce((*i)->n.coeff, (*i)->n.power, (*i)->d.power);
 	    break;
 	} catch (OrthogonalException &e) {
 	    red->reset();
+	    n_try++;
 	}
     }
     gf = red->get_gf();
@@ -998,7 +1000,7 @@ bool gen_fun::summate(Value *sum) const
 	    maxlen = (*i)->d.power.NumRows();
 
     infinite_counter cnt((*term.begin())->d.power.NumCols(), maxlen);
-    cnt.init(context);
+    cnt.init(context, 0);
     for (short_rat_list::iterator i = term.begin(); i != term.end(); ++i)
 	cnt.reduce((*i)->n.coeff, (*i)->n.power, (*i)->d.power);
 

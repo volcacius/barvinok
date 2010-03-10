@@ -173,12 +173,12 @@ void tcounter::add_lattice_points(int sign)
  * powers in the denominator of one of the terms in the generating
  * function.
  */
-void infinite_counter::init(Polyhedron *context)
+void infinite_counter::init(Polyhedron *context, int n_try)
 {
     Matrix *M, *H, *Q, *U;
     mat_ZZ A;
 
-    randomvector(context, lambda, context->Dimension);
+    randomvector(context, lambda, context->Dimension, n_try);
 
     M = Matrix_Alloc(context->NbConstraints, context->Dimension);
     for (int i = 0; i < context->NbConstraints; ++i)

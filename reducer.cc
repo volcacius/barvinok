@@ -19,10 +19,11 @@ void np_base::handle(const signed_cone& sc, barvinok_options *options)
 
 void np_base::start(Polyhedron *P, barvinok_options *options)
 {
+    int n_try = 0;
     QQ factor(1, 1);
     for (;;) {
 	try {
-	    init(P);
+	    init(P, n_try);
 	    for (int i = 0; i < P->NbRays; ++i) {
 		if (!value_pos_p(P->Ray[i][dim+1]))
 		    continue;
@@ -32,6 +33,7 @@ void np_base::start(Polyhedron *P, barvinok_options *options)
 	    }
 	    break;
 	} catch (OrthogonalException &e) {
+	    n_try++;
 	    reset();
 	}
     }

@@ -15,9 +15,9 @@ struct counter_base: public np_base {
 	value_init(tmp);
     }
 
-    virtual void init(Polyhedron *P) {
+    virtual void init(Polyhedron *P, int n_try) {
 	vec_ZZ l;
-	randomvector(P, l, dim);
+	randomvector(P, l, dim, n_try);
 	zz2values(l, lambda->p);
     }
 
@@ -99,7 +99,7 @@ struct infinite_counter {
 	value_init(tz);
     }
 
-    void init(Polyhedron *context);
+    void init(Polyhedron *context, int n_try);
 
     void reduce(const vec_QQ& c, const mat_ZZ& num, const mat_ZZ& den_f);
 
