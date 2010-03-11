@@ -513,6 +513,27 @@ error:
 	return obj;
 }
 
+static struct isc_un_op *find_matching_bin_op(struct isc_un_op *like,
+	isl_obj_type lhs, isl_obj_type rhs)
+{
+	int i;
+
+	for (i = 0; ; ++i) {
+		if (!bin_ops[i].op)
+			break;
+		if (bin_ops[i].op != like->op)
+			continue;
+		if (bin_ops[i].lhs != lhs)
+			continue;
+		if (bin_ops[i].rhs != rhs)
+			continue;
+
+		return &bin_ops[i].op;
+	}
+
+	return NULL;
+}
+
 static struct isl_obj read_expr(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -529,7 +550,9 @@ static struct isl_obj read_expr(struct isl_stream *s,
 
 		right_obj = read_obj(s, table);
 
-		isl_assert(s->ctx, right_obj.type == op->rhs, goto error);
+		op = find_matching_bin_op(op, obj.type, right_obj.type);
+
+		isl_assert(s->ctx, op, goto error);
 		obj.v = op->fn(obj.v, right_obj.v);
 		obj.type = op->res;
 	}
