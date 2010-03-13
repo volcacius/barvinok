@@ -157,6 +157,8 @@ struct isc_bin_op bin_ops[] = {
 	{ '.',	isl_obj_map,	isl_obj_map,
 		isl_obj_map,
 		(isc_bin_op_fn) &isl_map_apply_range },
+	{ ISL_TOKEN_TO,	isl_obj_set,	isl_obj_set,	isl_obj_map,
+		(isc_bin_op_fn) &isl_map_from_domain_and_range },
 	{ '+',	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
 		isl_obj_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_pw_qpolynomial_add },
