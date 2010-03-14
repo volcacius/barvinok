@@ -60,11 +60,31 @@ m^+;
 (m^+)[0];
 \end{verbatim}
 
-\begin{table}
-\begin{tabular}{lp{0.7\textwidth}}
+\bottomcaption{{\tt iscc} operations.  The variables
+have the following types,
+$s$: set,
+$m$: map,
+$q$: piecewise quasipolynomial,
+$f$: piecewise quasipolynomial fold,
+$l$: list,
+$i$: integer
+}
+\label{t:iscc}
+\tablehead{
 Syntax & Meaning
 \\
 \hline
+}
+\tabletail{
+\multicolumn{2}{r}{\small\sl continued on next page}
+\\
+}
+\tablelasttail{}
+\begin{supertabular}{lp{0.7\textwidth}}
+$s_2$ := \ai[\tt]{aff} $s_1$ & affine hull of $s_1$
+\\
+$m_2$ := \ai[\tt]{aff} $m_1$ & affine hull of $m_1$
+\\
 $q$ := \ai[\tt]{card} $s$ &
 number of elements in the set $s$
 \\
@@ -160,15 +180,4 @@ is known to be exact
 $l$[$i$] &
 the element at position $i$ in the list $l$
 \\
-\end{tabular}
-\caption{\protect\ai[\tt]{iscc} operations.  The variables
-have the following types,
-$s$: set,
-$m$: map,
-$q$: piecewise quasipolynomial,
-$f$: piecewise quasipolynomial fold,
-$l$: list,
-$i$: integer
-}
-\label{t:iscc}
-\end{table}
+\end{supertabular}

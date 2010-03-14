@@ -193,6 +193,16 @@ __isl_give isl_map *map_sample(__isl_take isl_map *map)
 	return isl_map_from_basic_map(isl_map_sample(map));
 }
 
+static __isl_give isl_set *set_affine_hull(__isl_take isl_set *set)
+{
+	return isl_set_from_basic_set(isl_set_affine_hull(set));
+}
+
+static __isl_give isl_map *map_affine_hull(__isl_take isl_map *map)
+{
+	return isl_map_from_basic_map(isl_map_affine_hull(map));
+}
+
 typedef void *(*isc_un_op_fn)(void *arg);
 struct isc_un_op {
 	enum isl_token_type	op;
@@ -205,6 +215,10 @@ struct isc_named_un_op {
 	struct isc_un_op	op;
 };
 struct isc_named_un_op named_un_ops[] = {
+	{"aff",	{ -1,	isl_obj_map,	isl_obj_map,
+		(isc_un_op_fn) &map_affine_hull } },
+	{"aff",	{ -1,	isl_obj_set,	isl_obj_set,
+		(isc_un_op_fn) &set_affine_hull } },
 	{"card",	{ -1,	isl_obj_set,	isl_obj_pw_qpolynomial,
 		(isc_un_op_fn) &isl_set_card } },
 	{"card",	{ -1,	isl_obj_map,	isl_obj_pw_qpolynomial,
