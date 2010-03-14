@@ -61,89 +61,97 @@ m^+;
 \end{verbatim}
 
 \begin{table}
-\begin{tabular}{llp{0.5\textwidth}}
-Syntax & Result type & Meaning
+\begin{tabular}{lp{0.7\textwidth}}
+Syntax & Meaning
 \\
 \hline
-\ai[\tt]{card} {\it set } & pw quasipolynomial &
-number of elements in the set
+$q$ := \ai[\tt]{card} $s$ &
+number of elements in the set $s$
 \\
-\ai[\tt]{card} {\it map } & pw quasipolynomial &
+$q$ := \ai[\tt]{card} $m$ &
 number of elements in the image of a domain element
 \\
-\ai[\tt]{dom} {\it map } & set &
-domain of map
+$s$ := \ai[\tt]{dom} $m$ &
+domain of map $m$
 \\
-\ai[\tt]{ran} {\it map } & set &
-range of map
+$s$ := \ai[\tt]{ran} $m$ &
+range of map $m$
 \\
-\ai[\tt]{lexmin} {\it set } & set &
-lexicographically minimal element of a set
+$s_2$ := \ai[\tt]{lexmin} $s_1$ &
+lexicographically minimal element of $s_1$
 \\
-\ai[\tt]{lexmin} {\it map } & map &
+$m_2$ := \ai[\tt]{lexmin} $m_1$ &
 lexicographically minimal image element
 \\
-\ai[\tt]{lexmax} {\it set } & set &
-lexicographically maximal element of a set
+$s_2$ := \ai[\tt]{lexmax} $s_1$ &
+lexicographically maximal element of $s_1$
 \\
-\ai[\tt]{lexmax} {\it map } & map &
+$m_2$ := \ai[\tt]{lexmax} $m_1$ &
 lexicographically maximal image element
 \\
-\ai[\tt]{sample} {\it set } & set &
-a sample element of the set
+$s_2$ := \ai[\tt]{sample} $s_1$ &
+a sample element of the set $s_1$
 \\
-\ai[\tt]{sample} {\it map } & map &
-a sample element of the map
+$m_2$ := \ai[\tt]{sample} $m_1$ &
+a sample element of the map $m_1$
 \\
-\ai[\tt]{sum} {\it pw\_qp } & pw qp &
-sum over all integer points in the domain
+$q_2$ := \ai[\tt]{sum} $q_1$ &
+sum $q_1$ over all integer points in the domain of $q_1$
 \\
-\ai[\tt]{ub} {\it pwqp } & pw qp fold &
-upper bound on the quasipolynomial over
-all integer points in the domain.
+$f$ := \ai[\tt]{ub} $q$ &
+upper bound on the piecewise quasipolynomial $q$ over
+all integer points in the domain of $q$.
 This operation is only available if
 \ai[\tt]{GiNaC} support was compiled in.
 \\
-{\it set} \ai{$+$} {\it set} & set & union
+$s_3$ := $s_1$ \ai{$+$} $s_2$ & union
 \\
-{\it map} \ai{$+$} {\it map} & map & union
+$m_3$ := $m_1$ \ai{$+$} $m_2$ & union
 \\
-{\it pwqp} \ai{$+$} {\it pwqp} & pwqp & sum
+$q_3$ := $q_1$ \ai{$+$} $q_2$ & sum
 \\
-{\it set} \ai{$-$} {\it set} & set & set difference
+$s_3$ := $s_1$ \ai{$-$} $s_2$ & set difference
 \\
-{\it map} \ai{$-$} {\it map} & map & set difference
+$m_3$ := $m_1$ \ai{$-$} $m_2$ & set difference
 \\
-{\it pwqp} \ai{$-$} {\it pwqp} & pwqp & difference
+$q_3$ := $q_1$ \ai{$-$} $q_2$ & difference
 \\
-{\it set} \ai{$*$} {\it set} & set & intersection
+$s_3$ := $s_1$ \ai{$*$} $s_2$ & intersection
 \\
-{\it map} \ai{$*$} {\it map} & map & intersection
+$m_3$ := $m_1$ \ai{$*$} $m_2$ & intersection
 \\
-{\it pwqp} \ai{$*$} {\it pwqp} & pwqp & product
+$q_3$ := $q_1$ \ai{$*$} $q_2$ & product
 \\
-{\it pwqp} \ai{@} {\it set} & pwqp &
-evaluate the piecewise quasipolynomial in each element
-of the set and return a piecewise quasipolynomial
+$q_2$ := $q_1$ \ai{@} $s$ &
+evaluate the piecewise quasipolynomial $q_1$ in each element
+of the set $s$ and return a piecewise quasipolynomial
 mapping each of the individual elements to the resulting
 constant
 \\
-{\it pwqpfold} \ai{@} {\it set} & pwqp &
-evaluate the piecewise quasipolynomial fold in each element
-of the set and return a piecewise quasipolynomial
+$q$ := $f$ \ai{@} $s$ &
+evaluate the piecewise quasipolynomial fold $f$ in each element
+of the set $s$ and return a piecewise quasipolynomial
 mapping each of the individual elements to the resulting
 constant
 \\
-{\it map} \ai[\tt]{\^{}+} & list &
+$l$ := $m$\ai[\tt]{\^{}+} &
 compute an overapproximation of the transitive closure
-and return a list containing the overapproximation
+of $m$ and return a list containing the overapproximation
 and a boolean that is true if the overapproximation
 is known to be exact
 \\
-{\it list} [{\it int}] & &
-the element at the given position in the list
+$l$[$i$] &
+the element at position $i$ in the list $l$
 \\
 \end{tabular}
-\caption{\protect\ai[\tt]{iscc} operations}
+\caption{\protect\ai[\tt]{iscc} operations.  The variables
+have the following types,
+$s$: set,
+$m$: map,
+$q$: piecewise quasipolynomial,
+$f$: piecewise quasipolynomial fold,
+$l$: list,
+$i$: integer
+}
 \label{t:iscc}
 \end{table}
