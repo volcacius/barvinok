@@ -67,7 +67,8 @@ $m$: map,
 $q$: piecewise quasipolynomial,
 $f$: piecewise quasipolynomial fold,
 $l$: list,
-$i$: integer
+$i$: integer,
+$b$: boolean
 }
 \label{t:iscc}
 \tablehead{
@@ -181,5 +182,25 @@ is known to be exact
 \\
 $l$[$i$] &
 the element at position $i$ in the list $l$
+\\
+$b$ := $s_1$ \ai[\tt]{=} $s_2$ & is $s_1$ equal to $s_2$?
+\\
+$b$ := $m_1$ \ai[\tt]{=} $m_2$ & is $m_1$ equal to $m_2$?
+\\
+$b$ := $s_1$ \ai[\tt]{<=} $s_2$ & is $s_1$ a subset of $s_2$?
+\\
+$b$ := $m_1$ \ai[\tt]{<=} $m_2$ & is $m_1$ a subset of $m_2$?
+\\
+$b$ := $s_1$ \ai[\tt]{<} $s_2$ & is $s_1$ a proper subset of $s_2$?
+\\
+$b$ := $m_1$ \ai[\tt]{<} $m_2$ & is $m_1$ a proper subset of $m_2$?
+\\
+$b$ := $s_1$ \ai[\tt]{>=} $s_2$ & is $s_1$ a superset of $s_2$?
+\\
+$b$ := $m_1$ \ai[\tt]{>=} $m_2$ & is $m_1$ a superset of $m_2$?
+\\
+$b$ := $s_1$ \ai[\tt]{>} $s_2$ & is $s_1$ a proper superset of $s_2$?
+\\
+$b$ := $m_1$ \ai[\tt]{>} $m_2$ & is $m_1$ a proper superset of $m_2$?
 \\
 \end{supertabular}
