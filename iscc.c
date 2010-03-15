@@ -541,7 +541,7 @@ error:
 	return obj;
 }
 
-static struct isc_un_op *find_matching_bin_op(struct isc_un_op *like,
+static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
 	isl_obj_type lhs, isl_obj_type rhs)
 {
 	int i;
@@ -556,7 +556,7 @@ static struct isc_un_op *find_matching_bin_op(struct isc_un_op *like,
 		if (bin_ops[i].rhs != rhs)
 			continue;
 
-		return &bin_ops[i].op;
+		return &bin_ops[i];
 	}
 
 	return NULL;
