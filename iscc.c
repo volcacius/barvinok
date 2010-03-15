@@ -501,6 +501,35 @@ error:
 	return obj;
 }
 
+static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
+{
+	struct isl_token *tok;
+
+	if (isl_stream_eat_if_available(s, '+'))
+		return transitive_closure(s->ctx, obj);
+
+	tok = isl_stream_next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_VALUE || isl_int_cmp_si(tok->u.v, -1)) {
+		isl_stream_error(s, tok, "expecting -1");
+		if (tok)
+			isl_stream_push_token(s, tok);
+		goto error;
+	}
+	isl_token_free(tok);
+	isl_assert(s->ctx, obj.type == isl_obj_map, goto error);
+
+	obj.v = isl_map_reverse(obj.v);
+	if (!obj.v)
+		goto error;
+
+	return obj;
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -526,11 +555,9 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		}
 	}
 
-	if (isl_stream_eat_if_available(s, '^')) {
-		if (isl_stream_eat(s, '+'))
-			goto error;
-		obj = transitive_closure(s->ctx, obj);
-	} else if (obj.type == isl_obj_list && isl_stream_eat_if_available(s, '['))
+	if (isl_stream_eat_if_available(s, '^'))
+		obj = power(s, obj);
+	else if (obj.type == isl_obj_list && isl_stream_eat_if_available(s, '['))
 		obj = obj_at_index(s, obj);
 
 	return obj;
