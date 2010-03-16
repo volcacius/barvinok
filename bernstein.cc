@@ -813,6 +813,7 @@ static int guarded_qp_bernstein_coefficients(__isl_take isl_set *set,
 	__isl_take isl_qpolynomial *qp, void *user)
 {
 	struct isl_bound *bound = (struct isl_bound *)user;
+	unsigned nvar;
 	Polyhedron *D;
 	struct barvinok_options *options;
 	evalue *e;
@@ -822,12 +823,19 @@ static int guarded_qp_bernstein_coefficients(__isl_take isl_set *set,
 	if (!set || !qp)
 		goto error;
 
+	nvar = isl_set_dim(set, isl_dim_set);
+
 	e = isl_qpolynomial_to_evalue(qp);
 	if (!e)
 		goto error;
 
 	set = isl_set_make_disjoint(set);
 	D = isl_set_to_polylib(set);
+
+	bound->vars = constructVariableVector(nvar, "v");
+	bound->allvars = bound->vars;
+	bound->allvars.insert(bound->allvars.end(),
+				bound->params.begin(), bound->params.end());
 
 	bound->pl = bernstein_coefficients_relation(bound->pl, D, e, bound->U,
 			bound->allvars, bound->vars, bound->params, options);
@@ -870,10 +878,6 @@ __isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_upper_bound(
 	bound.pl = NULL;
 	bound.U = Universe_Polyhedron(nparam);
 	bound.params = constructVariableVector(nparam, "p");
-	bound.vars = constructVariableVector(nvar, "v");
-	bound.allvars = bound.vars;
-	bound.allvars.insert(bound.allvars.end(),
-				bound.params.begin(), bound.params.end());
 
 	if (isl_pw_qpolynomial_foreach_lifted_piece(pwqp,
 				    guarded_qp_bernstein_coefficients, &bound))
