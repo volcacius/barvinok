@@ -24,14 +24,15 @@ static void isl_obj_bool_free(void *v)
 {
 }
 
-static void isl_obj_bool_print(void *v, FILE *out)
+static __isl_give isl_printer *isl_obj_bool_print(__isl_take isl_printer *p,
+	void *v)
 {
 	if (v == &isl_bool_true)
-		fprintf(out, "True");
+		return isl_printer_print_str(p, "True");
 	else if (v == &isl_bool_false)
-		fprintf(out, "False");
+		return isl_printer_print_str(p, "False");
 	else
-		fprintf(out, "Error");
+		return isl_printer_print_str(p, "Error");
 }
 
 static void *isl_obj_bool_add(void *v1, void *v2)
@@ -700,15 +701,18 @@ error:
 	return obj;
 }
 
-static void read_line(struct isl_stream *s, struct isl_hash_table *table)
+static __isl_give isl_printer *read_line(struct isl_stream *s,
+	struct isl_hash_table *table, __isl_take isl_printer *p)
 {
 	struct isl_obj obj = { isl_obj_none, NULL };
 	char *lhs = NULL;
 	int assign = 0;
 	struct isc_bin_op *op = NULL;
 
+	if (!p)
+		return NULL;
 	if (isl_stream_is_empty(s))
-		return;
+		return p;
 
 	assign = is_assign(s);
 	if (assign) {
@@ -727,15 +731,16 @@ static void read_line(struct isl_stream *s, struct isl_hash_table *table)
 		if (do_assign(s->ctx, table, lhs, obj))
 			return;
 	} else {
-		obj.type->print(obj.v, stdout);
-		printf("\n");
+		p = obj.type->print(p, obj.v);
+		p = isl_printer_end_line(p);
 		free_obj(obj);
 	}
 
-	return;
+	return p;
 error:
 	free(lhs);
 	free_obj(obj);
+	return p;
 }
 
 int free_cb(void *entry)
@@ -767,19 +772,23 @@ int main(int argc, char **argv)
 	struct isl_ctx *ctx;
 	struct isl_stream *s;
 	struct isl_hash_table *table;
+	isl_printer *p;
 
 	ctx = isl_ctx_alloc();
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
 	table = isl_hash_table_alloc(ctx, 10);
 	assert(table);
+	p = isl_printer_to_file(ctx, stdout);
+	assert(p);
 
 	register_named_ops(s);
 
 	while (!feof(stdin)) {
-		read_line(s, table);
+		p = read_line(s, table, p);
 	}
 
+	isl_printer_free(p);
 	isl_hash_table_foreach(ctx, table, free_cb);
 	isl_hash_table_free(ctx, table);
 	isl_stream_free(s);
