@@ -1,23 +1,20 @@
 #include <assert.h>
 #include <iostream>
-#include <bernstein/bernstein.h>
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/bernstein.h>
+#include <bound_common.h>
 #include "argp.h"
 #include "progname.h"
 #include "evalue_convert.h"
 #include "evalue_read.h"
 #include "verify.h"
-#include "range.h"
 
 using std::cout;
 using std::cerr;
 using std::endl;
-using namespace GiNaC;
-using namespace bernstein;
 using namespace barvinok;
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
@@ -207,19 +204,20 @@ error:
 	return (vpb->vpd.n >= 1 && ok) ? 0 : -1;
 }
 
-static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar,
-		  const GiNaC::exvector &params,
+static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf, evalue *EP, unsigned nvar,
 		  struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options } };
-	isl_ctx *ctx = isl_ctx_alloc();
+	isl_ctx *ctx;
 	isl_dim *dim;
 	isl_set *context;
 	int r;
+	unsigned nparam;
 
-	dim = isl_dim_set_alloc(ctx, params.size(), 0);
-	vpb.pwf = isl_pw_qpolynomial_fold_from_ginac(dim, pl, params);
-	dim = isl_dim_set_alloc(ctx, nvar + params.size(), 0);
+	ctx = isl_pw_qpolynomial_fold_get_ctx(pwf);
+	nparam = isl_pw_qpolynomial_fold_dim(pwf, isl_dim_param);
+	vpb.pwf = pwf;
+	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
 	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
 	vpb.pwqp = isl_pw_qpolynomial_move(vpb.pwqp, isl_dim_set, 0,
 						isl_dim_param, 0, nvar);
@@ -236,42 +234,35 @@ static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar,
 
 	isl_set_free(context);
 	isl_pw_qpolynomial_free(vpb.pwqp);
-	isl_pw_qpolynomial_fold_free(vpb.pwf);
-
-	isl_ctx_free(ctx);
 
 	verify_point_data_fini(&vpb.vpd);
 
 	return r;
 }
 
-static piecewise_lst *iterate(evalue *EP, unsigned nvar, Polyhedron *C,
-				struct options *options)
+static __isl_give isl_pw_qpolynomial_fold *iterate(
+	__isl_take isl_pw_qpolynomial *pwqp, enum isl_fold type)
 {
-    assert(C->Dimension == 0);
-    Vector *p = Vector_Alloc(nvar+2);
-    value_set_si(p->p[nvar+1], 1);
-    Value opt;
+	isl_dim *dim = isl_pw_qpolynomial_get_dim(pwqp);
+	isl_set *set;
+	isl_qpolynomial *qp;
+	isl_qpolynomial_fold *fold;
+	unsigned nvar;
 
-    value_init(opt);
-    struct check_EP_data data;
-    data.cp.z = p->p;
-    data.cp.check = NULL;
+	assert(isl_dim_size(dim, isl_dim_param) == 0);
+	nvar = isl_dim_size(dim, isl_dim_set);
 
-    data.EP = EP;
-    check_EP_set_scan(&data, C, options->verify.barvinok->MaxRays);
-    int sign = options->verify.barvinok->bernstein_optimize;
-    evalue_optimum(&data, &opt, sign);
-    check_EP_clear_scan(&data);
+	if (type == isl_fold_min)
+		qp = isl_pw_qpolynomial_min(pwqp);
+	else
+		qp = isl_pw_qpolynomial_max(pwqp);
 
-    exvector params;
-    piecewise_lst *pl = new piecewise_lst(params, sign);
-    pl->add_guarded_lst(Polyhedron_Copy(C), lst(value2numeric(opt)));
+	qp = isl_qpolynomial_drop_dims(qp, isl_dim_set, 0, nvar);
+	fold = isl_qpolynomial_fold_alloc(type, qp);
+	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+	set = isl_set_universe(dim);
 
-    value_clear(opt);
-    Vector_Free(p);
-
-    return pl;
+	return isl_pw_qpolynomial_fold_alloc(set, fold);
 }
 
 /*
@@ -340,61 +331,63 @@ static void split_on_domain_size(evalue *EP, evalue **EP_less, evalue **EP_more,
     delete [] s_more;
 }
 
-static piecewise_lst *optimize(evalue *EP, unsigned nvar, Polyhedron *C,
-				const exvector& params,
-				struct options *options)
+static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
+	Polyhedron *C, __isl_take isl_dim *dim,
+	struct options *options)
 {
-    piecewise_lst *pl = NULL;
+    isl_pw_qpolynomial_fold *pwf;
     if (options->iterate > 0) {
 	evalue *EP_less = NULL;
 	evalue *EP_more = NULL;
-	piecewise_lst *pl_more = NULL;
+	isl_pw_qpolynomial_fold *pwf = NULL, *pwf_more = NULL;
+
 	split_on_domain_size(EP, &EP_less, &EP_more, options->iterate,
 				options->verify.barvinok);
 	if (!EVALUE_IS_ZERO(*EP_less)) {
 	    options->iterate = -1;
-	    pl = optimize(EP_less, nvar, C, params, options);
+	    pwf = optimize(EP_less, nvar, C, isl_dim_copy(dim), options);
 	}
 	if (!EVALUE_IS_ZERO(*EP_more)) {
 	    options->iterate = 0;
-	    pl_more = optimize(EP_more, nvar, C, params, options);
+	    pwf_more = optimize(EP_more, nvar, C, isl_dim_copy(dim), options);
 	}
+	isl_dim_free(dim);
 	evalue_free(EP_less);
 	evalue_free(EP_more);
-	if (!pl)
-	    return pl_more;
-	if (!pl_more)
-	    return pl;
-	pl->combine(*pl_more);
-	delete pl_more;
-	return pl;
+	if (!pwf)
+	    return pwf_more;
+	if (!pwf_more)
+	    return pwf;
+	return isl_pw_qpolynomial_fold_add(pwf, pwf_more);
     }
+    int method = options->verify.barvinok->bound;
+    isl_dim *dim_EP;
+    isl_pw_qpolynomial *pwqp;
+    enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
+    dim_EP = isl_dim_insert(dim, isl_dim_param, 0, nvar);
+    pwqp = isl_pw_qpolynomial_from_evalue(dim_EP, EP);
+    pwqp = isl_pw_qpolynomial_move(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
     if (options->iterate)
-	pl = iterate(EP, nvar, C, options);
-    else if (options->verify.barvinok->bound == BV_BOUND_BERNSTEIN) {
-	pl = evalue_bernstein_coefficients(NULL, EP, C, params,
-					   options->verify.barvinok);
-	if (options->lower)
-	    pl->minimize();
-	else
-	    pl->maximize();
-    } else
-	pl = evalue_range_propagation(NULL, EP, params,
-				      options->verify.barvinok);
-    return pl;
+	pwf = iterate(pwqp, type);
+    else
+	pwf = isl_pw_qpolynomial_bound(pwqp, type, method);
+    return pwf;
 }
 
 static int optimize(evalue *EP, const char **all_vars,
 		    unsigned nvar, unsigned nparam, struct options *options)
 {
     Polyhedron *U;
-    piecewise_lst *pl = NULL;
     U = Universe_Polyhedron(nparam);
     int print_solution = 1;
     int result = 0;
+    isl_ctx *ctx = isl_ctx_alloc();
+    isl_dim *dim;
+    isl_pw_qpolynomial_fold *pwf;
 
-    exvector params;
-    params = constructParameterVector(all_vars+nvar, nparam);
+    dim = isl_dim_set_alloc(ctx, nparam, 0);
+    for (int i = 0; i < nparam; ++i)
+	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
 
     if (options->verify.verify) {
 	verify_options_set_range(&options->verify, nvar+nparam);
@@ -406,16 +399,22 @@ static int optimize(evalue *EP, const char **all_vars,
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
 	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
-    pl = optimize(EP, nvar, U, params, options);
-    assert(pl);
-    if (print_solution)
-	cout << *pl << endl;
-    if (options->verify.verify) {
-	result = verify(pl, EP, nvar, params, &options->verify);
+    pwf = optimize(EP, nvar, U, dim, options);
+    assert(pwf);
+    if (print_solution) {
+	isl_printer *p = isl_printer_to_file(ctx, stdout);
+	p = isl_printer_print_pw_qpolynomial_fold(p, pwf);
+	p = isl_printer_end_line(p);
+	isl_printer_free(p);
     }
-    delete pl;
+    if (options->verify.verify) {
+	result = verify(pwf, EP, nvar, &options->verify);
+    }
+    isl_pw_qpolynomial_fold_free(pwf);
 
     Polyhedron_Free(U);
+
+    isl_ctx_free(ctx);
 
     return result;
 }
