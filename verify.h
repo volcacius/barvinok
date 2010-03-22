@@ -65,6 +65,20 @@ void check_EP_set_scan(struct check_EP_data *data, Polyhedron *C,
 			unsigned MaxRays);
 void check_EP_clear_scan(struct check_EP_data *data);
 
+__isl_give isl_set *verify_context_set_bounds(__isl_take isl_set *set,
+	const struct verify_options *options);
+
+struct verify_point_data {
+	const struct verify_options *options;
+	int n;
+	int s;
+	int error;
+};
+
+int verify_point_data_init(struct verify_point_data *vpd,
+	__isl_keep isl_set *context);
+void verify_point_data_fini(struct verify_point_data *vpd);
+
 #if defined(__cplusplus)
 }
 #endif

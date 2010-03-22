@@ -513,3 +513,77 @@ void evalue_optimum(const struct check_EP_data *data, Value *opt, int sign)
 	    optimum(data->S[i], 0, data, opt, &found, sign);
     assert(found);
 }
+
+__isl_give isl_set *verify_context_set_bounds(__isl_take isl_set *set,
+	const struct verify_options *options)
+{
+	int i;
+	unsigned nparam;
+	isl_point *pt, *pt2;
+	isl_set *box;
+
+	nparam = isl_set_dim(set, isl_dim_param);
+
+	if (options->r > 0) {
+		pt = isl_set_sample_point(isl_set_copy(set));
+		pt2 = isl_point_copy(pt);
+
+		for (i = 0; i < nparam; ++i) {
+			pt = isl_point_add_ui(pt, isl_dim_param, i, options->r);
+			pt2 = isl_point_sub_ui(pt2, isl_dim_param, i, options->r);
+		}
+	} else {
+		isl_int v;
+
+		isl_int_init(v);
+		pt = isl_point_zero(isl_set_get_dim(set));
+		isl_int_set_si(v, options->m);
+		for (i = 0; i < nparam; ++i)
+			pt = isl_point_set_coordinate(pt, isl_dim_param, i, v);
+
+		pt2 = isl_point_zero(isl_set_get_dim(set));
+		isl_int_set_si(v, options->M);
+		for (i = 0; i < nparam; ++i)
+			pt2 = isl_point_set_coordinate(pt2, isl_dim_param, i, v);
+
+		isl_int_clear(v);
+	}
+
+	box = isl_set_box_from_points(pt, pt2);
+
+	return isl_set_intersect(set, box);
+}
+
+int verify_point_data_init(struct verify_point_data *vpd,
+	__isl_keep isl_set *context)
+{
+	isl_int v;
+	int i;
+	int r;
+
+	isl_int_init(v);
+	r = isl_set_count(context, &v);
+	vpd->n = isl_int_cmp_si(v, 200) < 0 ? isl_int_get_si(v) : 200;
+	isl_int_clear(v);
+
+	if (!vpd->options->print_all) {
+		vpd->s = vpd->n < 80 ? 1 : 1 + vpd->n/80;
+		for (i = 0; i < vpd->n; i += vpd->s)
+			printf(".");
+		printf("\r");
+		fflush(stdout);
+	}
+
+	vpd->error = r < 0 ? -1 : 0;
+
+	return r;
+}
+
+void verify_point_data_fini(struct verify_point_data *vpd)
+{
+	if (!vpd->options->print_all)
+		printf("\n");
+
+	if (vpd->error)
+		fprintf(stderr, "Check failed !\n");
+}

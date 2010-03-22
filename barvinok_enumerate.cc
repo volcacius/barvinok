@@ -70,74 +70,31 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static __isl_give isl_set *set_bounds(__isl_take isl_set *set,
-	const struct verify_options *options)
-{
-	int i;
-	unsigned nparam;
-	isl_point *pt, *pt2;
-	isl_set *box;
-
-	nparam = isl_set_dim(set, isl_dim_param);
-
-	if (options->r > 0) {
-		pt = isl_set_sample_point(isl_set_copy(set));
-		pt2 = isl_point_copy(pt);
-
-		for (i = 0; i < nparam; ++i) {
-			pt = isl_point_add_ui(pt, isl_dim_param, i, options->r);
-			pt2 = isl_point_sub_ui(pt2, isl_dim_param, i, options->r);
-		}
-	} else {
-		isl_int v;
-
-		isl_int_init(v);
-		pt = isl_point_zero(isl_set_get_dim(set));
-		isl_int_set_si(v, options->m);
-		for (i = 0; i < nparam; ++i) 
-			pt = isl_point_set_coordinate(pt, isl_dim_param, i, v);
-
-		pt2 = isl_point_zero(isl_set_get_dim(set));
-		isl_int_set_si(v, options->M);
-		for (i = 0; i < nparam; ++i) 
-			pt2 = isl_point_set_coordinate(pt2, isl_dim_param, i, v);
-
-		isl_int_clear(v);
-	}
-
-	box = isl_set_box_from_points(pt, pt2);
-
-	return isl_set_intersect(set, box);
-}
-
-struct verify_point_data {
-	const struct verify_options *options;
+struct verify_point_enum {
+	struct verify_point_data vpd;
 	isl_set *set;
 	isl_pw_qpolynomial *pwqp;
-	int n;
-	int s;
-	int error;
 };
 
 static int verify_point(__isl_take isl_point *pnt, void *user)
 {
-	struct verify_point_data *vpd = (struct verify_point_data *) user;
+	struct verify_point_enum *vpe = (struct verify_point_enum *) user;
 	isl_set *set;
 	int i;
 	unsigned nparam;
 	isl_int v, n, d;
 	isl_qpolynomial *cnt = NULL;
-	int pa = vpd->options->barvinok->polynomial_approximation;
+	int pa = vpe->vpd.options->barvinok->polynomial_approximation;
 	int cst;
 	int ok;
-	FILE *out = vpd->options->print_all ? stdout : stderr;
+	FILE *out = vpe->vpd.options->print_all ? stdout : stderr;
 
-	vpd->n--;
+	vpe->vpd.n--;
 
 	isl_int_init(v);
 	isl_int_init(n);
 	isl_int_init(d);
-	set = isl_set_copy(vpd->set);
+	set = isl_set_copy(vpe->set);
 	nparam = isl_set_dim(set, isl_dim_param);
 	for (i = 0; i < nparam; ++i) {
 		isl_point_get_coordinate(pnt, isl_dim_param, i, &v);
@@ -147,7 +104,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	if (isl_set_count(set, &v) < 0)
 		goto error;
 
-	cnt = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vpd->pwqp),
+	cnt = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vpe->pwqp),
 					isl_point_copy(pnt));
 
 	cst = isl_qpolynomial_is_cst(cnt, &n, &d);
@@ -171,7 +128,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	else
 		ok = isl_int_eq(n, v);
 
-	if (vpd->options->print_all || !ok) {
+	if (vpe->vpd.options->print_all || !ok) {
 		fprintf(out, "EP(");
 		for (i = 0; i < nparam; ++i) {
 			if (i)
@@ -187,7 +144,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 			fprintf(out, ". OK\n");
 		else
 			fprintf(out, ". NOT OK\n");
-	} else if ((vpd->n % vpd->s) == 0) {
+	} else if ((vpe->vpd.n % vpe->vpd.s) == 0) {
 		printf("o");
 		fflush(stdout);
 	}
@@ -204,24 +161,23 @@ error:
 	isl_point_free(pnt);
 
 	if (!ok)
-		vpd->error = 1;
+		vpe->vpd.error = 1;
 
-	if (vpd->options->continue_on_error)
+	if (vpe->vpd.options->continue_on_error)
 		ok = 1;
 
-	return (vpd->n >= 1 && ok) ? 0 : -1;
+	return (vpe->vpd.n >= 1 && ok) ? 0 : -1;
 }
 
 static int verify_isl(Polyhedron *P, Polyhedron *C,
 		evalue *EP, const struct verify_options *options)
 {
-	struct verify_point_data vpd = { options };
+	struct verify_point_enum vpe = { { options } };
 	int i;
 	isl_ctx *ctx = isl_ctx_alloc();
 	isl_dim *dim;
 	isl_set *set;
 	isl_set *set_C;
-	isl_int v;
 	int r;
 
 	dim = isl_dim_set_alloc(ctx, C->Dimension, P->Dimension - C->Dimension);
@@ -233,40 +189,24 @@ static int verify_isl(Polyhedron *P, Polyhedron *C,
 	set_C = isl_set_intersect(isl_set_copy(set), set_C);
 	set_C = isl_set_remove(set_C, isl_dim_set, 0, P->Dimension - C->Dimension);
 
-	set_C = set_bounds(set_C, options);
+	set_C = verify_context_set_bounds(set_C, options);
 
-	isl_int_init(v);
-	r = isl_set_count(set_C, &v);
-	vpd.n = isl_int_cmp_si(v, 200) < 0 ? isl_int_get_si(v) : 200;
-	isl_int_clear(v);
+	r = verify_point_data_init(&vpe.vpd, set_C);
 
-	if (!options->print_all) {
-		vpd.s = vpd.n < 80 ? 1 : 1 + vpd.n/80;
-		for (i = 0; i < vpd.n; i += vpd.s)
-			printf(".");
-		printf("\r");
-		fflush(stdout);
-	}
-
-	vpd.set = set;
-	vpd.pwqp = isl_pw_qpolynomial_from_evalue(isl_set_get_dim(set_C), EP);
-	vpd.error = 0;
+	vpe.set = set;
+	vpe.pwqp = isl_pw_qpolynomial_from_evalue(isl_set_get_dim(set_C), EP);
 	if (r == 0)
-		isl_set_foreach_point(set_C, verify_point, &vpd);
-	if (vpd.error)
+		isl_set_foreach_point(set_C, verify_point, &vpe);
+	if (vpe.vpd.error)
 		r = -1;
 
-	isl_pw_qpolynomial_free(vpd.pwqp);
+	isl_pw_qpolynomial_free(vpe.pwqp);
 	isl_set_free(set);
 	isl_set_free(set_C);
 
 	isl_ctx_free(ctx);
 
-	if (!options->print_all)
-		printf("\n");
-
-	if (r < 0)
-		fprintf(stderr, "Check failed !\n");
+	verify_point_data_fini(&vpe.vpd);
 
 	return r;
 }
