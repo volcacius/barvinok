@@ -217,7 +217,7 @@ libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
 libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
 if HAVE_GINAC
-    BERNSTEIN_CC = bernstein.cc ex_convert.cc range.cc
+    BERNSTEIN_CC = bernstein.cc
 else
     BERNSTEIN_CC = dummy.c
 endif
@@ -226,10 +226,6 @@ libbarvinok_la_SOURCES = \
     bound_common.h \
     $(BERNSTEIN_CC)
 EXTRA_libbarvinok_la_SOURCES = \
-    ex_convert.cc \
-    ex_convert.h \
-    range.cc \
-    range.h \
     bernstein.cc \
     dummy.c
 if HAVE_GINAC
