@@ -81,115 +81,168 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static int check_poly_max(const struct check_poly_data *data,
-			  int nparam, Value *z,
-			  const struct verify_options *options);
-
-struct check_poly_max_data : public check_EP_data {
-    piecewise_lst	 *pl;
-
-    check_poly_max_data(evalue *EP, piecewise_lst *pl) : pl(pl) {
-	this->EP = EP;
-	this->cp.check = check_poly_max;
-    }
+struct verify_point_bound {
+	struct verify_point_data vpd;
+	isl_pw_qpolynomial *pwqp;
+	isl_pw_qpolynomial_fold *pwf;
 };
 
-static int check_poly_max(const struct check_poly_data *data,
-			  int nparam, Value *z,
-			  const struct verify_options *options)
+static int verify_point(__isl_take isl_point *pnt, void *user)
 {
-    int k;
-    int ok;
-    const check_poly_max_data *max_data;
-    max_data = (const check_poly_max_data *)data;
-    const char *minmax;
-    Value m, n, d;
-    value_init(m);
-    value_init(n);
-    value_init(d);
-    int sign;
+	int i;
+	unsigned nparam;
+	struct verify_point_bound *vpb = (struct verify_point_bound *) user;
+	isl_int v, n, d, b, t;
+	isl_pw_qpolynomial *pwqp;
+	isl_qpolynomial *bound;
+	isl_qpolynomial *opt;
+	const char *minmax;
+	int sign;
+	int ok;
+	int cst;
+	FILE *out = vpb->vpd.options->print_all ? stdout : stderr;
 
-    if (options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX) {
-	minmax = "max";
-	sign = 1;
-    } else {
-	minmax = "min";
-	sign = -1;
-    }
+	vpb->vpd.n--;
 
-    max_data->pl->evaluate(nparam, z, &n, &d);
-    if (sign > 0)
-	mpz_fdiv_q(m, n, d);
-    else
-	mpz_cdiv_q(m, n, d);
-
-    if (options->print_all) {
-	printf("%s(", minmax);
-	value_print(stdout, VALUE_FMT, z[0]);
-	for (k = 1; k < nparam; ++k) {
-	    printf(", ");
-	    value_print(stdout, VALUE_FMT, z[k]);
+	if (vpb->vpd.options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX) {
+		minmax = "max";
+		sign = 1;
+	} else {
+		minmax = "min";
+		sign = -1;
 	}
-	printf(") = ");
-	value_print(stdout, VALUE_FMT, n);
-	if (value_notone_p(d)) {
-	    printf("/");
-	    value_print(stdout, VALUE_FMT, d);
+
+	isl_int_init(b);
+	isl_int_init(t);
+	isl_int_init(v);
+	isl_int_init(n);
+	isl_int_init(d);
+
+	pwqp = isl_pw_qpolynomial_copy(vpb->pwqp);
+
+	nparam = isl_pw_qpolynomial_dim(pwqp, isl_dim_param);
+	for (i = 0; i < nparam; ++i) {
+		isl_point_get_coordinate(pnt, isl_dim_param, i, &v);
+		pwqp = isl_pw_qpolynomial_fix_dim(pwqp, isl_dim_param, i, v);
 	}
-	printf(" (");
-	value_print(stdout, VALUE_FMT, m);
-	printf(")");
-    }
 
-    evalue_optimum(max_data, &n, sign);
+	bound = isl_pw_qpolynomial_fold_eval(isl_pw_qpolynomial_fold_copy(vpb->pwf),
+						isl_point_copy(pnt));
 
-    if (sign > 0)
-	ok = value_ge(m, n);
-    else
-	ok = value_le(m, n);
-
-    if (options->print_all) {
-	printf(", %s(EP) = ", minmax);
-	value_print(stdout, VALUE_FMT, n);
-	printf(". ");
-    }
-
-    if (!ok) {
-	printf("\n"); 
-	fflush(stdout);
-	fprintf(stderr, "Error !\n");
-	fprintf(stderr, "%s(", minmax);
-	value_print(stderr, VALUE_FMT, z[0]);
-	for (k = 1; k < nparam; ++k) {
-	    fprintf(stderr,", ");
-	    value_print(stderr, VALUE_FMT, z[k]);
-	}
-	fprintf(stderr, ") should be ");
 	if (sign > 0)
-	    fprintf(stderr, "greater");
+		opt = isl_pw_qpolynomial_max(pwqp);
 	else
-	    fprintf(stderr, "smaller");
-	fprintf(stderr, " than or equal to ");
-	value_print(stderr, VALUE_FMT, n);
-	fprintf(stderr, ", while pl eval gives ");
-	value_print(stderr, VALUE_FMT, m);
-	fprintf(stderr, ".\n");
-	cerr << *max_data->pl << endl;
-    } else if (options->print_all)
-	printf("OK.\n");
+		opt = isl_pw_qpolynomial_min(pwqp);
 
-    value_clear(m);
-    value_clear(n);
-    value_clear(d);
+	cst = isl_qpolynomial_is_cst(opt, &n, &d);
+	if (cst != 1)
+		goto error;
+	if (sign > 0)
+		isl_int_fdiv_q(v, n, d);
+	else
+		isl_int_cdiv_q(v, n, d);
 
-    return ok;
+	cst = isl_qpolynomial_is_cst(bound, &n, &d);
+	if (cst != 1)
+		goto error;
+	if (sign > 0)
+		isl_int_fdiv_q(b, n, d);
+	else
+		isl_int_cdiv_q(b, n, d);
+
+	if (sign > 0)
+		ok = value_ge(b, v);
+	else
+		ok = value_le(b, v);
+
+	if (vpb->vpd.options->print_all || !ok) {
+		fprintf(out, "%s(", minmax);
+		for (i = 0; i < nparam; ++i) {
+			if (i)
+				fprintf(out, ", ");
+			isl_point_get_coordinate(pnt, isl_dim_param, i, &t);
+			isl_int_print(out, t, 0);
+		}
+		fprintf(out, ") = ");
+		isl_int_print(out, n, 0);
+		if (!isl_int_is_one(d)) {
+			fprintf(out, "/");
+			isl_int_print(out, d, 0);
+			fprintf(out, " (");
+			isl_int_print(out, b, 0);
+			fprintf(out, ")");
+		}
+		fprintf(out, ", %s(EP) = ", minmax);
+		isl_int_print(out, v, 0);
+		if (ok)
+			fprintf(out, ". OK\n");
+		else
+			fprintf(out, ". NOT OK\n");
+	} else if ((vpb->vpd.n % vpb->vpd.s) == 0) {
+		printf("o");
+		fflush(stdout);
+	}
+
+	if (0) {
+error:
+		ok = 0;
+	}
+
+	isl_qpolynomial_free(bound);
+	isl_qpolynomial_free(opt);
+	isl_point_free(pnt);
+
+	isl_int_clear(t);
+	isl_int_clear(d);
+	isl_int_clear(n);
+	isl_int_clear(v);
+	isl_int_clear(b);
+
+	if (!ok)
+		vpb->vpd.error = 1;
+
+	if (vpb->vpd.options->continue_on_error)
+		ok = 1;
+
+	return (vpb->vpd.n >= 1 && ok) ? 0 : -1;
 }
 
-static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar, unsigned nparam,
+static int verify(piecewise_lst *pl, evalue *EP, unsigned nvar,
+		  const GiNaC::exvector &params,
 		  struct verify_options *options)
 {
-    check_poly_max_data data(EP, pl);
-    return !check_EP(&data, nvar, nparam, options);
+	struct verify_point_bound vpb = { { options } };
+	isl_ctx *ctx = isl_ctx_alloc();
+	isl_dim *dim;
+	isl_set *context;
+	int r;
+
+	dim = isl_dim_set_alloc(ctx, params.size(), 0);
+	vpb.pwf = isl_pw_qpolynomial_fold_from_ginac(dim, pl, params);
+	dim = isl_dim_set_alloc(ctx, nvar + params.size(), 0);
+	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
+	vpb.pwqp = isl_pw_qpolynomial_move(vpb.pwqp, isl_dim_set, 0,
+						isl_dim_param, 0, nvar);
+	context = isl_pw_qpolynomial_fold_domain(
+					isl_pw_qpolynomial_fold_copy(vpb.pwf));
+	context = verify_context_set_bounds(context, options);
+
+	r = verify_point_data_init(&vpb.vpd, context);
+
+	if (r == 0)
+		isl_set_foreach_point(context, verify_point, &vpb);
+	if (vpb.vpd.error)
+		r = -1;
+
+	isl_set_free(context);
+	isl_pw_qpolynomial_free(vpb.pwqp);
+	isl_pw_qpolynomial_fold_free(vpb.pwf);
+
+	isl_ctx_free(ctx);
+
+	verify_point_data_fini(&vpb.vpd);
+
+	return r;
 }
 
 static piecewise_lst *iterate(evalue *EP, unsigned nvar, Polyhedron *C,
@@ -358,7 +411,7 @@ static int optimize(evalue *EP, const char **all_vars,
     if (print_solution)
 	cout << *pl << endl;
     if (options->verify.verify) {
-	result = verify(pl, EP, nvar, nparam, &options->verify);
+	result = verify(pl, EP, nvar, params, &options->verify);
     }
     delete pl;
 
