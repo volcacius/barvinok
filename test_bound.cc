@@ -83,7 +83,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 struct result_data {
-    Value		    n;
+    isl_int		    n;
     double		    RE_sum[nr_methods];
 
     my_clock_t		    ticks[nr_methods];
@@ -98,13 +98,13 @@ void result_data_init(struct result_data *result)
 	result->ticks[i] = 0;
 	result->size[i] = 0;
     }
-    value_init(result->n);
+    isl_int_init(result->n);
 }
 
 void result_data_clear(struct result_data *result)
 {
     int i;
-    value_clear(result->n);
+    isl_int_clear(result->n);
 }
 
 void result_data_print(struct result_data *result, int n)
@@ -121,98 +121,166 @@ void result_data_print(struct result_data *result, int n)
 	fprintf(stderr, ", %zd/%d", result->size[i], n);
     fprintf(stderr, "\n");
 
-    fprintf(stderr, "%g\n", VALUE_TO_DOUBLE(result->n));
-    fprintf(stderr, "%g", result->RE_sum[0]/VALUE_TO_DOUBLE(result->n));
+    fprintf(stderr, "%g\n", isl_int_get_d(result->n));
+    fprintf(stderr, "%g", result->RE_sum[0]/isl_int_get_d(result->n));
     for (i = 1; i < nr_methods; ++i)
-	fprintf(stderr, ", %g", result->RE_sum[i]/VALUE_TO_DOUBLE(result->n));
+	fprintf(stderr, ", %g", result->RE_sum[i]/isl_int_get_d(result->n));
     fprintf(stderr, "\n");
 }
 
-static int test_bound(const struct check_poly_data *data,
-			  int nparam, Value *z,
-			  const struct verify_options *options);
-
-struct test_bound_data : public check_EP_data {
-    piecewise_lst	**pl;
-    struct result_data   *result;
-
-    test_bound_data(evalue *EP, piecewise_lst **pl, result_data *result) :
-			pl(pl), result(result) {
-	this->EP = EP;
-	this->cp.check = test_bound;
-    }
+struct verify_point_bound {
+	struct verify_point_data vpd;
+	struct result_data *result;
+	isl_pw_qpolynomial *pwqp;
+	isl_pw_qpolynomial_fold **pwf;
 };
 
-static int test_bound(const struct check_poly_data *data,
-			  int nparam, Value *z,
-			  const struct verify_options *options)
+static int verify_point(__isl_take isl_point *pnt, void *user)
 {
-    const test_bound_data *tb_data = (const test_bound_data *)data;
-    Value max, min, exact, approx;
-    Value n, d;
+	struct verify_point_bound *vpb = (struct verify_point_bound *) user;
+	const struct verify_options *options = vpb->vpd.options;
+	int i;
+	unsigned nparam;
+	isl_int max, min, exact, approx;
+	isl_int n, d;
+	isl_qpolynomial *opt;
+	isl_pw_qpolynomial *pwqp;
+	int cst;
 
-    value_init(exact);
-    value_init(approx);
-    value_init(max);
-    value_init(min);
-    value_init(n);
-    value_init(d);
+	vpb->vpd.n--;
 
-    evalue_optimum(tb_data, &max, 1);
-    evalue_optimum(tb_data, &min, -1);
-    value_assign(exact, max);
-    value_subtract(exact, exact, min);
-    value_add_int(exact, exact, 1);
+	isl_int_init(max);
+	isl_int_init(min);
+	isl_int_init(exact);
+	isl_int_init(approx);
+	isl_int_init(n);
+	isl_int_init(d);
 
-    if (options->print_all) {
-	value_print(stderr, "max: "VALUE_FMT, max);
-	value_print(stderr, ", min: "VALUE_FMT, min);
-	value_print(stderr, ", range: "VALUE_FMT, exact);
-    }
+	pwqp = isl_pw_qpolynomial_copy(vpb->pwqp);
 
-    value_increment(tb_data->result->n, tb_data->result->n);
-    for (int i = 0; i < nr_methods; ++i) {
-	double error;
+	nparam = isl_pw_qpolynomial_dim(pwqp, isl_dim_param);
+	for (i = 0; i < nparam; ++i) {
+		isl_point_get_coordinate(pnt, isl_dim_param, i, &n);
+		pwqp = isl_pw_qpolynomial_fix_dim(pwqp, isl_dim_param, i, n);
+	}
 
-	tb_data->pl[2*i]->evaluate(nparam, z, &n, &d);
-	mpz_fdiv_q(max, n, d);
-	tb_data->pl[2*i+1]->evaluate(nparam, z, &n, &d);
-	mpz_cdiv_q(min, n, d);
+	opt = isl_pw_qpolynomial_max(isl_pw_qpolynomial_copy(pwqp));
+	cst = isl_qpolynomial_is_cst(opt, &n, &d);
+	isl_qpolynomial_free(opt);
+	assert(cst == 1);
+	isl_int_fdiv_q(max, n, d);
 
-	value_assign(approx, max);
-	value_subtract(approx, approx, min);
-	value_add_int(approx, approx, 1);
-	if (options->print_all)
-	    value_print(stderr, ", "VALUE_FMT, approx);
+	opt = isl_pw_qpolynomial_min(pwqp);
+	cst = isl_qpolynomial_is_cst(opt, &n, &d);
+	isl_qpolynomial_free(opt);
+	assert(cst == 1);
+	isl_int_cdiv_q(min, n, d);
 
-	assert(value_ge(approx, exact));
-	value_subtract(approx, approx, exact);
+	isl_int_sub(exact, max, min);
+	isl_int_add_ui(exact, exact, 1);
 
-	error = fabs(VALUE_TO_DOUBLE(approx)) / VALUE_TO_DOUBLE(exact);
-	if (options->print_all)
-	    fprintf(stderr, " (%g)", error);
-	tb_data->result->RE_sum[i] += error;
-    }
+	if (options->print_all) {
+		fprintf(stderr, "max: "); isl_int_print(stderr, max, 0);
+		fprintf(stderr, ", min: "); isl_int_print(stderr, min, 0);
+		fprintf(stderr, ", range: "); isl_int_print(stderr, exact, 0);
+	}
 
-    if (options->print_all)
-	fprintf(stderr, "\n");
+	for (int i = 0; i < nr_methods; ++i) {
+		double error;
 
-    value_clear(n);
-    value_clear(d);
-    value_clear(max);
-    value_clear(min);
-    value_clear(exact);
-    value_clear(approx);
+		opt = isl_pw_qpolynomial_fold_eval(
+				isl_pw_qpolynomial_fold_copy(vpb->pwf[2 * i]),
+				isl_point_copy(pnt));
+		cst = isl_qpolynomial_is_cst(opt, &n, &d);
+		isl_qpolynomial_free(opt);
+		assert(cst == 1);
+		isl_int_fdiv_q(max, n, d);
+	
+		opt = isl_pw_qpolynomial_fold_eval(
+				isl_pw_qpolynomial_fold_copy(vpb->pwf[2 * i + 1]),
+				isl_point_copy(pnt));
+		cst = isl_qpolynomial_is_cst(opt, &n, &d);
+		isl_qpolynomial_free(opt);
+		assert(cst == 1);
+		isl_int_cdiv_q(min, n, d);
 
-    return 1;
+		isl_int_sub(approx, max, min);
+		isl_int_add_ui(approx, approx, 1);
+		if (options->print_all) {
+			fprintf(stderr, ", "); isl_int_print(stderr, approx, 0);
+		}
+
+		assert(isl_int_ge(approx, exact));
+		isl_int_sub(approx, approx, exact);
+
+		error = fabs(isl_int_get_d(approx)) / isl_int_get_d(exact);
+		if (options->print_all)
+			fprintf(stderr, " (%g)", error);
+		vpb->result->RE_sum[i] += error;
+	}
+
+	if (options->print_all) {
+		fprintf(stderr, "\n");
+	} else if ((vpb->vpd.n % vpb->vpd.s) == 0) {
+		printf("o");
+		fflush(stdout);
+	}
+
+	isl_int_clear(max);
+	isl_int_clear(min);
+	isl_int_clear(exact);
+	isl_int_clear(approx);
+	isl_int_clear(n);
+	isl_int_clear(d);
+
+	isl_point_free(pnt);
+
+	return 0;
 }
 
-static void test(evalue *EP, unsigned nvar, unsigned nparam,
+static void test(evalue *EP, unsigned nvar,
+		 const GiNaC::exvector &params,
 		 piecewise_lst **pl, struct result_data *result,
 		 struct verify_options *options)
 {
-    test_bound_data data(EP, pl, result);
-    check_EP(&data, nvar, nparam, options);
+	struct verify_point_bound vpb = { { options }, result };
+	isl_ctx *ctx = isl_ctx_alloc();
+	isl_dim *dim;
+	isl_set *context;
+	int r;
+	int i;
+
+	vpb.pwf = isl_alloc_array(ctx, isl_pw_qpolynomial_fold *, 2 * nr_methods);
+
+	dim = isl_dim_set_alloc(ctx, params.size(), 0);
+	for (i = 0; i < 2 * nr_methods; ++i)
+		vpb.pwf[i] = isl_pw_qpolynomial_fold_from_ginac(isl_dim_copy(dim),
+								pl[i], params);
+	isl_dim_free(dim);
+	dim = isl_dim_set_alloc(ctx, nvar + params.size(), 0);
+	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
+	vpb.pwqp = isl_pw_qpolynomial_move(vpb.pwqp, isl_dim_set, 0,
+						isl_dim_param, 0, nvar);
+	context = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vpb.pwqp));
+	context = isl_set_remove(context, isl_dim_set, 0, nvar);
+	context = verify_context_set_bounds(context, options);
+
+	r = verify_point_data_init(&vpb.vpd, context);
+	assert(r == 0);
+	isl_int_set_si(result->n, vpb.vpd.n);
+
+	isl_set_foreach_point(context, verify_point, &vpb);
+	assert(!vpb.vpd.error);
+
+	isl_set_free(context);
+	isl_pw_qpolynomial_free(vpb.pwqp);
+	for (i = 0; i < 2 * nr_methods; ++i)
+		isl_pw_qpolynomial_fold_free(vpb.pwf[i]);
+
+	isl_ctx_free(ctx);
+
+	verify_point_data_fini(&vpb.vpd);
+	free(vpb.pwf);
 }
 
 static int number_of_polynomials(piecewise_lst *pl)
@@ -279,7 +347,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	result->size[i] = number_of_polynomials(pl[2*i]);
 	result->size[i] += number_of_polynomials(pl[2*i+1]);
     }
-    test(EP, nvar, nparam, pl, result, options);
+    test(EP, nvar, params, pl, result, options);
 
     for (int i = 0; i < 2*nr_methods; ++i)
 	delete pl[i];
@@ -332,7 +400,7 @@ int main(int argc, char **argv)
 	if (!options.quiet)
 	    result_data_print(&result, 1);
 
-	value_addto(all_result.n, all_result.n, result.n);
+	isl_int_add(all_result.n, all_result.n, result.n);
 	for (i = 0; i < nr_methods; ++i) {
 	    all_result.RE_sum[i] += result.RE_sum[i];
 	    all_result.ticks[i] += result.ticks[i];
