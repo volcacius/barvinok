@@ -740,10 +740,13 @@ static __isl_give isl_qpolynomial *qp_from_ex(__isl_take isl_dim *dim,
 __isl_give isl_qpolynomial *isl_qpolynomial_from_ginac(__isl_take isl_dim *dim,
 	const GiNaC::ex &ex, const GiNaC::exvector &params)
 {
+	GiNaC::ex exp;
+
 	if (!dim)
 		return NULL;
 
-	return qp_from_ex(dim, ex, params, 0);
+	exp = ex.expand();
+	return qp_from_ex(dim, exp, params, 0);
 error:
 	isl_dim_free(dim);
 	return NULL;
