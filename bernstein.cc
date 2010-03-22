@@ -702,6 +702,9 @@ static __isl_give isl_qpolynomial *qp_from_ex(__isl_take isl_dim *dim,
 	int deg;
 	int j;
 
+	if (is_a<fail>(ex))
+		return isl_qpolynomial_nan(dim);
+
 	if (is_a<numeric>(ex)) {
 		numeric r = ex_to<numeric>(ex);
 		isl_int n;
