@@ -60,18 +60,19 @@ static void isl_obj_list_free(void *v)
 	isl_list_free((struct isl_list *)v);
 }
 
-static void isl_obj_list_print(void *v, FILE *out)
+static __isl_give isl_printer *isl_obj_list_print(__isl_take isl_printer *p,
+	void *v)
 {
 	struct isl_list *list = (struct isl_list *)v;
 	int i;
 
-	fprintf(out, "(");
+	isl_printer_print_str(p, "(");
 	for (i = 0; i < list->n; ++i) {
 		if (i)
-			fprintf(out, ", ");
-		list->obj[i].type->print(list->obj[i].v, out);
+			isl_printer_print_str(p, ", ");
+		list->obj[i].type->print(p, list->obj[i].v);
 	}
-	fprintf(out, ")");
+	isl_printer_print_str(p, ")");
 }
 
 static void *isl_obj_list_add(void *v1, void *v2)
