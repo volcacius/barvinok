@@ -107,15 +107,22 @@ else
 fi
 AC_CHECK_DECL(mpz_divisible_p,[],[AC_LIBOBJ(mpz_divisible_p)],[#include <gmp.h>])
 
-AX_SUBMODULE(polylib,bundled|system,bundled)
+AX_SUBMODULE(polylib,build|bundled|system,bundled)
 
 AC_SUBST(POLYLIB_CPPFLAGS)
 AC_SUBST(POLYLIB_LDFLAGS)
 AC_SUBST(POLYLIB_LIBS)
-if test "$with_polylib" = "bundled"; then
+case "$with_polylib" in
+bundled)
 	bv_configure_args="$bv_configure_args --with-polylib-builddir=../polylib"
 	POLYLIB_CPPFLAGS="-I\$(top_builddir)/polylib/include -I\$(top_srcdir)/polylib/include"
-else
+	;;
+build)
+	with_polylib_builddir=`echo @abs_builddir@ | $with_polylib_builddir/config.status --file=-`
+	POLYLIB_CPPFLAGS="-I$polylib_srcdir/include -I$with_polylib_builddir/include"
+	POLYLIB_LIBS="$with_polylib_builddir/libpolylibgmp.la"
+	;;
+system)
 	POLYLIB_LIBS="-lpolylibgmp"
 	if test "x$with_polylib_prefix" != "x"; then
 		POLYLIB_CPPFLAGS="-I$with_polylib_prefix/include"
@@ -127,7 +134,7 @@ else
 		AC_MSG_ERROR(Need PolyLib)
 	])
 	CPPFLAGS="$SAVE_CPPFLAGS"
-fi
+esac
 
 AM_CONDITIONAL(BUNDLED_POLYLIB, test $with_polylib = bundled)
 
