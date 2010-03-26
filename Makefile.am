@@ -12,7 +12,7 @@ if BUNDLED_ISL
     ISL_LA = $(top_builddir)/isl/libisl.la
 endif
 if BUNDLED_ISL_POLYLIB
-    MAYBE_ISL = isl-polylib
+    MAYBE_ISL_POLYLIB = isl-polylib
     ISL_POLYLIB_LA = $(top_builddir)/isl-polylib/libisl-polylib.la
 endif
 if BUNDLED_OMEGA
@@ -25,9 +25,12 @@ endif
 if USE_PARKER
     MAYBE_PARKER = parker
 endif
-SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POYLIB) \
+SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POLYLIB) \
 		$(MAYBE_BERNSTEIN) $(MAYBE_OMEGA) \
 		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega_interface doc
+DIST_SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) \
+		$(MAYBE_ISL_POLYLIB) bernstein $(MAYBE_OMEGA) \
+		lib zsolve parker omega_interface doc
 
 FORCE:
 lib/libgnu.la: FORCE
