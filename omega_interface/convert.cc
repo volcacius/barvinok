@@ -145,26 +145,3 @@ Relation Domain2relation(Polyhedron *D, unsigned nvar, unsigned nparam,
     }
     return r;
 }
-
-void dump(Relation& r)
-{
-    varvector vv;
-    varvector params;
-    struct barvinok_options *options = barvinok_options_new_with_defaults();
-    Polyhedron *D = relation2Domain(r, vv, params, options->MaxRays);
-    unsigned dim = r.is_set() ? r.n_set() : r.n_inp() + r.n_out();
-
-    if (D->next) {
-	fprintf(stderr, "Unions not supported\n");
-    } else {
-	unsigned exist = D->Dimension - params.size() - dim;
-	Polyhedron_PrintConstraints(stdout, P_VALUE_FMT, D);
-	fprintf(stdout, "\nE %d\nP %d\n\n", exist, params.size());
-	for (int i = 0; i < params.size(); ++i)
-	    fprintf(stdout, "%s ", params[i]->char_name());
-	fprintf(stdout, "\n");
-    }
-
-    Domain_Free(D);
-    barvinok_options_free(options);
-}

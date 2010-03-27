@@ -27,10 +27,10 @@ if USE_PARKER
 endif
 SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POLYLIB) \
 		$(MAYBE_BERNSTEIN) $(MAYBE_OMEGA) \
-		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . omega_interface doc
+		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) \
 		$(MAYBE_ISL_POLYLIB) bernstein $(MAYBE_OMEGA) \
-		lib zsolve parker omega_interface doc
+		lib zsolve parker doc
 
 FORCE:
 lib/libgnu.la: FORCE
@@ -259,7 +259,9 @@ barvinok_union_SOURCES = barvinok_union.cc
 if HAVE_OMEGA
 BEEO_SOURCES = \
 	omega_interface/Exit.cc \
+	omega_interface/convert.h \
 	omega_interface/convert.cc \
+	omega_interface/count.h \
 	omega_interface/count.cc
 else
 BEEO_SOURCES = 
