@@ -119,9 +119,9 @@ void result_data_print(struct result_data *result, int n)
 	fprintf(stderr, ", %d", result->ticks[i]/n);
     fprintf(stderr, "\n");
 
-    fprintf(stderr, "%d/%d", result->size[0], n);
+    fprintf(stderr, "%zd/%d", result->size[0], n);
     for (i = 1; i < nr_methods; ++i)
-	fprintf(stderr, ", %d/%d", result->size[i], n);
+	fprintf(stderr, ", %zd/%d", result->size[i], n);
     fprintf(stderr, "\n");
 
     fprintf(stderr, "%g\n", VALUE_TO_DOUBLE(result->n));
