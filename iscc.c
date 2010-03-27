@@ -5,11 +5,9 @@
 #include <isl_stream.h>
 #include <isl_obj_list.h>
 #include <barvinok/barvinok.h>
+#include <bound_common.h>
 
 #include "config.h"
-#ifdef HAVE_GINAC
-#include <barvinok/bernstein.h>
-#endif
 
 static int isl_bool_false = 0;
 static int isl_bool_true = 1;
@@ -331,6 +329,16 @@ static __isl_give isl_map *map_affine_hull(__isl_take isl_map *map)
 	return isl_map_from_basic_map(isl_map_affine_hull(map));
 }
 
+static __isl_give isl_pw_qpolynomial_fold *pw_qpolynomial_upper_bound(
+	__isl_take isl_pw_qpolynomial *pwqp)
+{
+#ifdef HAVE_GINAC
+	return isl_pw_qpolynomial_bound(pwqp, isl_fold_max, BV_BOUND_BERNSTEIN);
+#else
+	return isl_pw_qpolynomial_bound(pwqp, isl_fold_max, BV_BOUND_RANGE);
+#endif
+}
+
 typedef void *(*isc_un_op_fn)(void *arg);
 struct isc_un_op {
 	enum isl_token_type	op;
@@ -384,10 +392,8 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &map_sample } },
 	{"sum",		{ -1,	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
 		(isc_un_op_fn) &isl_pw_qpolynomial_sum } },
-#ifdef HAVE_GINAC
 	{"ub",		{ -1,	isl_obj_pw_qpolynomial, isl_obj_pw_qpolynomial_fold,
-		(isc_un_op_fn) &isl_pw_qpolynomial_upper_bound } },
-#endif
+		(isc_un_op_fn) &pw_qpolynomial_upper_bound } },
 	NULL
 };
 
