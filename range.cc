@@ -145,10 +145,10 @@ static void range_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
 	evalue_fixed_sign_terms(pos, data->signs, data->sign);
 	evalue_fixed_sign_terms(neg, data->signs, -data->sign);
 
-	subs[0] = u;
+	subs[0] = data->signs[0] > 0 ? u : l;
 	evalue_substitute(pos, subs);
 
-	subs[0] = l;
+	subs[0] = data->signs[0] > 0 ? l : u;
 	evalue_substitute(neg, subs);
 
 	eadd(neg, pos);
@@ -164,7 +164,9 @@ static void range_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     if (dim == data->nparam) {
 	data->pl->add_guarded_lst(T, lst(evalue2ex(pos, data->params)));
     } else {
+	data->signs++;
 	propagate_on_domain(T, pos, data);
+	data->signs--;
 	Polyhedron_Free(T);
     }
 
