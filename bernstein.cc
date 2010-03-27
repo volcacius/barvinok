@@ -62,7 +62,7 @@ static ex evalue2ex_add_var(evalue *e, exvector& extravar,
 	return base_var;
 
     char name[20];
-    snprintf(name, sizeof(name), "f%c%d", is_fract ? 'r' : 'l', expr.size());
+    snprintf(name, sizeof(name), "f%c%zd", is_fract ? 'r' : 'l', expr.size());
     extravar.push_back(base_var = symbol(name));
     expr.push_back(typed_evalue(is_fract, e));
 
