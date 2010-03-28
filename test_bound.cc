@@ -1,15 +1,14 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
-#include <bernstein/bernstein.h>
 #include <barvinok/options.h>
 #include <barvinok/bernstein.h>
 #include <barvinok/util.h>
+#include <bound_common.h>
 #include "argp.h"
 #include "progname.h"
 #include "evalue_read.h"
 #include "verify.h"
-#include "range.h"
 
 #ifdef HAVE_SYS_TIMES_H
 
@@ -40,8 +39,6 @@ static my_clock_t time_diff(struct tms *before, struct tms *after)
 using std::cout;
 using std::cerr;
 using std::endl;
-using namespace GiNaC;
-using namespace bernstein;
 using namespace barvinok;
 
 static struct {
@@ -239,25 +236,21 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 }
 
 static void test(evalue *EP, unsigned nvar,
-		 const GiNaC::exvector &params,
-		 piecewise_lst **pl, struct result_data *result,
-		 struct verify_options *options)
+	__isl_keep isl_pw_qpolynomial_fold **pwf, struct result_data *result,
+	struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options }, result };
-	isl_ctx *ctx = isl_ctx_alloc();
+	isl_ctx *ctx;
 	isl_dim *dim;
 	isl_set *context;
 	int r;
 	int i;
+	unsigned nparam;
 
-	vpb.pwf = isl_alloc_array(ctx, isl_pw_qpolynomial_fold *, 2 * nr_methods);
-
-	dim = isl_dim_set_alloc(ctx, params.size(), 0);
-	for (i = 0; i < 2 * nr_methods; ++i)
-		vpb.pwf[i] = isl_pw_qpolynomial_fold_from_ginac(isl_dim_copy(dim),
-								pl[i], params);
-	isl_dim_free(dim);
-	dim = isl_dim_set_alloc(ctx, nvar + params.size(), 0);
+	vpb.pwf = pwf;
+	ctx = isl_pw_qpolynomial_fold_get_ctx(pwf[0]);
+	nparam = isl_pw_qpolynomial_fold_dim(pwf[0], isl_dim_param);
+	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
 	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
 	vpb.pwqp = isl_pw_qpolynomial_move(vpb.pwqp, isl_dim_set, 0,
 						isl_dim_param, 0, nvar);
@@ -274,21 +267,8 @@ static void test(evalue *EP, unsigned nvar,
 
 	isl_set_free(context);
 	isl_pw_qpolynomial_free(vpb.pwqp);
-	for (i = 0; i < 2 * nr_methods; ++i)
-		isl_pw_qpolynomial_fold_free(vpb.pwf[i]);
-
-	isl_ctx_free(ctx);
 
 	verify_point_data_fini(&vpb.vpd);
-	free(vpb.pwf);
-}
-
-static int number_of_polynomials(piecewise_lst *pl)
-{
-    int n = 0;
-    for (int i = 0; i < pl->list.size(); ++i)
-	n += pl->list[i].second.nops();
-    return n;
 }
 
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
@@ -297,9 +277,9 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     const char **all_vars = NULL;
     unsigned nvar;
     unsigned nparam;
-    Polyhedron *U;
-    exvector params;
-    piecewise_lst *pl[2*nr_methods];
+    isl_ctx *ctx = isl_ctx_alloc();
+    isl_dim *dim;
+    isl_pw_qpolynomial_fold *pwf[2*nr_methods];
 
     EP = evalue_read_from_file(in, NULL, &all_vars,
 			       &nvar, &nparam, options->barvinok->MaxRays);
@@ -315,9 +295,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     evalue_frac2polynomial(upper, 1, options->barvinok->MaxRays);
     evalue_frac2polynomial(lower, -1, options->barvinok->MaxRays);
 
-    U = Universe_Polyhedron(nparam);
-    params = constructParameterVector(all_vars+nvar, nparam);
-
+    dim = isl_dim_set_alloc(ctx, nparam, 0);
     for (int i = 0; i < nr_methods; ++i) {
 	struct tms st_cpu;
 	struct tms en_cpu;
@@ -326,36 +304,40 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	for (int j = 0; j < 2; ++j) {
 	    evalue *poly = j == 0 ? upper : lower;
 	    int sign = j == 0 ? BV_BERNSTEIN_MAX : BV_BERNSTEIN_MIN;
+	    enum isl_fold type = j == 0 ? isl_fold_max : isl_fold_min;
 	    options->barvinok->bernstein_optimize = sign;
-	    if (methods[i].method == BV_BOUND_BERNSTEIN) {
-		pl[2*i+j] = evalue_bernstein_coefficients(NULL, poly, U, params,
-						   options->barvinok);
-		if (sign == BV_BERNSTEIN_MIN)
-		    pl[2*i+j]->minimize();
-		else
-		    pl[2*i+j]->maximize();
-	    } else {
-		pl[2*i+j] = evalue_range_propagation(NULL, poly, params,
-					      options->barvinok);
-	    }
+	    isl_dim *dim_poly;
+	    isl_pw_qpolynomial *pwqp;
+	    dim_poly = isl_dim_insert(isl_dim_copy(dim), isl_dim_param, 0, nvar);
+	    pwqp = isl_pw_qpolynomial_from_evalue(dim_poly, poly);
+	    pwqp = isl_pw_qpolynomial_move(pwqp, isl_dim_set, 0,
+					    isl_dim_param, 0, nvar);
+	    pwf[2*i+j] = isl_pw_qpolynomial_bound(pwqp, type, methods[i].method);
 	}
 	times(&en_cpu);
 	result->ticks[i] = time_diff(&en_cpu, &st_cpu);
-	if (options->barvinok->verbose)
-	    for (int j = 0; j < 2; ++j)
-		cerr << *pl[2*i+j] << endl;
-	result->size[i] = number_of_polynomials(pl[2*i]);
-	result->size[i] += number_of_polynomials(pl[2*i+1]);
+	result->size[i] = isl_pw_qpolynomial_fold_size(pwf[2*i]);
+	result->size[i] = isl_pw_qpolynomial_fold_size(pwf[2*i+1]);
+	if (options->barvinok->verbose) {
+	    isl_printer *p = isl_printer_to_file(ctx, stdout);
+	    for (int j = 0; j < 2; ++j) {
+		p = isl_printer_print_pw_qpolynomial_fold(p, pwf[2*i+j]);
+		p = isl_printer_end_line(p);
+	    }
+	    isl_printer_free(p);
+	}
     }
-    test(EP, nvar, params, pl, result, options);
+    isl_dim_free(dim);
+    test(EP, nvar, pwf, result, options);
 
     for (int i = 0; i < 2*nr_methods; ++i)
-	delete pl[i];
-    Polyhedron_Free(U);
+	isl_pw_qpolynomial_fold_free(pwf[i]);
     evalue_free(EP);
     evalue_free(lower);
     evalue_free(upper);
     Free_ParamNames(all_vars, nvar+nparam);
+
+    isl_ctx_free(ctx);
 }
 
 int main(int argc, char **argv)
