@@ -118,6 +118,10 @@ struct isc_bin_op {
 	isl_obj_type		res;
 	isc_bin_op_fn		fn;
 };
+struct isc_named_bin_op {
+	char			*name;
+	struct isc_bin_op	op;
+};
 
 struct iscc_at {
 	isl_pw_qpolynomial *pwqp;
@@ -285,6 +289,13 @@ struct isc_bin_op bin_ops[] = {
 		isl_obj_pw_qpolynomial_fold,
 		(isc_bin_op_fn) &isl_pw_qpolynomial_fold_gist },
 	0
+};
+struct isc_named_bin_op named_bin_ops[] = {
+	{ "cross",	{ -1,	isl_obj_set,	isl_obj_set,	isl_obj_set,
+		(isc_bin_op_fn) &isl_set_product } },
+	{ "cross",	{ -1,	isl_obj_map,	isl_obj_map,	isl_obj_map,
+		(isc_bin_op_fn) &isl_map_product } },
+	NULL
 };
 
 __isl_give isl_set *set_sample(__isl_take isl_set *set)
@@ -455,6 +466,18 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 		return &bin_ops[i];
 	}
 
+	for (i = 0; ; ++i) {
+		if (!named_bin_ops[i].name)
+			break;
+		if (named_bin_ops[i].op.op != tok->type)
+			continue;
+		if (named_bin_ops[i].op.lhs != lhs)
+			continue;
+
+		isl_token_free(tok);
+		return &named_bin_ops[i].op;
+	}
+
 	isl_stream_push_token(s, tok);
 
 	return NULL;
@@ -470,7 +493,7 @@ static struct isc_un_op *read_prefix_un_op_if_available(struct isl_stream *s)
 		return NULL;
 
 	for (i = 0; ; ++i) {
-		if (!named_un_ops[i].op.op)
+		if (!named_un_ops[i].name)
 			break;
 		if (named_un_ops[i].op.op != tok->type)
 			continue;
@@ -490,7 +513,7 @@ static struct isc_un_op *find_matching_un_op(struct isc_un_op *like,
 	int i;
 
 	for (i = 0; ; ++i) {
-		if (!named_un_ops[i].op.op)
+		if (!named_un_ops[i].name)
 			break;
 		if (named_un_ops[i].op.op != like->op)
 			continue;
@@ -699,6 +722,19 @@ static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
 		return &bin_ops[i];
 	}
 
+	for (i = 0; ; ++i) {
+		if (!named_bin_ops[i].name)
+			break;
+		if (named_bin_ops[i].op.op != like->op)
+			continue;
+		if (named_bin_ops[i].op.lhs != lhs)
+			continue;
+		if (named_bin_ops[i].op.rhs != rhs)
+			continue;
+
+		return &named_bin_ops[i].op;
+	}
+
 	return NULL;
 }
 
@@ -797,6 +833,14 @@ static void register_named_ops(struct isl_stream *s)
 		named_un_ops[i].op.op = isl_stream_register_keyword(s,
 							named_un_ops[i].name);
 		assert(named_un_ops[i].op.op != ISL_TOKEN_ERROR);
+	}
+
+	for (i = 0; ; ++i) {
+		if (!named_bin_ops[i].name)
+			break;
+		named_bin_ops[i].op.op = isl_stream_register_keyword(s,
+							named_bin_ops[i].name);
+		assert(named_bin_ops[i].op.op != ISL_TOKEN_ERROR);
 	}
 }
 
