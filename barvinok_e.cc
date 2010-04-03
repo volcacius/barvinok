@@ -4,7 +4,6 @@
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include "param_util.h"
-#include "piputil.h"
 #include "reduce_domain.h"
 #include "config.h"
 
@@ -1126,43 +1125,6 @@ static evalue* enumerate_vd(Polyhedron **PA,
     return EP;
 }
 
-evalue* barvinok_enumerate_pip(Polyhedron *P, unsigned exist, unsigned nparam,
-			       unsigned MaxRays)
-{
-    evalue *E;
-    barvinok_options *options = barvinok_options_new_with_defaults();
-    options->MaxRays = MaxRays;
-    E = barvinok_enumerate_pip_with_options(P, exist, nparam, options);
-    barvinok_options_free(options);
-    return E;
-}
-
-evalue *barvinok_enumerate_pip_with_options(Polyhedron *P,
-		  unsigned exist, unsigned nparam, struct barvinok_options *options)
-{
-    int nvar = P->Dimension - exist - nparam;
-    evalue *EP = evalue_zero();
-    Polyhedron *Q, *N;
-
-#ifdef DEBUG_ER
-    fprintf(stderr, "\nER: PIP\n");
-#endif /* DEBUG_ER */
-
-    Polyhedron *D = pip_projectout(P, nvar, exist, nparam);
-    for (Q = D; Q; Q = N) {
-	N = Q->next;
-	Q->next = 0;
-	evalue *E;
-	exist = Q->Dimension - nvar - nparam;
-	E = barvinok_enumerate_e_with_options(Q, exist, nparam, options);
-	Polyhedron_Free(Q);
-	eadd(E, EP);
-	evalue_free(E);
-    }
-
-    return EP;
-}
-
 evalue *barvinok_enumerate_isl(Polyhedron *P,
 	  unsigned exist, unsigned nparam, struct barvinok_options *options)
 {
@@ -1541,7 +1503,7 @@ next:
     if (EP)
 	goto out;
 
-    EP = barvinok_enumerate_pip_with_options(P, exist, nparam, options);
+    EP = barvinok_enumerate_isl(P, exist, nparam, options);
     if (EP)
 	goto out;
 

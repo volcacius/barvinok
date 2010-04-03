@@ -66,7 +66,7 @@ bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
-		  barvinok_summate verify_lexsmaller piptest \
+		  barvinok_summate verify_lexsmaller \
 		  polyhedron_sample 4coins lexmin @bv_barvinok_bound@ \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
@@ -156,8 +156,6 @@ libbarvinok_core_la_SOURCES = \
     param_polynomial.h \
     param_util.c \
     param_util.h \
-    piputil.h \
-    piputil.c \
     $(POLYSIGN_CDD) \
     $(POLYSIGN_GLPK) \
     polysign.c \
@@ -492,7 +490,7 @@ check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
 	@for dir in $(BEE_TESTDIRS); do \
 	    for i in $(top_srcdir)/tests/$$dir/*; do \
 		if test -f $$i; then \
-		    for options in '' '--pip' '--pip --omega' '--isl'; do \
+		    for options in '' '--isl --omega' '--isl'; do \
 			for spec in 'random' 'bf' 'df'; do \
 			    opt="--specialization=$$spec $$options"; \
 			    echo $$i $$opt; \

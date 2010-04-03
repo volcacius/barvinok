@@ -31,7 +31,6 @@ struct argp_option argp_options[] = {
     { "isl",      	    'i',    0,      0 },
     { "omega",      	    'o',    0,      0 },
     { "parker", 	    'P',    0,      0 },
-    { "pip",   	    	    'p',    0,      0 },
     { "series",     	    's',    0,	    0 },
     { "series",		    's', 0, 0, "compute rational generating function" },
     { "explicit",	    'e', 0, 0, "convert rgf to psp" },
@@ -45,7 +44,6 @@ struct arguments {
     int isl;
     int omega;
     int parker;
-    int pip;
     int scarf;
     int series;
     int function;
@@ -86,9 +84,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case 'i':
 	arguments->isl = 1;
-	break;
-    case 'p':
-	arguments->pip = 1;
 	break;
     default:
 	return ARGP_ERR_UNKNOWN;
@@ -167,7 +162,6 @@ int main(int argc, char **argv)
     arguments.isl = 0;
     arguments.omega = 0;
     arguments.parker = 0;
-    arguments.pip = 0;
     arguments.scarf = 0;
     arguments.series = 0;
     arguments.function = 0;
@@ -232,8 +226,6 @@ int main(int argc, char **argv)
 	    EP = barvinok_enumerate_scarf(A, exist, nparam, options);
 	else if (arguments.isl && exist > 0)
 	    EP = barvinok_enumerate_isl(A, exist, nparam, options);
-	else if (arguments.pip && exist > 0)
-	    EP = barvinok_enumerate_pip_with_options(A, exist, nparam, options);
 	else
 	    EP = barvinok_enumerate_e_with_options(A, exist, nparam, options);
 	reduce_evalue(EP);
