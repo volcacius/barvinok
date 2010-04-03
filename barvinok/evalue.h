@@ -44,6 +44,8 @@ typedef struct _evalue {
   } x;
 } evalue;
 
+__isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(
+	__isl_take isl_dim *dim, const evalue *e);
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(
 	__isl_take isl_dim *dim, const evalue *e);
 evalue *isl_qpolynomial_to_evalue(__isl_keep isl_qpolynomial *qp);

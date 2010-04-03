@@ -66,7 +66,7 @@ static int type_offset(enode *p)
 	       p->type == flooring ? 1 : 0;
 }
 
-static __isl_give isl_qpolynomial *evalue2qp(__isl_take isl_dim *dim,
+__isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(__isl_take isl_dim *dim,
 	const evalue *e)
 {
 	int i;
@@ -87,12 +87,14 @@ static __isl_give isl_qpolynomial *evalue2qp(__isl_take isl_dim *dim,
 	assert(e->x.p->size >= 1 + offset);
 
 	base = extract_base(isl_dim_copy(dim), e);
-	qp = evalue2qp(isl_dim_copy(dim), &e->x.p->arr[e->x.p->size - 1]);
+	qp = isl_qpolynomial_from_evalue(isl_dim_copy(dim),
+					 &e->x.p->arr[e->x.p->size - 1]);
 
 	for (i = e->x.p->size - 2; i >= offset; --i) {
 		qp = isl_qpolynomial_mul(qp, isl_qpolynomial_copy(base));
 		qp = isl_qpolynomial_add(qp,
-				    evalue2qp(isl_dim_copy(dim), &e->x.p->arr[i]));
+				    isl_qpolynomial_from_evalue(isl_dim_copy(dim),
+				    &e->x.p->arr[i]));
 	}
 
 	isl_qpolynomial_free(base);
@@ -186,7 +188,7 @@ static __isl_give isl_pw_qpolynomial *guarded_evalue2pwqp(__isl_take isl_set *se
 	if (value_zero_p(e->d) && e->x.p->type == relation)
 		return relation2pwqp(set, e);
 
-	qp = evalue2qp(isl_set_get_dim(set), e);
+	qp = isl_qpolynomial_from_evalue(isl_set_get_dim(set), e);
 
 	return isl_pw_qpolynomial_alloc(set, qp);
 }
