@@ -863,7 +863,7 @@ int main(int argc, char **argv)
 
 	register_named_ops(s);
 
-	while (!feof(stdin)) {
+	while (!s->eof) {
 		p = read_line(s, table, p);
 	}
 
