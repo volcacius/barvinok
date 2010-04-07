@@ -347,6 +347,8 @@ struct isc_named_un_op named_un_ops[] = {
 	{"coalesce",	{ -1,	isl_obj_pw_qpolynomial_fold,
 		isl_obj_pw_qpolynomial_fold,
 		(isc_un_op_fn) &isl_pw_qpolynomial_fold_coalesce } },
+	{"deltas",	{ -1,	isl_obj_map,	isl_obj_set,
+		(isc_un_op_fn) &isl_map_deltas } },
 	{"dom",	{ -1,	isl_obj_map,	isl_obj_set,
 		(isc_un_op_fn) &isl_map_domain } },
 	{"dom",	{ -1,	isl_obj_pw_qpolynomial,	isl_obj_set,
