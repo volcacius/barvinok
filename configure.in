@@ -178,14 +178,17 @@ case "$with_isl" in
 bundled)
 	ISL_CFLAGS="-I\$(top_srcdir)/isl/include -I\$(top_builddir)/isl/include"
 	bv_configure_args="$bv_configure_args --with-isl-builddir=../isl"
+	PACKAGE_CFLAGS_ISL="-I$prefix/include/isl"
 	;;
 build)
 	with_isl_builddir=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
 	ISL_CFLAGS="-I$isl_srcdir/include -I$with_isl_builddir/include"
 	ISL_LIBS="$with_isl_builddir/libisl.la"
+	PACKAGE_CFLAGS_ISL="-I$prefix/include/isl"
 	;;
 system)
 	PKG_CHECK_MODULES([ISL], [isl])
+	PACKAGE_CFLAGS_ISL="$ISL_CFLAGS"
 esac
 AM_CONDITIONAL(BUNDLED_ISL, test $with_isl = bundled)
 
@@ -556,7 +559,8 @@ CPPFLAGS="$SAVE_CPPFLAGS"
 AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
 
-PACKAGE_LIBS="-lbarvinok -lbarvinok-core $EXTRA_PACKAGE_LIBS -lpolylibgmp -lpiplibMP"
+PACKAGE_CFLAGS="$PACKAGE_CFLAGS_ISL"
+PACKAGE_LIBS="-lbarvinok -lbarvinok-core $EXTRA_PACKAGE_LIBS -lisl-polylib -lpolylibgmp -lpiplibMP -lisl"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
