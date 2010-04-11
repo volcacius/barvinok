@@ -1586,7 +1586,7 @@ __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 
 	nparam = isl_map_dim(map, isl_dim_param);
 	n_in = isl_map_dim(map, isl_dim_in);
-	map = isl_map_move(map, isl_dim_param, nparam, isl_dim_in, 0, n_in);
+	map = isl_map_move_dims(map, isl_dim_param, nparam, isl_dim_in, 0, n_in);
 	set = isl_map_range(map);
 	card = isl_set_card(set);
 	card = isl_pw_qpolynomial_move(card, isl_dim_set, 0,
