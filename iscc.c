@@ -196,18 +196,6 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_fold_at(
 	return at.res;
 }
 
-static __isl_give isl_set *set_gist(__isl_take isl_set *set,
-	__isl_take isl_set *context)
-{
-	return isl_set_gist(set, isl_set_convex_hull(context));
-}
-
-static __isl_give isl_map *map_gist(__isl_take isl_map *map,
-	__isl_take isl_map *context)
-{
-	return isl_map_gist(map, isl_map_convex_hull(context));
-}
-
 struct isc_bin_op bin_ops[] = {
 	{ '+',	isl_obj_set,	isl_obj_set,
 		isl_obj_set,
@@ -278,10 +266,10 @@ struct isc_bin_op bin_ops[] = {
 		(isc_bin_op_fn) &isl_pw_qpolynomial_fold_at },
 	{ '%',	isl_obj_set,	isl_obj_set,
 		isl_obj_set,
-		(isc_bin_op_fn) &set_gist },
+		(isc_bin_op_fn) &isl_set_gist },
 	{ '%',	isl_obj_map,	isl_obj_map,
 		isl_obj_map,
-		(isc_bin_op_fn) &map_gist },
+		(isc_bin_op_fn) &isl_map_gist },
 	{ '%',	isl_obj_pw_qpolynomial,	isl_obj_set,
 		isl_obj_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_pw_qpolynomial_gist },
