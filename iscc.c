@@ -15,6 +15,29 @@ static int isl_bool_false = 0;
 static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
+struct isl_arg_choice iscc_format[] = {
+	{"isl",		ISL_FORMAT_ISL},
+	{"omega",	ISL_FORMAT_OMEGA},
+	{"polylib",	ISL_FORMAT_POLYLIB},
+	{"latex",	ISL_FORMAT_LATEX},
+	{"C",		ISL_FORMAT_C},
+	{0}
+};
+
+struct iscc_options {
+	struct isl_options	*isl;
+	unsigned		 format;
+};
+
+struct isl_arg iscc_options_arg[] = {
+ISL_ARG_CHILD(struct iscc_options, isl, "isl", isl_options_arg)
+ISL_ARG_CHOICE(struct iscc_options, format, 0, "format", \
+	iscc_format,	ISL_FORMAT_ISL)
+ISL_ARG_END
+};
+
+ISL_ARG_DEF(iscc_options, struct iscc_options, iscc_options_arg)
+
 static void *isl_obj_bool_copy(void *v)
 {
 	return v;
@@ -839,14 +862,21 @@ int main(int argc, char **argv)
 	struct isl_ctx *ctx;
 	struct isl_stream *s;
 	struct isl_hash_table *table;
+	struct iscc_options *options;
 	isl_printer *p;
 
-	ctx = isl_ctx_alloc();
+	options = iscc_options_new_with_defaults();
+	assert(options);
+	argc = iscc_options_parse(options, argc, argv, ISL_ARG_ALL);
+
+	ctx = isl_ctx_alloc_with_options(options->isl);
+	options->isl = NULL;
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
 	table = isl_hash_table_alloc(ctx, 10);
 	assert(table);
 	p = isl_printer_to_file(ctx, stdout);
+	p = isl_printer_set_output_format(p, options->format);
 	assert(p);
 
 	register_named_ops(s);
