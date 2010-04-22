@@ -15,6 +15,8 @@ static int isl_bool_false = 0;
 static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
+static enum isl_token_type read_op;
+
 struct isl_arg_choice iscc_format[] = {
 	{"isl",		ISL_FORMAT_ISL},
 	{"omega",	ISL_FORMAT_OMEGA},
@@ -679,6 +681,42 @@ error:
 	return obj;
 }
 
+static struct isl_obj read_from_file(struct isl_stream *s)
+{
+	struct isl_obj obj;
+	struct isl_token *tok;
+	struct isl_stream *s_file;
+	FILE *file;
+
+	tok = isl_stream_next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_STRING) {
+		isl_stream_error(s, tok, "expecting filename");
+		isl_token_free(tok);
+		goto error;
+	}
+
+	file = fopen(tok->u.s, "r");
+	isl_token_free(tok);
+	isl_assert(s->ctx, file, goto error);
+
+	s_file = isl_stream_new_file(s->ctx, file);
+	if (!s_file) {
+		fclose(file);
+		goto error;
+	}
+
+	obj = isl_stream_read_obj(s_file);
+
+	isl_stream_free(s_file);
+	fclose(file);
+
+	return obj;
+error:
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -694,6 +732,9 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		op = read_prefix_un_op_if_available(s);
 		if (op)
 			return read_un_op_expr(s, table, op);
+
+		if (isl_stream_eat_if_available(s, read_op))
+			return read_from_file(s);
 
 		name = isl_stream_read_ident_if_available(s);
 		if (name) {
@@ -839,6 +880,9 @@ int free_cb(void *entry)
 static void register_named_ops(struct isl_stream *s)
 {
 	int i;
+
+	read_op = isl_stream_register_keyword(s, "read");
+	assert(read_op != ISL_TOKEN_ERROR);
 
 	for (i = 0; ; ++i) {
 		if (!named_un_ops[i].name)

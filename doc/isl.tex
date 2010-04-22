@@ -68,7 +68,8 @@ $q$: piecewise quasipolynomial,
 $f$: piecewise quasipolynomial fold,
 $l$: list,
 $i$: integer,
-$b$: boolean
+$b$: boolean,
+$o$: object of any type
 }
 \label{t:iscc}
 \tablehead{
@@ -144,6 +145,9 @@ lexicographically maximal element of $s_1$
 \\
 $m_2$ := \ai[\tt]{lexmax} $m_1$ &
 lexicographically maximal image element
+\\
+$o$ := \ai[\tt]{read} {\tt "}{\it filename}{\tt"} &
+read object from file
 \\
 $s_2$ := \ai[\tt]{sample} $s_1$ &
 a sample element of the set $s_1$
@@ -225,7 +229,7 @@ of $m$ and return a list containing the overapproximation
 and a boolean that is true if the overapproximation
 is known to be exact
 \\
-$l$[$i$] &
+$o$ := $l$[$i$] &
 the element at position $i$ in the list $l$
 \\
 $b$ := $s_1$ \ai[\tt]{=} $s_2$ & is $s_1$ equal to $s_2$?
