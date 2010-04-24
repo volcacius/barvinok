@@ -890,6 +890,7 @@ int main(int argc, char **argv)
 	isl_hash_table_free(ctx, table);
 	isl_stream_free(s);
 	isl_ctx_free(ctx);
+	free(options);
 
 	return 0;
 }
