@@ -652,6 +652,33 @@ error:
 	return obj;
 }
 
+static struct isl_obj apply(struct isl_stream *s, __isl_take isl_map *map,
+	struct isl_hash_table *table)
+{
+	struct isl_obj obj;
+
+	obj = read_expr(s, table);
+	isl_assert(s->ctx, obj.type == isl_obj_set || obj.type == isl_obj_map,
+		goto error);
+
+	if (obj.type == isl_obj_set) {
+		obj.v = isl_set_apply(obj.v, map);
+	} else
+		obj.v = isl_map_apply_range(obj.v, map);
+	if (!obj.v)
+		goto error;
+
+	if (isl_stream_eat(s, ')'))
+		goto error;
+
+	return obj;
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_token *tok;
@@ -749,6 +776,8 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		obj = power(s, obj);
 	else if (obj.type == isl_obj_list && isl_stream_eat_if_available(s, '['))
 		obj = obj_at_index(s, obj);
+	else if (obj.type == isl_obj_map && isl_stream_eat_if_available(s, '('))
+		obj = apply(s, obj.v, table);
 
 	return obj;
 error:
