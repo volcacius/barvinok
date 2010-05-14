@@ -68,7 +68,11 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->count_sample_infinite = 1;
     options->try_Delaunay_triangulation = 0;
 
+#ifdef HAVE_GINAC
     options->bound = BV_BOUND_BERNSTEIN;
+#else
+    options->bound = BV_BOUND_RANGE;
+#endif
     options->chambers = BV_CHAMBERS_POLYLIB;
 
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;

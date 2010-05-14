@@ -7,6 +7,7 @@
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
 #include <barvinok/options.h>
+#include "bound_common.h"
 #include "reduce_domain.h"
 
 using namespace GiNaC;
@@ -860,8 +861,8 @@ error:
 	return -1;
 }
 
-__isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_upper_bound(
-	__isl_take isl_pw_qpolynomial *pwqp)
+__isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_bound_bernstein(
+	__isl_take isl_pw_qpolynomial *pwqp, enum isl_fold type)
 {
 	isl_dim *dim = NULL;
 	unsigned nvar;
@@ -874,10 +875,15 @@ __isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_upper_bound(
 
 	dim = isl_pw_qpolynomial_get_dim(pwqp);
 	nvar = isl_dim_size(dim, isl_dim_set);
+
+	if (isl_pw_qpolynomial_is_zero(pwqp)) {
+		isl_pw_qpolynomial_free(pwqp);
+		dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+		return isl_pw_qpolynomial_fold_zero(dim);
+	}
 	if (nvar == 0) {
 		isl_dim_free(dim);
-		return isl_pw_qpolynomial_fold_from_pw_qpolynomial(isl_fold_max,
-									pwqp);
+		return isl_pw_qpolynomial_fold_from_pw_qpolynomial(type, pwqp);
 	}
 
 	nparam = isl_dim_size(dim, isl_dim_param);
@@ -889,11 +895,17 @@ __isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_upper_bound(
 				    guarded_qp_bernstein_coefficients, &bound))
 		goto error;
 
-	bound.pl->maximize();
+	if (type == isl_fold_max)
+		bound.pl->maximize();
+	else
+		bound.pl->minimize();
 
 	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
 
-	bound.pl->sign = 1;
+	if (type == isl_fold_max)
+		bound.pl->sign = 1;
+	else
+		bound.pl->sign = -1;
 	pwf = isl_pw_qpolynomial_fold_from_ginac(dim, bound.pl, bound.params);
 
 	Polyhedron_Free(bound.U);

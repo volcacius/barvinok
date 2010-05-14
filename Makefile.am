@@ -222,6 +222,8 @@ else
     BERNSTEIN_CC = dummy.c
 endif
 libbarvinok_la_SOURCES = \
+    bound_common.c \
+    bound_common.h \
     $(BERNSTEIN_CC)
 EXTRA_libbarvinok_la_SOURCES = \
     ex_convert.cc \
