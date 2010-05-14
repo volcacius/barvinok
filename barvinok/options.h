@@ -73,6 +73,10 @@ struct barvinok_options {
     #define	BV_GBR_PIP_DUAL	3
     int		gbr_lp_solver;
 
+    #define	BV_BOUND_BERNSTEIN	0
+    #define	BV_BOUND_RANGE		1
+    int		bound;
+
     /* bernstein options */
     #define	BV_BERNSTEIN_NONE   0
     #define	BV_BERNSTEIN_MAX    1
@@ -132,7 +136,8 @@ void barvinok_options_free(struct barvinok_options *options);
 #define BV_OPT_CHAMBERS		268
 #define BV_OPT_HULL		269
 #define BV_OPT_PRINT_STATS	270
-#define BV_OPT_LAST		270
+#define BV_OPT_BOUND		271
+#define BV_OPT_LAST		271
 
 #define BV_GRP_APPROX		1
 #define BV_GRP_LAST		1

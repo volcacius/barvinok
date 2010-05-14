@@ -68,6 +68,7 @@ struct barvinok_options *barvinok_options_new_with_defaults()
     options->count_sample_infinite = 1;
     options->try_Delaunay_triangulation = 0;
 
+    options->bound = BV_BOUND_BERNSTEIN;
     options->chambers = BV_CHAMBERS_POLYLIB;
 
     options->polynomial_approximation = BV_APPROX_SIGN_NONE;
@@ -148,6 +149,10 @@ static struct argp_option barvinok_argp_options[] = {
     { "primal",	    	    BV_OPT_PRIMAL,  	    0,			0 },
     { "table",	    	    BV_OPT_TABLE,  	    0,			0 },
     { "specialization",	    BV_OPT_SPECIALIZATION,  "[bf|df|random|todd]" },
+#ifdef HAVE_GINAC
+    { "bound",		    BV_OPT_BOUND,	    "bernstein|range",	0,
+	"algorithm to use for computing bounds [default: bernstein]" },
+#endif
 #ifdef POINTS2TRIANGS_PATH
     { "chamber-decomposition", 	BV_OPT_CHAMBERS,    "polylib|topcom",	0,
 	"tool to use for chamber decomposition [default: polylib]" },
@@ -320,6 +325,12 @@ static error_t barvinok_parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case BV_OPT_TABLE:
 	options->lookup_table = 1;
+	break;
+    case BV_OPT_BOUND:
+	if (!strcmp(arg, "bernstein"))
+	    options->bound = BV_BOUND_BERNSTEIN;
+	if (!strcmp(arg, "range"))
+	    options->bound = BV_BOUND_RANGE;
 	break;
     case BV_OPT_CHAMBERS:
 	if (!strcmp(arg, "polylib"))

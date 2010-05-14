@@ -44,14 +44,11 @@ using namespace GiNaC;
 using namespace bernstein;
 using namespace barvinok;
 
-#define	METHOD_BERNSTEIN	0
-#define METHOD_PROPAGATION	1
-
 static struct {
     int	    method;
 } methods[] = {
-    { METHOD_BERNSTEIN },
-    { METHOD_PROPAGATION },
+    { BV_BOUND_BERNSTEIN },
+    { BV_BOUND_RANGE },
 };
 
 #define nr_methods (sizeof(methods)/sizeof(*methods))
@@ -262,7 +259,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	    evalue *poly = j == 0 ? upper : lower;
 	    int sign = j == 0 ? BV_BERNSTEIN_MAX : BV_BERNSTEIN_MIN;
 	    options->barvinok->bernstein_optimize = sign;
-	    if (methods[i].method == METHOD_BERNSTEIN) {
+	    if (methods[i].method == BV_BOUND_BERNSTEIN) {
 		pl[2*i+j] = evalue_bernstein_coefficients(NULL, poly, U, params,
 						   options->barvinok);
 		if (sign == BV_BERNSTEIN_MIN)

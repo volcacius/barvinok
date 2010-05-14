@@ -25,16 +25,13 @@ using namespace barvinok;
 #define OPT_VARS  	    (BV_OPT_LAST+1)
 #define OPT_SPLIT  	    (BV_OPT_LAST+2)
 #define OPT_LOWER  	    (BV_OPT_LAST+3)
-#define OPT_METHOD  	    (BV_OPT_LAST+4)
-#define OPT_ITERATE  	    (BV_OPT_LAST+5)
+#define OPT_ITERATE  	    (BV_OPT_LAST+4)
 
 struct argp_option argp_options[] = {
     { "split",		    OPT_SPLIT,	"int" },
     { "variables",	    OPT_VARS,  	"list",	0,
 	"comma separated list of variables over which to compute a bound" },
     { "lower",	    	    OPT_LOWER, 	0, 0,	"compute lower bound instead of upper bound"},
-    { "optimization-method",	OPT_METHOD,	"bernstein|propagation",
-	0, "optimization method to use" },
     { "iterate",	    OPT_ITERATE,  	"int", 1,
 	"exact result by iterating over domain (of specified maximal size)"},
     { 0 }
@@ -46,9 +43,6 @@ struct options {
     char* var_list;
     int split;
     int lower;
-#define	METHOD_BERNSTEIN	0
-#define METHOD_PROPAGATION	1
-    int method;
     int iterate;
 };
 
@@ -64,7 +58,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	options->var_list = NULL;
 	options->split = 0;
 	options->lower = 0;
-	options->method = METHOD_BERNSTEIN;
 	options->iterate = 0;
 	break;
     case OPT_VARS:
@@ -75,14 +68,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 	break;
     case OPT_LOWER:
 	options->lower = 1;
-	break;
-    case OPT_METHOD:
-	if (!strcmp(arg, "bernstein"))
-	    options->method = METHOD_BERNSTEIN;
-	else if (!strcmp(arg, "propagation"))
-	    options->method = METHOD_PROPAGATION;
-	else
-	    argp_error(state, "unknown value for --optimization-method option");
 	break;
     case OPT_ITERATE:
 	if (!arg)
@@ -333,7 +318,7 @@ static piecewise_lst *optimize(evalue *EP, unsigned nvar, Polyhedron *C,
     }
     if (options->iterate)
 	pl = iterate(EP, nvar, C, options);
-    else if (options->method == METHOD_BERNSTEIN) {
+    else if (options->verify.barvinok->bound == BV_BOUND_BERNSTEIN) {
 	pl = evalue_bernstein_coefficients(NULL, EP, C, params,
 					   options->verify.barvinok);
 	if (options->lower)
