@@ -16,20 +16,20 @@ void barvinok_stats_clear(struct barvinok_stats *stats)
 
 void barvinok_stats_print(struct barvinok_stats *stats, FILE *out)
 {
-    fprintf(out, "Base cones: %d\n", stats->base_cones);
+    fprintf(out, "Base cones: %ld\n", stats->base_cones);
     if (stats->volume_simplices)
-	fprintf(out, "Volume simplices: %d\n", stats->volume_simplices);
+	fprintf(out, "Volume simplices: %ld\n", stats->volume_simplices);
     if (stats->topcom_chambers) {
-	fprintf(out, "TOPCOM empty chambers: %d\n",
+	fprintf(out, "TOPCOM empty chambers: %ld\n",
 		stats->topcom_empty_chambers);
-	fprintf(out, "TOPCOM chambers: %d\n", stats->topcom_chambers);
-	fprintf(out, "TOPCOM distinct chambers: %d\n",
+	fprintf(out, "TOPCOM chambers: %ld\n", stats->topcom_chambers);
+	fprintf(out, "TOPCOM distinct chambers: %ld\n",
 		stats->topcom_distinct_chambers);
     }
     if (stats->gbr_solved_lps)
-	fprintf(out, "LPs solved during GBR: %d\n", stats->gbr_solved_lps);
+	fprintf(out, "LPs solved during GBR: %ld\n", stats->gbr_solved_lps);
     if (stats->bernoulli_sums)
-	fprintf(out, "Bernoulli sums: %d\n", stats->bernoulli_sums);
+	fprintf(out, "Bernoulli sums: %ld\n", stats->bernoulli_sums);
 }
 
 struct barvinok_options *barvinok_options_new_with_defaults()
