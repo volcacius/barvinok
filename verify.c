@@ -459,61 +459,6 @@ int check_EP(struct check_EP_data *data, unsigned nvar, unsigned nparam,
     return ok;
 }
 
-static void optimum(Polyhedron *S, int pos, const struct check_EP_data *data,
-		    Value *opt, int *found, int sign)
-{
-    if (!S) {
-	double d;
-	Value c;
-	value_init(c);
-	/* value_set_double rounds to zero; give it some slop */
-	d = compute_evalue(data->EP, data->cp.z+1);
-	if (d > 0)
-	    d += .25;
-	else
-	    d -= .25;
-	value_set_double(c, d);
-	if (!*found) {
-	    value_assign(*opt, c);
-	    *found = 1;
-	} else {
-	    if (sign > 0) {
-		if (value_gt(c, *opt))
-		    value_assign(*opt, c);
-	    } else {
-		if (value_lt(c, *opt))
-		    value_assign(*opt, c);
-	    }
-	}
-	value_clear(c);
-    } else {
-	Value LB, UB;
-	int ok;
-	value_init(LB);
-	value_init(UB);
-	ok = !(lower_upper_bounds(1+pos, S, data->cp.z, &LB, &UB));
-	assert(ok);
-	for (; value_le(LB, UB); value_increment(LB, LB)) {
-	    value_assign(data->cp.z[1+pos], LB);
-	    optimum(S->next, pos+1, data, opt, found, sign);
-	}
-	value_set_si(data->cp.z[1+pos], 0);
-	value_clear(LB);
-	value_clear(UB);
-    }
-}
-
-void evalue_optimum(const struct check_EP_data *data, Value *opt, int sign)
-{
-    int i;
-    int found = 0;
-
-    for (i = 0; i < data->n_S; ++i)
-	if (!(data->S[i] && emptyQ(data->S[i])))
-	    optimum(data->S[i], 0, data, opt, &found, sign);
-    assert(found);
-}
-
 __isl_give isl_set *verify_context_set_bounds(__isl_take isl_set *set,
 	const struct verify_options *options)
 {
