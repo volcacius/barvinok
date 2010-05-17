@@ -5,8 +5,6 @@
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/sample.h>
-#include "argp.h"
-#include "progname.h"
 #include "config.h"
 #include "evalue_read.h"
 #include "lattice_width.h"
@@ -42,8 +40,7 @@ int main(int argc, char **argv)
     char s[128];
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-    set_program_name(argv[0]);
-    argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
+    argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
 
     nbPol = nbVec = nbMat = 0;
     fgets(s, 128, stdin);

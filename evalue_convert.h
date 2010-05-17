@@ -1,8 +1,8 @@
 #ifndef EVALUE_CONVERT
 #define EVALUE_CONVERT
 
+#include <isl_arg.h>
 #include <barvinok/evalue.h>
-#include "argp.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -21,7 +21,7 @@ struct convert_options {
 int evalue_convert(evalue *EP, struct convert_options *options,
 		   int verbose, unsigned nparam, const char **params);
 
-extern struct argp convert_argp;
+ISL_ARG_DECL(convert_options, struct convert_options, convert_options_arg)
 
 #if defined(__cplusplus)
 }

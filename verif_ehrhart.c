@@ -36,7 +36,7 @@ static int cp_EP(const struct check_poly_data *data, int nparam, Value *z,
     int k;
     int ok;
     Value c, tmp, one;
-    int pa = options->barvinok->polynomial_approximation;
+    int pa = options->barvinok->approx->approximation;
     struct check_poly_EP_data* EP_data = (struct check_poly_EP_data*) data;
     const evalue *EP = EP_data->EP;
     int exist = EP_data->exist;

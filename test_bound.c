@@ -5,8 +5,6 @@
 #include <barvinok/bernstein.h>
 #include <barvinok/util.h>
 #include <bound_common.h>
-#include "argp.h"
-#include "progname.h"
 #include "evalue_read.h"
 #include "verify.h"
 
@@ -45,34 +43,18 @@ static struct {
 
 #define nr_methods (sizeof(methods)/sizeof(*methods))
 
-struct argp_option argp_options[] = {
-    { "quiet",	    'q' },
-    { 0 }
-};
-
 struct options {
-    struct verify_options    verify;
+    struct verify_options    *verify;
     int quiet;
 };
 
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct options *options = (struct options*) state->input;
+struct isl_arg options_arg[] = {
+ISL_ARG_CHILD(struct options, verify, NULL, verify_options_arg, NULL)
+ISL_ARG_BOOL(struct options, quiet, 'q', "quiet", 0, NULL)
+ISL_ARG_END
+};
 
-    switch (key) {
-    case ARGP_KEY_INIT:
-	state->child_inputs[0] = options->verify.barvinok;
-	state->child_inputs[1] = &options->verify;
-	options->quiet = 0;
-	break;
-    case 'q':
-	options->quiet = 1;
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
+ISL_ARG_DEF(options, struct options, options_arg)
 
 struct result_data {
     isl_int		    n;
@@ -339,26 +321,17 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 
 int main(int argc, char **argv)
 {
-    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
     char path[PATH_MAX+1];
     struct result_data all_result;
     int n = 0;
-    static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    	0,	0,  		0 },
-	{ &verify_argp,    	0,	"verification",		BV_GRP_LAST+1 },
-	{ 0 }
-    };
-    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
-    struct options options;
+    struct options *options = options_new_with_defaults();
 
-    options.verify.barvinok = bv_options;
-    set_program_name(argv[0]);
-    argp_parse(&argp, argc, argv, 0, 0, &options);
+    argc = options_parse(options, argc, argv, ISL_ARG_ALL);
 
-    if (options.verify.M == INT_MIN)
-	options.verify.M = 100;
-    if (options.verify.m == INT_MAX)
-	options.verify.m = -100;
+    if (options->verify->M == INT_MIN)
+	options->verify->M = 100;
+    if (options->verify->m == INT_MAX)
+	options->verify->m = -100;
 
     result_data_init(&all_result);
 
@@ -373,10 +346,10 @@ int main(int argc, char **argv)
 	*strchr(path, '\n') = '\0';
 	in = fopen(path, "r");
 	assert(in);
-	handle(in, &result, &options.verify);
+	handle(in, &result, options->verify);
 	fclose(in);
 
-	if (!options.quiet)
+	if (!options->quiet)
 	    result_data_print(&result, 1);
 
 	isl_int_add(all_result.n, all_result.n, result.n);
@@ -388,7 +361,7 @@ int main(int argc, char **argv)
 
 	result_data_clear(&result);
 
-	if (!options.quiet) {
+	if (!options->quiet) {
 	    fprintf(stderr, "average\n");
 	    result_data_print(&all_result, n);
 	}
@@ -396,7 +369,7 @@ int main(int argc, char **argv)
 
     result_data_clear(&all_result);
 
-    barvinok_options_free(bv_options);
+    options_free(options);
 
     return 0;
 }

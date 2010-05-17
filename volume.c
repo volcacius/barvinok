@@ -291,13 +291,13 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
     value_init(mone.d);
     evalue_set_si(&mone, -1, 1);
 
-    if (options->volume_triangulate == BV_VOL_BARYCENTER)
+    if (options->approx->volume_triangulate == BV_VOL_BARYCENTER)
 	center = barycenter(PP, D);
     else
 	center = triangulation_vertex(PP, D, F);
     for (j = 0; j < dim; ++j)
 	matrix[row][j] = vertex2evalue(center->p[j], center->NbColumns - 2);
-    if (options->volume_triangulate == BV_VOL_BARYCENTER)
+    if (options->approx->volume_triangulate == BV_VOL_BARYCENTER)
 	Matrix_Free(center);
     else
 	v = Vector_Alloc(1+nparam+1);
@@ -317,7 +317,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 	Param_Domain *FD;
 	if (First_Non_Zero(F->Constraint[j]+1, dim) == -1)
 	    continue;
-	if (options->volume_triangulate != BV_VOL_BARYCENTER) {
+	if (options->approx->volume_triangulate != BV_VOL_BARYCENTER) {
 	    Param_Inner_Product(F->Constraint[j], center, v->p);
 	    if (First_Non_Zero(v->p+1, nparam+1) == -1)
 		continue;
@@ -336,7 +336,7 @@ static evalue *volume_triangulate(Param_Polyhedron *PP, Param_Domain *D,
 	Param_Domain_Free(FD);
     }
 
-    if (options->volume_triangulate != BV_VOL_BARYCENTER)
+    if (options->approx->volume_triangulate != BV_VOL_BARYCENTER)
 	Vector_Free(v);
 
     for (j = 0; j < dim; ++j)
@@ -512,7 +512,7 @@ static evalue *volume_in_domain(Param_Polyhedron *PP, Param_Domain *D,
     END_FORALL_PVertex_in_ParamPolyhedron;
 
     if (nbV > (dim-row) + 1) {
-	if (options->volume_triangulate == BV_VOL_LIFT)
+	if (options->approx->volume_triangulate == BV_VOL_LIFT)
 	    vol = volume_triangulate_lift(PP, D, dim, matrix, point,
 					  row, options);
 	else
@@ -542,20 +542,20 @@ evalue* Param_Polyhedron_Volume(Polyhedron *P, Polyhedron* C,
     Param_Domain *D;
     Polyhedron *TC;
 
-    if (options->polynomial_approximation == BV_APPROX_SIGN_NONE)
+    if (options->approx->approximation == BV_APPROX_SIGN_NONE)
 	return NULL;
 
-    if (options->polynomial_approximation != BV_APPROX_SIGN_APPROX) {
-	int pa = options->polynomial_approximation;
+    if (options->approx->approximation != BV_APPROX_SIGN_APPROX) {
+	int pa = options->approx->approximation;
 	assert(pa == BV_APPROX_SIGN_UPPER || pa == BV_APPROX_SIGN_LOWER);
 
 	P = Polyhedron_Flate(P, nparam, pa == BV_APPROX_SIGN_UPPER,
 			     options->MaxRays);
 
 	/* Don't deflate/inflate again (on this polytope) */
-	options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
+	options->approx->approximation = BV_APPROX_SIGN_APPROX;
 	vol = barvinok_enumerate_with_options(P, C, options);
-	options->polynomial_approximation = pa;
+	options->approx->approximation = pa;
 
 	Polyhedron_Free(P);
 	return vol;

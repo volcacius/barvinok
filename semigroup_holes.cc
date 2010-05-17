@@ -2,8 +2,6 @@
 #include <iostream>
 #include <barvinok/barvinok.h>
 #include <barvinok/genfun.h>
-#include "argp.h"
-#include "progname.h"
 
 /* This program computes the generating function of the holes in a semigroup.
  * The input is a matrix with the generators m_i of the semigroup as columns.
@@ -168,8 +166,7 @@ int main(int argc, char **argv)
 	gen_fun *holes;
 	barvinok_options *options = barvinok_options_new_with_defaults();
 
-	set_program_name(argv[0]);
-	argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
+	argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
 
 	generators = Matrix_Read();
 	assert(generators);

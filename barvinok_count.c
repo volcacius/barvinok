@@ -3,8 +3,6 @@
 #include <strings.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "argp.h"
-#include "progname.h"
 
 int main(int argc, char **argv)
 {
@@ -12,8 +10,7 @@ int main(int argc, char **argv)
     Polyhedron *A;
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-    set_program_name(argv[0]);
-    argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
+    argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
 
     A = Polyhedron_Read(options->MaxRays);
     value_init(cb);

@@ -3,73 +3,48 @@
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include "lattice_width.h"
-#include "argp.h"
-#include "progname.h"
-
-struct argp_option argp_options[] = {
-    { "direction",	    'd',  0,	0,  "print width directions" },
-    { 0 }
-};
 
 struct arguments {
-    struct barvinok_options *options;
+    struct barvinok_options *barvinok;
     int direction;
 };
 
-error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct arguments *arguments = state->input;
+struct isl_arg options_arg[] = {
+ISL_ARG_CHILD(struct arguments, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARG_BOOL(struct arguments, direction, 'd', "direction", 0,
+	"print width directions")
+ISL_ARG_END
+};
 
-    switch (key) {
-    case ARGP_KEY_INIT:
-	state->child_inputs[0] = arguments->options;
-	arguments->direction = 0;
-	break;
-    case 'd':
-	arguments->direction = 1;
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
+ISL_ARG_DEF(options, struct arguments, options_arg)
 
 int main(int argc, char **argv)
 {
     Polyhedron *P, *C;
     Matrix *M;
     const char **param_name;
-    struct arguments arguments;
-    static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    0,	0,  0 },
-	{ 0 }
-    };
-    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
-    struct barvinok_options *options = barvinok_options_new_with_defaults();
+    struct arguments *options = options_new_with_defaults();
     struct width_direction_array *dirs;
     int i;
 
-    arguments.options = options;
-
-    set_program_name(argv[0]);
-    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+    argc = options_parse(options, argc, argv, ISL_ARG_ALL);
 
     M = Matrix_Read();
     assert(M);
-    P = Constraints2Polyhedron(M, options->MaxRays);
+    P = Constraints2Polyhedron(M, options->barvinok->MaxRays);
     Matrix_Free(M);
     M = Matrix_Read();
     assert(M);
-    C = Constraints2Polyhedron(M, options->MaxRays);
+    C = Constraints2Polyhedron(M, options->barvinok->MaxRays);
     Matrix_Free(M);
     param_name = Read_ParamNames(stdin, C->Dimension);
 
-    dirs = Polyhedron_Lattice_Width_Directions(P, C, options);
+    dirs = Polyhedron_Lattice_Width_Directions(P, C, options->barvinok);
     for (i = 0; i < dirs->n; ++i) {
 	evalue *E;
 
 	Print_Domain(stdout, dirs->wd[i].domain, param_name);
-	if (arguments.direction)
+	if (options->direction)
 	    Vector_Print(stdout, P_VALUE_FMT, dirs->wd[i].dir);
 	E = affine2evalue(dirs->wd[i].width->p,
 			  dirs->wd[i].width->p[C->Dimension+1],
@@ -82,7 +57,7 @@ int main(int argc, char **argv)
     Free_ParamNames(param_name, C->Dimension);
     Polyhedron_Free(P);
     Polyhedron_Free(C);
-    barvinok_options_free(options);
+    options_free(options);
 
     return 0;
 }

@@ -6,8 +6,7 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/bernstein.h>
 #include <bound_common.h>
-#include "argp.h"
-#include "progname.h"
+#include "bound_options.h"
 #include "evalue_convert.h"
 #include "evalue_read.h"
 #include "verify.h"
@@ -18,65 +17,6 @@ using std::endl;
 using namespace barvinok;
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
-
-#define OPT_VARS  	    (BV_OPT_LAST+1)
-#define OPT_SPLIT  	    (BV_OPT_LAST+2)
-#define OPT_LOWER  	    (BV_OPT_LAST+3)
-#define OPT_ITERATE  	    (BV_OPT_LAST+4)
-
-struct argp_option argp_options[] = {
-    { "split",		    OPT_SPLIT,	"int" },
-    { "variables",	    OPT_VARS,  	"list",	0,
-	"comma separated list of variables over which to compute a bound" },
-    { "lower",	    	    OPT_LOWER, 	0, 0,	"compute lower bound instead of upper bound"},
-    { "iterate",	    OPT_ITERATE,  	"int", 1,
-	"exact result by iterating over domain (of specified maximal size)"},
-    { 0 }
-};
-
-struct options {
-    struct convert_options   convert;
-    struct verify_options    verify;
-    char* var_list;
-    int split;
-    int lower;
-    int iterate;
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct options *options = (struct options*) state->input;
-
-    switch (key) {
-    case ARGP_KEY_INIT:
-	state->child_inputs[0] = &options->convert;
-	state->child_inputs[1] = &options->verify;
-	state->child_inputs[2] = options->verify.barvinok;
-	options->var_list = NULL;
-	options->split = 0;
-	options->lower = 0;
-	options->iterate = 0;
-	break;
-    case OPT_VARS:
-	options->var_list = strdup(arg);
-	break;
-    case OPT_SPLIT:
-	options->split = atoi(arg);
-	break;
-    case OPT_LOWER:
-	options->lower = 1;
-	break;
-    case OPT_ITERATE:
-	if (!arg)
-	    options->iterate = -1;
-	else
-	    options->iterate = atoi(arg);
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
 
 struct verify_point_bound {
 	struct verify_point_data vpd;
@@ -342,7 +282,7 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
 	isl_pw_qpolynomial_fold *pwf = NULL, *pwf_more = NULL;
 
 	split_on_domain_size(EP, &EP_less, &EP_more, options->iterate,
-				options->verify.barvinok);
+				options->verify->barvinok);
 	if (!EVALUE_IS_ZERO(*EP_less)) {
 	    options->iterate = -1;
 	    pwf = optimize(EP_less, nvar, C, isl_dim_copy(dim), options);
@@ -360,7 +300,7 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
 	    return pwf;
 	return isl_pw_qpolynomial_fold_add(pwf, pwf_more);
     }
-    int method = options->verify.barvinok->bound;
+    int method = options->verify->barvinok->bound;
     isl_dim *dim_EP;
     isl_pw_qpolynomial *pwqp;
     enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
@@ -381,7 +321,7 @@ static int optimize(evalue *EP, const char **all_vars,
     U = Universe_Polyhedron(nparam);
     int print_solution = 1;
     int result = 0;
-    isl_ctx *ctx = isl_ctx_alloc();
+    isl_ctx *ctx = isl_ctx_alloc_with_options(options_arg, options);
     isl_dim *dim;
     isl_pw_qpolynomial_fold *pwf;
 
@@ -389,16 +329,16 @@ static int optimize(evalue *EP, const char **all_vars,
     for (int i = 0; i < nparam; ++i)
 	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
 
-    if (options->verify.verify) {
-	verify_options_set_range(&options->verify, nvar+nparam);
-	if (!options->verify.barvinok->verbose)
+    if (options->verify->verify) {
+	verify_options_set_range(options->verify, nvar+nparam);
+	if (!options->verify->barvinok->verbose)
 	    print_solution = 0;
     }
 
     if (options->lower)
-	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
+	options->verify->barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
     else
-	options->verify.barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
+	options->verify->barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
     pwf = optimize(EP, nvar, U, dim, options);
     assert(pwf);
     if (print_solution) {
@@ -407,8 +347,8 @@ static int optimize(evalue *EP, const char **all_vars,
 	p = isl_printer_end_line(p);
 	isl_printer_free(p);
     }
-    if (options->verify.verify) {
-	result = verify(pwf, EP, nvar, &options->verify);
+    if (options->verify->verify) {
+	result = verify(pwf, EP, nvar, options->verify);
     }
     isl_pw_qpolynomial_fold_free(pwf);
 
@@ -425,41 +365,28 @@ int main(int argc, char **argv)
     const char **all_vars = NULL;
     unsigned nvar;
     unsigned nparam;
-    struct options options;
-    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
-    static struct argp_child argp_children[] = {
-	{ &convert_argp,    	0,	"input conversion",	1 },
-	{ &verify_argp,    	0,	"verification",		2 },
-	{ &barvinok_argp,    	0,	"barvinok options",	3 },
-	{ 0 }
-    };
-    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
+    struct options *options = options_new_with_defaults();
     int result = 0;
 
-    options.verify.barvinok = bv_options;
-    set_program_name(argv[0]);
-    argp_parse(&argp, argc, argv, 0, 0, &options);
+    argc = options_parse(options, argc, argv, ISL_ARG_ALL);
 
-    EP = evalue_read_from_file(stdin, options.var_list, &all_vars,
-			       &nvar, &nparam, bv_options->MaxRays);
+    EP = evalue_read_from_file(stdin, options->var_list, &all_vars,
+			       &nvar, &nparam, options->verify->barvinok->MaxRays);
     assert(EP);
 
-    if (options.split)
-	evalue_split_periods(EP, options.split, bv_options->MaxRays);
+    if (options->split)
+	evalue_split_periods(EP, options->split, options->verify->barvinok->MaxRays);
 
-    evalue_convert(EP, &options.convert, bv_options->verbose,
+    evalue_convert(EP, options->convert, options->verify->barvinok->verbose,
 			nvar+nparam, all_vars);
 
     if (EVALUE_IS_ZERO(*EP))
 	print_evalue(stdout, EP, all_vars);
     else
-	result = optimize(EP, all_vars, nvar, nparam, &options);
+	result = optimize(EP, all_vars, nvar, nparam, options);
 
     evalue_free(EP);
 
-    if (options.var_list)
-	free(options.var_list);
     Free_ParamNames(all_vars, nvar+nparam);
-    barvinok_options_free(bv_options);
     return result;
 }

@@ -1289,12 +1289,12 @@ out:
 	}
 
 	emul(&factor, eres);
-	if (options->approximation_method == BV_APPROX_DROP) {
-	    if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
+	if (options->approx->method == BV_APPROX_DROP) {
+	    if (options->approx->approximation == BV_APPROX_SIGN_UPPER)
 		evalue_frac2polynomial(eres, 1, options->MaxRays);
-	    if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
+	    if (options->approx->approximation == BV_APPROX_SIGN_LOWER)
 		evalue_frac2polynomial(eres, -1, options->MaxRays);
-	    if (options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
+	    if (options->approx->approximation == BV_APPROX_SIGN_APPROX)
 		evalue_frac2polynomial(eres, 0, options->MaxRays);
 	}
 	reduce_evalue(eres);
@@ -1393,7 +1393,7 @@ evalue* barvinok_enumerate_with_options(Polyhedron *P, Polyhedron* C,
     next = P->next;
     P->next = NULL;
 
-    if (options->approximation_method == BV_APPROX_BERNOULLI ||
+    if (options->approx->method == BV_APPROX_BERNOULLI ||
 	options->summation == BV_SUM_BERNOULLI) {
 	    int summation = options->summation;
 	    options->summation = BV_SUM_BERNOULLI;
@@ -1475,12 +1475,12 @@ static evalue* barvinok_enumerate_ev_f(Polyhedron *P, Polyhedron* C,
 				       barvinok_options *options)
 {
     unsigned nparam = C->Dimension;
-    bool do_scale = options->approximation_method == BV_APPROX_SCALE;
+    bool do_scale = options->approx->method == BV_APPROX_SCALE;
 
     if (options->summation == BV_SUM_EULER)
 	return barvinok_summate_unweighted(P, C, options);
 
-    if (options->approximation_method == BV_APPROX_VOLUME)
+    if (options->approx->method == BV_APPROX_VOLUME)
 	return Param_Polyhedron_Volume(P, C, options);
 
     if (P->Dimension - nparam == 1 && !do_scale)

@@ -1,6 +1,4 @@
 #include <barvinok/options.h>
-#include "argp.h"
-#include "progname.h"
 #include "param_util.h"
 
 /* This program computes the full-dimensional chambers of the vector
@@ -78,8 +76,7 @@ int main(int argc, char **argv)
 	Param_Domain *PD;
 	struct barvinok_options *options = barvinok_options_new_with_defaults();
 
-	set_program_name(argv[0]);
-	argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
+	argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
 
 	A = Matrix_Read();
 	assert(A);

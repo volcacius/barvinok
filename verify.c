@@ -21,64 +21,41 @@
 /* if dimension >= VBIDDIM, use VSRANGE */
 #define VBIGDIM 8
 
-static struct argp_option argp_options[] = {
-    { "verify",     	    'T',    0,	    0 },
-    { "exact",     	    'E',    0,	    0 },
-    { "print-all",  	    'A',    0,	    0 },
-    { "continue-on-error",  'C',    0,	    0 },
-    { "min",   	    	    'm',    "int",  0 },
-    { "max",   	    	    'M',    "int",  0 },
-    { "range",      	    'r',    "int",  0 },
-    { 0 }
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
+static int set_m(void *opt, long val)
 {
-    struct verify_options *options = state->input;
-
-    switch (key) {
-    case ARGP_KEY_INIT:
-	options->verify = 0;
-	options->exact = 0;
-	options->print_all = 0;
-	options->continue_on_error = 0;
-	options->m = INT_MAX;
-	options->M = INT_MIN;
-	options->r = -1;
-	break;
-    case ARGP_KEY_FINI:
-	break;
-    case 'T':
+	struct verify_options *options = (struct verify_options *)opt;
+	options->m = val;
 	options->verify = 1;
-	break;
-    case 'E':
-	options->exact = 1;
-	break;
-    case 'A':
-	options->print_all = 1;
-	break;
-    case 'C':
-	options->continue_on_error = 1;
-	break;
-    case 'm':
-	options->m = atoi(arg);
-	options->verify = 1;
-	break;
-    case 'M':
-	options->M = atoi(arg);
-	options->verify = 1;
-	break;
-    case 'r':
-	options->r = atoi(arg);
-	options->M = atoi(arg);
-	options->m = -options->M;
-	options->verify = 1;
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
 }
+
+static int set_M(void *opt, long val)
+{
+	struct verify_options *options = (struct verify_options *)opt;
+	options->M = val;
+	options->verify = 1;
+}
+
+static int set_r(void *opt, long val)
+{
+	struct verify_options *options = (struct verify_options *)opt;
+	options->r = val;
+	options->m = -val;
+	options->M = val;
+	options->verify = 1;
+}
+
+struct isl_arg verify_options_arg[] = {
+ISL_ARG_CHILD(struct verify_options, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARG_BOOL(struct verify_options, verify, 'T', "verify", 0, NULL)
+ISL_ARG_BOOL(struct verify_options, exact, 'E', "exact", 0, NULL)
+ISL_ARG_BOOL(struct verify_options, print_all, 'A', "print-all", 0, NULL)
+ISL_ARG_BOOL(struct verify_options, continue_on_error, 'C',
+	"continue-on-error", 0, NULL)
+ISL_ARG_USER_LONG(struct verify_options, m, 'm', "min", set_m, INT_MAX, NULL)
+ISL_ARG_USER_LONG(struct verify_options, M, 'M', "max", set_M, INT_MIN, NULL)
+ISL_ARG_USER_LONG(struct verify_options, r, 'r', "range", set_r, -1, NULL)
+ISL_ARG_END
+};
 
 void verify_options_set_range(struct verify_options *options, int dim)
 {
@@ -105,10 +82,6 @@ void verify_options_set_range(struct verify_options *options, int dim)
 	exit(0);
     }
 }
-
-struct argp verify_argp = {
-    argp_options, parse_opt, 0, 0
-};
 
 static Polyhedron *project_on(Polyhedron *P, int i)
 {

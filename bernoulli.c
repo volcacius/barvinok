@@ -254,7 +254,7 @@ static evalue *compute_poly_u(evalue *poly_u, Value *upper, Vector *row,
 			      struct poly_list *faulhaber,
 			      struct Bernoulli_data *data)
 {
-    int exact = data->options->approximation_method == BV_APPROX_NONE;
+    int exact = data->options->approx->method == BV_APPROX_NONE;
     if (poly_u)
 	return poly_u;
     Vector_Copy(upper+2, row->p, dim+1);
@@ -268,7 +268,7 @@ static evalue *compute_poly_l(evalue *poly_l, Value *lower, Vector *row,
 			      struct poly_list *faulhaber,
 			      struct Bernoulli_data *data)
 {
-    int exact = data->options->approximation_method == BV_APPROX_NONE;
+    int exact = data->options->approx->method == BV_APPROX_NONE;
     if (poly_l)
 	return poly_l;
     Vector_Copy(lower+2, row->p, dim+1);
@@ -321,7 +321,7 @@ static evalue *linear_term(const evalue *cst, Value *lower, Value *upper,
 static void Bernoulli_init(unsigned n, void *cb_data)
 {
     struct Bernoulli_data *data = (struct Bernoulli_data *)cb_data;
-    int exact = data->options->approximation_method == BV_APPROX_NONE;
+    int exact = data->options->approx->method == BV_APPROX_NONE;
     int cases = exact ? 3 : 5;
 
     evalue_section_array_ensure(data->sections, cases * n);
@@ -423,7 +423,7 @@ static void Bernoulli_cb(Matrix *M, Value *lower, Value *upper, void *cb_data)
     Value tmp;
     unsigned dim = M->NbColumns-2;
     Vector *row;
-    int exact = data->options->approximation_method == BV_APPROX_NONE;
+    int exact = data->options->approx->method == BV_APPROX_NONE;
     int cases = exact ? 3 : 5;
 
     assert(lower);
@@ -894,7 +894,7 @@ evalue *bernoulli_summate(Polyhedron *P, evalue *E, unsigned nvar,
     evalue *E_orig = E;
     Value period;
     evalue *sum;
-    int exact = options->approximation_method == BV_APPROX_NONE;
+    int exact = options->approx->method == BV_APPROX_NONE;
 
     value_init(period);
 

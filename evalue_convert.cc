@@ -17,64 +17,6 @@ using std::endl;
 
 using std::string;
 
-static struct argp_option argp_options[] = {
-    { "convert",   	    'c', 0, 0, "convert fractionals to periodics" },
-    { "combine",   	    'C', 0, 0 },
-    { "floor",     	    'f', 0, 0, "convert fractionals to floorings" },
-    { "list",   	    'l', 0, 0 },
-    { "latex",   	    'L', 0, 0 },
-    { "to-isl",   	    'I', 0, 0 },
-    { "range-reduction",    'R',    0,	    0 },
-    0
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct convert_options *options = (struct convert_options *)state->input;
-
-    switch (key) {
-    case ARGP_KEY_INIT:
-	options->floor = 0;
-	options->convert = 0;
-	options->combine = 0;
-	options->range = 0;
-	options->list = 0;
-	options->latex = 0;
-	options->isl = 0;
-	break;
-    case ARGP_KEY_FINI:
-	break;
-    case 'f':
-	options->floor = 1;
-	break;
-    case 'c':
-	options->convert = 1;
-	break;
-    case 'C':
-	options->combine = 1;
-	break;
-    case 'l':
-	options->list = 1;
-	break;
-    case 'L':
-	options->latex = 1;
-	break;
-    case 'R':
-	options->range = 1;
-	break;
-    case 'I':
-	options->isl = 1;
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
-
-struct argp convert_argp = {
-    argp_options, parse_opt, 0, 0
-};
-
 static int type_offset(enode *p)
 {
    return p->type == fractional ? 1 : 

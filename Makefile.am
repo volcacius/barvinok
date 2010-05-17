@@ -27,14 +27,12 @@ if USE_PARKER
 endif
 SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POLYLIB) \
 		$(MAYBE_BERNSTEIN) $(MAYBE_OMEGA) \
-		lib $(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
+		$(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) \
 		$(MAYBE_ISL_POLYLIB) bernstein $(MAYBE_OMEGA) \
-		lib zsolve parker doc
+		zsolve parker doc
 
 FORCE:
-lib/libgnu.la: FORCE
-	cd lib; $(MAKE) $(AM_MAKEFLAGS) libgnu.la
 bernstein/libbernstein.la: FORCE
 	cd bernstein; $(MAKE) $(AM_MAKEFLAGS) libbernstein.la
 polylib/libpolylibgmp.la: FORCE
@@ -52,10 +50,10 @@ zsolve/libzsolve.la: FORCE
 parker/libparker.la: FORCE
 	cd parker; $(MAKE) $(AM_MAKEFLAGS) libparker.la
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include -I$(srcdir)/lib -Ilib \
+AM_CPPFLAGS = -I$(srcdir)/bernstein/include \
 	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@ \
 	      @NTL_CPPFLAGS@ @ISL_CFLAGS@ @ISL_POLYLIB_CFLAGS@
-AM_LDFLAGS = -Llib @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
+AM_LDFLAGS = @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
 
 LIB_ISL = $(ISL_LA) @ISL_LIBS@
 LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
@@ -213,7 +211,7 @@ endif
 libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
 			     $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			     $(PIPLIB_LA) @PIPLIB_LIBS@ \
-			     $(ZSOLVE_LA) lib/libgnu.la
+			     $(ZSOLVE_LA)
 libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
 if HAVE_GINAC
@@ -247,11 +245,17 @@ testlib_SOURCES = \
 	testlib.cc
 barvinok_count_SOURCES = barvinok_count.c
 barvinok_ehrhart_SOURCES = \
+	barvinok_ehrhart_options.c \
+	barvinok_ehrhart_options.h \
 	barvinok_ehrhart.cc \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	$(FDSTREAM)
-barvinok_union_SOURCES = barvinok_union.cc
+barvinok_union_SOURCES = \
+	barvinok_union_options.c \
+	barvinok_union_options.h \
+	barvinok_union.cc
 if HAVE_OMEGA
 BEEO_SOURCES = \
 	omega_interface/Exit.cc \
@@ -266,7 +270,10 @@ if USE_FDSTREAM
 FDSTREAM = fdstream.cc fdstream.h
 endif
 barvinok_enumerate_SOURCES = \
+	barvinok_enumerate_options.c \
+	barvinok_enumerate_options.h \
 	barvinok_enumerate.cc \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	$(FDSTREAM) \
@@ -280,7 +287,10 @@ barvinok_enumerate_SOURCES = \
 	verify_series.cc
 EXTRA_barvinok_enumerate_SOURCES = fdstream.cc fdstream.h
 barvinok_enumerate_e_SOURCES = \
+	barvinok_enumerate_e_options.c \
+	barvinok_enumerate_e_options.h \
 	barvinok_enumerate_e.cc \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	$(FDSTREAM) \
@@ -307,11 +317,14 @@ barvinok_enumerate_e_LDADD = \
 	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok-core.la \
 	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \
 	evalue_read.h \
 	$(FDSTREAM) \
+	bound_options.h \
+	bound_options.c \
 	bound.cc \
 	verify.h \
 	verify.c
@@ -320,7 +333,10 @@ barvinok_bound_LDADD = \
 	libbarvinok-core.la libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
+	barvinok_summate_options.c \
+	barvinok_summate_options.h \
 	barvinok_summate.cc \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \
@@ -332,6 +348,7 @@ EXTRA_barvinok_summate_SOURCES = fdstream.cc fdstream.h
 4coins_SOURCES = 4coins.cc
 semigroup_holes_SOURCES = semigroup_holes.cc
 lexmin_SOURCES = \
+	lexmin_options.c \
 	lexmin.h \
 	lexmin.cc \
 	combine.c \
@@ -348,6 +365,7 @@ test_approx_SOURCES = \
 	verify.c
 test_bound_SOURCES = \
 	test_bound.c \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \
@@ -361,6 +379,7 @@ test_bound_LDADD = \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 evalue_convert_SOURCES = \
 	evalue_convert_main.c \
+	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \
@@ -484,11 +503,14 @@ check-enumerate: barvinok_enumerate$(EXEEXT)
 		./barvinok_enumerate$(EXEEXT) --verify $$opt < $$i || exit; \
 	    fi \
 	done
+if HAVE_OMEGA
+    SPEC_OMEGA = '--isl --omega'
+endif
 check-enumerate_e: barvinok_enumerate_e$(EXEEXT)
 	@for dir in $(BEE_TESTDIRS); do \
 	    for i in $(top_srcdir)/tests/$$dir/*; do \
 		if test -f $$i; then \
-		    for options in '' '--isl --omega' '--isl'; do \
+		    for options in '' $(SPEC_OMEGA) '--isl'; do \
 			for spec in 'random' 'bf' 'df'; do \
 			    opt="--specialization=$$spec $$options"; \
 			    echo $$i $$opt; \

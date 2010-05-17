@@ -507,9 +507,9 @@ static Polyhedron *flate(Polyhedron *P, Lattice *L,
 			 unsigned nparam, int inflate,
 			 struct barvinok_options *options)
 {
-    if (options->scale_flags & BV_APPROX_SCALE_NARROW2)
+    if (options->approx->scale_flags & BV_APPROX_SCALE_NARROW2)
 	return flate_narrow2(P, L, nparam, inflate, options->MaxRays);
-    else if (options->scale_flags & BV_APPROX_SCALE_NARROW)
+    else if (options->approx->scale_flags & BV_APPROX_SCALE_NARROW)
 	return flate_narrow(P, L, nparam, inflate, options->MaxRays);
     else
 	return Polyhedron_Flate(P, nparam, inflate, options->MaxRays);
@@ -519,7 +519,7 @@ static void Param_Polyhedron_Scale(Param_Polyhedron *PP, Polyhedron **P,
 				   Lattice **L,
 				   Value *det, struct barvinok_options *options)
 {
-    if (options->scale_flags & BV_APPROX_SCALE_FAST)
+    if (options->approx->scale_flags & BV_APPROX_SCALE_FAST)
 	Param_Polyhedron_Scale_Integer_Fast(PP, P, L, det, options->MaxRays);
     else
 	Param_Polyhedron_Scale_Integer_Slow(PP, P, L, det, options->MaxRays);
@@ -530,17 +530,17 @@ static evalue *enumerate_flated(Polyhedron *P, Polyhedron *C, Lattice *L,
 {
     unsigned nparam = C->Dimension;
     evalue *eres;
-    int save_approximation = options->polynomial_approximation;
+    int save_approximation = options->approx->approximation;
 
-    if (options->polynomial_approximation == BV_APPROX_SIGN_UPPER)
+    if (options->approx->approximation == BV_APPROX_SIGN_UPPER)
 	P = flate(P, L, nparam, 1, options);
-    if (options->polynomial_approximation == BV_APPROX_SIGN_LOWER)
+    if (options->approx->approximation == BV_APPROX_SIGN_LOWER)
 	P = flate(P, L, nparam, 0, options);
 
     /* Don't deflate/inflate again (on this polytope) */
-    options->polynomial_approximation = BV_APPROX_SIGN_NONE;
+    options->approx->approximation = BV_APPROX_SIGN_NONE;
     eres = barvinok_enumerate_with_options(P, C, options);
-    options->polynomial_approximation = save_approximation;
+    options->approx->approximation = save_approximation;
     Polyhedron_Free(P);
 
     return eres;
@@ -551,7 +551,7 @@ static evalue *PP_enumerate_narrow_flated(Param_Polyhedron *PP,
 				       	  struct barvinok_options *options)
 {
     Polyhedron *Porig = P;
-    int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
+    int scale_narrow2 = options->approx->scale_flags & BV_APPROX_SCALE_NARROW2;
     Lattice *L = NULL;
     Value det;
     evalue *eres;
@@ -566,9 +566,9 @@ static evalue *PP_enumerate_narrow_flated(Param_Polyhedron *PP,
 	P = Porig;
     }
     /* Don't scale again (on this polytope) */
-    options->approximation_method = BV_APPROX_NONE;
+    options->approx->method = BV_APPROX_NONE;
     eres = enumerate_flated(P, C, L, options);
-    options->approximation_method = BV_APPROX_SCALE;
+    options->approx->method = BV_APPROX_SCALE;
     Matrix_Free(L);
     if (P != Porig)
 	Polyhedron_Free(P);
@@ -633,7 +633,7 @@ static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
     PP = Polyhedron2Param_Polyhedron(P, C, options);
     POL_UNSET(Rat_MaxRays, POL_INTEGER);
 
-    if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
+    if ((options->approx->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
 	int nd = -1;
 	evalue *tmp, *eres = NULL;
 	Polyhedron *TC = true_context(P, C, options->MaxRays);
@@ -680,11 +680,11 @@ static evalue *enumerate_narrow_flated(Polyhedron *P, Polyhedron *C,
 evalue *scale_bound(Polyhedron *P, Polyhedron *C,
 		    struct barvinok_options *options)
 {
-    int scale_narrow = options->scale_flags & BV_APPROX_SCALE_NARROW;
-    int scale_narrow2 = options->scale_flags & BV_APPROX_SCALE_NARROW2;
+    int scale_narrow = options->approx->scale_flags & BV_APPROX_SCALE_NARROW;
+    int scale_narrow2 = options->approx->scale_flags & BV_APPROX_SCALE_NARROW2;
 
-    if (options->polynomial_approximation == BV_APPROX_SIGN_NONE ||
-        options->polynomial_approximation == BV_APPROX_SIGN_APPROX)
+    if (options->approx->approximation == BV_APPROX_SIGN_NONE ||
+        options->approx->approximation == BV_APPROX_SIGN_APPROX)
 	return NULL;
 
     if (scale_narrow || scale_narrow2)
@@ -701,7 +701,7 @@ evalue *scale(Param_Polyhedron *PP, Polyhedron *P, Polyhedron *C,
     evalue *eres = NULL;
     Value det;
 
-    if ((options->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
+    if ((options->approx->scale_flags & BV_APPROX_SCALE_CHAMBER) && PP->D->next) {
 	int nd = -1;
 	evalue *tmp;
 	Polyhedron *TC = true_context(P, C, options->MaxRays);

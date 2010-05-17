@@ -3,9 +3,8 @@
 #include <strings.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "argp.h"
-#include "progname.h"
 #include "evalue_convert.h"
+#include "barvinok_ehrhart_options.h"
 
 /* The input of this example program is a polytope in PolyLib notation,
  * i.e., an n by d+2 matrix of the n constraints A x + b >= 0 defining
@@ -21,62 +20,23 @@
  * should always be 1.
  */
 
-struct argp_option argp_options[] = {
-    { "series",    's', 0, 0, "compute rational generating function" },
-    { 0 }
-};
-
-struct arguments {
-    int series;
-    struct barvinok_options	*barvinok;
-    struct convert_options   convert;
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct arguments *options = (struct arguments*) state->input;
-
-    switch (key) {
-    case ARGP_KEY_INIT:
-	state->child_inputs[0] = options->barvinok;
-	state->child_inputs[1] = &options->convert;
-	options->series = 0;
-	break;
-    case 's':
-	options->series = 1;
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
-
 int main(int argc, char **argv)
 {
     Polyhedron *A, *C, *U;
     const char **param_name;
     int print_solution = 1;
-    struct arguments options;
-    static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    	0,	0,  		0 },
-	{ &convert_argp,    	0,	"output conversion",    BV_GRP_LAST+1 },
-	{ 0 }
-    };
-    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
-    barvinok_options *bv_options = barvinok_options_new_with_defaults();
+    struct ehrhart_options *options = ehrhart_options_new_with_defaults();
 
-    options.barvinok = bv_options;
-    set_program_name(argv[0]);
-    argp_parse(&argp, argc, argv, 0, 0, &options);
+    argc = ehrhart_options_parse(options, argc, argv, ISL_ARG_ALL);
 
-    A = Polyhedron_Read(bv_options->MaxRays);
+    A = Polyhedron_Read(options->barvinok->MaxRays);
     param_name = Read_ParamNames(stdin, 1);
     Polyhedron_Print(stdout, P_VALUE_FMT, A);
     C = Cone_over_Polyhedron(A);
     U = Universe_Polyhedron(1);
-    if (options.series) {
+    if (options->series) {
 	gen_fun *gf;
-	gf = barvinok_series_with_options(C, U, bv_options);
+	gf = barvinok_series_with_options(C, U, options->barvinok);
 	gf->print(std::cout, U->Dimension, param_name);
 	puts("");
 	delete gf;
@@ -87,9 +47,9 @@ int main(int argc, char **argv)
 	 * vertices, rather than letting barvinok_enumerate_ev (re)compute
 	 * them through Polyhedron2Param_SimplifiedDomain.
 	 */
-	EP = barvinok_enumerate_with_options(C, U, bv_options);
+	EP = barvinok_enumerate_with_options(C, U, options->barvinok);
 	assert(EP);
-	if (evalue_convert(EP, &options.convert, bv_options->verbose,
+	if (evalue_convert(EP, options->convert, options->barvinok->verbose,
 			   C->Dimension, param_name))
 	    print_solution = 0;
 	if (print_solution)
@@ -100,6 +60,6 @@ int main(int argc, char **argv)
     Polyhedron_Free(A);
     Polyhedron_Free(C);
     Polyhedron_Free(U);
-    barvinok_options_free(bv_options);
+    ehrhart_options_free(options);
     return 0;
 }

@@ -1,8 +1,9 @@
 #ifndef VERIFY_H
 #define VERIFY_H
 
+#include <isl_arg.h>
+#include <isl_set.h>
 #include <barvinok/polylib.h>
-#include "argp.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -13,9 +14,9 @@ struct verify_options {
     int exact;
     int print_all;
     int continue_on_error;
-    int m;
-    int M;
-    int r;
+    long m;
+    long M;
+    long r;
 
     /* "generated" options */
     int st;
@@ -23,7 +24,8 @@ struct verify_options {
     struct barvinok_options *barvinok;
 };
 
-extern struct argp verify_argp;
+ISL_ARG_DECL(verify_options, struct verify_options, verify_options_arg)
+
 void verify_options_set_range(struct verify_options *options, int dim);
 
 Polyhedron *check_poly_context_scan(Polyhedron *P, Polyhedron **C,

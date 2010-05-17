@@ -1,9 +1,6 @@
 #include <assert.h>
 #include <barvinok/options.h>
 #include <barvinok/sample.h>
-#include "config.h"
-#include "argp.h"
-#include "progname.h"
 
 int main(int argc, char **argv)
 {
@@ -12,8 +9,7 @@ int main(int argc, char **argv)
     Vector *sample;
     struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
 
-    set_program_name(argv[0]);
-    argp_parse(&barvinok_argp, argc, argv, 0, 0, bv_options);
+    argc = barvinok_options_parse(bv_options, argc, argv, ISL_ARG_ALL);
 
     M = Matrix_Read();
     P = Constraints2Polyhedron(M, bv_options->MaxRays);

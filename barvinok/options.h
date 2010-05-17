@@ -2,6 +2,7 @@
 #define BARVINOK_OPTIONS_H
 
 #include <stdio.h>
+#include <isl_arg.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -20,7 +21,32 @@ struct barvinok_stats {
 void barvinok_stats_clear(struct barvinok_stats *stats);
 void barvinok_stats_print(struct barvinok_stats *stats, FILE *out);
 
+struct barvinok_approximation_options {
+	#define		BV_APPROX_SIGN_NONE	0
+	#define		BV_APPROX_SIGN_APPROX	1
+	#define		BV_APPROX_SIGN_LOWER	2
+	#define		BV_APPROX_SIGN_UPPER	3
+	int	    	approximation;
+	#define		BV_APPROX_NONE		0
+	#define		BV_APPROX_DROP		1
+	#define		BV_APPROX_SCALE		2
+	#define		BV_APPROX_VOLUME	3
+	#define		BV_APPROX_BERNOULLI	4
+	int	    	method;
+	#define		BV_APPROX_SCALE_FAST	(1 << 0)
+	#define		BV_APPROX_SCALE_NARROW	(1 << 1)
+	#define		BV_APPROX_SCALE_NARROW2	(1 << 2)
+	#define		BV_APPROX_SCALE_CHAMBER	(1 << 3)
+	int	    	scale_flags;
+	#define		BV_VOL_LIFT		0
+	#define		BV_VOL_VERTEX		1
+	#define		BV_VOL_BARYCENTER	2
+	int	    	volume_triangulate;
+};
+
 struct barvinok_options {
+    struct isl_options	    *isl;
+    struct barvinok_approximation_options *approx;
     struct barvinok_stats   *stats;
 
     /* PolyLib options */
@@ -44,27 +70,6 @@ struct barvinok_options {
     int		    	    count_sample_infinite;
 
     int			    try_Delaunay_triangulation;
-
-    #define	BV_APPROX_SIGN_NONE	0
-    #define	BV_APPROX_SIGN_APPROX	1
-    #define	BV_APPROX_SIGN_LOWER	2
-    #define	BV_APPROX_SIGN_UPPER	3
-    int			    polynomial_approximation;
-    #define	BV_APPROX_NONE		0
-    #define	BV_APPROX_DROP		1
-    #define	BV_APPROX_SCALE		2
-    #define	BV_APPROX_VOLUME	3
-    #define	BV_APPROX_BERNOULLI	4
-    int			    approximation_method;
-    #define	BV_APPROX_SCALE_FAST	(1 << 0)
-    #define	BV_APPROX_SCALE_NARROW	(1 << 1)
-    #define	BV_APPROX_SCALE_NARROW2	(1 << 2)
-    #define	BV_APPROX_SCALE_CHAMBER	(1 << 3)
-    int			    scale_flags;
-    #define	BV_VOL_LIFT		0
-    #define	BV_VOL_VERTEX		1
-    #define	BV_VOL_BARYCENTER	2
-    int			    volume_triangulate;
 
     /* basis reduction options */
     #define	BV_GBR_PIP	0
@@ -118,32 +123,7 @@ struct barvinok_options {
     int		gbr_only_first;
 };
 
-struct barvinok_options *barvinok_options_new_with_defaults();
-void barvinok_options_free(struct barvinok_options *options);
-
-#define BV_OPT_SPECIALIZATION	256
-#define BV_OPT_PRIMAL		257
-#define BV_OPT_TABLE		258
-#define BV_OPT_GBR		259
-#define BV_OPT_MAXINDEX		260
-#define BV_OPT_POLAPPROX	261
-#define BV_OPT_APPROX		262
-#define BV_OPT_SCALE		263
-#define BV_OPT_VOL		264
-#define BV_OPT_RECURSE		265
-#define BV_OPT_LP		266
-#define BV_OPT_SUM		267
-#define BV_OPT_CHAMBERS		268
-#define BV_OPT_HULL		269
-#define BV_OPT_PRINT_STATS	270
-#define BV_OPT_BOUND		271
-#define BV_OPT_LAST		271
-
-#define BV_GRP_APPROX		1
-#define BV_GRP_LAST		1
-
-struct argp;
-extern struct argp barvinok_argp;
+ISL_ARG_DECL(barvinok_options, struct barvinok_options, barvinok_options_arg)
 
 #if defined(__cplusplus)
 }

@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     Matrix_Free(M);
     param_name = Read_ParamNames(stdin, C->Dimension);
 
-    bv_options->polynomial_approximation = BV_APPROX_SIGN_APPROX;
+    bv_options->approx->approximation = BV_APPROX_SIGN_APPROX;
     EP = Param_Polyhedron_Volume(A, C, bv_options);
     print_evalue(stdout, EP, (const char **)param_name);
     fprintf(stdout, "\n");

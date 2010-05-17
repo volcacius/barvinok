@@ -13,8 +13,6 @@
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "argp.h"
-#include "progname.h"
 #include "conversion.h"
 #include "decomposer.h"
 #include "lattice_point.h"
@@ -43,45 +41,6 @@ using std::endl;
 using std::ostream;
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
-
-#define EMPTINESS_CHECK     	(BV_OPT_LAST+1)
-#define NO_REDUCTION  	    	(BV_OPT_LAST+2)
-
-struct argp_option argp_options[] = {
-    { "emptiness-check",    EMPTINESS_CHECK,	"[none|count]",	    0 },
-    { "no-reduction",	    NO_REDUCTION,	0,		    0 },
-    { 0 }
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct lexmin_options *options = (struct lexmin_options *)(state->input);
-    struct barvinok_options *bv_options = options->verify.barvinok;
-
-    switch (key) {
-    case ARGP_KEY_INIT:
-	state->child_inputs[0] = options->verify.barvinok;
-	state->child_inputs[1] = &options->verify;
-	options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_SAMPLE;
-	options->reduce = 1;
-	break;
-    case EMPTINESS_CHECK:
-	if (!strcmp(arg, "none"))
-	    options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_NONE;
-	else if (!strcmp(arg, "count")) {
-	    options->emptiness_check = BV_LEXMIN_EMPTINESS_CHECK_COUNT;
-	    bv_options->count_sample_infinite = 0;
-	}
-	break;
-    case NO_REDUCTION:
-	options->reduce = 0;
-	break;
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
-
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 static int type_offset(enode *p)
@@ -1215,7 +1174,7 @@ struct indicator {
 	int nparam = ic.PP->Constraints->NbColumns-2 - ic.vertex.length();
 	if (options->reduce) {
 	    Polyhedron *Q = Polyhedron_Project_Initial(D->D, nparam);
-	    Q = DomainConstraintSimplify(Q, options->verify.barvinok->MaxRays);
+	    Q = DomainConstraintSimplify(Q, options->verify->barvinok->MaxRays);
 	    if (!P || !PolyhedronIncludes(Q, P))
 		reduce_in_domain(Q);
 	    if (P)
@@ -1456,7 +1415,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
     unsigned dim = a->den.NumCols();
     order_sign sign = order_eq;
     EDomain *D = ind->D;
-    unsigned MaxRays = ind->options->verify.barvinok->MaxRays;
+    unsigned MaxRays = ind->options->verify->barvinok->MaxRays;
     bool rational = a->sign == 0 || b->sign == 0;
 
     order_sign cached_sign = order_eq;
@@ -1478,9 +1437,9 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
     }
 
     if (rational && POL_ISSET(MaxRays, POL_INTEGER)) {
-	ind->options->verify.barvinok->MaxRays &= ~POL_INTEGER;
-	if (ind->options->verify.barvinok->MaxRays)
-	    ind->options->verify.barvinok->MaxRays |= POL_HIGH_BIT;
+	ind->options->verify->barvinok->MaxRays &= ~POL_INTEGER;
+	if (ind->options->verify->barvinok->MaxRays)
+	    ind->options->verify->barvinok->MaxRays |= POL_HIGH_BIT;
     }
 
     sign = order_eq;
@@ -1504,7 +1463,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	else if (eequal(a->vertex[k], b->vertex[k]))
 	    diff_sign = order_eq;
 	else
-	    diff_sign = evalue_sign(diff, D, ind->options->verify.barvinok);
+	    diff_sign = evalue_sign(diff, D, ind->options->verify->barvinok);
 
 	if (diff_sign == order_undefined) {
 	    assert(sign == order_le || sign == order_ge);
@@ -1563,7 +1522,7 @@ order_sign partial_order::compare(const indicator_term *a, const indicator_term 
 	delete term[1];
     }
 
-    ind->options->verify.barvinok->MaxRays = MaxRays;
+    ind->options->verify->barvinok->MaxRays = MaxRays;
     return sign;
 }
 
@@ -1830,7 +1789,7 @@ void indicator::expand_rational_vertex(const indicator_term *initial)
 	Param_Vertices *V;
 	FORALL_PVertex_in_ParamPolyhedron(V, PD, ic.PP) // _i is internal counter
 	    if (_i == pos) {
-		ic.decompose_at_vertex(V, pos, options->verify.barvinok);
+		ic.decompose_at_vertex(V, pos, options->verify->barvinok);
 		break;
 	    }
 	END_FORALL_PVertex_in_ParamPolyhedron;
@@ -2226,16 +2185,16 @@ static void split_on(const split& sp, EDomain *D,
     *Dgt = NULL;
     ge_constraint *ge = D->compute_ge_constraint(sp.constraint);
     if (sp.sign == split::lge || sp.sign == split::ge)
-	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options->verify.barvinok);
+	ED[2] = EDomain::new_from_ge_constraint(ge, 1, options->verify->barvinok);
     else
 	ED[2] = NULL;
     if (sp.sign == split::lge || sp.sign == split::le)
-	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options->verify.barvinok);
+	ED[0] = EDomain::new_from_ge_constraint(ge, -1, options->verify->barvinok);
     else
 	ED[0] = NULL;
 
     assert(sp.sign == split::lge || sp.sign == split::ge || sp.sign == split::le);
-    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options->verify.barvinok);
+    ED[1] = EDomain::new_from_ge_constraint(ge, 0, options->verify->barvinok);
 
     delete ge;
 
@@ -2455,7 +2414,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	if (!best) {
 	    /* apparently there can be negative initial term on empty domains */
 	    if (ind.options->emptiness_check != BV_LEXMIN_EMPTINESS_CHECK_NONE &&
-		ind.options->verify.barvinok->lp_solver == BV_LP_POLYLIB)
+		ind.options->verify->barvinok->lp_solver == BV_LP_POLYLIB)
 		assert(!neg);
 	    break;
 	}
@@ -2468,7 +2427,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 		    bool handled = ind.handle_equal_numerators(best);
 		    if (ind.options->emptiness_check !=
 				BV_LEXMIN_EMPTINESS_CHECK_NONE &&
-			ind.options->verify.barvinok->lp_solver == BV_LP_POLYLIB)
+			ind.options->verify->barvinok->lp_solver == BV_LP_POLYLIB)
 			assert(handled);
 		    /* If !handled then the leading coefficient is bigger than one;
 		     * must be an empty domain
@@ -2513,7 +2472,7 @@ static vector<max_term*> lexmin(indicator& ind, unsigned nparam,
 	order_sign sign;
 	for (int k = 0; k < dim; ++k) {
 	    diff = ediff(best->vertex[k], second->vertex[k]);
-	    sign = evalue_sign(diff, ind.D, ind.options->verify.barvinok);
+	    sign = evalue_sign(diff, ind.D, ind.options->verify->barvinok);
 
 	    /* neg can never be smaller than best, unless it may still cancel.
 	     * This can happen if positive terms have been determined to
@@ -2616,7 +2575,7 @@ static void lexmin_base(Polyhedron *P, Polyhedron *C,
     unsigned nparam = C->Dimension;
     Param_Polyhedron *PP = NULL;
 
-    PP = Polyhedron2Param_Polyhedron(P, C, options->verify.barvinok);
+    PP = Polyhedron2Param_Polyhedron(P, C, options->verify->barvinok);
 
     unsigned dim = P->Dimension - nparam;
 
@@ -2628,8 +2587,8 @@ static void lexmin_base(Polyhedron *P, Polyhedron *C,
     construct_rational_vertices(PP, T, T ? T->NbRows-nparam-1 : dim,
 				nparam, all_vertices);
 
-    Polyhedron *TC = true_context(P, C, options->verify.barvinok->MaxRays);
-    FORALL_REDUCED_DOMAIN(PP, TC, nd, options->verify.barvinok, i, D, rVD)
+    Polyhedron *TC = true_context(P, C, options->verify->barvinok->MaxRays);
+    FORALL_REDUCED_DOMAIN(PP, TC, nd, options->verify->barvinok, i, D, rVD)
 	Param_Vertices *V;
 
 	EDomain *epVD = new EDomain(rVD);
@@ -2645,7 +2604,7 @@ static void lexmin_base(Polyhedron *P, Polyhedron *C,
 	vector<max_term*> maxima = lexmin(ind, nparam, loc);
 	if (CP)
 	    for (int j = 0; j < maxima.size(); ++j)
-		maxima[j]->substitute(CP, options->verify.barvinok);
+		maxima[j]->substitute(CP, options->verify->barvinok);
 	all_max.insert(all_max.end(), maxima.begin(), maxima.end());
 
 	Domain_Free(rVD);
@@ -2677,7 +2636,7 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 
     if (P->NbEq > 0)
 	remove_all_equalities(&P, &C, &CP, &T, nparam,
-			      options->verify.barvinok->MaxRays);
+			      options->verify->barvinok->MaxRays);
     if (!emptyQ2(P))
 	lexmin_base(P, C, CP, T, all_max, options);
 done:
@@ -2704,34 +2663,23 @@ int main(int argc, char **argv)
     int bignum;
     char **iter_names, **param_names;
     int print_solution = 1;
-    struct lexmin_options options;
-    static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    	0,	0,  		0 },
-	{ &verify_argp,    	0,	"verification",	1 },
-	{ 0 }
-    };
-    static struct argp argp = { argp_options, &parse_opt, 0, 0, argp_children };
-    struct barvinok_options *bv_options;
+    struct lexmin_options *options = lexmin_options_new_with_defaults();
+    options->verify->barvinok->lookup_table = 0;
 
-    bv_options = barvinok_options_new_with_defaults();
-    bv_options->lookup_table = 0;
-
-    options.verify.barvinok = bv_options;
-    set_program_name(argv[0]);
-    argp_parse(&argp, argc, argv, 0, 0, &options);
+    argc = lexmin_options_parse(options, argc, argv, ISL_ARG_ALL);
 
     MA = Matrix_Read();
-    C = Constraints2Polyhedron(MA, bv_options->MaxRays);
+    C = Constraints2Polyhedron(MA, options->verify->barvinok->MaxRays);
     Matrix_Free(MA);
     fscanf(stdin, " %d", &bignum);
     assert(bignum == -1);
     MA = Matrix_Read();
-    A = Constraints2Polyhedron(MA, bv_options->MaxRays);
+    A = Constraints2Polyhedron(MA, options->verify->barvinok->MaxRays);
     Matrix_Free(MA);
 
-    verify_options_set_range(&options.verify, A->Dimension);
+    verify_options_set_range(options->verify, A->Dimension);
 
-    if (options.verify.verify)
+    if (options->verify->verify)
 	print_solution = 0;
 
     iter_names = util_generate_names(A->Dimension - C->Dimension, "i");
@@ -2740,13 +2688,13 @@ int main(int argc, char **argv)
 	Polyhedron_Print(stdout, P_VALUE_FMT, A);
 	Polyhedron_Print(stdout, P_VALUE_FMT, C);
     }
-    vector<max_term*> maxima = lexmin(A, C, &options);
+    vector<max_term*> maxima = lexmin(A, C, options);
     if (print_solution)
 	for (int i = 0; i < maxima.size(); ++i)
-	    maxima[i]->print(cout, param_names, options.verify.barvinok);
+	    maxima[i]->print(cout, param_names, options->verify->barvinok);
 
-    if (options.verify.verify)
-	verify_results(A, C, maxima, &options.verify);
+    if (options->verify->verify)
+	verify_results(A, C, maxima, options->verify);
 
     for (int i = 0; i < maxima.size(); ++i)
 	delete maxima[i];
@@ -2756,7 +2704,7 @@ int main(int argc, char **argv)
     Polyhedron_Free(A);
     Polyhedron_Free(C);
 
-    barvinok_options_free(bv_options);
+    lexmin_options_free(options);
 
     return 0;
 }

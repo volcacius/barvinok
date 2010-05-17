@@ -1,8 +1,6 @@
 #include <assert.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "argp.h"
-#include "progname.h"
 #include "ilp.h"
 #include "polysign.h"
 
@@ -16,8 +14,7 @@ int main(int argc, char **argv)
     enum lp_result res;
     Value one;
 
-    set_program_name(argv[0]);
-    argp_parse(&barvinok_argp, argc, argv, 0, 0, options);
+    argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
 
     P = Polyhedron_Read(options->MaxRays);
     obj = Vector_Read();

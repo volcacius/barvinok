@@ -5,41 +5,22 @@
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include <barvinok/basis_reduction.h>
-#include "argp.h"
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
-
-struct argp_option argp_options[] = {
-    { "direct",		'd',  0,	0,
-	"don't apply generalized basis reduction first" },
-    { 0 }
-};
 
 struct options {
     struct barvinok_options *barvinok;
     int direct;
 };
 
-error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct options *options = state->input;
+struct isl_arg options_arg[] = {
+ISL_ARG_CHILD(struct options, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARG_BOOL(struct options, direct, 'd', "direct", 0,
+	"don't apply generalized basis reduction first")
+ISL_ARG_END
+};
 
-    switch (key) {
-    case ARGP_KEY_INIT:
-	state->child_inputs[0] = options->barvinok;
-	options->direct = 0;
-	break;
-    case 'd':
-	options->direct = 1;
-	break;
-    case 'V':
-	printf(barvinok_version());
-	exit(0);
-    default:
-	return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
+ISL_ARG_DEF(options, struct options, options_arg)
 
 static void scan_poly(Polyhedron *S, int pos, Value *z, Matrix *T)
 {
@@ -82,26 +63,17 @@ int main(int argc, char **argv)
     int i, j, ok;
     Matrix *basis, *T, *inv;
     int c, ind = 0;
-    struct barvinok_options *bv_options = barvinok_options_new_with_defaults();
-    static struct argp_child argp_children[] = {
-	{ &barvinok_argp,    0,	0,  0 },
-	{ 0 }
-    };
-    static struct argp argp = { argp_options, parse_opt, 0, 0, argp_children };
-    struct options options;
+    struct options *options = options_new_with_defaults();
 
-    options.barvinok = bv_options;
+    argc = options_parse(options, argc, argv, ISL_ARG_ALL);
 
-    set_program_name(argv[0]);
-    argp_parse(&argp, argc, argv, 0, 0, &options);
+    A = Polyhedron_Read(options->barvinok->MaxRays);
 
-    A = Polyhedron_Read(bv_options->MaxRays);
-
-    if (options.direct) {
+    if (options->direct) {
 	inv = Identity(A->Dimension+1);
 	P = A;
     } else {
-	basis = Polyhedron_Reduced_Basis(A, bv_options);
+	basis = Polyhedron_Reduced_Basis(A, options->barvinok);
 
 	T = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
 	inv = Matrix_Alloc(A->Dimension+1, A->Dimension+1);
@@ -115,12 +87,12 @@ int main(int argc, char **argv)
 	assert(ok);
 	Matrix_Free(T);
 
-	P = Polyhedron_Preimage(A, inv, bv_options->MaxRays);
+	P = Polyhedron_Preimage(A, inv, options->barvinok->MaxRays);
 	Polyhedron_Free(A);
     }
 
     U = Universe_Polyhedron(0);
-    S = Polyhedron_Scan(P, U, bv_options->MaxRays);
+    S = Polyhedron_Scan(P, U, options->barvinok->MaxRays);
 
     p = ALLOCN(Value, P->Dimension+2);
     for(i=0;i<=P->Dimension;i++) {
@@ -139,6 +111,6 @@ int main(int argc, char **argv)
     Domain_Free(S);
     Polyhedron_Free(P);
     Polyhedron_Free(U);
-    barvinok_options_free(bv_options);
+    options_free(options);
     return 0;
 }
