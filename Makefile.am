@@ -347,7 +347,7 @@ test_approx_SOURCES = \
 	verify.h \
 	verify.c
 test_bound_SOURCES = \
-	test_bound.cc \
+	test_bound.c \
 	evalue_convert.cc \
 	evalue_convert.h \
 	evalue_read.c \

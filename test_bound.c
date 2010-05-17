@@ -36,11 +36,6 @@ static my_clock_t time_diff(struct tms *before, struct tms *after)
 
 #endif
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using namespace barvinok;
-
 static struct {
     int	    method;
 } methods[] = {
@@ -182,7 +177,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		fprintf(stderr, ", range: "); isl_int_print(stderr, exact, 0);
 	}
 
-	for (int i = 0; i < nr_methods; ++i) {
+	for (i = 0; i < nr_methods; ++i) {
 		double error;
 
 		opt = isl_pw_qpolynomial_fold_eval(
@@ -273,6 +268,7 @@ static void test(evalue *EP, unsigned nvar,
 
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
 {
+    int i;
     evalue *EP, *upper, *lower;
     const char **all_vars = NULL;
     unsigned nvar;
@@ -296,18 +292,19 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     evalue_frac2polynomial(lower, -1, options->barvinok->MaxRays);
 
     dim = isl_dim_set_alloc(ctx, nparam, 0);
-    for (int i = 0; i < nr_methods; ++i) {
+    for (i = 0; i < nr_methods; ++i) {
+	int j;
 	struct tms st_cpu;
 	struct tms en_cpu;
 
 	times(&st_cpu);
-	for (int j = 0; j < 2; ++j) {
+	for (j = 0; j < 2; ++j) {
 	    evalue *poly = j == 0 ? upper : lower;
 	    int sign = j == 0 ? BV_BERNSTEIN_MAX : BV_BERNSTEIN_MIN;
 	    enum isl_fold type = j == 0 ? isl_fold_max : isl_fold_min;
-	    options->barvinok->bernstein_optimize = sign;
 	    isl_dim *dim_poly;
 	    isl_pw_qpolynomial *pwqp;
+	    options->barvinok->bernstein_optimize = sign;
 	    dim_poly = isl_dim_insert(isl_dim_copy(dim), isl_dim_param, 0, nvar);
 	    pwqp = isl_pw_qpolynomial_from_evalue(dim_poly, poly);
 	    pwqp = isl_pw_qpolynomial_move(pwqp, isl_dim_set, 0,
@@ -320,7 +317,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	result->size[i] = isl_pw_qpolynomial_fold_size(pwf[2*i+1]);
 	if (options->barvinok->verbose) {
 	    isl_printer *p = isl_printer_to_file(ctx, stdout);
-	    for (int j = 0; j < 2; ++j) {
+	    for (j = 0; j < 2; ++j) {
 		p = isl_printer_print_pw_qpolynomial_fold(p, pwf[2*i+j]);
 		p = isl_printer_end_line(p);
 	    }
@@ -330,7 +327,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     isl_dim_free(dim);
     test(EP, nvar, pwf, result, options);
 
-    for (int i = 0; i < 2*nr_methods; ++i)
+    for (i = 0; i < 2*nr_methods; ++i)
 	isl_pw_qpolynomial_fold_free(pwf[i]);
     evalue_free(EP);
     evalue_free(lower);
