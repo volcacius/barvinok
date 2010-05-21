@@ -948,8 +948,7 @@ int main(int argc, char **argv)
 	assert(options);
 	argc = iscc_options_parse(options, argc, argv, ISL_ARG_ALL);
 
-	ctx = isl_ctx_alloc_with_options(options->isl);
-	options->isl = NULL;
+	ctx = isl_ctx_alloc_with_options(iscc_options_arg, options);
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
 	table = isl_hash_table_alloc(ctx, 10);
@@ -969,7 +968,6 @@ int main(int argc, char **argv)
 	isl_hash_table_free(ctx, table);
 	isl_stream_free(s);
 	isl_ctx_free(ctx);
-	free(options);
 
 	return 0;
 }
