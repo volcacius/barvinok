@@ -25,12 +25,13 @@ struct isl_arg_choice iscc_format[] = {
 };
 
 struct iscc_options {
-	struct isl_options	*isl;
+	struct barvinok_options	*barvinok;
 	unsigned		 format;
 };
 
 struct isl_arg iscc_options_arg[] = {
-ISL_ARG_CHILD(struct iscc_options, isl, "isl", isl_options_arg, "isl options")
+ISL_ARG_CHILD(struct iscc_options, barvinok, "barvinok", barvinok_options_arg,
+	"barvinok options")
 ISL_ARG_CHOICE(struct iscc_options, format, 0, "format", \
 	iscc_format,	ISL_FORMAT_ISL, "output format")
 ISL_ARG_END
