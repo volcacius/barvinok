@@ -19,6 +19,7 @@
 
 #include <barvinok/evalue.h>
 #include <barvinok/barvinok.h>
+#include <barvinok/util.h>
 #include "verif_ehrhart.h"
 
 #undef CS   /* for Solaris 10 */
