@@ -270,7 +270,7 @@ LDFLAGS="$SAVE_LDFLAGS"
 
 AC_SUBST(bv_cone_hilbert_basis)
 AC_MSG_CHECKING(whether to compile zsolve)
-AC_ARG_WITH(bernstein,
+AC_ARG_WITH(zsolve,
 	    [AS_HELP_STRING([--without-zsolve],[do not compile zsolve])],
             [ with_zsolve=$withval],  [ with_zsolve=yes ])
 AC_MSG_RESULT($with_zsolve)
