@@ -256,3 +256,4 @@ ISL_ARG_END
 };
 
 ISL_ARG_DEF(barvinok_options, struct barvinok_options, barvinok_options_arg)
+ISL_ARG_CTX_DEF(barvinok_options, struct barvinok_options, barvinok_options_arg)

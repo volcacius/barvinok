@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <isl_arg.h>
+#include <isl_ctx.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -124,6 +125,7 @@ struct barvinok_options {
 };
 
 ISL_ARG_DECL(barvinok_options, struct barvinok_options, barvinok_options_arg)
+ISL_ARG_CTX_DECL(barvinok_options, struct barvinok_options, barvinok_options_arg)
 
 #if defined(__cplusplus)
 }
