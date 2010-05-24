@@ -159,7 +159,7 @@ static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf, evalue *EP, unsigned 
 	vpb.pwf = pwf;
 	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
 	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-	vpb.pwqp = isl_pw_qpolynomial_move(vpb.pwqp, isl_dim_set, 0,
+	vpb.pwqp = isl_pw_qpolynomial_move_dims(vpb.pwqp, isl_dim_set, 0,
 						isl_dim_param, 0, nvar);
 	context = isl_pw_qpolynomial_fold_domain(
 					isl_pw_qpolynomial_fold_copy(vpb.pwf));
@@ -306,7 +306,7 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
     enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
     dim_EP = isl_dim_insert(dim, isl_dim_param, 0, nvar);
     pwqp = isl_pw_qpolynomial_from_evalue(dim_EP, EP);
-    pwqp = isl_pw_qpolynomial_move(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
+    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
     if (options->iterate)
 	pwf = iterate(pwqp, type);
     else

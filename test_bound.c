@@ -229,7 +229,7 @@ static void test(evalue *EP, unsigned nvar,
 	nparam = isl_pw_qpolynomial_fold_dim(pwf[0], isl_dim_param);
 	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
 	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-	vpb.pwqp = isl_pw_qpolynomial_move(vpb.pwqp, isl_dim_set, 0,
+	vpb.pwqp = isl_pw_qpolynomial_move_dims(vpb.pwqp, isl_dim_set, 0,
 						isl_dim_param, 0, nvar);
 	context = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vpb.pwqp));
 	context = isl_set_remove(context, isl_dim_set, 0, nvar);
@@ -289,7 +289,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	    options->barvinok->bernstein_optimize = sign;
 	    dim_poly = isl_dim_insert(isl_dim_copy(dim), isl_dim_param, 0, nvar);
 	    pwqp = isl_pw_qpolynomial_from_evalue(dim_poly, poly);
-	    pwqp = isl_pw_qpolynomial_move(pwqp, isl_dim_set, 0,
+	    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
 					    isl_dim_param, 0, nvar);
 	    pwf[2*i+j] = isl_pw_qpolynomial_bound(pwqp, type, methods[i].method);
 	}
