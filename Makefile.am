@@ -411,7 +411,6 @@ EXTRA_DIST = \
     doc/Internal.tex \
     doc/applications.tex \
     doc/barvinok.tex \
-    doc/omega.tex \
     doc/polymake.tex \
     doc/reports.tex \
     doc/barvinok.bib \
