@@ -5,7 +5,6 @@
 #include <isl_stream.h>
 #include <isl_obj_list.h>
 #include <barvinok/barvinok.h>
-#include <bound_common.h>
 
 #include "config.h"
 
@@ -330,14 +329,29 @@ static __isl_give isl_map *map_affine_hull(__isl_take isl_map *map)
 	return isl_map_from_basic_map(isl_map_affine_hull(map));
 }
 
-static __isl_give isl_pw_qpolynomial_fold *pw_qpolynomial_upper_bound(
+static __isl_give struct isl_list *pw_qpolynomial_upper_bound(
 	__isl_take isl_pw_qpolynomial *pwqp)
 {
-#ifdef HAVE_GINAC
-	return isl_pw_qpolynomial_bound(pwqp, isl_fold_max, BV_BOUND_BERNSTEIN);
-#else
-	return isl_pw_qpolynomial_bound(pwqp, isl_fold_max, BV_BOUND_RANGE);
-#endif
+	isl_ctx *ctx;
+	struct isl_list *list;
+	int tight;
+
+	ctx = isl_pw_qpolynomial_get_ctx(pwqp);
+	list = isl_list_alloc(ctx, 2);
+	if (!list)
+		goto error;
+
+	list->obj[0].type = isl_obj_pw_qpolynomial_fold;
+	list->obj[0].v = isl_pw_qpolynomial_bound(pwqp, isl_fold_max, &tight);
+	list->obj[1].type = isl_obj_bool;
+	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
+	if (tight < 0 || !list->obj[0].v)
+		goto error;
+
+	return list;
+error:
+	isl_list_free(list);
+	return NULL;
 }
 
 typedef void *(*isc_un_op_fn)(void *arg);
@@ -393,7 +407,7 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &map_sample } },
 	{"sum",		{ -1,	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
 		(isc_un_op_fn) &isl_pw_qpolynomial_sum } },
-	{"ub",		{ -1,	isl_obj_pw_qpolynomial, isl_obj_pw_qpolynomial_fold,
+	{"ub",		{ -1,	isl_obj_pw_qpolynomial, isl_obj_list,
 		(isc_un_op_fn) &pw_qpolynomial_upper_bound } },
 	NULL
 };

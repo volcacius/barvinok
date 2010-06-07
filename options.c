@@ -126,18 +126,6 @@ static struct isl_arg_choice specialization[] = {
 	{0}
 };
 
-#ifdef HAVE_GINAC
-#define DEFAULT_BOUND BV_BOUND_BERNSTEIN
-#else
-#define DEFAULT_BOUND BV_BOUND_RANGE
-#endif
-
-static struct isl_arg_choice bound[] = {
-	{"bernstein",	BV_BOUND_BERNSTEIN},
-	{"range",	BV_BOUND_RANGE},
-	{0}
-};
-
 #ifdef HAVE_LIBGLPK
 #define DEFAULT_GBR BV_GBR_GLPK
 #elif defined HAVE_LIBCDDGMP
@@ -155,17 +143,6 @@ static struct isl_arg_choice gbr[] = {
 #endif
 	{"pip",		BV_GBR_PIP},
 	{"pip-dual",	BV_GBR_PIP_DUAL},
-	{0}
-};
-
-static struct isl_arg_flags bernstein_recurse[] = {
-	{"none",	BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS, 0},
-	{"factors",	BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS,
-			BV_BERNSTEIN_FACTORS},
-	{"intervals",	BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS,
-			BV_BERNSTEIN_INTERVALS},
-	{"full",	BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS,
-			BV_BERNSTEIN_FACTORS | BV_BERNSTEIN_INTERVALS},
 	{0}
 };
 
@@ -235,11 +212,6 @@ ISL_ARG_USER(struct barvinok_options, count_sample_infinite, &int_init_one, NULL
 ISL_ARG_USER(struct barvinok_options, try_Delaunay_triangulation, &int_init_zero, NULL)
 ISL_ARG_CHOICE(struct barvinok_options, gbr_lp_solver, 0, "gbr", gbr,
 	DEFAULT_GBR, "lp solver to use for basis reduction")
-ISL_ARG_CHOICE(struct barvinok_options, bound, 0, "bound", bound,
-	DEFAULT_BOUND, "algorithm to use for computing bounds")
-ISL_ARG_USER(struct barvinok_options, bernstein_optimize, &int_init_zero, NULL)
-ISL_ARG_FLAGS(struct barvinok_options, bernstein_recurse, 0,
-	"bernstein-recurse", bernstein_recurse, BV_BERNSTEIN_FACTORS, NULL)
 ISL_ARG_CHOICE(struct barvinok_options, lp_solver, 0, "lp", lp,
 	DEFAULT_LP, "lp solver to use")
 ISL_ARG_CHOICE(struct barvinok_options, summation, 0, "summation", summation,

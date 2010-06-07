@@ -7,7 +7,6 @@
 #include <barvinok/util.h>
 #include <barvinok/bernstein.h>
 #include <barvinok/options.h>
-#include "bound_common.h"
 #include "reduce_domain.h"
 
 using namespace GiNaC;

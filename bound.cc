@@ -4,8 +4,6 @@
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include <barvinok/bernstein.h>
-#include <bound_common.h>
 #include "bound_options.h"
 #include "evalue_convert.h"
 #include "evalue_read.h"
@@ -14,7 +12,6 @@
 using std::cout;
 using std::cerr;
 using std::endl;
-using namespace barvinok;
 
 #define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
@@ -22,6 +19,7 @@ struct verify_point_bound {
 	struct verify_point_data vpd;
 	isl_pw_qpolynomial *pwqp;
 	isl_pw_qpolynomial_fold *pwf;
+	enum isl_fold type;
 };
 
 static int verify_point(__isl_take isl_point *pnt, void *user)
@@ -41,7 +39,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 
 	vpb->vpd.n--;
 
-	if (vpb->vpd.options->barvinok->bernstein_optimize == BV_BERNSTEIN_MAX) {
+	if (vpb->type == isl_fold_max) {
 		minmax = "max";
 		sign = 1;
 	} else {
@@ -145,7 +143,7 @@ error:
 }
 
 static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf, evalue *EP, unsigned nvar,
-		  struct verify_options *options)
+		  enum isl_fold type, struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options } };
 	isl_ctx *ctx;
@@ -158,6 +156,7 @@ static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf, evalue *EP, unsigned 
 	nparam = isl_pw_qpolynomial_fold_dim(pwf, isl_dim_param);
 	vpb.pwf = pwf;
 	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
+	vpb.type = type;
 	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
 	vpb.pwqp = isl_pw_qpolynomial_move_dims(vpb.pwqp, isl_dim_set, 0,
 						isl_dim_param, 0, nvar);
@@ -300,7 +299,6 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
 	    return pwf;
 	return isl_pw_qpolynomial_fold_add(pwf, pwf_more);
     }
-    int method = options->verify->barvinok->bound;
     isl_dim *dim_EP;
     isl_pw_qpolynomial *pwqp;
     enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
@@ -310,7 +308,7 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
     if (options->iterate)
 	pwf = iterate(pwqp, type);
     else
-	pwf = isl_pw_qpolynomial_bound(pwqp, type, method);
+	pwf = isl_pw_qpolynomial_bound(pwqp, type, NULL);
     return pwf;
 }
 
@@ -335,10 +333,6 @@ static int optimize(evalue *EP, const char **all_vars,
 	    print_solution = 0;
     }
 
-    if (options->lower)
-	options->verify->barvinok->bernstein_optimize = BV_BERNSTEIN_MIN;
-    else
-	options->verify->barvinok->bernstein_optimize = BV_BERNSTEIN_MAX;
     pwf = optimize(EP, nvar, U, dim, options);
     assert(pwf);
     if (print_solution) {
@@ -348,7 +342,8 @@ static int optimize(evalue *EP, const char **all_vars,
 	isl_printer_free(p);
     }
     if (options->verify->verify) {
-	result = verify(pwf, EP, nvar, options->verify);
+	enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
+	result = verify(pwf, EP, nvar, type, options->verify);
     }
     isl_pw_qpolynomial_fold_free(pwf);
 

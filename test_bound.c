@@ -2,9 +2,7 @@
 #include <limits.h>
 #include <math.h>
 #include <barvinok/options.h>
-#include <barvinok/bernstein.h>
 #include <barvinok/util.h>
-#include <bound_common.h>
 #include "evalue_read.h"
 #include "verify.h"
 
@@ -37,8 +35,8 @@ static my_clock_t time_diff(struct tms *before, struct tms *after)
 static struct {
     int	    method;
 } methods[] = {
-    { BV_BOUND_BERNSTEIN },
-    { BV_BOUND_RANGE },
+    { ISL_BOUND_BERNSTEIN },
+    { ISL_BOUND_RANGE },
 };
 
 #define nr_methods (sizeof(methods)/sizeof(*methods))
@@ -282,16 +280,15 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	times(&st_cpu);
 	for (j = 0; j < 2; ++j) {
 	    evalue *poly = j == 0 ? upper : lower;
-	    int sign = j == 0 ? BV_BERNSTEIN_MAX : BV_BERNSTEIN_MIN;
 	    enum isl_fold type = j == 0 ? isl_fold_max : isl_fold_min;
 	    isl_dim *dim_poly;
 	    isl_pw_qpolynomial *pwqp;
-	    options->barvinok->bernstein_optimize = sign;
 	    dim_poly = isl_dim_insert(isl_dim_copy(dim), isl_dim_param, 0, nvar);
 	    pwqp = isl_pw_qpolynomial_from_evalue(dim_poly, poly);
 	    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
 					    isl_dim_param, 0, nvar);
-	    pwf[2*i+j] = isl_pw_qpolynomial_bound(pwqp, type, methods[i].method);
+	    options->barvinok->isl->bound = methods[i].method;
+	    pwf[2*i+j] = isl_pw_qpolynomial_bound(pwqp, type, NULL);
 	}
 	times(&en_cpu);
 	result->ticks[i] = time_diff(&en_cpu, &st_cpu);
