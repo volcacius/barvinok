@@ -181,6 +181,7 @@ static struct isl_arg_choice chambers[] = {
 #ifdef POINTS2TRIANGS_PATH
 	{"topcom",		BV_CHAMBERS_TOPCOM},
 #endif
+	{"isl",			BV_CHAMBERS_ISL},
 	{0}
 };
 

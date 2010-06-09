@@ -2,6 +2,7 @@
 #include <barvinok/options.h>
 #include "param_util.h"
 #include "topcom.h"
+#include "isl_param_util.h"
 #include "config.h"
 
 #define ALLOC(type) (type*)malloc(sizeof(type))
@@ -128,6 +129,9 @@ Param_Polyhedron *Polyhedron2Param_Polyhedron(Polyhedron *P, Polyhedron *C,
 	break;
     case BV_CHAMBERS_TOPCOM:
 	return TC_P2PP(P, C, options);
+	break;
+    case BV_CHAMBERS_ISL:
+	return ISL_P2PP(P, C, options);
 	break;
     default:
 	assert(0);

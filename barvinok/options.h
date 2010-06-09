@@ -97,6 +97,7 @@ struct barvinok_options {
 
     #define	BV_CHAMBERS_POLYLIB	0
     #define	BV_CHAMBERS_TOPCOM	1
+    #define	BV_CHAMBERS_ISL		2
     int		chambers;
 
     #define	BV_HULL_GBR		0

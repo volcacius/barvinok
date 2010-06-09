@@ -133,6 +133,8 @@ libbarvinok_la_SOURCES = \
     hull.h \
     ilp.c \
     ilp.h \
+    isl_param_util.c \
+    isl_param_util.h \
     lattice_point.cc \
     lattice_point.h \
     lattice_width.c \
@@ -462,11 +464,12 @@ check-euler: barvinok_summate$(EXEEXT)
 if HAVE_TOPCOM
     TOPCOM_CD = '--chamber-decomposition=topcom'
 endif
+ISL_CD = '--chamber-decomposition=isl'
 check-enumerate: barvinok_enumerate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/ehrhart/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		for options in '' '--series' '--series --primal' $(TOPCOM_CD); do \
+		for options in '' '--series' '--series --primal' $(TOPCOM_CD) $(ISL_CD); do \
 		    for spec in 'random' 'bf' 'df'; do \
 			opt="--specialization=$$spec $$options"; \
 			echo "        $$opt"; \
