@@ -3,6 +3,7 @@
 #include <string.h>
 #include <isl_obj.h>
 #include <isl_stream.h>
+#include <isl_vertices.h>
 #include <isl_obj_list.h>
 #include <barvinok/barvinok.h>
 
@@ -13,6 +14,7 @@ static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
 static enum isl_token_type read_op;
+static enum isl_token_type vertices_op;
 
 struct isl_arg_choice iscc_format[] = {
 	{"isl",		ISL_FORMAT_ISL},
@@ -700,6 +702,73 @@ error:
 	return obj;
 }
 
+struct add_vertex_data {
+	struct isl_list *list;
+	int i;
+};
+
+static int add_vertex(__isl_take isl_vertex *vertex, void *user)
+{
+	struct add_vertex_data *data = (struct add_vertex_data *)user;
+	isl_basic_set *expr;
+
+	expr = isl_vertex_get_expr(vertex);
+
+	data->list->obj[data->i].type = isl_obj_set;
+	data->list->obj[data->i].v = isl_set_from_basic_set(expr);
+	data->i++;
+
+	isl_vertex_free(vertex);
+
+	return 0;
+}
+
+static struct isl_obj vertices(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	isl_ctx *ctx;
+	struct isl_obj obj;
+	isl_set *set;
+	isl_basic_set *hull;
+	isl_vertices *vertices = NULL;
+	struct isl_list *list = NULL;
+	struct add_vertex_data data;
+
+	obj = read_expr(s, table);
+	isl_assert(s->ctx, obj.type == isl_obj_set, goto error);
+	set = obj.v;
+	obj.v = NULL;
+	set = isl_set_remove_divs(set);
+	hull = isl_set_convex_hull(set);
+	vertices = isl_basic_set_compute_vertices(hull);
+	isl_basic_set_free(hull);
+
+	ctx = isl_vertices_get_ctx(vertices);
+	list = isl_list_alloc(ctx, isl_vertices_get_n_vertices(vertices));
+	if (!list)
+		goto error;
+
+	data.list = list;
+	data.i = 0;
+
+	if (isl_vertices_foreach_vertex(vertices, &add_vertex, &data) < 0)
+		goto error;
+
+	isl_vertices_free(vertices);
+
+	obj.type = isl_obj_list;
+	obj.v = list;
+
+	return obj;
+error:
+	isl_vertices_free(vertices);
+	isl_list_free(list);
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_token *tok;
@@ -783,6 +852,8 @@ static struct isl_obj read_obj(struct isl_stream *s,
 
 		if (isl_stream_eat_if_available(s, read_op))
 			return read_from_file(s);
+		if (isl_stream_eat_if_available(s, vertices_op))
+			return vertices(s, table);
 
 		name = isl_stream_read_ident_if_available(s);
 		if (name) {
@@ -933,6 +1004,8 @@ static void register_named_ops(struct isl_stream *s)
 
 	read_op = isl_stream_register_keyword(s, "read");
 	assert(read_op != ISL_TOKEN_ERROR);
+	vertices_op = isl_stream_register_keyword(s, "vertices");
+	assert(vertices_op != ISL_TOKEN_ERROR);
 
 	for (i = 0; ; ++i) {
 		if (!named_un_ops[i].name)
