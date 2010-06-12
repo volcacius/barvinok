@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <limits.h>
 #include <barvinok/barvinok.h>
 #include "verify.h"
