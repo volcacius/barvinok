@@ -52,7 +52,7 @@ AM_LDFLAGS = @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
 LIB_ISL = $(ISL_LA) @ISL_LIBS@
 LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
 
-lib_LTLIBRARIES = libbarvinok-core.la libbarvinok.la
+lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
 		  barvinok_ehrhart polytope_scan iscc
 noinst_PROGRAMS = test testlib randomtest \
@@ -95,7 +95,7 @@ endif
 if USE_ZSOLVE
     HILBERT_C = hilbert.c
 endif
-libbarvinok_core_la_SOURCES = \
+libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
     barvinok/util.h \
@@ -182,7 +182,7 @@ libbarvinok_core_la_SOURCES = \
     barvinok_e.cc \
     $(BR_CDD) \
     $(BR_GLPK)
-EXTRA_libbarvinok_core_la_SOURCES = \
+EXTRA_libbarvinok_la_SOURCES = \
     basis_reduction_cdd.cc \
     basis_reduction_glpk.c \
     hilbert.c \
@@ -202,18 +202,13 @@ endif
 if USE_ZSOLVE
     ZSOLVE_LA = zsolve/libzsolve.la
 endif
-libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
+libbarvinok_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
 			     $(POLYLIB_LA) @POLYLIB_LIBS@ \
 			     $(PIPLIB_LA) @PIPLIB_LIBS@ \
 			     $(ZSOLVE_LA)
-libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
-				$(AM_LDFLAGS)
-libbarvinok_la_SOURCES = \
-    dummy.c
-libbarvinok_la_LIBADD = libbarvinok-core.la
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
-LDADD = libbarvinok-core.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+LDADD = libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 test_SOURCES = \
@@ -295,7 +290,7 @@ barvinok_enumerate_e_CPPFLAGS = \
 	$(PARKERCPPFLAGS) @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = $(PARKERLDFLAGS) @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
-	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok-core.la \
+	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok.la \
 	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
 	evalue_convert_options.c \
@@ -311,7 +306,7 @@ barvinok_bound_SOURCES = \
 	verify.c
 EXTRA_barvinok_bound_SOURCES = fdstream.cc fdstream.h
 barvinok_bound_LDADD = \
-	libbarvinok-core.la libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
 	barvinok_summate_options.c \
@@ -356,7 +351,7 @@ test_bound_SOURCES = \
 	verify.c
 EXTRA_test_bound_SOURCES = fdstream.cc fdstream.h
 test_bound_LDADD = \
-	libbarvinok-core.la libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 evalue_convert_SOURCES = \
 	evalue_convert_main.c \
@@ -371,7 +366,7 @@ iscc_SOURCES =	\
 	isl_obj_list.c \
 	iscc.c
 iscc_LDADD = \
-	libbarvinok.la libbarvinok-core.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')

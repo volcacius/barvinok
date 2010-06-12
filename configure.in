@@ -522,7 +522,7 @@ AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
 
 PACKAGE_CFLAGS="$PACKAGE_CFLAGS_ISL"
-PACKAGE_LIBS="-lbarvinok -lbarvinok-core $EXTRA_PACKAGE_LIBS -lisl-polylib -lpolylibgmp -lpiplibMP -lisl"
+PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lisl-polylib -lpolylibgmp -lpiplibMP -lisl"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
