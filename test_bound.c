@@ -5,6 +5,7 @@
 #include <barvinok/util.h>
 #include "evalue_read.h"
 #include "verify.h"
+#include "config.h"
 
 #ifdef HAVE_SYS_TIMES_H
 
