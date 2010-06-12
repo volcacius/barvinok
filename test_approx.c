@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <barvinok/barvinok.h>
 #include "verify.h"
+#include "config.h"
 
 #ifdef HAVE_SYS_TIMES_H
 
