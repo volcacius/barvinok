@@ -34,11 +34,6 @@ const char *barvinok_version(void)
 #else
 	" -GLPK"
 #endif
-#ifdef HAVE_GINAC
-	" +GINAC"
-#else
-	" -GINAC"
-#endif
 #ifdef POINTS2TRIANGS_PATH
 	" +TOPCOM"
 #else

@@ -21,6 +21,4 @@ Most of the barvinok library was written by
 	    91893 Orsay
 	    France
 
-The bernstein library was written by Federico Fernandez and Sven Verdoolaege.
-
 Some code was copied from PolyLib.  See evalue.c

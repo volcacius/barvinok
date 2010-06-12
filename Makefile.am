@@ -1,6 +1,3 @@
-if HAVE_GINAC
-    MAYBE_BERNSTEIN = bernstein
-endif
 if BUNDLED_POLYLIB
     MAYBE_POLYLIB = polylib
 endif
@@ -26,15 +23,13 @@ if USE_PARKER
     MAYBE_PARKER = parker
 endif
 SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POLYLIB) \
-		$(MAYBE_BERNSTEIN) $(MAYBE_OMEGA) \
+		$(MAYBE_OMEGA) \
 		$(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_PIPLIB) $(MAYBE_POLYLIB) $(MAYBE_ISL) \
-		$(MAYBE_ISL_POLYLIB) bernstein $(MAYBE_OMEGA) \
+		$(MAYBE_ISL_POLYLIB) $(MAYBE_OMEGA) \
 		zsolve parker doc
 
 FORCE:
-bernstein/libbernstein.la: FORCE
-	cd bernstein; $(MAKE) $(AM_MAKEFLAGS) libbernstein.la
 polylib/libpolylibgmp.la: FORCE
 	cd polylib; $(MAKE) $(AM_MAKEFLAGS) libpolylibgmp.la
 piplib/libpiplibMP.la: FORCE
@@ -50,8 +45,7 @@ zsolve/libzsolve.la: FORCE
 parker/libparker.la: FORCE
 	cd parker; $(MAKE) $(AM_MAKEFLAGS) libparker.la
 
-AM_CPPFLAGS = -I$(srcdir)/bernstein/include \
-	      @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ @ginac_CFLAGS@ \
+AM_CPPFLAGS = @POLYLIB_CPPFLAGS@ @PIPLIB_CPPFLAGS@ \
 	      @NTL_CPPFLAGS@ @ISL_CFLAGS@ @ISL_POLYLIB_CFLAGS@
 AM_LDFLAGS = @POLYLIB_LDFLAGS@ @PIPLIB_LDFLAGS@ @NTL_LDFLAGS@
 
@@ -65,12 +59,13 @@ noinst_PROGRAMS = test testlib randomtest \
 		  remove_redundant_equalities \
 		  barvinok_union polytope_volume test_approx \
 		  barvinok_summate verify_lexsmaller \
-		  polyhedron_sample 4coins lexmin @bv_barvinok_bound@ \
+		  polyhedron_sample 4coins lexmin \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width polytope_minimize \
 		  polyhedron_integer_hull vector_partition_chambers \
-		  semigroup_holes evalue_convert
-EXTRA_PROGRAMS = barvinok_bound test_bound cone_hilbert_basis
+		  semigroup_holes evalue_convert \
+		  barvinok_bound test_bound
+EXTRA_PROGRAMS = cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
     barvinok/barvinok.h \
@@ -80,8 +75,7 @@ pkginclude_HEADERS = \
     barvinok/options.h \
     barvinok/polylib.h \
     barvinok/sample.h \
-    barvinok/basis_reduction.h \
-    barvinok/bernstein.h
+    barvinok/basis_reduction.h
 nodist_pkginclude_HEADERS = \
     barvinok/NTL.h \
     barvinok/set.h
@@ -214,20 +208,9 @@ libbarvinok_core_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
 			     $(ZSOLVE_LA)
 libbarvinok_core_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
-if HAVE_GINAC
-    BERNSTEIN_CC = bernstein.cc
-else
-    BERNSTEIN_CC = dummy.c
-endif
 libbarvinok_la_SOURCES = \
-    $(BERNSTEIN_CC)
-EXTRA_libbarvinok_la_SOURCES = \
-    bernstein.cc \
     dummy.c
-if HAVE_GINAC
-    BERNSTEIN_LA = $(top_builddir)/bernstein/libbernstein.la
-endif
-libbarvinok_la_LIBADD = libbarvinok-core.la $(BERNSTEIN_LA)
+libbarvinok_la_LIBADD = libbarvinok-core.la
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
 LDADD = libbarvinok-core.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
@@ -460,7 +443,7 @@ check-approx: test_approx$(EXEEXT)
 		echo $$i | ./test_approx$(EXEEXT) -q -r 10 || exit; \
 	    fi \
 	done
-check-evalue: @bv_barvinok_bound@ barvinok_summate$(EXEEXT)
+check-evalue: barvinok_bound$(EXEEXT) test_bound$(EXEEXT) barvinok_summate$(EXEEXT)
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
 		echo $$i; \

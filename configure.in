@@ -44,10 +44,6 @@ AC_ARG_WITH(default-prefix,
 	AS_HELP_STRING([--with-default-prefix=DIR],
 	    [Default installation prefix of optional packages]))
 if test "${with_default_prefix+set}" = set; then
-	if test "${with_ginac_prefix+set}" != set -a \
-	   -f "$with_default_prefix/lib/pkgconfig/ginac.pc"; then
-		with_ginac_prefix=$with_default_prefix
-	fi
 	if test "${with_libgmp+set}" != set -a \
 	   -f "$with_default_prefix/include/gmp.h"; then
 		with_libgmp=$with_default_prefix
@@ -299,31 +295,6 @@ if test "$with_zsolve" != "no"; then
 fi
 AM_CONDITIONAL(USE_ZSOLVE, test x$use_zsolve = xtrue)
 
-AC_MSG_CHECKING(whether to compile bernstein)
-AC_ARG_WITH(bernstein,
-	    [AS_HELP_STRING([--without-bernstein],[do not compile bernstein])],
-            [ with_bernstein=$withval],  [ with_bernstein=yes ])
-AC_MSG_RESULT($with_bernstein)
-
-AC_ARG_WITH(ginac_prefix,
-	[AS_HELP_STRING([--with-ginac-prefix=DIR],[Installation prefix of GiNaC])])
-if test "x$with_ginac_prefix" != "x"; then
-	export PKG_CONFIG_PATH="$with_ginac_prefix/lib/pkgconfig${PKG_CONFIG_PATH+:$PKG_CONFIG_PATH}"
-fi
-
-AC_SUBST(bv_barvinok_bound)
-have_ginac=false
-if test "$with_bernstein" != "no"; then
-	PKG_CHECK_EXISTS([ginac], [
-		PKG_CHECK_MODULES(ginac, ginac)
-		have_ginac=true
-		AC_DEFINE(HAVE_GINAC,[],[use GiNaC])
-		EXTRA_PACKAGE_LIBS="-lbernstein $EXTRA_PACKAGE_LIBS"
-		bv_barvinok_bound="barvinok_bound\$(EXEEXT) test_bound\$(EXEEXT)"
-	])
-fi
-AM_CONDITIONAL(HAVE_GINAC, test x$have_ginac = xtrue)
-
 AX_SUBMODULE(omega,no|bundled|system,bundled)
 
 AC_SUBST(OMEGA_CPPFLAGS)
@@ -568,9 +539,6 @@ if test $with_isl = bundled; then
 fi
 if test $with_isl_polylib = bundled; then
 	AC_CONFIG_SUBDIRS(isl-polylib)
-fi
-if test x$have_ginac = xtrue; then
-    AC_CONFIG_SUBDIRS(bernstein)
 fi
 if test $with_omega = bundled; then
 	AC_CONFIG_SUBDIRS(omega)

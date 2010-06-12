@@ -79,20 +79,6 @@ struct barvinok_options {
     #define	BV_GBR_PIP_DUAL	3
     int		gbr_lp_solver;
 
-    #define	BV_BOUND_BERNSTEIN	0
-    #define	BV_BOUND_RANGE		1
-    int		bound;
-
-    /* bernstein options */
-    #define	BV_BERNSTEIN_NONE   0
-    #define	BV_BERNSTEIN_MAX    1
-    #define	BV_BERNSTEIN_MIN   -1
-    int		bernstein_optimize;
-
-    #define	BV_BERNSTEIN_FACTORS	1
-    #define	BV_BERNSTEIN_INTERVALS	2
-    int		bernstein_recurse;
-
     #define	BV_LP_POLYLIB		0
     #define	BV_LP_GLPK		1
     #define	BV_LP_CDD		2
