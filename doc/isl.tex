@@ -51,7 +51,7 @@ f := [n] -> { [i] -> 2*n*i - n*n + 3*n - 1/2*i*i - 3/2*i-1 :
                 (exists j : 0 <= i < 4*n-1 and 0 <= j < n and
                             2*n-1 <= i+j <= 4*n-2 and i <= 2*n-1 ) };
 ub f;
-u := ub f;
+u := (ub f)[0];
 u @ [n] -> { [] : 0 <= n <= 10 };
 
 m := [n] -> { [i,j] -> [i+1,j+1] : 1 <= i,j < n;
@@ -158,9 +158,13 @@ a sample element of the map $m_1$
 $q_2$ := \ai[\tt]{sum} $q_1$ &
 sum $q_1$ over all integer points in the domain of $q_1$
 \\
-$f$ := \ai[\tt]{ub} $q$ &
+$l$ := \ai[\tt]{ub} $q$ &
+compute an
 upper bound on the piecewise quasipolynomial $q$ over
 all integer points in the domain of $q$
+and return a list containing the upper bound
+and a boolean that is true if the upper bound
+is known to be tight
 \\
 $l$ := \ai[\tt]{vertices} $s$ &
 a list of vertices of the rational polytope defined by the same constraints
