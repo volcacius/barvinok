@@ -658,7 +658,7 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 	}
 	i = isl_int_get_si(tok->u.v);
 	isl_token_free(tok);
-	isl_assert(s, i < list->n, goto error);
+	isl_assert(s->ctx, i < list->n, goto error);
 	if (isl_stream_eat(s, ']'))
 		goto error;
 
