@@ -601,6 +601,8 @@ static struct isl_obj read_un_op_expr(struct isl_stream *s,
 	struct isl_obj obj = { isl_obj_none, NULL };
 
 	obj = read_obj(s, table);
+	if (!obj.v)
+		goto error;
 
 	op = find_matching_un_op(op, obj.type);
 
@@ -843,7 +845,7 @@ static struct isl_obj read_obj(struct isl_stream *s,
 
 	if (isl_stream_eat_if_available(s, '(')) {
 		obj = read_expr(s, table);
-		if (isl_stream_eat(s, ')'))
+		if (!obj.v || isl_stream_eat(s, ')'))
 			goto error;
 	} else {
 		op = read_prefix_un_op_if_available(s);
@@ -856,12 +858,12 @@ static struct isl_obj read_obj(struct isl_stream *s,
 			return vertices(s, table);
 
 		name = isl_stream_read_ident_if_available(s);
-		if (name) {
+		if (name)
 			obj = stored_obj(s->ctx, table, name);
-		} else {
+		else
 			obj = isl_stream_read_obj(s);
-			assert(obj.v);
-		}
+		if (!obj.v)
+			goto error;
 	}
 
 	if (isl_stream_eat_if_available(s, '^'))
@@ -920,7 +922,7 @@ static struct isl_obj read_expr(struct isl_stream *s,
 	struct isl_obj right_obj = { isl_obj_none, NULL };
 
 	obj = read_obj(s, table);
-	for (;;) {
+	for (; obj.v;) {
 		struct isc_bin_op *op = NULL;
 
 		op = read_bin_op_if_available(s, obj.type);
@@ -982,6 +984,8 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 
 	return p;
 error:
+	isl_stream_flush_tokens(s);
+	isl_stream_skip_line(s);
 	free(lhs);
 	free_obj(obj);
 	return p;
