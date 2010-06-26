@@ -275,7 +275,7 @@ static evalue *div2evalue(__isl_take isl_div *div)
 	isl_div_get_denominator(div, &vec->el[0]);
 	isl_div_get_constant(div, &vec->el[1 + dim + nparam]);
 
-	e = isl_alloc_type(set->ctx, evalue);
+	e = isl_alloc_type(div->ctx, evalue);
 	if (!e)
 		goto error;
 	value_init(e->d);
