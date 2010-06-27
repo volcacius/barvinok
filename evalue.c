@@ -8,7 +8,6 @@
 /*       (see file : LICENSE).                                         */
 /***********************************************************************/
 
-#include <alloca.h>
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
@@ -3373,6 +3372,7 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     evalue *factor = NULL;
     evalue cum;
     int negative = 0;
+    int allocated = 0;
 
     if (EVALUE_IS_ZERO(*e))
 	return 0;
@@ -3419,7 +3419,8 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
     }
 
     if (!signs) {
-	signs = alloca(sizeof(int) * D->Dimension);
+	allocated = 1;
+	signs = ALLOCN(int, D->Dimension);
 	domain_signs(D, signs);
     }
 
@@ -3441,6 +3442,9 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	    emul(&f, t);
 
 	    free_evalue_refs(&f);
+
+	    if (allocated)
+		free(signs);
 
 	    return t;
 	}
@@ -3552,6 +3556,9 @@ static evalue *esum_over_domain(evalue *e, int nvar, Polyhedron *D,
 	Vector_Free(row);
 
     reduce_evalue(res);
+
+    if (allocated)
+	free(signs);
 
     return res;
 }
@@ -3936,7 +3943,7 @@ void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
     assert(e->x.p->size >= 2);
     dim = EVALUE_DOMAIN(e->x.p->arr[0])->Dimension;
 
-    signs = alloca(sizeof(int) * dim);
+    signs = ALLOCN(int, dim);
 
     if (!sign)
 	for (i = 0; i < dim; ++i)
@@ -3946,6 +3953,8 @@ void evalue_frac2polynomial(evalue *e, int sign, unsigned MaxRays)
 	    domain_signs(EVALUE_DOMAIN(e->x.p->arr[2*i]), signs);
 	evalue_frac2polynomial_r(&e->x.p->arr[2*i+1], signs, sign, 0);
     }
+
+    free(signs);
 }
 
 /* Split the domains of e (which is assumed to be a partition)
