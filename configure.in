@@ -295,7 +295,7 @@ if test "$with_zsolve" != "no"; then
 fi
 AM_CONDITIONAL(USE_ZSOLVE, test x$use_zsolve = xtrue)
 
-AX_SUBMODULE(omega,no|bundled|system,bundled)
+AX_SUBMODULE(omega,no|bundled|system,no)
 
 AC_SUBST(OMEGA_CPPFLAGS)
 AC_SUBST(OMEGA_LDFLAGS)
