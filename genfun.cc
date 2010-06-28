@@ -622,7 +622,7 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
 	    assert((*i)->d.power.NumCols() == (*i2)->d.power.NumCols());
 
 	    if (options->verbose)
-		fprintf(stderr, "HP: %d/%d %d/%d \r",
+		fprintf(stderr, "HP: %d/%zd %d/%zd \r",
 				    j, term.size(), k, gf->term.size());
 
 	    parallel_polytopes pp((*i)->n.power.NumRows() *
