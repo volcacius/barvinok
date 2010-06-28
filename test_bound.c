@@ -84,9 +84,9 @@ void result_data_print(struct result_data *result, int n)
 {
     int i;
 
-    fprintf(stderr, "%d", result->ticks[0]/n);
+    fprintf(stderr, "%g", (double)result->ticks[0]/n);
     for (i = 1; i < nr_methods; ++i)
-	fprintf(stderr, ", %d", result->ticks[i]/n);
+	fprintf(stderr, ", %g", (double)result->ticks[i]/n);
     fprintf(stderr, "\n");
 
     fprintf(stderr, "%zd/%d", result->size[0], n);
