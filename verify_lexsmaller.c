@@ -242,7 +242,7 @@ int main(int argc,char *argv[])
     if (options->print_max)
 	value_init(options->max);
     value_init(count);
-    check_lexsmaller(SP, SD, en, 0, dim, zP->p, zD->p, zE->p, &count, &options);
+    check_lexsmaller(SP, SD, en, 0, dim, zP->p, zD->p, zE->p, &count, options);
     value_clear(count);
 
     if (options->print_max) {
