@@ -1,3 +1,14 @@
+version: 0.31
+date: Tue Jun 29 13:18:52 CEST 2010
+changes:
+    - use isl for argument parsing
+    - minor compilation fixes
+    - drop bernstein library in favor of isl implementation
+    - drop Omega calculator
+    - the Omega submodule is no longer compiled by default
+    - improved isl based calculator
+    - drop barvinok_enumerate_pip_with_options
+---
 version: 0.30
 date: Wed Mar 10 18:10:33 CET 2010
 changes:
