@@ -67,6 +67,8 @@ m := [n] -> { [i,j] -> [i+1,j+1] : 1 <= i,j < n;
               [i,j] -> [i+1,j-1] : 1 <= i < n and 2 <= j <= n };
 m^+;
 (m^+)[0];
+
+codegen [N] -> { A[i] -> [i,0] : 0 <= i <= N; B[i] -> [i,1] : 1 <= i <= N };
 \end{verbatim}
 
 \bottomcaption{{\tt iscc} operations.  The variables
@@ -82,6 +84,7 @@ $o$: object of any type
 }
 \label{t:iscc}
 \tablehead{
+\hline
 Syntax & Meaning
 \\
 \hline
@@ -121,6 +124,11 @@ $f_2$ := \ai[\tt]{coalesce} $f_1$ &
 simplify the representation of $f_1$ by trying
 to combine pairs of basic sets in the domain
 of $f_1$ into a single basic set
+\\
+\ai[\tt]{codegen} $m$ &
+generate code for the given scattering function.
+This operation is only available if \ai[\tt]{CLooG}
+support was compiled in.
 \\
 $s_3$ := $s_1$ \ai[\tt]{cross} $s_2$ &
 Cartesian product of $s_1$ and $s_2$
