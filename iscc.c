@@ -991,9 +991,9 @@ error:
 	return p;
 }
 
-int free_cb(void *entry)
+int free_cb(void **entry, void *user)
 {
-	struct isl_named_obj *named = entry;
+	struct isl_named_obj *named = *entry;
 
 	free_obj(named->obj);
 	free(named->name);
@@ -1056,7 +1056,7 @@ int main(int argc, char **argv)
 	}
 
 	isl_printer_free(p);
-	isl_hash_table_foreach(ctx, table, free_cb);
+	isl_hash_table_foreach(ctx, table, free_cb, NULL);
 	isl_hash_table_free(ctx, table);
 	isl_stream_free(s);
 	isl_ctx_free(ctx);
