@@ -2,7 +2,7 @@
 
 \subsection{Library}
 
-The \barvinok/ library currently supports just two
+The \barvinok/ library currently supports only a few
 functions that interface with the \isl/ library.
 In time, this interface will grow and is set to replace
 the \PolyLib/ interface.
@@ -11,15 +11,22 @@ the \isl/ user manual.
 
 \begin{verbatim}
 __isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set);
+__isl_give isl_union_pw_qpolynomial *isl_union_set_card(
+        __isl_take isl_union_set *uset);
 \end{verbatim}
-Compute the number of elements in an \ai[\tt]{isl\_set}.
-The resulting \ai[\tt]{isl\_pw\_qpolynomial} has purely parametric cells.
+Compute the number of elements in an \ai[\tt]{isl\_set}
+or \ai[\tt]{isl\_union\_set}.
+The resulting \ai[\tt]{isl\_pw\_qpolynomial}
+or \ai[\tt]{isl\_union\_pw\_qpolynomial} has purely parametric cells.
 
 \begin{verbatim}
 __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map);
+__isl_give isl_union_pw_qpolynomial *isl_union_map_card(
+        __isl_take isl_union_map *umap);
 \end{verbatim}
 Compute a closed form expression for the number of image elements
-associated to any element in the domain of the given \ai[\tt]{isl\_map}.
+associated to any element in the domain of the given \ai[\tt]{isl\_map}
+or \ai[\tt]{isl\_union\_map}.
 The union of the cells in the resulting \ai[\tt]{isl\_pw\_qpolynomial}
 is equal to the domain of the input \ai[\tt]{isl\_map}.
 

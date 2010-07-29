@@ -1597,3 +1597,63 @@ __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 	card = isl_pw_qpolynomial_reset_dim(card, dim);
 	return card;
 }
+
+static int set_card(__isl_take isl_set *set, void *user)
+{
+	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
+	isl_pw_qpolynomial *pwqp;
+
+	pwqp = isl_set_card(set);
+	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, pwqp);
+
+	return 0;
+}
+
+__isl_give isl_union_pw_qpolynomial *isl_union_set_card(
+	__isl_take isl_union_set *uset)
+{
+	isl_dim *dim;
+	isl_union_pw_qpolynomial *res;
+
+	dim = isl_union_set_get_dim(uset);
+	res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_set_foreach_set(uset, &set_card, &res) < 0)
+		goto error;
+	isl_union_set_free(uset);
+
+	return res;
+error:
+	isl_union_set_free(uset);
+	isl_union_pw_qpolynomial_free(res);
+	return NULL;
+}
+
+static int map_card(__isl_take isl_map *map, void *user)
+{
+	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
+	isl_pw_qpolynomial *pwqp;
+
+	pwqp = isl_map_card(map);
+	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, pwqp);
+
+	return 0;
+}
+
+__isl_give isl_union_pw_qpolynomial *isl_union_map_card(
+	__isl_take isl_union_map *umap)
+{
+	isl_dim *dim;
+	isl_union_pw_qpolynomial *res;
+
+	dim = isl_union_map_get_dim(umap);
+	res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_map_foreach_map(umap, &map_card, &res) < 0)
+		goto error;
+	isl_union_map_free(umap);
+
+	return res;
+error:
+	isl_union_map_free(umap);
+	isl_union_pw_qpolynomial_free(res);
+	return NULL;
+}

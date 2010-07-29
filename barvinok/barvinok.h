@@ -2,7 +2,7 @@
 #define BARVINOK_H
 
 #include <isl_polynomial.h>
-#include <isl_set.h>
+#include <isl_union_set.h>
 #include <barvinok/evalue.h>
 
 #if defined(__cplusplus)
@@ -11,6 +11,10 @@ extern "C" {
 
 __isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set);
 __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map);
+__isl_give isl_union_pw_qpolynomial *isl_union_set_card(
+	__isl_take isl_union_set *uset);
+__isl_give isl_union_pw_qpolynomial *isl_union_map_card(
+	__isl_take isl_union_map *umap);
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	__isl_take isl_pw_qpolynomial *pwqp);
 
