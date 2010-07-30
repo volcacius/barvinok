@@ -761,7 +761,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 
 	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
 	if (nvar == 0)
-		return pwqp;
+		return isl_pw_qpolynomial_drop_dims(pwqp, isl_dim_set, 0, 0);
 
 	dim = isl_pw_qpolynomial_get_dim(pwqp);
 	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
