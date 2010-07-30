@@ -780,6 +780,37 @@ error:
 	return NULL;
 }
 
+static int pw_qpolynomial_sum(__isl_take isl_pw_qpolynomial *pwqp, void *user)
+{
+	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
+	isl_pw_qpolynomial *sum;
+
+	sum = isl_pw_qpolynomial_sum(pwqp);
+	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, sum);
+
+	return 0;
+}
+
+__isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_sum(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	isl_dim *dim;
+	isl_union_pw_qpolynomial *res;
+
+	dim = isl_union_pw_qpolynomial_get_dim(upwqp);
+	res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_pw_qpolynomial_foreach_pw_qpolynomial(upwqp,
+						&pw_qpolynomial_sum, &res) < 0)
+		goto error;
+	isl_union_pw_qpolynomial_free(upwqp);
+
+	return res;
+error:
+	isl_union_pw_qpolynomial_free(upwqp);
+	isl_union_pw_qpolynomial_free(res);
+	return NULL;
+}
+
 evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays)
 {
     evalue *sum;

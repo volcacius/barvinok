@@ -33,6 +33,8 @@ is equal to the domain of the input \ai[\tt]{isl\_map}.
 \begin{verbatim}
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
         __isl_take isl_pw_qpolynomial *pwqp);
+__isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_sum(
+        __isl_take isl_union_pw_qpolynomial *upwqp);
 \end{verbatim}
 Compute the sum of the given piecewise quasipolynomial over
 all integer points in the domain.  The result is a piecewise
