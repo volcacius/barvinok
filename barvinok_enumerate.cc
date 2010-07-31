@@ -431,7 +431,7 @@ int main(int argc, char **argv)
 			   C->Dimension, param_name))
 	    print_solution = 0;
 	if (options->size)
-	    printf("\nSize: %d\n", evalue_size(EP));
+	    printf("\nSize: %zd\n", evalue_size(EP));
 	if (print_solution)
 	    print_evalue(stdout, EP, param_name);
     }
