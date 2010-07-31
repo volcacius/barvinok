@@ -78,58 +78,69 @@ int *isl_bool_from_int(int res)
 	return res < 0 ? &isl_bool_error : res ? &isl_bool_true : &isl_bool_false;
 }
 
-int *map_is_equal(__isl_take isl_map *map1, __isl_take isl_map *map2)
+int *union_map_is_equal(__isl_take isl_union_map *map1,
+	__isl_take isl_union_map *map2)
 {
-	int res = isl_map_is_equal(map1, map2);
-	isl_map_free(map1);
-	isl_map_free(map2);
+	int res = isl_union_map_is_equal(map1, map2);
+	isl_union_map_free(map1);
+	isl_union_map_free(map2);
 	return isl_bool_from_int(res);
 }
-int *set_is_equal(__isl_take isl_set *set1, __isl_take isl_set *set2)
+int *union_set_is_equal(__isl_take isl_union_set *set1,
+	__isl_take isl_union_set *set2)
 {
-	return map_is_equal((isl_map *)set1, (isl_map *)set2);
+	return union_map_is_equal((isl_union_map *)set1, (isl_union_map *)set2);
 }
 
-int *map_is_subset(__isl_take isl_map *map1, __isl_take isl_map *map2)
+int *union_map_is_subset(__isl_take isl_union_map *map1,
+	__isl_take isl_union_map *map2)
 {
-	int res = isl_map_is_subset(map1, map2);
-	isl_map_free(map1);
-	isl_map_free(map2);
+	int res = isl_union_map_is_subset(map1, map2);
+	isl_union_map_free(map1);
+	isl_union_map_free(map2);
 	return isl_bool_from_int(res);
 }
-int *set_is_subset(__isl_take isl_set *set1, __isl_take isl_set *set2)
+int *union_set_is_subset(__isl_take isl_union_set *set1,
+	__isl_take isl_union_set *set2)
 {
-	return map_is_subset((isl_map *)set1, (isl_map *)set2);
+	return union_map_is_subset((isl_union_map *)set1, (isl_union_map *)set2);
 }
 
-int *map_is_strict_subset(__isl_take isl_map *map1, __isl_take isl_map *map2)
+int *union_map_is_strict_subset(__isl_take isl_union_map *map1,
+	__isl_take isl_union_map *map2)
 {
-	int res = isl_map_is_strict_subset(map1, map2);
-	isl_map_free(map1);
-	isl_map_free(map2);
+	int res = isl_union_map_is_strict_subset(map1, map2);
+	isl_union_map_free(map1);
+	isl_union_map_free(map2);
 	return isl_bool_from_int(res);
 }
-int *set_is_strict_subset(__isl_take isl_set *set1, __isl_take isl_set *set2)
+int *union_set_is_strict_subset(__isl_take isl_union_set *set1,
+	__isl_take isl_union_set *set2)
 {
-	return map_is_strict_subset((isl_map *)set1, (isl_map *)set2);
+	return union_map_is_strict_subset((isl_union_map *)set1,
+					  (isl_union_map *)set2);
 }
 
-int *map_is_superset(__isl_take isl_map *map1, __isl_take isl_map *map2)
+int *union_map_is_superset(__isl_take isl_union_map *map1,
+	__isl_take isl_union_map *map2)
 {
-	return map_is_subset(map2, map1);
+	return union_map_is_subset(map2, map1);
 }
-int *set_is_superset(__isl_take isl_set *set1, __isl_take isl_set *set2)
+int *union_set_is_superset(__isl_take isl_union_set *set1,
+	__isl_take isl_union_set *set2)
 {
-	return set_is_subset(set2, set1);
+	return union_set_is_subset(set2, set1);
 }
 
-int *map_is_strict_superset(__isl_take isl_map *map1, __isl_take isl_map *map2)
+int *union_map_is_strict_superset(__isl_take isl_union_map *map1,
+	__isl_take isl_union_map *map2)
 {
-	return map_is_strict_subset(map2, map1);
+	return union_map_is_strict_subset(map2, map1);
 }
-int *set_is_strict_superset(__isl_take isl_set *set1, __isl_take isl_set *set2)
+int *union_set_is_strict_superset(__isl_take isl_union_set *set1,
+	__isl_take isl_union_set *set2)
 {
-	return set_is_strict_subset(set2, set1);
+	return union_set_is_strict_subset(set2, set1);
 }
 
 extern struct isl_obj_vtable isl_obj_list_vtable;
@@ -149,8 +160,8 @@ struct isc_named_bin_op {
 };
 
 struct iscc_at {
-	isl_pw_qpolynomial *pwqp;
-	isl_pw_qpolynomial *res;
+	isl_union_pw_qpolynomial *upwqp;
+	isl_union_pw_qpolynomial *res;
 };
 
 static int eval_at(__isl_take isl_point *pnt, void *user)
@@ -160,33 +171,36 @@ static int eval_at(__isl_take isl_point *pnt, void *user)
 	isl_set *set;
 
 	set = isl_set_from_point(isl_point_copy(pnt));
-	qp = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(at->pwqp), pnt);
+	qp = isl_union_pw_qpolynomial_eval(
+				isl_union_pw_qpolynomial_copy(at->upwqp), pnt);
 
-	at->res = isl_pw_qpolynomial_add_disjoint(at->res,
-			isl_pw_qpolynomial_alloc(set, qp));
+	at->res = isl_union_pw_qpolynomial_add(at->res,
+			isl_union_pw_qpolynomial_from_pw_qpolynomial(
+				isl_pw_qpolynomial_alloc(set, qp)));
 
 	return 0;
 }
 
-__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_at(
-	__isl_take isl_pw_qpolynomial *pwqp, __isl_take isl_set *set)
+__isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_at(
+	__isl_take isl_union_pw_qpolynomial *upwqp,
+	__isl_take isl_union_set *uset)
 {
 	struct iscc_at at;
 
-	at.pwqp = pwqp;
-	at.res = isl_pw_qpolynomial_zero(isl_set_get_dim(set));
+	at.upwqp = upwqp;
+	at.res = isl_union_pw_qpolynomial_zero(isl_union_set_get_dim(uset));
 
-	isl_set_foreach_point(set, eval_at, &at);
+	isl_union_set_foreach_point(uset, eval_at, &at);
 
-	isl_pw_qpolynomial_free(pwqp);
-	isl_set_free(set);
+	isl_union_pw_qpolynomial_free(upwqp);
+	isl_union_set_free(uset);
 
 	return at.res;
 }
 
 struct iscc_fold_at {
-	isl_pw_qpolynomial_fold *pwf;
-	isl_pw_qpolynomial *res;
+	isl_union_pw_qpolynomial_fold *upwf;
+	isl_union_pw_qpolynomial *res;
 };
 
 static int eval_fold_at(__isl_take isl_point *pnt, void *user)
@@ -196,155 +210,151 @@ static int eval_fold_at(__isl_take isl_point *pnt, void *user)
 	isl_set *set;
 
 	set = isl_set_from_point(isl_point_copy(pnt));
-	qp = isl_pw_qpolynomial_fold_eval(isl_pw_qpolynomial_fold_copy(at->pwf),
-						pnt);
+	qp = isl_union_pw_qpolynomial_fold_eval(
+			    isl_union_pw_qpolynomial_fold_copy(at->upwf), pnt);
 
-	at->res = isl_pw_qpolynomial_add_disjoint(at->res,
-			isl_pw_qpolynomial_alloc(set, qp));
+	at->res = isl_union_pw_qpolynomial_add(at->res,
+			isl_union_pw_qpolynomial_from_pw_qpolynomial(
+				isl_pw_qpolynomial_alloc(set, qp)));
 
 	return 0;
 }
 
-__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_fold_at(
-	__isl_take isl_pw_qpolynomial_fold *pwf, __isl_take isl_set *set)
+__isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_fold_at(
+	__isl_take isl_union_pw_qpolynomial_fold *upwf,
+	__isl_take isl_union_set *uset)
 {
 	struct iscc_fold_at at;
 
-	at.pwf = pwf;
-	at.res = isl_pw_qpolynomial_zero(isl_set_get_dim(set));
+	at.upwf = upwf;
+	at.res = isl_union_pw_qpolynomial_zero(isl_union_set_get_dim(uset));
 
-	isl_set_foreach_point(set, eval_fold_at, &at);
+	isl_union_set_foreach_point(uset, eval_fold_at, &at);
 
-	isl_pw_qpolynomial_fold_free(pwf);
-	isl_set_free(set);
+	isl_union_pw_qpolynomial_fold_free(upwf);
+	isl_union_set_free(uset);
 
 	return at.res;
 }
 
 struct isc_bin_op bin_ops[] = {
-	{ '+',	isl_obj_set,	isl_obj_set,
-		isl_obj_set,
-		(isc_bin_op_fn) &isl_set_union },
-	{ '+',	isl_obj_map,	isl_obj_map,
-		isl_obj_map,
-		(isc_bin_op_fn) &isl_map_union },
-	{ '-',	isl_obj_set,	isl_obj_set,
-		isl_obj_set,
-		(isc_bin_op_fn) &isl_set_subtract },
-	{ '-',	isl_obj_map,	isl_obj_map,
-		isl_obj_map,
-		(isc_bin_op_fn) &isl_map_subtract },
-	{ '*',	isl_obj_set,	isl_obj_set,
-		isl_obj_set,
-		(isc_bin_op_fn) &isl_set_intersect },
-	{ '*',	isl_obj_map,	isl_obj_map,
-		isl_obj_map,
-		(isc_bin_op_fn) &isl_map_intersect },
-	{ '*',	isl_obj_map,	isl_obj_set,
-		isl_obj_map,
-		(isc_bin_op_fn) &isl_map_intersect_domain },
-	{ '.',	isl_obj_map,	isl_obj_map,
-		isl_obj_map,
-		(isc_bin_op_fn) &isl_map_apply_range },
-	{ ISL_TOKEN_TO,	isl_obj_set,	isl_obj_set,	isl_obj_map,
-		(isc_bin_op_fn) &isl_map_from_domain_and_range },
-	{ '=', isl_obj_set,	isl_obj_set,	isl_obj_bool,
-		(isc_bin_op_fn) &set_is_equal },
-	{ '=', isl_obj_map,	isl_obj_map,	isl_obj_bool,
-		(isc_bin_op_fn) &map_is_equal },
-	{ ISL_TOKEN_LE, isl_obj_set,	isl_obj_set,	isl_obj_bool,
-		(isc_bin_op_fn) &set_is_subset },
-	{ ISL_TOKEN_LE, isl_obj_map,	isl_obj_map,	isl_obj_bool,
-		(isc_bin_op_fn) &map_is_subset },
-	{ ISL_TOKEN_LT, isl_obj_set,	isl_obj_set,	isl_obj_bool,
-		(isc_bin_op_fn) &set_is_strict_subset },
-	{ ISL_TOKEN_LT, isl_obj_map,	isl_obj_map,	isl_obj_bool,
-		(isc_bin_op_fn) &map_is_strict_subset },
-	{ ISL_TOKEN_GE, isl_obj_set,	isl_obj_set,	isl_obj_bool,
-		(isc_bin_op_fn) &set_is_superset },
-	{ ISL_TOKEN_GE, isl_obj_map,	isl_obj_map,	isl_obj_bool,
-		(isc_bin_op_fn) &map_is_superset },
-	{ ISL_TOKEN_GT, isl_obj_set,	isl_obj_set,	isl_obj_bool,
-		(isc_bin_op_fn) &set_is_strict_superset },
-	{ ISL_TOKEN_GT, isl_obj_map,	isl_obj_map,	isl_obj_bool,
-		(isc_bin_op_fn) &map_is_strict_superset },
-	{ '+',	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_add },
-	{ '-',	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_sub },
-	{ '*',	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_mul },
-	{ '*',	isl_obj_pw_qpolynomial,	isl_obj_set,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_intersect_domain },
-	{ '*',	isl_obj_pw_qpolynomial_fold,	isl_obj_set,
-		isl_obj_pw_qpolynomial_fold,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_fold_intersect_domain },
-	{ '@',	isl_obj_pw_qpolynomial, isl_obj_set,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_at },
-	{ '@',	isl_obj_pw_qpolynomial_fold, isl_obj_set,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_fold_at },
-	{ '%',	isl_obj_set,	isl_obj_set,
-		isl_obj_set,
-		(isc_bin_op_fn) &isl_set_gist },
-	{ '%',	isl_obj_map,	isl_obj_map,
-		isl_obj_map,
-		(isc_bin_op_fn) &isl_map_gist },
-	{ '%',	isl_obj_pw_qpolynomial,	isl_obj_set,
-		isl_obj_pw_qpolynomial,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_gist },
-	{ '%',	isl_obj_pw_qpolynomial_fold,	isl_obj_set,
-		isl_obj_pw_qpolynomial_fold,
-		(isc_bin_op_fn) &isl_pw_qpolynomial_fold_gist },
+	{ '+',	isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_union_set,
+		(isc_bin_op_fn) &isl_union_set_union },
+	{ '+',	isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_union },
+	{ '-',	isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_union_set,
+		(isc_bin_op_fn) &isl_union_set_subtract },
+	{ '-',	isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_subtract },
+	{ '*',	isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_union_set,
+		(isc_bin_op_fn) &isl_union_set_intersect },
+	{ '*',	isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_intersect },
+	{ '*',	isl_obj_union_map,	isl_obj_union_set,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_intersect_domain },
+	{ '.',	isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_apply_range },
+	{ ISL_TOKEN_TO,	isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_from_domain_and_range },
+	{ '=', isl_obj_union_set,	isl_obj_union_set,	isl_obj_bool,
+		(isc_bin_op_fn) &union_set_is_equal },
+	{ '=', isl_obj_union_map,	isl_obj_union_map,	isl_obj_bool,
+		(isc_bin_op_fn) &union_map_is_equal },
+	{ ISL_TOKEN_LE, isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_bool, (isc_bin_op_fn) &union_set_is_subset },
+	{ ISL_TOKEN_LE, isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_bool, (isc_bin_op_fn) &union_map_is_subset },
+	{ ISL_TOKEN_LT, isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_bool, (isc_bin_op_fn) &union_set_is_strict_subset },
+	{ ISL_TOKEN_LT, isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_bool, (isc_bin_op_fn) &union_map_is_strict_subset },
+	{ ISL_TOKEN_GE, isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_bool, (isc_bin_op_fn) &union_set_is_superset },
+	{ ISL_TOKEN_GE, isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_bool, (isc_bin_op_fn) &union_map_is_superset },
+	{ ISL_TOKEN_GT, isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_bool, (isc_bin_op_fn) &union_set_is_strict_superset },
+	{ ISL_TOKEN_GT, isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_bool, (isc_bin_op_fn) &union_map_is_strict_superset },
+	{ '+',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_add },
+	{ '-',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_sub },
+	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_mul },
+	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_intersect_domain },
+	{ '*',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_intersect_domain },
+	{ '@',	isl_obj_union_pw_qpolynomial, isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_at },
+	{ '@',	isl_obj_union_pw_qpolynomial_fold, isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_at },
+	{ '%',	isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_union_set,
+		(isc_bin_op_fn) &isl_union_set_gist },
+	{ '%',	isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_gist },
+	{ '%',	isl_obj_union_pw_qpolynomial,	isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_gist },
+	{ '%',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_gist },
 	0
 };
 struct isc_named_bin_op named_bin_ops[] = {
-	{ "cross",	{ -1,	isl_obj_set,	isl_obj_set,	isl_obj_set,
-		(isc_bin_op_fn) &isl_set_product } },
-	{ "cross",	{ -1,	isl_obj_map,	isl_obj_map,	isl_obj_map,
-		(isc_bin_op_fn) &isl_map_product } },
+	{ "cross",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
+		isl_obj_union_set,
+		(isc_bin_op_fn) &isl_union_set_product } },
+	{ "cross",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_product } },
 	NULL
 };
 
-__isl_give isl_set *set_sample(__isl_take isl_set *set)
+__isl_give isl_set *union_set_sample(__isl_take isl_union_set *uset)
 {
-	return isl_set_from_basic_set(isl_set_sample(set));
+	return isl_set_from_basic_set(isl_union_set_sample(uset));
 }
 
-__isl_give isl_map *map_sample(__isl_take isl_map *map)
+__isl_give isl_map *union_map_sample(__isl_take isl_union_map *umap)
 {
-	return isl_map_from_basic_map(isl_map_sample(map));
+	return isl_map_from_basic_map(isl_union_map_sample(umap));
 }
 
-static __isl_give isl_set *set_affine_hull(__isl_take isl_set *set)
-{
-	return isl_set_from_basic_set(isl_set_affine_hull(set));
-}
-
-static __isl_give isl_map *map_affine_hull(__isl_take isl_map *map)
-{
-	return isl_map_from_basic_map(isl_map_affine_hull(map));
-}
-
-static __isl_give struct isl_list *pw_qpolynomial_upper_bound(
-	__isl_take isl_pw_qpolynomial *pwqp)
+static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
 {
 	isl_ctx *ctx;
 	struct isl_list *list;
 	int tight;
 
-	ctx = isl_pw_qpolynomial_get_ctx(pwqp);
+	ctx = isl_union_pw_qpolynomial_get_ctx(upwqp);
 	list = isl_list_alloc(ctx, 2);
 	if (!list)
 		goto error;
 
-	list->obj[0].type = isl_obj_pw_qpolynomial_fold;
-	list->obj[0].v = isl_pw_qpolynomial_bound(pwqp, isl_fold_max, &tight);
+	list->obj[0].type = isl_obj_union_pw_qpolynomial_fold;
+	list->obj[0].v = isl_union_pw_qpolynomial_bound(upwqp,
+							isl_fold_max, &tight);
 	list->obj[1].type = isl_obj_bool;
 	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
 	if (tight < 0 || !list->obj[0].v)
@@ -368,49 +378,54 @@ struct isc_named_un_op {
 	struct isc_un_op	op;
 };
 struct isc_named_un_op named_un_ops[] = {
-	{"aff",	{ -1,	isl_obj_map,	isl_obj_map,
-		(isc_un_op_fn) &map_affine_hull } },
-	{"aff",	{ -1,	isl_obj_set,	isl_obj_set,
-		(isc_un_op_fn) &set_affine_hull } },
-	{"card",	{ -1,	isl_obj_set,	isl_obj_pw_qpolynomial,
-		(isc_un_op_fn) &isl_set_card } },
-	{"card",	{ -1,	isl_obj_map,	isl_obj_pw_qpolynomial,
-		(isc_un_op_fn) &isl_map_card } },
-	{"coalesce",	{ -1,	isl_obj_set,	isl_obj_set,
-		(isc_un_op_fn) &isl_set_coalesce } },
-	{"coalesce",	{ -1,	isl_obj_map,	isl_obj_map,
-		(isc_un_op_fn) &isl_map_coalesce } },
-	{"coalesce",	{ -1,	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
-		(isc_un_op_fn) &isl_pw_qpolynomial_coalesce } },
-	{"coalesce",	{ -1,	isl_obj_pw_qpolynomial_fold,
-		isl_obj_pw_qpolynomial_fold,
-		(isc_un_op_fn) &isl_pw_qpolynomial_fold_coalesce } },
-	{"deltas",	{ -1,	isl_obj_map,	isl_obj_set,
-		(isc_un_op_fn) &isl_map_deltas } },
-	{"dom",	{ -1,	isl_obj_map,	isl_obj_set,
-		(isc_un_op_fn) &isl_map_domain } },
-	{"dom",	{ -1,	isl_obj_pw_qpolynomial,	isl_obj_set,
-		(isc_un_op_fn) &isl_pw_qpolynomial_domain } },
-	{"dom",	{ -1,	isl_obj_pw_qpolynomial_fold,	isl_obj_set,
-		(isc_un_op_fn) &isl_pw_qpolynomial_fold_domain } },
-	{"ran",	{ -1,	isl_obj_map,	isl_obj_set,
-		(isc_un_op_fn) &isl_map_range } },
-	{"lexmin",	{ -1,	isl_obj_map,	isl_obj_map,
-		(isc_un_op_fn) &isl_map_lexmin } },
-	{"lexmax",	{ -1,	isl_obj_map,	isl_obj_map,
-		(isc_un_op_fn) &isl_map_lexmax } },
-	{"lexmin",	{ -1,	isl_obj_set,	isl_obj_set,
-		(isc_un_op_fn) &isl_set_lexmin } },
-	{"lexmax",	{ -1,	isl_obj_set,	isl_obj_set,
-		(isc_un_op_fn) &isl_set_lexmax } },
-	{"sample",	{ -1,	isl_obj_set,	isl_obj_set,
-		(isc_un_op_fn) &set_sample } },
-	{"sample",	{ -1,	isl_obj_map,	isl_obj_map,
-		(isc_un_op_fn) &map_sample } },
-	{"sum",		{ -1,	isl_obj_pw_qpolynomial,	isl_obj_pw_qpolynomial,
-		(isc_un_op_fn) &isl_pw_qpolynomial_sum } },
-	{"ub",		{ -1,	isl_obj_pw_qpolynomial, isl_obj_list,
-		(isc_un_op_fn) &pw_qpolynomial_upper_bound } },
+	{"aff",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_map_affine_hull } },
+	{"aff",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_set_affine_hull } },
+	{"card",	{ -1,	isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &isl_union_set_card } },
+	{"card",	{ -1,	isl_obj_union_map,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &isl_union_map_card } },
+	{"coalesce",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_set_coalesce } },
+	{"coalesce",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_map_coalesce } },
+	{"coalesce",	{ -1,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &isl_union_pw_qpolynomial_coalesce } },
+	{"coalesce",	{ -1,	isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_un_op_fn) &isl_union_pw_qpolynomial_fold_coalesce } },
+	{"deltas",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_map_deltas } },
+	{"dom",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_map_domain } },
+	{"dom",	{ -1,	isl_obj_union_pw_qpolynomial,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_pw_qpolynomial_domain } },
+	{"dom",	{ -1,	isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_pw_qpolynomial_fold_domain } },
+	{"ran",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_map_range } },
+	{"lexmin",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_map_lexmin } },
+	{"lexmax",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_map_lexmax } },
+	{"lexmin",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_set_lexmin } },
+	{"lexmax",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_set_lexmax } },
+	{"sample",	{ -1,	isl_obj_union_set,	isl_obj_set,
+		(isc_un_op_fn) &union_set_sample } },
+	{"sample",	{ -1,	isl_obj_union_map,	isl_obj_map,
+		(isc_un_op_fn) &union_map_sample } },
+	{"sum",		{ -1,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &isl_union_pw_qpolynomial_sum } },
+	{"ub",		{ -1,	isl_obj_union_pw_qpolynomial, isl_obj_list,
+		(isc_un_op_fn) &union_pw_qpolynomial_upper_bound } },
 	NULL
 };
 
@@ -482,8 +497,79 @@ static struct isl_obj stored_obj(struct isl_ctx *ctx,
 	return obj;
 }
 
+static int is_subtype(struct isl_obj obj, isl_obj_type super)
+{
+	if (obj.type == super)
+		return 1;
+	if (obj.type == isl_obj_map && super == isl_obj_union_map)
+		return 1;
+	if (obj.type == isl_obj_set && super == isl_obj_union_set)
+		return 1;
+	if (obj.type == isl_obj_pw_qpolynomial &&
+	    super == isl_obj_union_pw_qpolynomial)
+		return 1;
+	if (obj.type == isl_obj_pw_qpolynomial_fold &&
+	    super == isl_obj_union_pw_qpolynomial_fold)
+		return 1;
+	if (obj.type == isl_obj_union_set && isl_union_set_is_empty(obj.v))
+		return 1;
+	return 0;
+}
+
+static struct isl_obj convert(struct isl_obj obj, isl_obj_type type)
+{
+	if (obj.type == type)
+		return obj;
+	if (obj.type == isl_obj_map && type == isl_obj_union_map) {
+		obj.type = isl_obj_union_map;
+		obj.v = isl_union_map_from_map(obj.v);
+		return obj;
+	}
+	if (obj.type == isl_obj_set && type == isl_obj_union_set) {
+		obj.type = isl_obj_union_set;
+		obj.v = isl_union_set_from_set(obj.v);
+		return obj;
+	}
+	if (obj.type == isl_obj_pw_qpolynomial &&
+	    type == isl_obj_union_pw_qpolynomial) {
+		obj.type = isl_obj_union_pw_qpolynomial;
+		obj.v = isl_union_pw_qpolynomial_from_pw_qpolynomial(obj.v);
+		return obj;
+	}
+	if (obj.type == isl_obj_pw_qpolynomial_fold &&
+	    type == isl_obj_union_pw_qpolynomial_fold) {
+		obj.type = isl_obj_union_pw_qpolynomial_fold;
+		obj.v = isl_union_pw_qpolynomial_fold_from_pw_qpolynomial_fold(obj.v);
+		return obj;
+	}
+	if (obj.type == isl_obj_union_set && isl_union_set_is_empty(obj.v)) {
+		if (type == isl_obj_union_map) {
+			obj.type = isl_obj_union_map;
+			return obj;
+		}
+		if (type == isl_obj_union_pw_qpolynomial) {
+			isl_dim *dim = isl_union_set_get_dim(obj.v);
+			isl_union_set_free(obj.v);
+			obj.v = isl_union_pw_qpolynomial_zero(dim);
+			obj.type = isl_obj_union_pw_qpolynomial;
+			return obj;
+		}
+		if (type == isl_obj_union_pw_qpolynomial_fold) {
+			isl_dim *dim = isl_union_set_get_dim(obj.v);
+			isl_union_set_free(obj.v);
+			obj.v = isl_union_pw_qpolynomial_fold_zero(dim);
+			obj.type = isl_obj_union_pw_qpolynomial_fold;
+			return obj;
+		}
+	}
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
-	isl_obj_type lhs)
+	struct isl_obj lhs)
 {
 	int i;
 	struct isl_token *tok;
@@ -497,7 +583,7 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 			break;
 		if (bin_ops[i].op != tok->type)
 			continue;
-		if (bin_ops[i].lhs != lhs)
+		if (!is_subtype(lhs, bin_ops[i].lhs))
 			continue;
 
 		isl_token_free(tok);
@@ -509,7 +595,7 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 			break;
 		if (named_bin_ops[i].op.op != tok->type)
 			continue;
-		if (named_bin_ops[i].op.lhs != lhs)
+		if (!is_subtype(lhs, named_bin_ops[i].op.lhs))
 			continue;
 
 		isl_token_free(tok);
@@ -546,7 +632,7 @@ static struct isc_un_op *read_prefix_un_op_if_available(struct isl_stream *s)
 }
 
 static struct isc_un_op *find_matching_un_op(struct isc_un_op *like,
-	isl_obj_type arg)
+	struct isl_obj arg)
 {
 	int i;
 
@@ -555,7 +641,7 @@ static struct isc_un_op *find_matching_un_op(struct isc_un_op *like,
 			break;
 		if (named_un_ops[i].op.op != like->op)
 			continue;
-		if (named_un_ops[i].op.arg != arg)
+		if (!is_subtype(arg, named_un_ops[i].op.arg))
 			continue;
 
 		return &named_un_ops[i].op;
@@ -604,9 +690,10 @@ static struct isl_obj read_un_op_expr(struct isl_stream *s,
 	if (!obj.v)
 		goto error;
 
-	op = find_matching_un_op(op, obj.type);
+	op = find_matching_un_op(op, obj);
 
 	isl_assert(s->ctx, op, goto error);
+	obj = convert(obj, op->arg);
 	obj.v = op->fn(obj.v);
 	obj.type = op->res;
 
@@ -623,13 +710,15 @@ static struct isl_obj transitive_closure(struct isl_ctx *ctx, struct isl_obj obj
 	struct isl_list *list;
 	int exact;
 
-	isl_assert(ctx, obj.type == isl_obj_map, goto error);
+	if (obj.type == isl_obj_map)
+		obj = convert(obj, isl_obj_union_map);
+	isl_assert(ctx, obj.type == isl_obj_union_map, goto error);
 	list = isl_list_alloc(ctx, 2);
 	if (!list)
 		goto error;
 
-	list->obj[0].type = isl_obj_map;
-	list->obj[0].v = isl_map_transitive_closure(obj.v, &exact);
+	list->obj[0].type = isl_obj_union_map;
+	list->obj[0].v = isl_union_map_transitive_closure(obj.v, &exact);
 	list->obj[1].type = isl_obj_bool;
 	list->obj[1].v = exact ? &isl_bool_true : &isl_bool_false;
 	obj.v = list;
@@ -677,27 +766,33 @@ error:
 	return obj;
 }
 
-static struct isl_obj apply(struct isl_stream *s, __isl_take isl_map *map,
+static struct isl_obj apply(struct isl_stream *s, __isl_take isl_union_map *umap,
 	struct isl_hash_table *table)
 {
 	struct isl_obj obj;
 
 	obj = read_expr(s, table);
-	isl_assert(s->ctx, obj.type == isl_obj_set || obj.type == isl_obj_map,
-		goto error);
+	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_set) ||
+			   is_subtype(obj, isl_obj_union_map), goto error);
 
-	if (obj.type == isl_obj_set) {
-		obj.v = isl_set_apply(obj.v, map);
+	if (obj.type == isl_obj_set)
+		obj = convert(obj, isl_obj_union_set);
+	else if (obj.type == isl_obj_map)
+		obj = convert(obj, isl_obj_union_map);
+	if (obj.type == isl_obj_union_set) {
+		obj.v = isl_union_set_apply(obj.v, umap);
 	} else
-		obj.v = isl_map_apply_range(obj.v, map);
+		obj.v = isl_union_map_apply_range(obj.v, umap);
 	if (!obj.v)
-		goto error;
+		goto error2;
 
 	if (isl_stream_eat(s, ')'))
-		goto error;
+		goto error2;
 
 	return obj;
 error:
+	isl_union_map_free(umap);
+error2:
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
@@ -786,9 +881,9 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 		goto error;
 	}
 	isl_token_free(tok);
-	isl_assert(s->ctx, obj.type == isl_obj_map, goto error);
+	isl_assert(s->ctx, obj.type == isl_obj_union_map, goto error);
 
-	obj.v = isl_map_reverse(obj.v);
+	obj.v = isl_union_map_reverse(obj.v);
 	if (!obj.v)
 		goto error;
 
@@ -870,8 +965,11 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		obj = power(s, obj);
 	else if (obj.type == isl_obj_list && isl_stream_eat_if_available(s, '['))
 		obj = obj_at_index(s, obj);
-	else if (obj.type == isl_obj_map && isl_stream_eat_if_available(s, '('))
+	else if (is_subtype(obj, isl_obj_union_map) &&
+		 isl_stream_eat_if_available(s, '(')) {
+		obj = convert(obj, isl_obj_union_map);
 		obj = apply(s, obj.v, table);
+	}
 
 	return obj;
 error:
@@ -882,7 +980,7 @@ error:
 }
 
 static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
-	isl_obj_type lhs, isl_obj_type rhs)
+	struct isl_obj lhs, struct isl_obj rhs)
 {
 	int i;
 
@@ -891,9 +989,9 @@ static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
 			break;
 		if (bin_ops[i].op != like->op)
 			continue;
-		if (bin_ops[i].lhs != lhs)
+		if (!is_subtype(lhs, bin_ops[i].lhs))
 			continue;
-		if (bin_ops[i].rhs != rhs)
+		if (!is_subtype(rhs, bin_ops[i].rhs))
 			continue;
 
 		return &bin_ops[i];
@@ -904,9 +1002,9 @@ static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
 			break;
 		if (named_bin_ops[i].op.op != like->op)
 			continue;
-		if (named_bin_ops[i].op.lhs != lhs)
+		if (!is_subtype(lhs, named_bin_ops[i].op.lhs))
 			continue;
-		if (named_bin_ops[i].op.rhs != rhs)
+		if (!is_subtype(rhs, named_bin_ops[i].op.rhs))
 			continue;
 
 		return &named_bin_ops[i].op;
@@ -925,15 +1023,17 @@ static struct isl_obj read_expr(struct isl_stream *s,
 	for (; obj.v;) {
 		struct isc_bin_op *op = NULL;
 
-		op = read_bin_op_if_available(s, obj.type);
+		op = read_bin_op_if_available(s, obj);
 		if (!op)
 			break;
 
 		right_obj = read_obj(s, table);
 
-		op = find_matching_bin_op(op, obj.type, right_obj.type);
+		op = find_matching_bin_op(op, obj, right_obj);
 
 		isl_assert(s->ctx, op, goto error);
+		obj = convert(obj, op->lhs);
+		right_obj = convert(right_obj, op->rhs);
 		obj.v = op->fn(obj.v, right_obj.v);
 		obj.type = op->res;
 	}
