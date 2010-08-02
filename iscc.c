@@ -376,166 +376,36 @@ error:
 }
 
 #ifdef HAVE_CLOOG
-struct iscc_codegen_data {
-	int nr;
-	int nparam;
-	int max_iter;
-	int n_scat;
-	isl_set *context;
-	CloogState *state;
-	CloogLoop **next;
-	CloogBlockList **nextBL;
-	CloogScatteringList *scatterings;
-	CloogScatteringList **nextScat;
-};
-
-static int add_domain(__isl_take isl_map *map, void *user)
-{
-	struct iscc_codegen_data *data = (struct iscc_codegen_data *)user;
-	isl_ctx *ctx = isl_map_get_ctx(map);
-	isl_dim *dim;
-	isl_set *domain;
-	CloogStatement *statement;
-	CloogLoop *l;
-	CloogScatteringList *s;
-	int n_in;
-
-	n_in = isl_map_dim(map, isl_dim_in);
-	if (data->nr == 0) {
-		isl_dim *dim = isl_map_get_dim(map);
-		data->nparam = isl_map_dim(map, isl_dim_param);
-		data->n_scat = isl_map_dim(map, isl_dim_out);
-		dim = isl_dim_drop_inputs(dim, 0, n_in);
-		dim = isl_dim_drop_outputs(dim, 0, data->n_scat);
-		data->context = isl_set_universe(dim);
-	} else {
-		isl_assert(ctx, data->nparam == isl_map_dim(map, isl_dim_param),
-			   goto error);
-		isl_assert(ctx, data->n_scat == isl_map_dim(map, isl_dim_out),
-			   goto error);
-	}
-	if (n_in > data->max_iter)
-		data->max_iter = n_in;
-
-	l = cloog_loop_malloc(data->state);
-	if (!l)
-		goto error;
-	l->next = NULL;
-	l->inner = NULL;
-	domain = isl_map_domain(isl_map_copy(map));
-	l->domain = cloog_domain_from_isl_set(domain);
-
-	statement = cloog_statement_alloc(data->state, data->nr);
-	statement->usr = NULL;
-	dim = isl_map_get_dim(map);
-	statement->name = strdup(isl_dim_get_tuple_name(dim, isl_dim_in));
-	isl_dim_free(dim);
-	l->block = cloog_block_alloc(statement, 0, NULL, n_in);
-
-	s = isl_alloc_type(ctx, CloogScatteringList);
-	s->scatt = cloog_scattering_from_isl_map(map);
-	s->next = NULL;
-
-	*data->next = l;
-	*data->nextBL = cloog_block_list_alloc((*data->next)->block);
-	data->next = &(*data->next)->next;
-	data->nextBL = &(*data->nextBL)->next;
-	*data->nextScat = s;
-	data->nextScat = &(s->next);
-
-	data->nr++;
-
-	return 0;
-error:
-	return -1;
-}
-
-char **generate_names(isl_ctx *ctx, int n, const char *prefix)
-{
-	int i;
-	char **names;
-    
-	names = isl_alloc_array(ctx, char *, n);
-	for (i = 0; i < n; i++) {
-		names[i] = isl_alloc_array(ctx, char, 50);
-		sprintf(names[i], "%s%d", prefix, i);
-	}
-  
-	return names;
-}
-
 void *codegen(void *arg)
 {
-	int i;
-	struct iscc_codegen_data data;
 	isl_dim *dim;
 	isl_union_map *umap = (isl_union_map *)arg;
 	isl_ctx *ctx = isl_union_map_get_ctx(umap);
+	CloogState *state;
 	CloogOptions *options;
-	CloogProgram *p;
+	CloogDomain *context;
+	CloogUnionDomain *ud;
+	CloogInput *input;
 	struct clast_stmt *stmt;
 
-	data.state = cloog_isl_state_malloc(ctx);
-	options = cloog_options_malloc(data.state);
+	state = cloog_isl_state_malloc(ctx);
+	options = cloog_options_malloc(state);
 	options->language = LANGUAGE_C;
-	p = cloog_program_malloc();
 
-	isl_assert(ctx, p, goto error);
-	p->names = cloog_names_malloc();
-	isl_assert(ctx, p->names, goto error2);
-	p->language = 'c';
+	ud = cloog_union_domain_from_isl_union_map(isl_union_map_copy(umap));
 
-	data.context = NULL;
-	data.nr = 0;
-	data.nparam = -1;
-	data.max_iter = 0;
-	data.n_scat = -1;
-	data.next = &p->loop;
-	data.nextBL = &p->blocklist;
-	data.scatterings = NULL;
-	data.nextScat = &data.scatterings;
+	dim = isl_union_map_get_dim(umap);
+	context = cloog_domain_from_isl_set(isl_set_universe(dim));
 
-	if (isl_union_map_foreach_map(umap, &add_domain, &data) < 0)
-		goto error3;
+	input = cloog_input_alloc(context, ud);
 
-	if (data.nr == 0)
-		goto error3;
-
-	p->names->nb_parameters = data.nparam;
-	p->names->parameters = isl_alloc_array(ctx, char *, data.nparam);
-	dim = isl_set_get_dim(data.context);
-	p->context = cloog_domain_from_isl_set(data.context);
-	for (i = 0; i < data.nparam; ++i) {
-		const char *s = isl_dim_get_name(dim, isl_dim_param, i);
-		p->names->parameters[i] = strdup(s);
-	}
-	isl_dim_free(dim);
-
-	p->names->nb_iterators = data.max_iter;
-	p->names->iterators = generate_names(ctx, data.max_iter, "i");
-
-	p->names->nb_scattering = data.n_scat;
-	p->names->scattering = generate_names(ctx, data.n_scat, "c");
-	p->names->nb_scalars = 0;
-	p->nb_scattdims = data.n_scat;
-	p->scaldims = (int *)malloc(p->nb_scattdims*(sizeof(int)));
-	for (i = 0; i < p->nb_scattdims; i++)
-		p->scaldims[i] = 0;
-
-	cloog_program_scatter(p, data.scatterings, options);
-	p = cloog_program_generate(p, options);
-
-	stmt = cloog_clast_create(p, options);
+	stmt = cloog_clast_create_from_input(input, options);
 	clast_pprint(stdout, stmt, 0, options);
 	cloog_clast_free(stmt);
 
-error3:
-	cloog_scattering_list_free(data.scatterings);
-error2:
-	cloog_program_free(p);
 error:
 	cloog_options_free(options);
-	cloog_state_free(data.state);
+	cloog_state_free(state);
 	isl_union_map_free(umap);
 	return NULL;
 }
