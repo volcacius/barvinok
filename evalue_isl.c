@@ -6,6 +6,7 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
 	const evalue *e)
 {
 	int i;
+	isl_ctx *ctx;
 	isl_vec *v;
 	isl_div *div;
 	isl_qpolynomial *base, *c;
@@ -17,8 +18,9 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
 	if (e->x.p->type == polynomial)
 		return isl_qpolynomial_var(dim, isl_dim_param, e->x.p->pos - 1);
 
+	ctx = isl_dim_get_ctx(dim);
 	nparam = isl_dim_size(dim, isl_dim_param);
-	v = isl_vec_alloc(dim->ctx, 2 + nparam);
+	v = isl_vec_alloc(ctx, 2 + nparam);
 	if (!v)
 		goto error;
 
