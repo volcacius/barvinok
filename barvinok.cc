@@ -7,7 +7,7 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
-#include <isl_set_polylib.h>
+#include <isl_map_polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/evalue.h>
 #include "config.h"
@@ -1524,78 +1524,72 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
     return EP;
 }
 
-static int basic_set_card(__isl_take isl_basic_set *bset, void *user)
+static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 {
 	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
 	Polyhedron *P;
 	evalue *E;
 	barvinok_options *options = barvinok_options_new_with_defaults();
-	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
-	Polyhedron *U = Universe_Polyhedron(nparam);
-	isl_dim *dim;
+	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
+	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
+	Polyhedron *U = Universe_Polyhedron(nparam + n_in);
+	isl_dim *dim, *target_dim;
 
-	dim = isl_basic_set_get_dim(bset);
-	dim = isl_dim_drop(dim, isl_dim_set, 0, isl_dim_size(dim, isl_dim_set));
+	target_dim = isl_basic_map_get_dim(bmap);
+	target_dim = isl_dim_domain(target_dim);
 
-	P = isl_basic_set_to_polylib(bset);
+	bmap = isl_basic_map_move_dims(bmap, isl_dim_param, nparam,
+					isl_dim_in, 0, n_in);
+
+	dim = isl_basic_map_get_dim(bmap);
+	dim = isl_dim_domain(dim);
+
+	P = isl_basic_map_to_polylib(bmap);
 	E = barvinok_enumerate_with_options(P, U, options);
 
 	pwqp = isl_pw_qpolynomial_from_evalue(dim, E);
+	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
+						isl_dim_param, nparam, n_in);
+	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, target_dim);
 	*sum = isl_pw_qpolynomial_add(*sum, pwqp);
 
 	evalue_free(E);
 	Polyhedron_Free(P);
 	Polyhedron_Free(U);
 	barvinok_options_free(options);
-	isl_basic_set_free(bset);
+	isl_basic_map_free(bmap);
 
 	return 0;
-}
-
-__isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set)
-{
-	isl_dim *dim;
-	isl_pw_qpolynomial *sum;
-
-	dim = isl_set_get_dim(set);
-	dim = isl_dim_drop(dim, isl_dim_set, 0, isl_dim_size(dim, isl_dim_set));
-	sum = isl_pw_qpolynomial_zero(dim);
-
-	set = isl_set_make_disjoint(set);
-	set = isl_set_compute_divs(set);
-
-	if (isl_set_foreach_basic_set(set, &basic_set_card, &sum) < 0)
-		goto error;
-
-	isl_set_free(set);
-
-	return sum;
-error:
-	isl_set_free(set);
-	isl_pw_qpolynomial_free(sum);
-	return NULL;
 }
 
 __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 {
 	isl_dim *dim;
-	isl_set *set;
-	isl_pw_qpolynomial *card;
-	unsigned nparam;
-	unsigned n_in;
+	isl_pw_qpolynomial *sum;
 
 	dim = isl_map_get_dim(map);
 	dim = isl_dim_domain(dim);
-	nparam = isl_map_dim(map, isl_dim_param);
-	n_in = isl_map_dim(map, isl_dim_in);
-	map = isl_map_move_dims(map, isl_dim_param, nparam, isl_dim_in, 0, n_in);
-	set = isl_map_range(map);
-	card = isl_set_card(set);
-	card = isl_pw_qpolynomial_move_dims(card, isl_dim_set, 0,
-					isl_dim_param, nparam, n_in);
-	card = isl_pw_qpolynomial_reset_dim(card, dim);
-	return card;
+	sum = isl_pw_qpolynomial_zero(dim);
+
+	map = isl_map_make_disjoint(map);
+	map = isl_map_compute_divs(map);
+
+	if (isl_map_foreach_basic_map(map, &basic_map_card, &sum) < 0)
+		goto error;
+
+	isl_map_free(map);
+
+	return sum;
+error:
+	isl_map_free(map);
+	isl_pw_qpolynomial_free(sum);
+	return NULL;
+}
+
+__isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set)
+{
+	return isl_map_card(isl_map_from_range(set));
 }
 
 static int set_card(__isl_take isl_set *set, void *user)
