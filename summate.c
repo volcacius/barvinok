@@ -683,21 +683,60 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
     return sum;
 }
 
+static int add_unbounded_guarded_qp(__isl_take isl_set *set,
+	__isl_take isl_qpolynomial *qp, isl_pw_qpolynomial **sum)
+{
+	int zero;
+
+	zero = isl_qpolynomial_is_zero(qp);
+	if (zero < 0)
+		goto error;
+
+	if (!zero) {
+		isl_dim *dim;
+		isl_set *pdom;
+		int nvar;
+		isl_pw_qpolynomial *pwqp;
+		nvar = isl_set_dim(set, isl_dim_set);
+		pdom = isl_set_copy(set);
+		pdom = isl_set_project_out(pdom, isl_dim_set, 0, nvar);
+		dim = isl_set_get_dim(pdom);
+		pwqp = isl_pw_qpolynomial_alloc(pdom, isl_qpolynomial_nan(dim));
+		*sum = isl_pw_qpolynomial_add(*sum, pwqp);
+	}
+
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+	return 0;
+error:
+	isl_set_free(set);
+	isl_qpolynomial_free(qp);
+	return -1;
+}
+
 static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *qp,
 	void *user)
 {
 	Polyhedron *D, *P;
 	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **) user;
-	struct barvinok_options *options;
+	struct barvinok_options *options = NULL;
 	struct evalue_section_array sections;
 	isl_dim *dim = NULL;
 	int nvar;
 	evalue *e;
-
-	options = barvinok_options_new_with_defaults();
+	int bounded;
 
 	if (!set || !qp)
 		goto error;
+
+	bounded = isl_set_is_bounded(set);
+	if (bounded < 0)
+		goto error;
+
+	if (!bounded)
+		return add_unbounded_guarded_qp(set, qp, sum);
+
+	options = barvinok_options_new_with_defaults();
 
 	e = isl_qpolynomial_to_evalue(qp);
 	if (!e)
