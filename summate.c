@@ -918,6 +918,129 @@ error:
 	return NULL;
 }
 
+static int compatible_range(__isl_keep isl_dim *dim1, __isl_keep isl_dim *dim2)
+{
+	int m;
+	m = isl_dim_match(dim1, isl_dim_param, dim2, isl_dim_param);
+	if (m < 0 || !m)
+		return m;
+	return isl_dim_tuple_match(dim1, isl_dim_out, dim2, isl_dim_set);
+}
+
+/* Compute the intersection of the range of the map and the domain
+ * of the piecewise quasipolynomial and the sum the associated
+ * quasipolynomial over all elements in this intersection.
+ *
+ * We first introduce some unconstrained dimensions in the
+ * piecewise quasipolynomial, intersect the resulting domain
+ * with the wrapped map and the compute the sum.
+ */
+__isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
+	__isl_take isl_map *map, __isl_take isl_pw_qpolynomial *pwqp)
+{
+	isl_ctx *ctx;
+	isl_set *dom;
+	isl_dim *map_dim;
+	isl_dim *pwqp_dim;
+	unsigned n_in;
+	int ok;
+
+	ctx = isl_map_get_ctx(map);
+	if (!ctx)
+		goto error;
+
+	map_dim = isl_map_get_dim(map);
+	pwqp_dim = isl_pw_qpolynomial_get_dim(pwqp);
+	ok = compatible_range(map_dim, pwqp_dim);
+	isl_dim_free(map_dim);
+	isl_dim_free(pwqp_dim);
+	if (!ok)
+		isl_die(ctx, isl_error_invalid, "incompatible dimensions",
+			goto error);
+
+	n_in = isl_map_dim(map, isl_dim_in);
+	pwqp = isl_pw_qpolynomial_insert_dims(pwqp, isl_dim_set, 0, isl_dim_in);
+
+	dom = isl_map_wrap(map);
+	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, isl_set_get_dim(dom));
+
+	pwqp = isl_pw_qpolynomial_intersect_domain(pwqp, dom);
+	pwqp = isl_pw_qpolynomial_sum(pwqp);
+	
+	return pwqp;
+error:
+	isl_map_free(map);
+	isl_pw_qpolynomial_free(pwqp);
+	return NULL;
+}
+
+struct barvinok_apply_data {
+	isl_union_pw_qpolynomial *upwqp;
+	isl_union_pw_qpolynomial *res;
+	isl_map *map;
+};
+
+static int pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp, void *user)
+{
+	isl_dim *map_dim;
+	isl_dim *pwqp_dim;
+	struct barvinok_apply_data *data = user;
+	int ok;
+
+	map_dim = isl_map_get_dim(data->map);
+	pwqp_dim = isl_pw_qpolynomial_get_dim(pwqp);
+	ok = compatible_range(map_dim, pwqp_dim);
+	isl_dim_free(map_dim);
+	isl_dim_free(pwqp_dim);
+
+	if (ok) {
+		pwqp = isl_map_apply_pw_qpolynomial(isl_map_copy(data->map),
+							pwqp);
+		data->res = isl_union_pw_qpolynomial_add_pw_qpolynomial(
+							data->res, pwqp);
+	} else
+		isl_pw_qpolynomial_free(pwqp);
+
+	return 0;
+}
+
+static int map_apply(__isl_take isl_map *map, void *user)
+{
+	struct barvinok_apply_data *data = user;
+	int r;
+
+	data->map = map;
+	r = isl_union_pw_qpolynomial_foreach_pw_qpolynomial(data->upwqp,
+						    &pw_qpolynomial_apply, data);
+
+	isl_map_free(map);
+	return r;
+}
+
+__isl_give isl_union_pw_qpolynomial *isl_union_map_apply_union_pw_qpolynomial(
+	__isl_take isl_union_map *umap,
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	isl_dim *dim;
+	struct barvinok_apply_data data;
+
+	data.upwqp = upwqp;
+	dim = isl_union_pw_qpolynomial_get_dim(upwqp);
+	data.res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_map_foreach_map(umap, &map_apply, &data) < 0)
+		goto error;
+
+	isl_union_map_free(umap);
+	isl_union_pw_qpolynomial_free(upwqp);
+
+	return data.res;
+error:
+	isl_union_map_free(umap);
+	isl_union_pw_qpolynomial_free(upwqp);
+	isl_union_pw_qpolynomial_free(data.res);
+	return NULL;
+}
+
 evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays)
 {
     evalue *sum;
