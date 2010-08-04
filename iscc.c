@@ -602,6 +602,10 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_pw_qpolynomial_sum } },
 	{"ub",		{ -1,	isl_obj_union_pw_qpolynomial, isl_obj_list,
 		(isc_un_op_fn) &union_pw_qpolynomial_upper_bound } },
+	{"unwrap",	{ -1,	isl_obj_union_set,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_set_unwrap } },
+	{"wrap",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_map_wrap } },
 	NULL
 };
 
