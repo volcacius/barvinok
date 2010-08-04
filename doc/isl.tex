@@ -39,6 +39,10 @@ __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_sum(
 Compute the sum of the given piecewise quasipolynomial over
 all integer points in the domain.  The result is a piecewise
 quasipolynomial that only involves the parameters.
+If, however, the domain of the piecewise quasipolynomial wraps
+a relation, then the sum is computed over all integer points
+in the range of that relation and the domain of the relation
+becomes the domain of the result.
 
 \subsection{Calculator}
 
@@ -173,7 +177,9 @@ $m_2$ := \ai[\tt]{sample} $m_1$ &
 a sample element of the map $m_1$
 \\
 $q_2$ := \ai[\tt]{sum} $q_1$ &
-sum $q_1$ over all integer points in the domain of $q_1$
+sum $q_1$ over all integer points in the domain of $q_1$,
+or, if the domain of $q_1$ wraps a map, over all integer
+points in the range of the wrapped map.
 \\
 $l$ := \ai[\tt]{ub} $q$ &
 compute an
