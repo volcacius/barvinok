@@ -181,7 +181,10 @@ upper bound on the piecewise quasipolynomial $q$ over
 all integer points in the domain of $q$
 and return a list containing the upper bound
 and a boolean that is true if the upper bound
-is known to be tight
+is known to be tight.
+If the domain of $q$ wraps a map, then the upper
+bound is computed over all integer points in
+the range of the wrapped map instead.
 \\
 $l$ := \ai[\tt]{vertices} $s$ &
 a list of vertices of the rational polytope defined by the same constraints
