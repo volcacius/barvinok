@@ -1061,7 +1061,9 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 		goto error;
 	}
 	isl_token_free(tok);
-	isl_assert(s->ctx, obj.type == isl_obj_union_map, goto error);
+	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_map), goto error);
+	if (obj.type != isl_obj_union_map)
+		obj = convert(obj, isl_obj_union_map);
 
 	obj.v = isl_union_map_reverse(obj.v);
 	if (!obj.v)
