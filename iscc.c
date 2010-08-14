@@ -391,6 +391,7 @@ void *codegen(void *arg)
 	state = cloog_isl_state_malloc(ctx);
 	options = cloog_options_malloc(state);
 	options->language = LANGUAGE_C;
+	options->strides = 1;
 
 	ud = cloog_union_domain_from_isl_union_map(isl_union_map_copy(umap));
 
