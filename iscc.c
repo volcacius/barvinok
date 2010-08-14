@@ -376,7 +376,7 @@ error:
 }
 
 #ifdef HAVE_CLOOG
-void *codegen(void *arg)
+void *map_codegen(void *arg)
 {
 	isl_dim *dim;
 	isl_union_map *umap = (isl_union_map *)arg;
@@ -408,6 +408,41 @@ error:
 	cloog_options_free(options);
 	cloog_state_free(state);
 	isl_union_map_free(umap);
+	return NULL;
+}
+
+void *set_codegen(void *arg)
+{
+	isl_dim *dim;
+	isl_union_set *uset = (isl_union_set *)arg;
+	isl_ctx *ctx = isl_union_set_get_ctx(uset);
+	CloogState *state;
+	CloogOptions *options;
+	CloogDomain *context;
+	CloogUnionDomain *ud;
+	CloogInput *input;
+	struct clast_stmt *stmt;
+
+	state = cloog_isl_state_malloc(ctx);
+	options = cloog_options_malloc(state);
+	options->language = LANGUAGE_C;
+	options->strides = 1;
+
+	ud = cloog_union_domain_from_isl_union_set(isl_union_set_copy(uset));
+
+	dim = isl_union_set_get_dim(uset);
+	context = cloog_domain_from_isl_set(isl_set_universe(dim));
+
+	input = cloog_input_alloc(context, ud);
+
+	stmt = cloog_clast_create_from_input(input, options);
+	clast_pprint(stdout, stmt, 0, options);
+	cloog_clast_free(stmt);
+
+error:
+	cloog_options_free(options);
+	cloog_state_free(state);
+	isl_union_set_free(uset);
 	return NULL;
 }
 #endif
@@ -445,7 +480,10 @@ struct isc_named_un_op named_un_ops[] = {
 		isl_obj_union_pw_qpolynomial_fold,
 		(isc_un_op_fn) &isl_union_pw_qpolynomial_fold_coalesce } },
 #ifdef HAVE_CLOOG
-	{"codegen",	{ -1,	isl_obj_union_map, isl_obj_none, &codegen } },
+	{"codegen",	{ -1,	isl_obj_union_set, isl_obj_none,
+		&set_codegen } },
+	{"codegen",	{ -1,	isl_obj_union_map, isl_obj_none,
+		&map_codegen } },
 #endif
 	{"deltas",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_deltas } },
