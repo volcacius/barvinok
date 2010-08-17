@@ -241,6 +241,14 @@ __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_fold_at(
 	return at.res;
 }
 
+static __isl_give isl_union_pw_qpolynomial_fold *union_pw_qpolynomial_add_union_pw_qpolynomial_fold(
+	__isl_take isl_union_pw_qpolynomial *upwqp,
+	__isl_take isl_union_pw_qpolynomial_fold *upwf)
+{
+	return isl_union_pw_qpolynomial_fold_add_union_pw_qpolynomial(upwf,
+									upwqp);
+}
+
 struct isc_bin_op bin_ops[] = {
 	{ '+',	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_set,
@@ -295,6 +303,14 @@ struct isc_bin_op bin_ops[] = {
 	{ '+',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_add },
+	{ '+',	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &union_pw_qpolynomial_add_union_pw_qpolynomial_fold },
+	{ '+',	isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_add_union_pw_qpolynomial },
 	{ '-',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_sub },
