@@ -648,7 +648,8 @@ static struct isl_obj convert(struct isl_obj obj, isl_obj_type type)
 		if (type == isl_obj_union_pw_qpolynomial_fold) {
 			isl_dim *dim = isl_union_set_get_dim(obj.v);
 			isl_union_set_free(obj.v);
-			obj.v = isl_union_pw_qpolynomial_fold_zero(dim);
+			obj.v = isl_union_pw_qpolynomial_fold_zero(dim,
+								isl_fold_list);
 			obj.type = isl_obj_union_pw_qpolynomial_fold;
 			return obj;
 		}

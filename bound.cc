@@ -201,7 +201,7 @@ static __isl_give isl_pw_qpolynomial_fold *iterate(
 	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
 	set = isl_set_universe(dim);
 
-	return isl_pw_qpolynomial_fold_alloc(set, fold);
+	return isl_pw_qpolynomial_fold_alloc(type, set, fold);
 }
 
 /*
