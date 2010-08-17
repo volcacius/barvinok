@@ -959,7 +959,7 @@ __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 			goto error);
 
 	n_in = isl_map_dim(map, isl_dim_in);
-	pwqp = isl_pw_qpolynomial_insert_dims(pwqp, isl_dim_set, 0, isl_dim_in);
+	pwqp = isl_pw_qpolynomial_insert_dims(pwqp, isl_dim_set, 0, n_in);
 
 	dom = isl_map_wrap(map);
 	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, isl_set_get_dim(dom));
