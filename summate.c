@@ -928,12 +928,12 @@ static int compatible_range(__isl_keep isl_dim *dim1, __isl_keep isl_dim *dim2)
 }
 
 /* Compute the intersection of the range of the map and the domain
- * of the piecewise quasipolynomial and the sum the associated
+ * of the piecewise quasipolynomial and then sum the associated
  * quasipolynomial over all elements in this intersection.
  *
  * We first introduce some unconstrained dimensions in the
  * piecewise quasipolynomial, intersect the resulting domain
- * with the wrapped map and the compute the sum.
+ * with the wrapped map and then compute the sum.
  */
 __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 	__isl_take isl_map *map, __isl_take isl_pw_qpolynomial *pwqp)
