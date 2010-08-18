@@ -297,7 +297,7 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
 	    return pwf_more;
 	if (!pwf_more)
 	    return pwf;
-	return isl_pw_qpolynomial_fold_add(pwf, pwf_more);
+	return isl_pw_qpolynomial_fold_fold(pwf, pwf_more);
     }
     isl_dim *dim_EP;
     isl_pw_qpolynomial *pwqp;
