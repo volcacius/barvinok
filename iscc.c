@@ -357,7 +357,7 @@ static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
 	ctx = isl_union_pw_qpolynomial_get_ctx(upwqp);
 	list = isl_list_alloc(ctx, 2);
 	if (!list)
-		goto error;
+		goto error2;
 
 	list->obj[0].type = isl_obj_union_pw_qpolynomial_fold;
 	list->obj[0].v = isl_union_pw_qpolynomial_bound(upwqp,
@@ -368,6 +368,8 @@ static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
 		goto error;
 
 	return list;
+error2:
+	isl_union_pw_qpolynomial_free(upwqp);
 error:
 	isl_list_free(list);
 	return NULL;
