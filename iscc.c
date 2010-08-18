@@ -249,6 +249,36 @@ static __isl_give isl_union_pw_qpolynomial_fold *union_pw_qpolynomial_add_union_
 									upwqp);
 }
 
+static __isl_give struct isl_list *union_map_apply_union_pw_qpolynomial_fold(
+	__isl_take isl_union_map *umap,
+	__isl_take isl_union_pw_qpolynomial_fold *upwf)
+{
+	isl_ctx *ctx;
+	struct isl_list *list;
+	int tight;
+
+	ctx = isl_union_map_get_ctx(umap);
+	list = isl_list_alloc(ctx, 2);
+	if (!list)
+		goto error2;
+
+	list->obj[0].type = isl_obj_union_pw_qpolynomial_fold;
+	list->obj[0].v = isl_union_map_apply_union_pw_qpolynomial_fold(umap,
+							upwf, &tight);
+	list->obj[1].type = isl_obj_bool;
+	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
+	if (tight < 0 || !list->obj[0].v)
+		goto error;
+
+	return list;
+error2:
+	isl_union_map_free(umap);
+	isl_union_pw_qpolynomial_fold_free(upwf);
+error:
+	isl_list_free(list);
+	return NULL;
+}
+
 struct isc_bin_op bin_ops[] = {
 	{ '+',	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_set,
@@ -277,6 +307,9 @@ struct isc_bin_op bin_ops[] = {
 	{ '.',	isl_obj_union_map,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_map_apply_union_pw_qpolynomial },
+	{ '.',	isl_obj_union_map,	isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_list,
+		(isc_bin_op_fn) &union_map_apply_union_pw_qpolynomial_fold },
 	{ ISL_TOKEN_TO,	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_map,
 		(isc_bin_op_fn) &isl_union_map_from_domain_and_range },

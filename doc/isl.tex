@@ -87,6 +87,8 @@ m^+;
 codegen [N] -> { A[i] -> [i,0] : 0 <= i <= N; B[i] -> [i,1] : 1 <= i <= N };
 
 { [k] -> [i] : 1 <= i <= k } . { [n] -> 2 * n : n >= 1 };
+
+{ [m] -> [c] : 1 <= c <= m } . { [k] -> max((3 * k + k^2)) : k >= 1 };
 \end{verbatim}
 
 \bottomcaption{{\tt iscc} operations.  The variables
@@ -258,6 +260,10 @@ $m_3$ := $m_2$($m_1)$ & join of $m_1$ and $m_2$
 $q_2$ := $m$ \ai[\tt]{.} $q_1$ & join of $m$ and $q_1$, taking the sum
 over all elements in the intersection of the range of $m$ and the domain
 of $q_1$
+\\
+$f_2$ := $m$ \ai[\tt]{.} $f_1$ & join of $m$ and $f_1$, computing a bound
+over all elements in the intersection of the range of $m$ and the domain
+of $f_1$
 \\
 $m$ := $s_1$ \ai[\tt]{->} $s_2$ & universal map with domain $s_1$
 and range $s_2$
