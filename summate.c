@@ -1024,6 +1024,11 @@ __isl_give isl_union_pw_qpolynomial *isl_union_map_apply_union_pw_qpolynomial(
 	isl_dim *dim;
 	struct barvinok_apply_data data;
 
+	upwqp = isl_union_pw_qpolynomial_align_params(upwqp,
+				isl_union_map_get_dim(umap));
+	umap = isl_union_map_align_params(umap,
+				isl_union_pw_qpolynomial_get_dim(upwqp));
+
 	data.upwqp = upwqp;
 	dim = isl_union_pw_qpolynomial_get_dim(upwqp);
 	data.res = isl_union_pw_qpolynomial_zero(dim);
