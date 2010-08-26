@@ -1526,15 +1526,24 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
 
 static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 {
+	isl_ctx *ctx;
 	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
 	Polyhedron *P;
 	evalue *E;
-	barvinok_options *options = barvinok_options_new_with_defaults();
+	barvinok_options *options;
+	int options_allocated = 0;
 	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
 	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
 	Polyhedron *U = Universe_Polyhedron(nparam + n_in);
 	isl_dim *dim, *target_dim;
+
+	ctx = isl_basic_map_get_ctx(bmap);
+	options = isl_ctx_peek_barvinok_options(ctx);
+	if (!options) {
+		options = barvinok_options_new_with_defaults();
+		options_allocated = 1;
+	}
 
 	target_dim = isl_basic_map_get_dim(bmap);
 	target_dim = isl_dim_domain(target_dim);
@@ -1557,7 +1566,8 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	evalue_free(E);
 	Polyhedron_Free(P);
 	Polyhedron_Free(U);
-	barvinok_options_free(options);
+	if (options_allocated)
+		barvinok_options_free(options);
 	isl_basic_map_free(bmap);
 
 	return 0;
