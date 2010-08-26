@@ -782,9 +782,11 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 {
 	int r;
 	struct barvinok_summate_data data;
+	isl_ctx *ctx;
 	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **) user;
 	isl_map *map = NULL;
 	int wrapping = 0;
+	int options_allocated = 0;
 
 	data.sum = *sum;
 	data.dim = NULL;
@@ -793,8 +795,13 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 	if (!set || !qp)
 		goto error;
 
+	ctx = isl_set_get_ctx(set);
 	data.qp = qp;
-	data.options = barvinok_options_new_with_defaults();
+	data.options = isl_ctx_peek_barvinok_options(ctx);
+	if (!data.options) {
+		data.options = barvinok_options_new_with_defaults();
+		options_allocated = 1;
+	}
 
 	wrapping = isl_set_is_wrapping(set);
 	if (wrapping)
@@ -836,7 +843,8 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
 
-	barvinok_options_free(data.options);
+	if (options_allocated)
+		barvinok_options_free(data.options);
 
 	*sum = data.sum;
 
@@ -845,7 +853,8 @@ error:
 	isl_map_free(map);
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
-	barvinok_options_free(data.options);
+	if (options_allocated)
+		barvinok_options_free(data.options);
 	return -1;
 }
 
