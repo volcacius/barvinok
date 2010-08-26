@@ -61,12 +61,33 @@ static struct isl_arg_choice triangulation[] = {
 	{0}
 };
 
+static int set_approx(void *opt, unsigned val)
+{
+	struct barvinok_approximation_options *options;
+	options = (struct barvinok_approximation_options *)opt;
+	options->approximation = val;
+	if (options->method == BV_APPROX_NONE)
+		options->method = BV_APPROX_SCALE;
+	return 0;
+}
+
+static int set_method(void *opt, unsigned val)
+{
+	struct barvinok_approximation_options *options;
+	options = (struct barvinok_approximation_options *)opt;
+	options->method = val;
+	if (options->approximation == BV_APPROX_SIGN_NONE)
+		options->approximation = BV_APPROX_SIGN_APPROX;
+	return 0;
+}
+
 static struct isl_arg approx_options_arg[] = {
-ISL_ARG_OPT_CHOICE(struct barvinok_approximation_options, approximation, 0, \
-	"polynomial-approximation", approx,
+ISL_ARG_USER_OPT_CHOICE(struct barvinok_approximation_options, approximation, 0,
+	"polynomial-approximation", approx, &set_approx,
 	BV_APPROX_SIGN_NONE, BV_APPROX_SIGN_APPROX, NULL)
-ISL_ARG_OPT_CHOICE(struct barvinok_approximation_options, method, 0,
-	"approximation-method", approx_method, BV_APPROX_NONE, BV_APPROX_DROP,
+ISL_ARG_USER_OPT_CHOICE(struct barvinok_approximation_options, method, 0,
+	"approximation-method", approx_method, &set_method,
+	BV_APPROX_NONE, BV_APPROX_DROP,
 	"method to use in polynomial approximation")
 ISL_ARG_FLAGS(struct barvinok_approximation_options, scale_flags, 0,
 	"scale-options", scale_flags, 0, NULL)
