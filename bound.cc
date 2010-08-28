@@ -142,24 +142,19 @@ error:
 	return (vpb->vpd.n >= 1 && ok) ? 0 : -1;
 }
 
-static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf, evalue *EP, unsigned nvar,
-		  enum isl_fold type, struct verify_options *options)
+static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf,
+	__isl_take isl_pw_qpolynomial *pwqp, enum isl_fold type,
+	struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options } };
 	isl_ctx *ctx;
-	isl_dim *dim;
 	isl_set *context;
 	int r;
-	unsigned nparam;
 
 	ctx = isl_pw_qpolynomial_fold_get_ctx(pwf);
-	nparam = isl_pw_qpolynomial_fold_dim(pwf, isl_dim_param);
 	vpb.pwf = pwf;
-	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
 	vpb.type = type;
-	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-	vpb.pwqp = isl_pw_qpolynomial_move_dims(vpb.pwqp, isl_dim_set, 0,
-						isl_dim_param, 0, nvar);
+	vpb.pwqp = pwqp;
 	context = isl_pw_qpolynomial_fold_domain(
 					isl_pw_qpolynomial_fold_copy(vpb.pwf));
 	context = verify_context_set_bounds(context, options);
@@ -172,7 +167,7 @@ static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf, evalue *EP, unsigned 
 		r = -1;
 
 	isl_set_free(context);
-	isl_pw_qpolynomial_free(vpb.pwqp);
+	isl_pw_qpolynomial_free(pwqp);
 
 	verify_point_data_fini(&vpb.vpd);
 
@@ -277,18 +272,12 @@ static int split_on_domain_size(__isl_take isl_pw_qpolynomial *pwqp,
 	return r;
 }
 
-static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
-	Polyhedron *C, __isl_take isl_dim *dim,
+static __isl_give isl_pw_qpolynomial_fold *optimize(
+	__isl_take isl_pw_qpolynomial *pwqp, enum isl_fold type,
 	struct options *options)
 {
     isl_pw_qpolynomial_fold *pwf;
-    isl_dim *dim_EP;
-    isl_pw_qpolynomial *pwqp;
-    enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
 
-    dim_EP = isl_dim_insert(dim, isl_dim_param, 0, nvar);
-    pwqp = isl_pw_qpolynomial_from_evalue(dim_EP, EP);
-    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
     if (options->iterate > 0) {
 	isl_pw_qpolynomial *pwqp_less, *pwqp_more;
 	isl_pw_qpolynomial_fold *pwf_less, *pwf_more;
@@ -306,13 +295,13 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
 static int optimize(evalue *EP, const char **all_vars,
 		    unsigned nvar, unsigned nparam, struct options *options)
 {
-    Polyhedron *U;
-    U = Universe_Polyhedron(nparam);
     int print_solution = 1;
     int result = 0;
     isl_ctx *ctx = isl_ctx_alloc_with_options(options_arg, options);
     isl_dim *dim;
     isl_pw_qpolynomial_fold *pwf;
+    isl_pw_qpolynomial *pwqp;
+    enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
 
     dim = isl_dim_set_alloc(ctx, nparam, 0);
     for (int i = 0; i < nparam; ++i)
@@ -324,7 +313,10 @@ static int optimize(evalue *EP, const char **all_vars,
 	    print_solution = 0;
     }
 
-    pwf = optimize(EP, nvar, U, dim, options);
+    dim = isl_dim_insert(dim, isl_dim_param, 0, nvar);
+    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
+    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
+    pwf = optimize(isl_pw_qpolynomial_copy(pwqp), type, options);
     assert(pwf);
     if (print_solution) {
 	isl_printer *p = isl_printer_to_file(ctx, stdout);
@@ -334,11 +326,10 @@ static int optimize(evalue *EP, const char **all_vars,
     }
     if (options->verify->verify) {
 	enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
-	result = verify(pwf, EP, nvar, type, options->verify);
-    }
+	result = verify(pwf, pwqp, type, options->verify);
+    } else
+	isl_pw_qpolynomial_free(pwqp);
     isl_pw_qpolynomial_fold_free(pwf);
-
-    Polyhedron_Free(U);
 
     isl_ctx_free(ctx);
 
