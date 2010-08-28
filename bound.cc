@@ -204,70 +204,77 @@ static __isl_give isl_pw_qpolynomial_fold *iterate(
 	return isl_pw_qpolynomial_fold_alloc(type, set, fold);
 }
 
+struct bv_split_data {
+	int size;
+	__isl_give isl_pw_qpolynomial *pwqp_less;
+	__isl_give isl_pw_qpolynomial *pwqp_more;
+};
+
+static int split_on_size(__isl_take isl_set *set,
+	__isl_take isl_qpolynomial *qp, void *user)
+{
+	struct bv_split_data *data = (struct bv_split_data *)user;
+	int bounded;
+	isl_set *set_np;
+	isl_pw_qpolynomial *pwqp;
+	int nparam;
+
+	nparam = isl_set_dim(set, isl_dim_param);
+	set_np = isl_set_move_dims(isl_set_copy(set), isl_dim_set, 0,
+					isl_dim_param, 0, nparam);
+	bounded = isl_set_is_bounded(set_np);
+	assert(bounded >= 0);
+	if (bounded) {
+		isl_pw_qpolynomial *pwqp;
+		isl_qpolynomial *cst;
+		isl_int m;
+		int is_cst;
+
+		pwqp = isl_set_card(set_np);
+		cst = isl_pw_qpolynomial_max(pwqp);
+		isl_int_init(m);
+		is_cst = isl_qpolynomial_is_cst(cst, &m, NULL);
+		isl_qpolynomial_free(cst);
+		assert(is_cst);
+		bounded = isl_int_cmp_si(m, data->size) <= 0;
+		isl_int_clear(m);
+	} else
+		isl_set_free(set_np);
+
+	pwqp = isl_pw_qpolynomial_alloc(set, qp);
+	if (bounded)
+		data->pwqp_less = isl_pw_qpolynomial_add_disjoint(
+						data->pwqp_less, pwqp);
+	else
+		data->pwqp_more = isl_pw_qpolynomial_add_disjoint(
+						data->pwqp_more, pwqp);
+
+	return 0;
+}
+
 /*
- * Split (partition) EP into a partition with (sub)domains containing
+ * Split (partition) pwpq into a partition with (sub)domains containing
  * size integer points or less and a partition with (sub)domains
  * containing more integer points.
  */
-static void split_on_domain_size(evalue *EP, evalue **EP_less, evalue **EP_more,
-				 int size, barvinok_options *options)
+static int split_on_domain_size(__isl_take isl_pw_qpolynomial *pwqp,
+	__isl_give isl_pw_qpolynomial **pwqp_less,
+	__isl_give isl_pw_qpolynomial **pwqp_more,
+	int size)
 {
-    assert(value_zero_p(EP->d));
-    assert(EP->x.p->type == partition);
-    assert(EP->x.p->size >= 2);
+	isl_dim *dim;
+	struct bv_split_data data = { size };
+	int r;
 
-    struct evalue_section *s_less = new evalue_section[EP->x.p->size/2];
-    struct evalue_section *s_more = new evalue_section[EP->x.p->size/2];
+	dim = isl_pw_qpolynomial_get_dim(pwqp);
+	data.pwqp_less = isl_pw_qpolynomial_zero(isl_dim_copy(dim));
+	data.pwqp_more = isl_pw_qpolynomial_zero(dim);
+	r = isl_pw_qpolynomial_foreach_piece(pwqp, &split_on_size, &data);
+	*pwqp_less = data.pwqp_less;
+	*pwqp_more = data.pwqp_more;
+	isl_pw_qpolynomial_free(pwqp);
 
-    int n_less = 0;
-    int n_more = 0;
-
-    Value c;
-    value_init(c);
-
-    for (int i = 0; i < EP->x.p->size/2; ++i) {
-	Polyhedron *D = EVALUE_DOMAIN(EP->x.p->arr[2*i]);
-	Polyhedron *D_less = NULL;
-	Polyhedron *D_more = NULL;
-	Polyhedron **next_less = &D_less;
-	Polyhedron **next_more = &D_more;
-
-	for (Polyhedron *P = D; P; P = P->next) {
-	    Polyhedron *next = P->next;
-	    P->next = NULL;
-	    barvinok_count_with_options(P, &c, options);
-	    P->next = next;
-
-	    if (value_zero_p(c))
-		continue;
-
-	    if (value_pos_p(c) && value_cmp_si(c, size) <= 0) {
-		*next_less = Polyhedron_Copy(P);
-		next_less = &(*next_less)->next;
-	    } else {
-		*next_more = Polyhedron_Copy(P);
-		next_more = &(*next_more)->next;
-	    }
-	}
-
-	if (D_less) {
-	    s_less[n_less].D = D_less;
-	    s_less[n_less].E = evalue_dup(&EP->x.p->arr[2*i+1]);
-	    n_less++;
-	} else {
-	    s_more[n_more].D = D_more;
-	    s_more[n_more].E = evalue_dup(&EP->x.p->arr[2*i+1]);
-	    n_more++;
-	}
-    }
-
-    value_clear(c);
-
-    *EP_less = evalue_from_section_array(s_less, n_less);
-    *EP_more = evalue_from_section_array(s_more, n_more);
-
-    delete [] s_less;
-    delete [] s_more;
+	return r;
 }
 
 static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
@@ -275,37 +282,21 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(evalue *EP, unsigned nvar,
 	struct options *options)
 {
     isl_pw_qpolynomial_fold *pwf;
-    if (options->iterate > 0) {
-	evalue *EP_less = NULL;
-	evalue *EP_more = NULL;
-	isl_pw_qpolynomial_fold *pwf = NULL, *pwf_more = NULL;
-
-	split_on_domain_size(EP, &EP_less, &EP_more, options->iterate,
-				options->verify->barvinok);
-	if (!EVALUE_IS_ZERO(*EP_less)) {
-	    options->iterate = -1;
-	    pwf = optimize(EP_less, nvar, C, isl_dim_copy(dim), options);
-	}
-	if (!EVALUE_IS_ZERO(*EP_more)) {
-	    options->iterate = 0;
-	    pwf_more = optimize(EP_more, nvar, C, isl_dim_copy(dim), options);
-	}
-	isl_dim_free(dim);
-	evalue_free(EP_less);
-	evalue_free(EP_more);
-	if (!pwf)
-	    return pwf_more;
-	if (!pwf_more)
-	    return pwf;
-	return isl_pw_qpolynomial_fold_fold(pwf, pwf_more);
-    }
     isl_dim *dim_EP;
     isl_pw_qpolynomial *pwqp;
     enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
+
     dim_EP = isl_dim_insert(dim, isl_dim_param, 0, nvar);
     pwqp = isl_pw_qpolynomial_from_evalue(dim_EP, EP);
     pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
-    if (options->iterate)
+    if (options->iterate > 0) {
+	isl_pw_qpolynomial *pwqp_less, *pwqp_more;
+	isl_pw_qpolynomial_fold *pwf_less, *pwf_more;
+	split_on_domain_size(pwqp, &pwqp_less, &pwqp_more, options->iterate);
+	pwf_less = iterate(pwqp_less, type);
+	pwf_more = isl_pw_qpolynomial_bound(pwqp_more, type, NULL);
+	pwf = isl_pw_qpolynomial_fold_fold(pwf_less, pwf_more);
+    } else if (options->iterate)
 	pwf = iterate(pwqp, type);
     else
 	pwf = isl_pw_qpolynomial_bound(pwqp, type, NULL);
