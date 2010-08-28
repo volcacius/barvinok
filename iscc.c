@@ -657,7 +657,24 @@ static int is_subtype(struct isl_obj obj, isl_obj_type super)
 		return 1;
 	if (obj.type == isl_obj_union_set && isl_union_set_is_empty(obj.v))
 		return 1;
+	if (obj.type == isl_obj_list) {
+		struct isl_list *list = obj.v;
+		if (list->n == 2 && list->obj[1].type == isl_obj_bool)
+			return is_subtype(list->obj[0], super);
+	}
 	return 0;
+}
+
+static struct isl_obj obj_at(struct isl_obj obj, int i)
+{
+	struct isl_list *list = obj.v;
+
+	obj = list->obj[i];
+	obj.v = obj.type->copy(obj.v);
+
+	isl_list_free(list);
+
+	return obj;
 }
 
 static struct isl_obj convert(struct isl_obj obj, isl_obj_type type)
@@ -706,6 +723,11 @@ static struct isl_obj convert(struct isl_obj obj, isl_obj_type type)
 			obj.type = isl_obj_union_pw_qpolynomial_fold;
 			return obj;
 		}
+	}
+	if (obj.type == isl_obj_list) {
+		struct isl_list *list = obj.v;
+		if (list->n == 2 && list->obj[1].type == isl_obj_bool)
+			return convert(obj_at(obj, 0), type);
 	}
 	free_obj(obj);
 	obj.type = isl_obj_none;
@@ -855,7 +877,7 @@ static struct isl_obj transitive_closure(struct isl_ctx *ctx, struct isl_obj obj
 	struct isl_list *list;
 	int exact;
 
-	if (obj.type == isl_obj_map)
+	if (obj.type != isl_obj_union_map)
 		obj = convert(obj, isl_obj_union_map);
 	isl_assert(ctx, obj.type == isl_obj_union_map, goto error);
 	list = isl_list_alloc(ctx, 2);
@@ -898,12 +920,7 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 	if (isl_stream_eat(s, ']'))
 		goto error;
 
-	obj = list->obj[i];
-	obj.v = obj.type->copy(obj.v);
-
-	isl_list_free(list);
-
-	return obj;
+	return obj_at(obj, i);
 error:
 	free_obj(obj);
 	obj.type = isl_obj_none;
@@ -920,6 +937,11 @@ static struct isl_obj apply(struct isl_stream *s, __isl_take isl_union_map *umap
 	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_set) ||
 			   is_subtype(obj, isl_obj_union_map), goto error);
 
+	if (obj.type == isl_obj_list) {
+		struct isl_list *list = obj.v;
+		if (list->n == 2 && list->obj[1].type == isl_obj_bool)
+			obj = obj_at(obj, 0);
+	}
 	if (obj.type == isl_obj_set)
 		obj = convert(obj, isl_obj_union_set);
 	else if (obj.type == isl_obj_map)
