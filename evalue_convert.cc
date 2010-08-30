@@ -364,6 +364,7 @@ static void evalue_print_isl(FILE *out, const evalue *e, int nparam,
 	int i;
 	isl_ctx *ctx = isl_ctx_alloc();
 	isl_dim *dim = isl_dim_set_alloc(ctx, nparam, 0);
+	isl_printer *p;
 	isl_pw_qpolynomial *pwqp;
 
 	for (i = 0; i < nparam; ++i)
@@ -371,7 +372,10 @@ static void evalue_print_isl(FILE *out, const evalue *e, int nparam,
 
 	pwqp = isl_pw_qpolynomial_from_evalue(dim, e);
 
-	isl_pw_qpolynomial_print(pwqp, out, ISL_FORMAT_ISL);
+	p = isl_printer_to_file(ctx, out);
+	p = isl_printer_print_pw_qpolynomial(p, pwqp);
+	p = isl_printer_end_line(p);
+	isl_printer_free(p);
 
 	isl_pw_qpolynomial_free(pwqp);
 
