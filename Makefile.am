@@ -445,10 +445,8 @@ check-evalue: barvinok_bound$(EXEEXT) test_bound$(EXEEXT) barvinok_summate$(EXEE
 	@for i in $(top_srcdir)/tests/evalue/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
-		if test -n "@bv_barvinok_bound@"; then \
-		    ./barvinok_bound$(EXEEXT) -T -r30 < $$i || exit; \
-		    echo $$i | ./test_bound$(EXEEXT) -q -r30 || exit; \
-		fi; \
+		./barvinok_bound$(EXEEXT) -T -r30 < $$i || exit; \
+		echo $$i | ./test_bound$(EXEEXT) -q -r30 || exit; \
 		./barvinok_summate$(EXEEXT) -T -r30 < $$i || exit; \
 	    fi \
 	done
