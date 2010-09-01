@@ -987,46 +987,75 @@ static int add_vertex(__isl_take isl_vertex *vertex, void *user)
 	return 0;
 }
 
-static struct isl_obj vertices(struct isl_stream *s,
-	struct isl_hash_table *table)
+static int set_vertices(__isl_take isl_set *set, void *user)
 {
 	isl_ctx *ctx;
-	struct isl_obj obj;
-	isl_set *set;
 	isl_basic_set *hull;
 	isl_vertices *vertices = NULL;
 	struct isl_list *list = NULL;
-	struct add_vertex_data data;
+	int r;
+	struct add_vertex_data *data = (struct add_vertex_data *)user;
 
-	obj = read_expr(s, table);
-	isl_assert(s->ctx, obj.type == isl_obj_set, goto error);
-	set = obj.v;
-	obj.v = NULL;
 	set = isl_set_remove_divs(set);
 	hull = isl_set_convex_hull(set);
 	vertices = isl_basic_set_compute_vertices(hull);
 	isl_basic_set_free(hull);
 
+	list = data->list;
+
 	ctx = isl_vertices_get_ctx(vertices);
-	list = isl_list_alloc(ctx, isl_vertices_get_n_vertices(vertices));
+	data->list = isl_list_alloc(ctx, isl_vertices_get_n_vertices(vertices));
+	if (!data->list)
+		goto error;
+
+	data->i = 0;
+	r = isl_vertices_foreach_vertex(vertices, &add_vertex, user);
+
+	data->list = isl_list_concat(list, data->list);
+
+	isl_vertices_free(vertices);
+
+	return r;
+error:
+	data->list = list;
+	isl_vertices_free(vertices);
+	return -1;
+}
+
+static struct isl_obj vertices(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	isl_ctx *ctx;
+	struct isl_obj obj;
+	struct isl_list *list = NULL;
+	isl_union_set *uset;
+	struct add_vertex_data data = { NULL };
+
+	obj = read_expr(s, table);
+	obj = convert(obj, isl_obj_union_set);
+	isl_assert(s->ctx, obj.type == isl_obj_union_set, goto error);
+	uset = obj.v;
+	obj.v = NULL;
+
+	ctx = isl_union_set_get_ctx(uset);
+	list = isl_list_alloc(ctx, 0);
 	if (!list)
 		goto error;
 
 	data.list = list;
-	data.i = 0;
 
-	if (isl_vertices_foreach_vertex(vertices, &add_vertex, &data) < 0)
+	if (isl_union_set_foreach_set(uset, &set_vertices, &data) < 0)
 		goto error;
 
-	isl_vertices_free(vertices);
+	isl_union_set_free(uset);
 
 	obj.type = isl_obj_list;
-	obj.v = list;
+	obj.v = data.list;
 
 	return obj;
 error:
-	isl_vertices_free(vertices);
-	isl_list_free(list);
+	isl_union_set_free(uset);
+	isl_list_free(data.list);
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
