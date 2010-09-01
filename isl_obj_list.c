@@ -75,11 +75,10 @@ static __isl_give isl_printer *isl_obj_list_print(__isl_take isl_printer *p,
 	isl_printer_print_str(p, ")");
 }
 
-static void *isl_obj_list_add(void *v1, void *v2)
+__isl_give isl_list *isl_list_concat(__isl_take isl_list *list1,
+	__isl_take isl_list *list2)
 {
 	int i;
-	struct isl_list *list1 = (struct isl_list *)v1;
-	struct isl_list *list2 = (struct isl_list *)v2;
 	struct isl_list *list;
 
 	if (!list1 || !list2)
@@ -107,6 +106,14 @@ error:
 	isl_list_free(list1);
 	isl_list_free(list2);
 	return NULL;
+}
+
+static void *isl_obj_list_add(void *v1, void *v2)
+{
+	struct isl_list *list1 = (struct isl_list *)v1;
+	struct isl_list *list2 = (struct isl_list *)v2;
+
+	return isl_list_concat(list1, list2);
 }
 
 struct isl_obj_vtable isl_obj_list_vtable = {
