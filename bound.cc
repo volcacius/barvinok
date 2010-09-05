@@ -292,33 +292,26 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(
     return pwf;
 }
 
-static int optimize(evalue *EP, const char **all_vars,
-		    unsigned nvar, unsigned nparam, struct options *options)
+static int optimize(__isl_take isl_pw_qpolynomial *pwqp, struct options *options)
 {
     int print_solution = 1;
     int result = 0;
-    isl_ctx *ctx = isl_ctx_alloc_with_options(options_arg, options);
-    isl_dim *dim;
     isl_pw_qpolynomial_fold *pwf;
-    isl_pw_qpolynomial *pwqp;
     enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
 
-    dim = isl_dim_set_alloc(ctx, nparam, 0);
-    for (int i = 0; i < nparam; ++i)
-	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
-
     if (options->verify->verify) {
-	verify_options_set_range(options->verify, nvar+nparam);
+	isl_dim *dim = isl_pw_qpolynomial_get_dim(pwqp);
+	unsigned total = isl_dim_total(dim);
+	isl_dim_free(dim);
+	verify_options_set_range(options->verify, total);
 	if (!options->verify->barvinok->verbose)
 	    print_solution = 0;
     }
 
-    dim = isl_dim_insert(dim, isl_dim_param, 0, nvar);
-    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
     pwf = optimize(isl_pw_qpolynomial_copy(pwqp), type, options);
     assert(pwf);
     if (print_solution) {
+	isl_ctx *ctx = isl_pw_qpolynomial_get_ctx(pwqp);
 	isl_printer *p = isl_printer_to_file(ctx, stdout);
 	p = isl_printer_print_pw_qpolynomial_fold(p, pwf);
 	p = isl_printer_end_line(p);
@@ -331,8 +324,6 @@ static int optimize(evalue *EP, const char **all_vars,
 	isl_pw_qpolynomial_free(pwqp);
     isl_pw_qpolynomial_fold_free(pwf);
 
-    isl_ctx_free(ctx);
-
     return result;
 }
 
@@ -343,27 +334,35 @@ int main(int argc, char **argv)
     unsigned nvar;
     unsigned nparam;
     struct options *options = options_new_with_defaults();
+    isl_ctx *ctx;
+    isl_dim *dim;
+    isl_pw_qpolynomial *pwqp;
     int result = 0;
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
+    ctx = isl_ctx_alloc_with_options(options_arg, options);
 
     EP = evalue_read_from_file(stdin, options->var_list, &all_vars,
 			       &nvar, &nparam, options->verify->barvinok->MaxRays);
     assert(EP);
 
-    if (options->split)
-	evalue_split_periods(EP, options->split, options->verify->barvinok->MaxRays);
-
     evalue_convert(EP, options->convert, options->verify->barvinok->verbose,
 			nvar+nparam, all_vars);
 
-    if (EVALUE_IS_ZERO(*EP))
-	print_evalue(stdout, EP, all_vars);
-    else
-	result = optimize(EP, all_vars, nvar, nparam, options);
-
+    dim = isl_dim_set_alloc(ctx, nparam, 0);
+    for (int i = 0; i < nparam; ++i)
+	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
+    dim = isl_dim_insert(dim, isl_dim_param, 0, nvar);
+    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
+    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
     evalue_free(EP);
 
+    if (options->split)
+	pwqp = isl_pw_qpolynomial_split_periods(pwqp, options->split);
+
+    result = optimize(pwqp, options);
+
     Free_ParamNames(all_vars, nvar+nparam);
+    isl_ctx_free(ctx);
     return result;
 }
