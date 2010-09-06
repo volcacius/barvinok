@@ -366,6 +366,8 @@ evalue_convert_SOURCES = \
 iscc_SOURCES =	\
 	isl_obj_list.h \
 	isl_obj_list.c \
+	isl_obj_str.h \
+	isl_obj_str.c \
 	iscc.c
 iscc_CPPFLAGS = @CLOOG_CFLAGS@ $(AM_CPPFLAGS)
 iscc_LDADD = \

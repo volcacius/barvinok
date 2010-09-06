@@ -5,6 +5,7 @@
 #include <isl_stream.h>
 #include <isl_vertices.h>
 #include <isl_obj_list.h>
+#include <isl_obj_str.h>
 #include <barvinok/barvinok.h>
 
 #include "config.h"
@@ -378,6 +379,8 @@ struct isc_bin_op bin_ops[] = {
 	{ '%',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_union_set,
 		isl_obj_union_pw_qpolynomial_fold,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_gist },
+	{ '+',	isl_obj_str,	isl_obj_str,	isl_obj_str,
+		(isc_bin_op_fn) &isl_str_concat },
 	0
 };
 struct isc_named_bin_op named_bin_ops[] = {
@@ -663,6 +666,8 @@ static int is_subtype(struct isl_obj obj, isl_obj_type super)
 		if (list->n == 2 && list->obj[1].type == isl_obj_bool)
 			return is_subtype(list->obj[0], super);
 	}
+	if (super == isl_obj_str)
+		return 1;
 	return 0;
 }
 
@@ -678,7 +683,8 @@ static struct isl_obj obj_at(struct isl_obj obj, int i)
 	return obj;
 }
 
-static struct isl_obj convert(struct isl_obj obj, isl_obj_type type)
+static struct isl_obj convert(isl_ctx *ctx, struct isl_obj obj,
+	isl_obj_type type)
 {
 	if (obj.type == type)
 		return obj;
@@ -728,8 +734,33 @@ static struct isl_obj convert(struct isl_obj obj, isl_obj_type type)
 	if (obj.type == isl_obj_list) {
 		struct isl_list *list = obj.v;
 		if (list->n == 2 && list->obj[1].type == isl_obj_bool)
-			return convert(obj_at(obj, 0), type);
+			return convert(ctx, obj_at(obj, 0), type);
 	}
+	if (type == isl_obj_str) {
+		isl_str *str;
+		isl_printer *p;
+		char *s;
+
+		p = isl_printer_to_str(ctx);
+		if (!p)
+			goto error;
+		p = obj.type->print(p, obj.v);
+		s = isl_printer_get_str(p);
+		isl_printer_free(p);
+
+		str = isl_str_alloc(ctx);
+		if (!str) {
+			free(s);
+			goto error;
+		}
+		str->s = s;
+		free_obj(obj);
+		obj.v = str;
+		obj.type = isl_obj_str;
+		return obj;
+
+	}
+error:
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
@@ -861,7 +892,7 @@ static struct isl_obj read_un_op_expr(struct isl_stream *s,
 	op = find_matching_un_op(op, obj);
 
 	isl_assert(s->ctx, op, goto error);
-	obj = convert(obj, op->arg);
+	obj = convert(s->ctx, obj, op->arg);
 	obj.v = op->fn(obj.v);
 	obj.type = op->res;
 
@@ -879,7 +910,7 @@ static struct isl_obj transitive_closure(struct isl_ctx *ctx, struct isl_obj obj
 	int exact;
 
 	if (obj.type != isl_obj_union_map)
-		obj = convert(obj, isl_obj_union_map);
+		obj = convert(ctx, obj, isl_obj_union_map);
 	isl_assert(ctx, obj.type == isl_obj_union_map, goto error);
 	list = isl_list_alloc(ctx, 2);
 	if (!list)
@@ -944,9 +975,9 @@ static struct isl_obj apply(struct isl_stream *s, __isl_take isl_union_map *umap
 			obj = obj_at(obj, 0);
 	}
 	if (obj.type == isl_obj_set)
-		obj = convert(obj, isl_obj_union_set);
+		obj = convert(s->ctx, obj, isl_obj_union_set);
 	else if (obj.type == isl_obj_map)
-		obj = convert(obj, isl_obj_union_map);
+		obj = convert(s->ctx, obj, isl_obj_union_map);
 	if (obj.type == isl_obj_union_set) {
 		obj.v = isl_union_set_apply(obj.v, umap);
 	} else
@@ -1033,7 +1064,7 @@ static struct isl_obj vertices(struct isl_stream *s,
 	struct add_vertex_data data = { NULL };
 
 	obj = read_expr(s, table);
-	obj = convert(obj, isl_obj_union_set);
+	obj = convert(s->ctx, obj, isl_obj_union_set);
 	isl_assert(s->ctx, obj.type == isl_obj_union_set, goto error);
 	uset = obj.v;
 	obj.v = NULL;
@@ -1080,7 +1111,7 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 	isl_token_free(tok);
 	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_map), goto error);
 	if (obj.type != isl_obj_union_map)
-		obj = convert(obj, isl_obj_union_map);
+		obj = convert(s->ctx, obj, isl_obj_union_map);
 
 	obj.v = isl_union_map_reverse(obj.v);
 	if (!obj.v)
@@ -1130,6 +1161,31 @@ error:
 	return obj;
 }
 
+static struct isl_obj read_string_if_available(struct isl_stream *s)
+{
+	struct isl_token *tok;
+	struct isl_obj obj = { isl_obj_none, NULL };
+
+	tok = isl_stream_next_token(s);
+	if (!tok)
+		return obj;
+	if (tok->type == ISL_TOKEN_STRING) {
+		isl_str *str;
+		str = isl_str_alloc(s->ctx);
+		if (!str)
+			goto error;
+		str->s = strdup(tok->u.s);
+		isl_token_free(tok);
+		obj.v = str;
+		obj.type = isl_obj_str;
+	} else
+		isl_stream_push_token(s, tok);
+	return obj;
+error:
+	isl_token_free(tok);
+	return obj;
+}
+
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -1137,6 +1193,9 @@ static struct isl_obj read_obj(struct isl_stream *s,
 	char *name = NULL;
 	struct isc_un_op *op = NULL;
 
+	obj = read_string_if_available(s);
+	if (obj.v)
+		return obj;
 	if (isl_stream_eat_if_available(s, '(')) {
 		obj = read_expr(s, table);
 		if (!obj.v || isl_stream_eat(s, ')'))
@@ -1166,7 +1225,7 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		obj = obj_at_index(s, obj);
 	else if (is_subtype(obj, isl_obj_union_map) &&
 		 isl_stream_eat_if_available(s, '(')) {
-		obj = convert(obj, isl_obj_union_map);
+		obj = convert(s->ctx, obj, isl_obj_union_map);
 		obj = apply(s, obj.v, table);
 	}
 
@@ -1231,8 +1290,8 @@ static struct isl_obj read_expr(struct isl_stream *s,
 		op = find_matching_bin_op(op, obj, right_obj);
 
 		isl_assert(s->ctx, op, goto error);
-		obj = convert(obj, op->lhs);
-		right_obj = convert(right_obj, op->rhs);
+		obj = convert(s->ctx, obj, op->lhs);
+		right_obj = convert(s->ctx, right_obj, op->rhs);
 		obj.v = op->fn(obj.v, right_obj.v);
 		obj.type = op->res;
 	}

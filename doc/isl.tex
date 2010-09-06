@@ -103,6 +103,7 @@ $f$: piecewise quasipolynomial fold,
 $l$: list,
 $i$: integer,
 $b$: boolean,
+$S$: string,
 $o$: object of any type
 }
 \label{t:iscc}
@@ -235,6 +236,14 @@ $q_3$ := $q_1$ \ai{$+$} $q_2$ & sum
 $f_2$ := $f_1$ \ai{$+$} $q$ & sum
 \\
 $f_2$ := $q$ \ai{$+$} $f_1$ & sum
+\\
+$S_3$ := $S_1$ \ai{$+$} $S_2$ & concatenation
+\\
+$S_2$ := $o$ \ai{$+$} $S_1$ &
+concatenation of stringification of $o$ and $S_1$
+\\
+$S_2$ := $S_1$ \ai{$+$} $o$ &
+concatenation of $S_1$ and stringification of $o$
 \\
 $s_3$ := $s_1$ \ai{$-$} $s_2$ & set difference
 \\
