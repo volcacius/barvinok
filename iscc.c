@@ -634,7 +634,8 @@ static struct isl_obj stored_obj(struct isl_ctx *ctx,
 		struct isl_named_obj *named;
 		named = entry->data;
 		obj = named->obj;
-	}
+	} else
+		fprintf(stderr, "unknown identifier '%s'\n", name);
 
 	free(name);
 	obj.v = obj.type->copy(obj.v);
