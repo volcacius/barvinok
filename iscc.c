@@ -19,6 +19,7 @@ static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
 static enum isl_token_type read_op;
+static enum isl_token_type source_op;
 static enum isl_token_type vertices_op;
 
 struct isl_arg_choice iscc_format[] = {
@@ -1305,6 +1306,9 @@ error:
 	return obj;
 }
 
+static __isl_give isl_printer *source_file(struct isl_stream *s,
+	struct isl_hash_table *table, __isl_take isl_printer *p);
+
 static __isl_give isl_printer *read_line(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p)
 {
@@ -1317,6 +1321,9 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		return NULL;
 	if (isl_stream_is_empty(s))
 		return p;
+
+	if (isl_stream_eat_if_available(s, source_op))
+		return source_file(s, table, p);
 
 	assign = is_assign(s);
 	if (assign) {
@@ -1366,6 +1373,8 @@ static void register_named_ops(struct isl_stream *s)
 
 	read_op = isl_stream_register_keyword(s, "read");
 	assert(read_op != ISL_TOKEN_ERROR);
+	source_op = isl_stream_register_keyword(s, "source");
+	assert(source_op != ISL_TOKEN_ERROR);
 	vertices_op = isl_stream_register_keyword(s, "vertices");
 	assert(vertices_op != ISL_TOKEN_ERROR);
 
@@ -1384,6 +1393,43 @@ static void register_named_ops(struct isl_stream *s)
 							named_bin_ops[i].name);
 		assert(named_bin_ops[i].op.op != ISL_TOKEN_ERROR);
 	}
+}
+
+static __isl_give isl_printer *source_file(struct isl_stream *s,
+	struct isl_hash_table *table, __isl_take isl_printer *p)
+{
+	struct isl_token *tok;
+	struct isl_stream *s_file;
+	FILE *file;
+
+	tok = isl_stream_next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_STRING) {
+		isl_stream_error(s, tok, "expecting filename");
+		isl_token_free(tok);
+		return p;
+	}
+
+	file = fopen(tok->u.s, "r");
+	isl_token_free(tok);
+	isl_assert(s->ctx, file, return p);
+
+	s_file = isl_stream_new_file(s->ctx, file);
+	if (!s_file) {
+		fclose(file);
+		return p;
+	}
+
+	register_named_ops(s_file);
+
+	while (!s_file->eof)
+		p = read_line(s_file, table, p);
+
+	isl_stream_free(s_file);
+	fclose(file);
+
+	isl_stream_eat(s, ';');
+
+	return p;
 }
 
 int main(int argc, char **argv)
