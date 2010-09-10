@@ -1,3 +1,12 @@
+version: 0.32
+date: Fri Sep 10 14:58:48 CEST 2010
+changes:
+    - support named and nested spaces
+    - support union sets and maps
+    - add isl_map_apply_pw_qpolynomial
+    - use union sets and maps in iscc
+    - support codegen operation in iscc if CLooG is available
+---
 version: 0.31
 date: Tue Jun 29 13:18:52 CEST 2010
 changes:
