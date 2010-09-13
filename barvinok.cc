@@ -1555,7 +1555,7 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	dim = isl_dim_domain(dim);
 
 	P = isl_basic_map_to_polylib(bmap);
-	E = barvinok_enumerate_with_options(P, U, options);
+	E = enumerate(P, U, options);
 
 	pwqp = isl_pw_qpolynomial_from_evalue(dim, E);
 	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
@@ -1573,10 +1573,48 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	return 0;
 }
 
+static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
+	barvinok_options *options)
+{
+	isl_ctx *ctx;
+	isl_dim *dim;
+	isl_set *set;
+	isl_qpolynomial *qp;
+	isl_pw_qpolynomial *pwqp;
+	int summation = options->summation;
+
+	if (!map)
+		return NULL;
+
+	ctx = isl_map_get_ctx(map);
+
+	options->summation = BV_SUM_BERNOULLI;
+
+	set = isl_map_wrap(map);
+	dim = isl_set_get_dim(set);
+	qp = isl_qpolynomial_rat_cst(dim, ctx->one, ctx->one);
+
+	pwqp = isl_pw_qpolynomial_alloc(set, qp);
+	pwqp = isl_pw_qpolynomial_sum(pwqp);
+
+	options->summation = summation;
+
+	return pwqp;
+}
+
 __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 {
+	isl_ctx *ctx;
 	isl_dim *dim;
 	isl_pw_qpolynomial *sum;
+	barvinok_options *options;
+
+	ctx = isl_map_get_ctx(map);
+	options = isl_ctx_peek_barvinok_options(ctx);
+	if (options &&
+	    (options->approx->method == BV_APPROX_BERNOULLI ||
+	     options->summation == BV_SUM_BERNOULLI))
+		return card_as_sum(map, options);
 
 	dim = isl_map_get_dim(map);
 	dim = isl_dim_domain(dim);
