@@ -7,7 +7,7 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
-#include <isl_map_polylib.h>
+#include <isl_set_polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/evalue.h>
 #include "config.h"
@@ -1524,26 +1524,51 @@ evalue* barvinok_enumerate_union(Polyhedron *D, Polyhedron* C, unsigned MaxRays)
     return EP;
 }
 
-static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
+static __isl_give isl_pw_qpolynomial *basic_set_card(
+	__isl_take isl_basic_set *bset)
 {
 	isl_ctx *ctx;
-	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **)user;
+	isl_dim *dim;
 	isl_pw_qpolynomial *pwqp;
+	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
+	Polyhedron *U = Universe_Polyhedron(nparam);
 	Polyhedron *P;
 	evalue *E;
 	barvinok_options *options;
 	int options_allocated = 0;
-	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
-	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
-	Polyhedron *U = Universe_Polyhedron(nparam + n_in);
-	isl_dim *dim, *target_dim;
 
-	ctx = isl_basic_map_get_ctx(bmap);
+	ctx = isl_basic_set_get_ctx(bset);
 	options = isl_ctx_peek_barvinok_options(ctx);
 	if (!options) {
 		options = barvinok_options_new_with_defaults();
 		options_allocated = 1;
 	}
+
+	dim = isl_basic_set_get_dim(bset);
+	dim = isl_dim_domain(dim);
+
+	P = isl_basic_set_to_polylib(bset);
+	E = enumerate(P, U, options);
+
+	pwqp = isl_pw_qpolynomial_from_evalue(dim, E);
+	isl_basic_set_free(bset);
+
+	evalue_free(E);
+	Polyhedron_Free(P);
+	Polyhedron_Free(U);
+	if (options_allocated)
+		barvinok_options_free(options);
+
+	return pwqp;
+}
+
+static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
+{
+	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **)user;
+	isl_pw_qpolynomial *pwqp;
+	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
+	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
+	isl_dim *target_dim;
 
 	target_dim = isl_basic_map_get_dim(bmap);
 	target_dim = isl_dim_domain(target_dim);
@@ -1551,24 +1576,12 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	bmap = isl_basic_map_move_dims(bmap, isl_dim_param, nparam,
 					isl_dim_in, 0, n_in);
 
-	dim = isl_basic_map_get_dim(bmap);
-	dim = isl_dim_domain(dim);
+	pwqp = basic_set_card(isl_basic_map_range(bmap));
 
-	P = isl_basic_map_to_polylib(bmap);
-	E = enumerate(P, U, options);
-
-	pwqp = isl_pw_qpolynomial_from_evalue(dim, E);
 	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
 						isl_dim_param, nparam, n_in);
 	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, target_dim);
 	*sum = isl_pw_qpolynomial_add(*sum, pwqp);
-
-	evalue_free(E);
-	Polyhedron_Free(P);
-	Polyhedron_Free(U);
-	if (options_allocated)
-		barvinok_options_free(options);
-	isl_basic_map_free(bmap);
 
 	return 0;
 }
