@@ -1569,6 +1569,7 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
 	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
 	isl_dim *target_dim;
+	isl_basic_set *bset;
 
 	target_dim = isl_basic_map_get_dim(bmap);
 	target_dim = isl_dim_domain(target_dim);
@@ -1576,7 +1577,9 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	bmap = isl_basic_map_move_dims(bmap, isl_dim_param, nparam,
 					isl_dim_in, 0, n_in);
 
-	pwqp = basic_set_card(isl_basic_map_range(bmap));
+	bset = isl_basic_map_range(bmap);
+	bset = isl_basic_set_lift(bset);
+	pwqp = isl_basic_set_multiplicative_call(bset, &basic_set_card);
 
 	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
 						isl_dim_param, nparam, n_in);
