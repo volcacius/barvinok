@@ -20,6 +20,19 @@ Matrix *cdd_Polyhedron_Reduced_Basis(Polyhedron *P,
 }
 #endif
 
+#ifndef HAVE_PIPLIB
+Matrix *pip_Polyhedron_Reduced_Basis(Polyhedron *P,
+				     struct barvinok_options *options)
+{
+    assert(0);
+}
+Matrix *pip_dual_Polyhedron_Reduced_Basis(Polyhedron *P,
+				     struct barvinok_options *options)
+{
+    assert(0);
+}
+#endif
+
 Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 				     struct barvinok_options *options)
 {

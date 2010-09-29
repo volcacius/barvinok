@@ -98,6 +98,10 @@ endif
 if USE_ZSOLVE
     HILBERT_C = hilbert.c
 endif
+if HAVE_PIPLIB
+    BR_PIP = basis_reduction_pip.c basis_reduction_pip_dual.c
+    POLYSIGN_PIP = polysign_pip.c
+endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \
     barvinok/genfun.h \
@@ -105,8 +109,6 @@ libbarvinok_la_SOURCES = \
     barvinok/barvinok.h \
     NTL_QQ.cc \
     basis_reduction.c \
-    basis_reduction_pip.c \
-    basis_reduction_pip_dual.c \
     evalue.c \
     genfun.cc \
     util.c \
@@ -155,8 +157,8 @@ libbarvinok_la_SOURCES = \
     param_util.h \
     $(POLYSIGN_CDD) \
     $(POLYSIGN_GLPK) \
+    $(POLYSIGN_PIP) \
     polysign.c \
-    polysign_pip.c \
     polysign_polylib.c \
     polysign.h \
     power.h \
@@ -186,7 +188,8 @@ libbarvinok_la_SOURCES = \
     barvinok.cc \
     barvinok_e.cc \
     $(BR_CDD) \
-    $(BR_GLPK)
+    $(BR_GLPK) \
+    $(BR_PIP)
 EXTRA_libbarvinok_la_SOURCES = \
     basis_reduction_cdd.cc \
     basis_reduction_glpk.c \

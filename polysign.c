@@ -65,6 +65,21 @@ enum lp_result cddf_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
 }
 #endif
 
+#ifndef HAVE_PIPLIB
+enum lp_result pip_constraints_opt(Matrix *C, Value *obj, Value denom,
+				    enum lp_dir dir, Value *opt)
+{
+    assert(0);
+}
+
+enum lp_result pip_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
+				Value *min, Value *max,
+				struct barvinok_options *options)
+{
+    assert(0);
+}
+#endif
+
 enum order_sign polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {

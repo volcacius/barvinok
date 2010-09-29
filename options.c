@@ -154,8 +154,10 @@ static struct isl_arg_choice gbr[] = {
 #ifdef HAVE_LIBCDDGMP
 	{"cdd",		BV_GBR_CDD},
 #endif
+#ifdef HAVE_PIPLIB
 	{"pip",		BV_GBR_PIP},
 	{"pip-dual",	BV_GBR_PIP_DUAL},
+#endif
 	{"isl",		BV_GBR_ISL},
 	{0}
 };
@@ -164,8 +166,10 @@ static struct isl_arg_choice gbr[] = {
 #define DEFAULT_LP BV_LP_GLPK
 #elif defined HAVE_LIBCDDGMP
 #define DEFAULT_LP BV_LP_CDD
-#else
+#elif defined HAVE_PIPLIB
 #define DEFAULT_LP BV_LP_PIP
+#else
+#define DEFAULT_LP BV_LP_POLYLIB
 #endif
 
 static struct isl_arg_choice lp[] = {
@@ -176,7 +180,9 @@ static struct isl_arg_choice lp[] = {
 	{"cdd",		BV_LP_CDD},
 	{"cddf",	BV_LP_CDDF},
 #endif
+#ifdef HAVE_PIPLIB
 	{"pip",		BV_LP_PIP},
+#endif
 	{"polylib",	BV_LP_POLYLIB},
 	{0}
 };
