@@ -147,14 +147,6 @@ static struct isl_arg_choice specialization[] = {
 	{0}
 };
 
-#ifdef HAVE_LIBGLPK
-#define DEFAULT_GBR BV_GBR_GLPK
-#elif defined HAVE_LIBCDDGMP
-#define DEFAULT_GBR BV_GBR_CDD
-#else
-#define DEFAULT_GBR BV_GBR_PIP
-#endif
-
 static struct isl_arg_choice gbr[] = {
 #ifdef HAVE_LIBGLPK
 	{"glpk",	BV_GBR_GLPK},
@@ -164,6 +156,7 @@ static struct isl_arg_choice gbr[] = {
 #endif
 	{"pip",		BV_GBR_PIP},
 	{"pip-dual",	BV_GBR_PIP_DUAL},
+	{"isl",		BV_GBR_ISL},
 	{0}
 };
 
@@ -233,7 +226,7 @@ ISL_ARG_BOOL(struct barvinok_options, lookup_table, 0, "table", 0, NULL)
 ISL_ARG_USER(struct barvinok_options, count_sample_infinite, &int_init_one, NULL)
 ISL_ARG_USER(struct barvinok_options, try_Delaunay_triangulation, &int_init_zero, NULL)
 ISL_ARG_CHOICE(struct barvinok_options, gbr_lp_solver, 0, "gbr", gbr,
-	DEFAULT_GBR, "lp solver to use for basis reduction")
+	BV_GBR_ISL, "lp solver to use for basis reduction")
 ISL_ARG_CHOICE(struct barvinok_options, lp_solver, 0, "lp", lp,
 	DEFAULT_LP, "lp solver to use")
 ISL_ARG_CHOICE(struct barvinok_options, summation, 0, "summation", summation,
