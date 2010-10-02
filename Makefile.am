@@ -8,6 +8,9 @@ if BUNDLED_ISL
     MAYBE_ISL = isl
     ISL_LA = $(top_builddir)/isl/libisl.la
 endif
+if BUILD_ISL
+    ISL_LA = $(ISL_BUILDDIR)/libisl.la
+endif
 if BUNDLED_ISL_POLYLIB
     MAYBE_ISL_POLYLIB = isl-polylib
     ISL_POLYLIB_LA = $(top_builddir)/isl-polylib/libisl-polylib.la

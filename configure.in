@@ -166,6 +166,7 @@ AX_SUBMODULE(isl,build|bundled|system,bundled)
 
 AC_SUBST(ISL_CFLAGS)
 AC_SUBST(ISL_LIBS)
+AC_SUBST(ISL_BUILDDIR)
 case "$with_isl" in
 bundled)
 	ISL_CFLAGS="-I\$(top_srcdir)/isl/include -I\$(top_builddir)/isl/include"
@@ -173,9 +174,8 @@ bundled)
 	PACKAGE_CFLAGS_ISL='-I${prefix}/include/isl'
 	;;
 build)
-	with_isl_builddir=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
-	ISL_CFLAGS="-I$isl_srcdir/include -I$with_isl_builddir/include"
-	ISL_LIBS="$with_isl_builddir/libisl.la"
+	ISL_BUILDDIR=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
+	ISL_CFLAGS="-I$isl_srcdir/include -I$ISL_BUILDDIR/include"
 	PACKAGE_CFLAGS_ISL='-I${prefix}/include/isl'
 	;;
 system)
@@ -183,6 +183,7 @@ system)
 	PACKAGE_CFLAGS_ISL="$ISL_CFLAGS"
 esac
 AM_CONDITIONAL(BUNDLED_ISL, test $with_isl = bundled)
+AM_CONDITIONAL(BUILD_ISL, test $with_isl = build)
 
 AX_SUBMODULE(isl-polylib,build|bundled|system,bundled)
 
