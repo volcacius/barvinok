@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <isl_set_polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/options.h>
 #include <polylib/ranking.h>
@@ -17,14 +18,25 @@
 
 void manual_count(Polyhedron *P, Value* result)
 {
-    Polyhedron *U = Universe_Polyhedron(0);
-    Enumeration *en = Polyhedron_Enumerate(P,U,1024,NULL);
-    Value *v = compute_poly(en,NULL);
-    value_assign(*result, *v);
-    value_clear(*v);
-    free(v);
-    Enumeration_Free(en);
-    Polyhedron_Free(U);
+	isl_ctx *ctx = isl_ctx_alloc();
+	isl_dim *dim;
+	isl_set *set;
+	isl_int v;
+	int nvar = P->Dimension;
+	int r;
+
+	dim = isl_dim_set_alloc(ctx, 0, nvar);
+	set = isl_set_new_from_polylib(P, dim);
+
+	isl_int_init(v);
+	r = isl_set_count(set, &v);
+	isl_int_get_gmp(v, *result);
+	isl_int_clear(v);
+
+	isl_set_free(set);
+	isl_ctx_free(ctx);
+
+	assert(r >= 0);
 }
 
 #include <barvinok/evalue.h>
