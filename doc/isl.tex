@@ -1,5 +1,9 @@
 \section{\protect\isl/ interface}
 
+\let\llt\prec
+\let\lle\preccurlyeq
+\let\lgt\succ
+
 \subsection{Library}
 
 The \barvinok/ library currently supports only a few
@@ -118,7 +122,7 @@ Syntax & Meaning
 \\
 }
 \tablelasttail{}
-\begin{supertabular}{lp{0.7\textwidth}}
+\begin{supertabular}{p{0.35\textwidth}p{0.6\textwidth}}
 $s_2$ := \ai[\tt]{aff} $s_1$ & affine hull of $s_1$
 \\
 $m_2$ := \ai[\tt]{aff} $m_1$ & affine hull of $m_1$
@@ -229,6 +233,31 @@ wrap the map in a set
 \\
 $m$ := \ai[\tt]{unwrap} $s$ &
 unwrap the map from the set
+\\
+$m_4$ := \ai[\tt]{any} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $m_3$ &
+compute a map from any element $x$ in the domain of $m_1$
+to any element $y$ in the domain of $m_2$
+such that their images $m_1(x)$ and $m_2(y)$ overlap
+and such that $m_3(x) \llt m_3(y)$.
+\\
+$l$ := \ai[\tt]{last} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $m_3$ &
+compute a map that contains for any element $y$ in the domain of $m_2$
+a mapping from the lexicographically last element $x$ in the domain of $m_1$
+(according to the schedule $m_3$) to $y$
+such that $m_1(x)$ and $m_2(y)$ overlap and such that $m_3(x) \llt m_3(y)$.
+Return a list containing this map and the set of elements in the domain of
+$m_2$ for which there is no corresponding element in the domain of $m_1$.
+\\
+$m_5$ := \ai[\tt]{any} $m_1$ \ai[\tt]{last} $m_2$ \ai[\tt]{before} $m_3$
+\ai[\tt]{under} $m_4$ &
+compute a map that contains for any element $y$ in the domain of $m_3$
+a mapping from the lexicographically last element $x$ in the domain of $m_2$
+(according to the schedule $m_4$) to $y$
+such that $m_2(x)$ and $m_3(y)$ overlap and such that $m_4(x) \llt m_4(y)$
+as well as from any element $z$ in the domain of $m_1$ such that
+$m_1(z)$ and $m_3(y)$ overlap, $m_4(z) \llt m_4(y)$ and such that there
+is no $x$ in the domain of $m_2$ with
+$m_2(x) \cap m_3(y) \ne \emptyset$ and $m_4(z) \llt m_4(x) \llt m_4(y)$.
 \\
 $s_3$ := $s_1$ \ai{$+$} $s_2$ & union
 \\
