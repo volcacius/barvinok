@@ -18,9 +18,9 @@ static int isl_bool_false = 0;
 static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
-static enum isl_token_type read_op;
-static enum isl_token_type source_op;
-static enum isl_token_type vertices_op;
+enum iscc_op { ISCC_READ, ISCC_SOURCE, ISCC_VERTICES, ISCC_N_OP };
+static const char *op_name[ISCC_N_OP] = { "read", "source", "vertices" };
+static enum isl_token_type iscc_op[ISCC_N_OP];
 
 struct isl_arg_choice iscc_format[] = {
 	{"isl",		ISL_FORMAT_ISL},
@@ -1230,9 +1230,9 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		if (op)
 			return read_un_op_expr(s, table, op);
 
-		if (isl_stream_eat_if_available(s, read_op))
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_READ]))
 			return read_from_file(s);
-		if (isl_stream_eat_if_available(s, vertices_op))
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_VERTICES]))
 			return vertices(s, table);
 
 		name = isl_stream_read_ident_if_available(s);
@@ -1346,7 +1346,7 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 	if (isl_stream_is_empty(s))
 		return p;
 
-	if (isl_stream_eat_if_available(s, source_op))
+	if (isl_stream_eat_if_available(s, iscc_op[ISCC_SOURCE]))
 		return source_file(s, table, p);
 
 	assign = is_assign(s);
@@ -1395,12 +1395,10 @@ static void register_named_ops(struct isl_stream *s)
 {
 	int i;
 
-	read_op = isl_stream_register_keyword(s, "read");
-	assert(read_op != ISL_TOKEN_ERROR);
-	source_op = isl_stream_register_keyword(s, "source");
-	assert(source_op != ISL_TOKEN_ERROR);
-	vertices_op = isl_stream_register_keyword(s, "vertices");
-	assert(vertices_op != ISL_TOKEN_ERROR);
+	for (i = 0; i < ISCC_N_OP; ++i) {
+		iscc_op[i] = isl_stream_register_keyword(s, op_name[i]);
+		assert(iscc_op[i] != ISL_TOKEN_ERROR);
+	}
 
 	for (i = 0; ; ++i) {
 		if (!named_un_ops[i].name)
