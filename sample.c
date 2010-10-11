@@ -293,7 +293,7 @@ static Vector *isl_Polyhedron_Sample(Polyhedron *P,
 	int nvar = P->Dimension;
 	isl_basic_set *bset;
 	isl_point *pnt;
-	Vector *sample;
+	Vector *sample = NULL;
 
 	dim = isl_dim_set_alloc(ctx, 0, nvar);
 	bset = isl_basic_set_new_from_polylib(P, dim);
