@@ -1025,6 +1025,43 @@ error2:
 	return obj;
 }
 
+static struct isl_obj apply_fun(struct isl_stream *s,
+	struct isl_obj obj, struct isl_hash_table *table)
+{
+	struct isl_obj arg;
+
+	arg = read_expr(s, table);
+	isl_assert(s->ctx, is_subtype(arg, isl_obj_union_map), goto error);
+
+	if (arg.type == isl_obj_list) {
+		struct isl_list *list = arg.v;
+		if (list->n == 2 && list->obj[1].type == isl_obj_bool)
+			arg = obj_at(arg, 0);
+	}
+	if (arg.type == isl_obj_map)
+		arg = convert(s->ctx, arg, isl_obj_union_map);
+	if (obj.type == isl_obj_union_pw_qpolynomial) {
+		obj.v = isl_union_map_apply_union_pw_qpolynomial(arg.v, obj.v);
+	} else {
+		obj.type = isl_obj_list;
+		obj.v = union_map_apply_union_pw_qpolynomial_fold(arg.v, obj.v);
+	}
+	if (!obj.v)
+		goto error2;
+
+	if (isl_stream_eat(s, ')'))
+		goto error2;
+
+	return obj;
+error:
+	free_obj(arg);
+error2:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 struct add_vertex_data {
 	struct isl_list *list;
 	int i;
@@ -1438,6 +1475,14 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		 isl_stream_eat_if_available(s, '(')) {
 		obj = convert(s->ctx, obj, isl_obj_union_map);
 		obj = apply(s, obj.v, table);
+	} else if (is_subtype(obj, isl_obj_union_pw_qpolynomial) &&
+		   isl_stream_eat_if_available(s, '(')) {
+		obj = convert(s->ctx, obj, isl_obj_union_pw_qpolynomial);
+		obj = apply_fun(s, obj, table);
+	} else if (is_subtype(obj, isl_obj_union_pw_qpolynomial_fold) &&
+		   isl_stream_eat_if_available(s, '(')) {
+		obj = convert(s->ctx, obj, isl_obj_union_pw_qpolynomial_fold);
+		obj = apply_fun(s, obj, table);
 	}
 
 	return obj;
