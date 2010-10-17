@@ -302,7 +302,11 @@ $s_2$ := $m$($s_1$) & apply map $m$ to set $s_1$
 \\
 $m_3$ := $m_1$ \ai[\tt]{.} $m_2$ & join of $m_1$ and $m_2$
 \\
+$m_3$ := $m_1$ \ai[\tt]{before} $m_2$ & join of $m_1$ and $m_2$
+\\
 $m_3$ := $m_2$($m_1)$ & join of $m_1$ and $m_2$
+\\
+$m_3$ := $m_2$ \ai[\tt]{after} $m_1$ & join of $m_1$ and $m_2$
 \\
 $f_3$ := $f_1$ \ai[\tt]{.} $f_2$ & join of $f_1$ and $f_2$, combining
 the lists of quasipolynomials over shared domains
@@ -311,13 +315,21 @@ $q_2$ := $m$ \ai[\tt]{.} $q_1$ & join of $m$ and $q_1$, taking the sum
 over all elements in the intersection of the range of $m$ and the domain
 of $q_1$
 \\
+$q_2$ := $m$ \ai[\tt]{before} $q_1$ & $q_2$ := $m$ \ai[\tt]{.} $q_1$
+\\
 $q_2$ := $q_1(m)$ & $q_2$ := $m$ \ai[\tt]{.} $q_1$
+\\
+$q_2$ := $q_1$ \ai[\tt]{after} $m$ & $q_2$ := $m$ \ai[\tt]{.} $q_1$
 \\
 $f_2$ := $m$ \ai[\tt]{.} $f_1$ & join of $m$ and $f_1$, computing a bound
 over all elements in the intersection of the range of $m$ and the domain
 of $f_1$
 \\
+$f_2$ := $m$ \ai[\tt]{before} $f_1$ & $f_2$ := $m$ \ai[\tt]{.} $f_1$
+\\
 $f_2$ := $f_1(m)$ & $f_2$ := $m$ \ai[\tt]{.} $f_1$
+\\
+$f_2$ := $f_1$ \ai[\tt]{after} $m$ & $f_2$ := $m$ \ai[\tt]{.} $f_1$
 \\
 $m$ := $s_1$ \ai[\tt]{->} $s_2$ & universal map with domain $s_1$
 and range $s_2$

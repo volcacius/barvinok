@@ -411,7 +411,46 @@ struct isc_bin_op bin_ops[] = {
 		(isc_bin_op_fn) &isl_str_concat },
 	0
 };
+
+static __isl_give isl_union_map *map_after_map(__isl_take isl_union_map *umap1,
+	__isl_take isl_union_map *umap2)
+{
+	return isl_union_map_apply_range(umap2, umap1);
+}
+
+static __isl_give isl_union_pw_qpolynomial *qpolynomial_after_map(
+	__isl_take isl_union_pw_qpolynomial *upwqp,
+	__isl_take isl_union_map *umap)
+{
+	return isl_union_map_apply_union_pw_qpolynomial(umap, upwqp);
+}
+
+static __isl_give struct isl_list *qpolynomial_fold_after_map(
+	__isl_take isl_union_pw_qpolynomial_fold *upwf,
+	__isl_take isl_union_map *umap)
+{
+	return union_map_apply_union_pw_qpolynomial_fold(umap, upwf);
+}
+
 struct isc_named_bin_op named_bin_ops[] = {
+	{ "after",	{ -1, isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &map_after_map } },
+	{ "after",	{ -1, isl_obj_union_pw_qpolynomial,
+		isl_obj_union_map, isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &qpolynomial_after_map } },
+	{ "after",	{ -1, isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_map, isl_obj_list,
+		(isc_bin_op_fn) &qpolynomial_fold_after_map } },
+	{ "before",	{ -1, isl_obj_union_map,	isl_obj_union_map,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_apply_range } },
+	{ "before",	{ -1, isl_obj_union_map,
+		isl_obj_union_pw_qpolynomial, isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &isl_union_map_apply_union_pw_qpolynomial } },
+	{ "before",	{ -1, isl_obj_union_map,
+		isl_obj_union_pw_qpolynomial_fold, isl_obj_list,
+		(isc_bin_op_fn) &union_map_apply_union_pw_qpolynomial_fold } },
 	{ "cross",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_set,
 		(isc_bin_op_fn) &isl_union_set_product } },
@@ -1166,7 +1205,7 @@ static __isl_give isl_union_map *read_map(struct isl_stream *s,
 {
 	struct isl_obj obj;
 
-	obj = read_expr(s, table);
+	obj = read_obj(s, table);
 	obj = convert(s->ctx, obj, isl_obj_union_map);
 	isl_assert(s->ctx, obj.type == isl_obj_union_map, goto error);
 	return obj.v;
