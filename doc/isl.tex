@@ -63,13 +63,143 @@ as a function of an element in the domain of the map.
 \subsection{Calculator}
 
 The \ai[\tt]{iscc} calculator offers an interface to some
-of the functionality provided by the \isl/ and \barvinok/
+of the functionality provided by the \isl/, \cloog/ and \barvinok/
 libraries.
+The language used by \ai[\tt]{iscc} is extremely simple.  The calculator
+supports operations on constants and dynamically typed variables and
+assignments (\ai[\tt]{:=}) to those variables.  If the result of an expression
+is not used inside another expression and not assigned to a variable,
+then this result is printed on the screen.  The operators are overloaded
+based on the types of the arguments, which may be sets, relations,
+piecewise quasipolynomials, piecewise quasipolynomial folds, lists,
+strings or booleans.
 The supported operations are shown in \autoref{t:iscc}.
 Note that when an operation requires an argument of a certain
 type, a binary list with the first element of the required type
 may also be used instead.
-Here are some examples:
+
+\subsubsection{Objects and Basic Operations}
+
+A set contains integer tuples that satisfy some affine constraints
+in disjunctive normal form (DNF).  The description may involve (free)
+parameters and existentially quantified variables.
+For example, the set
+\begin{verbatim}
+[n] -> {[i] : exists a : i = 2a and 0 <= i <= n; D[i,j] : i,j >= 0}
+\end{verbatim}
+contains all the even integer numbers between 0 and the value of
+the parameter $n$, as well
+as the positive orthant of a 2-dimensional \verb!D! space.
+The optional parameters should
+be declared by placing them in a comma delimited list inside \verb![]!
+(followed by an ``\verb!->!'') in front of the main set description.
+The parameters are global and are identified by their names,
+so the order inside the list is arbitrary.
+The main set description consists of a \verb!{}!-pair containing
+a semicolon delimited list of
+subsets from a given space.  A space is identified by its optional
+name (\verb!D! in the example) and its dimension (the number
+of coordinates in the \verb![]! enclosed tuple following the optional name).
+The names of the coordinates are purely local within the set description.
+The space specification is separated by a colon from the actual constraints in DNF
+describing the elements from that space.
+The disjuncts are delimited by \verb!or!, while the conjuncts are delimited
+by \verb!and!.  Each disjunct may be preceded by \verb!exists!
+followed by a list of existentially quantified variables and a colon.
+
+Maps are binary relations on pairs of spaces and are defined in a similar
+way, except that the single space is replaced by a pair of spaces separated
+by \verb!->!.  Maps need not be single-valued.
+Each space may contain a nested pair of spaces.  Such nested spaces
+are extremely useful in more advanced applications.
+As an example, suppose that during equivalence checking
+\shortcite{Verdoolaege2009equivalence}
+of two programs the iterations of \verb!S1! in one program are supposed to
+produce the same results as the same iterations of \verb!SA! in the other program,
+which may be described using the following map
+\begin{verbatim}
+[n] -> { S1[i] -> SA[i] : 0 <= i <= n }
+\end{verbatim}
+If the iterations of \verb!S1! depend on the same iterations
+of \verb!S2!, i.e., \verb!{S1[i]->S2[i]}!, while those of \verb!SA!
+depend on the next iteration of \verb!B!, i.e., \verb!{SA[i]->SB[i+1]}!,
+then we can apply the cross product of these two dependence maps, i.e.,
+\begin{verbatim}
+{ [S1[i] -> SA[i']] -> [S2[i] -> SB[1+i']] }
+\end{verbatim}
+to the original map to find
+out which iterations of \verb!S2! should correspond to which
+iterations of \verb!SB!.
+
+Basic operations on sets and maps include intersection (\ai[\tt]{*}),
+union (\ai[\tt]{+}), difference (\ai[\tt]{-}), cross product (\ai[\tt]{cross}),
+sampling (\ai[\tt]{sample}), affine hull (\ai[\tt]{aff}),
+lexicographic optimization (\ai[\tt]{lexmin} or \ai[\tt]{lexmax}),
+subset (\ai[\tt]{<=}) and equality (\ai[\tt]{=}) tests,
+code generation (\ai[\tt]{codegen})
+and the cardinality (\ai[\tt]{card}).
+Additional operations on maps include computing domain (\ai[\tt]{dom})
+and range (\ai[\tt]{ran}), differences between image and domain (\ai[\tt]{deltas}),
+join (\ai[\tt]{.}), inverse (\ai[\tt]{\^{}-1}) and transitive closure (\ai[\tt]{\^{}+}).
+The latter may result in an overapproximation.
+
+The \ai[\tt]{card} operation computes the number of elements in a set
+or the number of elements in the image of a domain element of a map.
+The operation is performed exactly and completely symbolically and
+the result is a piecewise quasipolynomial, i.e., a subdivision of one
+or more spaces, with a quasipolynomial associated to each cell in the subdivision.
+As a trivial example, the result of
+\begin{verbatim}
+card { A[i] -> B[j] : 0 <= j <= i }
+\end{verbatim}
+is \verb!{ A[i] -> (1+i) : i >= 0 }!.
+Operations on piecewise quasipolynomials include sum (\ai[\tt]{+})
+and difference (\ai[\tt]{-}) and the computation of an upper bound over the domain.
+If the domain contains a pair of nested spaces, then the upper bound is computed over
+the nested range.  As another trivial example, the result of
+\begin{verbatim}
+ub{ [[i] -> [j]] -> j^2 : -i <= j <= i }
+\end{verbatim}
+is
+\verb!({ [i] -> max(i^2) : i >= 0 }, True)!.
+The first element in this list is the actual bound in the form
+of a piecewise quasipolynomial fold,
+i.e., a maximum of quasipolynomials defined over cells.
+The second indicates whether the bound is tight, i.e., whether
+a maximum has been computed.
+
+\subsubsection{Advanced Operations}
+
+While the basic {\tt card} operation simply counts the number of elements
+in an affine set, it is also possible to assign a weight to each element
+of the set and to compute the sum of those weights over all the points in the set.
+The syntax for this weighted counting is to compute the {\tt sum} of
+a piecewise quasipolynomial over its domain.  As in the case of the {\tt ub}
+operator, if the domain contains a pair of nested space, the sum is computed
+over the range.  As an example, the result
+of
+\begin{verbatim}
+sum{ [[i] -> [j]] -> i*j : 0 <= j <= i }
+\end{verbatim}
+is
+\verb|{ [i] -> (1/2*i^2+1/2*i^3) : i >= 0 }|.
+
+After the computation of some sum or bound, the result may have to
+be reformulated in terms of other variables.  For example, during
+inter procedural analysis, a result computed in terms of the formal
+parameters may have to be reformulated in terms of the actual parameters.
+{\tt iscc} therefore allows maps and
+piecewise quasipolynomials or folds to be composed.
+If the map is multi-valued, then the composition maps each domain element
+to the sum or upper bound of the values at its image elements.
+
+Finally, because of its high-level representation, {\tt iscc} can
+provide a dependence analysis operation taking only three maps as input,
+the sink accesses, the potential source accesses and a schedule.
+The result is a single dependence map.
+
+
+\subsubsection{More Examples}
 \begin{verbatim}
 P := [n, m] -> { [i,j] : 0 <= i <= n and i <= j <= m };
 card P;
@@ -98,7 +228,48 @@ codegen [N] -> { A[i] -> [i,0] : 0 <= i <= N; B[i] -> [i,1] : 1 <= i <= N };
 { [m] -> [c] : 1 <= c <= m } . { [k] -> max((3 * k + k^2)) : k >= 1 };
 \end{verbatim}
 
-\bottomcaption{{\tt iscc} operations.  The variables
+\subsubsection{Comparison to other Interactive Polyhedral Tools}
+
+Two related interactive polyhedral tools are
+the Omega calculator \shortcite{Omega_calc}
+and {\tt SPPoC} \shortcite{Boulet2001SPPoC}.
+The syntax of {\tt iscc} was very much inspired
+by that of the Omega calculator.  However, the Omega
+calculator only knows sets and maps.  In particular,
+it does not perform any form of counting.  An earlier version
+of \barvinok/ came with a modified version of
+the Omega calculator that introduced an operation
+for counting the number of elements in a set, but it
+would simply print the result and not allow any further
+manipulations.
+{\tt SPPoC} does support counting, but only the basic
+operation of counting the elements in a set.
+In particular, it does not support weighted counting,
+nor the computation of upper bounds.
+It also only supports (single-valued) functions
+and not generic relations like the Omega calculator and {\tt iscc}.
+Internally, {\tt SPPoC} uses {\tt PolyLib}, {\tt PipLib} and {\tt omega}
+to perform
+its operations.  Although the first two of these libraries may have been
+state-of-the-art at the time {\tt SPPoC} was created, they are
+no longer actively maintained and have been largely
+superseded by more recent libraries.
+In particular, {\tt PipLib} effectively only supports a single
+operation, which is now also available in both {\tt isl} and {\tt PPL}.
+The operations on rational polyhedra in {\tt PolyLib} are also
+available in {\tt PPL}, usually through a cleaner interface and
+with a more efficient implementation.  As to counting the elements
+in a parametric polytope, Barvinok's algorithm,
+implemented in the {\tt barvinok} library, is usually much faster
+than the algorithm implemented in {\tt PolyLib}
+\shortcite{Verdoolaege2007parametric}.
+Furthermore,
+the ability to work with named and nested spaces and the ability
+of sets and maps to contain (pairs of) elements from different spaces
+are not available in the Omega calculator and {\tt SPPoC}.
+
+\newpage
+\tablecaption{{\tt iscc} operations.  The variables
 have the following types,
 $s$: set,
 $m$: map,
