@@ -28,6 +28,7 @@ struct isl_arg_choice iscc_format[] = {
 	{"isl",		ISL_FORMAT_ISL},
 	{"omega",	ISL_FORMAT_OMEGA},
 	{"polylib",	ISL_FORMAT_POLYLIB},
+	{"ext-polylib",	ISL_FORMAT_EXT_POLYLIB},
 	{"latex",	ISL_FORMAT_LATEX},
 	{"C",		ISL_FORMAT_C},
 	{0}
