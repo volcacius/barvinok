@@ -580,6 +580,8 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_pw_qpolynomial_fold_domain } },
 	{"ran",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_range } },
+	{"identity",	{ -1,	isl_obj_union_set,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_set_identity } },
 	{"lexmin",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
 		(isc_un_op_fn) &isl_union_map_lexmin } },
 	{"lexmax",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
