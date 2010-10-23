@@ -143,7 +143,8 @@ static int verify_isl(Polyhedron *P, Polyhedron *C,
 	dim = isl_dim_drop(dim, isl_dim_set, 0, P->Dimension - C->Dimension);
 	set_C = isl_set_new_from_polylib(C, dim);
 	set_C = isl_set_intersect(isl_set_copy(set), set_C);
-	set_C = isl_set_remove(set_C, isl_dim_set, 0, P->Dimension - C->Dimension);
+	set_C = isl_set_remove_dims(set_C,
+				isl_dim_set, 0, P->Dimension - C->Dimension);
 
 	set_C = verify_context_set_bounds(set_C, options);
 

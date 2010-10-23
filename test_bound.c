@@ -231,7 +231,7 @@ static void test(evalue *EP, unsigned nvar,
 	vpb.pwqp = isl_pw_qpolynomial_move_dims(vpb.pwqp, isl_dim_set, 0,
 						isl_dim_param, 0, nvar);
 	context = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vpb.pwqp));
-	context = isl_set_remove(context, isl_dim_set, 0, nvar);
+	context = isl_set_remove_dims(context, isl_dim_set, 0, nvar);
 	context = verify_context_set_bounds(context, options);
 
 	r = verify_point_data_init(&vpb.vpd, context);
