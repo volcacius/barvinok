@@ -1,4 +1,4 @@
-#include <isl_map_polylib.h>
+#include <isl_set_polylib.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "bernoulli.h"
@@ -685,11 +685,11 @@ evalue *barvinok_summate(evalue *e, int nvar, struct barvinok_options *options)
 
 static __isl_give isl_pw_qpolynomial *add_unbounded_guarded_qp(
 	__isl_take isl_pw_qpolynomial *sum,
-	__isl_take isl_basic_map *bmap, __isl_take isl_qpolynomial *qp)
+	__isl_take isl_basic_set *bset, __isl_take isl_qpolynomial *qp)
 {
 	int zero;
 
-	if (!sum || !bmap || !qp)
+	if (!sum || !bset || !qp)
 		goto error;
 
 	zero = isl_qpolynomial_is_zero(qp);
@@ -698,22 +698,22 @@ static __isl_give isl_pw_qpolynomial *add_unbounded_guarded_qp(
 
 	if (!zero) {
 		isl_dim *dim;
-		isl_map *map;
-		isl_set *dom;
+		isl_set *set;
 		isl_pw_qpolynomial *pwqp;
 
-		map = isl_map_from_basic_map(isl_basic_map_copy(bmap));
-		dom = isl_map_domain(map);
-		dim = isl_set_get_dim(dom);
-		pwqp = isl_pw_qpolynomial_alloc(dom, isl_qpolynomial_nan(dim));
+		dim = isl_pw_qpolynomial_get_dim(sum);
+		set = isl_set_from_basic_set(isl_basic_set_copy(bset));
+		set = isl_map_domain(isl_map_from_range(set));
+		set = isl_set_reset_dim(set, isl_dim_copy(dim));
+		pwqp = isl_pw_qpolynomial_alloc(set, isl_qpolynomial_nan(dim));
 		sum = isl_pw_qpolynomial_add(sum, pwqp);
 	}
 
-	isl_basic_map_free(bmap);
+	isl_basic_set_free(bset);
 	isl_qpolynomial_free(qp);
 	return sum;
 error:
-	isl_basic_map_free(bmap);
+	isl_basic_set_free(bset);
 	isl_qpolynomial_free(qp);
 	isl_pw_qpolynomial_free(sum);
 	return NULL;
@@ -723,43 +723,41 @@ struct barvinok_summate_data {
 	isl_dim *dim;
 	__isl_take isl_qpolynomial *qp;
 	isl_pw_qpolynomial *sum;
+	int n_in;
 	int nvar;
+	int wrapping;
 	evalue *e;
 	struct evalue_section_array sections;
 	struct barvinok_options *options;
 };
 
-static int add_basic_guarded_qp(__isl_take isl_basic_map *bmap, void *user)
+static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 {
 	struct barvinok_summate_data *data = user;
 	Polyhedron *P;
 	evalue *tmp;
 	isl_pw_qpolynomial *pwqp;
 	int bounded;
-	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
-	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
+	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
 	isl_dim *dim;
 
-	if (!bmap)
+	if (!bset)
 		return -1;
 
-	bounded = isl_basic_map_image_is_bounded(bmap);
+	bounded = isl_basic_set_is_bounded(bset);
 	if (bounded < 0)
 		goto error;
 
 	if (!bounded) {
-		data->sum = add_unbounded_guarded_qp(data->sum, bmap,
+		data->sum = add_unbounded_guarded_qp(data->sum, bset,
 					isl_qpolynomial_copy(data->qp));
 		return 0;
 	}
 
-	bmap = isl_basic_map_move_dims(bmap, isl_dim_param, nparam,
-					isl_dim_in, 0, n_in);
+	dim = isl_basic_set_get_dim(bset);
+	dim = isl_dim_domain(isl_dim_from_range(dim));
 
-	dim = isl_basic_map_get_dim(bmap);
-	dim = isl_dim_domain(dim);
-
-	P = isl_basic_map_to_polylib(bmap);
+	P = isl_basic_set_to_polylib(bset);
 	tmp = barvinok_sum_over_polytope(P, data->e, data->nvar,
 					 &data->sections, data->options);
 	Polyhedron_Free(P);
@@ -769,11 +767,11 @@ static int add_basic_guarded_qp(__isl_take isl_basic_map *bmap, void *user)
 	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, isl_dim_copy(data->dim));
 	data->sum = isl_pw_qpolynomial_add(data->sum, pwqp);
 
-	isl_basic_map_free(bmap);
+	isl_basic_set_free(bset);
 
 	return 0;
 error:
-	isl_basic_map_free(bmap);
+	isl_basic_set_free(bset);
 	return -1;
 }
 
@@ -781,118 +779,106 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 	void *user)
 {
 	int r;
-	struct barvinok_summate_data data;
-	isl_ctx *ctx;
-	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **) user;
-	isl_map *map = NULL;
-	int wrapping = 0;
-	int options_allocated = 0;
-
-	data.sum = *sum;
-	data.dim = NULL;
-	data.options = NULL;
+	struct barvinok_summate_data *data = user;
 
 	if (!set || !qp)
 		goto error;
 
-	ctx = isl_set_get_ctx(set);
-	data.qp = qp;
-	data.options = isl_ctx_peek_barvinok_options(ctx);
-	if (!data.options) {
-		data.options = barvinok_options_new_with_defaults();
-		options_allocated = 1;
-	}
+	data->qp = qp;
 
-	wrapping = isl_set_is_wrapping(set);
-	if (wrapping)
-		map = isl_set_unwrap(isl_set_copy(set));
-	else
-		map = isl_map_from_range(isl_set_copy(set));
-
-	if (wrapping) {
-		unsigned nparam = isl_map_dim(map, isl_dim_param);
-		unsigned n_in = isl_map_dim(map, isl_dim_in);
+	if (data->wrapping) {
+		unsigned nparam = isl_set_dim(set, isl_dim_param);
 		isl_qpolynomial *qp2 = isl_qpolynomial_copy(qp);
+		set = isl_set_move_dims(set, isl_dim_param, nparam,
+					isl_dim_set, 0, data->n_in);
 		qp2 = isl_qpolynomial_move_dims(qp2, isl_dim_param, nparam,
-						isl_dim_set, 0, n_in);
-		data.e = isl_qpolynomial_to_evalue(qp2);
+						isl_dim_set, 0, data->n_in);
+		data->e = isl_qpolynomial_to_evalue(qp2);
 		isl_qpolynomial_free(qp2);
 	} else
-		data.e = isl_qpolynomial_to_evalue(qp);
-	if (!data.e)
+		data->e = isl_qpolynomial_to_evalue(qp);
+	if (!data->e)
 		goto error;
 
-	data.dim = isl_map_get_dim(map);
-	data.nvar = isl_dim_size(data.dim, isl_dim_out);
-	data.dim = isl_dim_domain(data.dim);
+	evalue_section_array_init(&data->sections);
 
-	evalue_section_array_init(&data.sections);
+	set = isl_set_make_disjoint(set);
+	set = isl_set_compute_divs(set);
 
-	map = isl_map_make_disjoint(map);
-	map = isl_map_compute_divs(map);
+	r = isl_set_foreach_basic_set(set, &add_basic_guarded_qp, data);
 
-	r = isl_map_foreach_basic_map(map, &add_basic_guarded_qp, &data);
+	free(data->sections.s);
 
-	free(data.sections.s);
+	evalue_free(data->e);
 
-	isl_dim_free(data.dim);
-
-	evalue_free(data.e);
-
-	isl_map_free(map);
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
-
-	if (options_allocated)
-		barvinok_options_free(data.options);
-
-	*sum = data.sum;
 
 	return r;
 error:
-	isl_map_free(map);
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
-	if (options_allocated)
-		barvinok_options_free(data.options);
 	return -1;
 }
 
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	__isl_take isl_pw_qpolynomial *pwqp)
 {
-	int nvar;
-	isl_dim *dim = NULL;
-	isl_pw_qpolynomial *sum;
+	isl_ctx *ctx;
+	struct barvinok_summate_data data;
+	int options_allocated = 0;
+
+	data.dim = NULL;
+	data.options = NULL;
 
 	if (!pwqp)
 		return NULL;
 
-	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
-	if (nvar == 0)
+	data.nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
+	if (data.nvar == 0)
 		return isl_pw_qpolynomial_drop_dims(pwqp, isl_dim_set, 0, 0);
 
-	dim = isl_pw_qpolynomial_get_dim(pwqp);
-	if (isl_dim_is_wrapping(dim)) {
-		dim = isl_dim_unwrap(dim);
-		nvar = isl_dim_size(dim, isl_dim_out);
-		dim = isl_dim_domain(dim);
-		if (nvar == 0)
-			return isl_pw_qpolynomial_reset_dim(pwqp, dim);
-	} else
-		dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+	data.dim = isl_pw_qpolynomial_get_dim(pwqp);
+	data.wrapping = isl_dim_is_wrapping(data.dim);
+	if (data.wrapping) {
+		data.dim = isl_dim_unwrap(data.dim);
+		data.n_in = isl_dim_size(data.dim, isl_dim_in);
+		data.nvar = isl_dim_size(data.dim, isl_dim_out);
+		data.dim = isl_dim_domain(data.dim);
+		if (data.nvar == 0)
+			return isl_pw_qpolynomial_reset_dim(pwqp, data.dim);
+	} else {
+		data.n_in = 0;
+		data.dim = isl_dim_drop(data.dim, isl_dim_set, 0, data.nvar);
+	}
 
-	sum = isl_pw_qpolynomial_zero(dim);
+	data.sum = isl_pw_qpolynomial_zero(isl_dim_copy(data.dim));
 
-	if (isl_pw_qpolynomial_foreach_lifted_piece(pwqp, add_guarded_qp, &sum) < 0)
+	ctx = isl_pw_qpolynomial_get_ctx(pwqp);
+	data.options = isl_ctx_peek_barvinok_options(ctx);
+	if (!data.options) {
+		data.options = barvinok_options_new_with_defaults();
+		options_allocated = 1;
+	}
+
+	if (isl_pw_qpolynomial_foreach_lifted_piece(pwqp,
+						    add_guarded_qp, &data) < 0)
 		goto error;
 
+	if (options_allocated)
+		barvinok_options_free(data.options);
+
+	isl_dim_free(data.dim);
+
 	isl_pw_qpolynomial_free(pwqp);
 
-	return sum;
+	return data.sum;
 error:
+	if (options_allocated)
+		barvinok_options_free(data.options);
 	isl_pw_qpolynomial_free(pwqp);
-	isl_pw_qpolynomial_free(sum);
+	isl_dim_free(data.dim);
+	isl_pw_qpolynomial_free(data.sum);
 	return NULL;
 }
 
