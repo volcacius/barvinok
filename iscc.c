@@ -570,6 +570,35 @@ error:
 }
 #endif
 
+static int add_point(__isl_take isl_point *pnt, void *user)
+{
+	isl_union_set **scan = (isl_union_set **) user;
+
+	*scan = isl_union_set_add_set(*scan, isl_set_from_point(pnt));
+
+	return 0;
+}
+
+static __isl_give isl_union_set *union_set_scan(__isl_take isl_union_set *uset)
+{
+	isl_union_set *scan;
+
+	scan = isl_union_set_empty(isl_union_set_get_dim(uset));
+
+	if (isl_union_set_foreach_point(uset, add_point, &scan) < 0) {
+		isl_union_set_free(scan);
+		return uset;
+	}
+
+	isl_union_set_free(uset);
+	return scan;
+}
+
+static __isl_give isl_union_map *union_map_scan(__isl_take isl_union_map *umap)
+{
+	return isl_union_set_unwrap(union_set_scan(isl_union_map_wrap(umap)));
+}
+
 typedef void *(*isc_un_op_fn)(void *arg);
 struct isc_un_op {
 	enum isl_token_type	op;
@@ -633,6 +662,10 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &union_set_sample } },
 	{"sample",	{ -1,	isl_obj_union_map,	isl_obj_map,
 		(isc_un_op_fn) &union_map_sample } },
+	{"scan",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
+		(isc_un_op_fn) &union_set_scan } },
+	{"scan",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &union_map_scan } },
 	{"sum",		{ -1,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_un_op_fn) &isl_union_pw_qpolynomial_sum } },
