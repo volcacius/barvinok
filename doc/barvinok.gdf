@@ -64,3 +64,4 @@
 @entry{OOM, OOM, Out Of Memory}
 @entry{SNF, SNF, Smith Normal Form}
 @entry{LBL, LBL, Linearly Bounded Lattice}
+@entry{DNF, DNF, Disjunctive Normal Form}

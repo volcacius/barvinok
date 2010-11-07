@@ -78,38 +78,341 @@ Note that when an operation requires an argument of a certain
 type, a binary list with the first element of the required type
 may also be used instead.
 
-\subsubsection{Objects and Basic Operations}
+\subsubsection{Sets and Iteration Domains}
 
-A set contains integer tuples that satisfy some affine constraints
-in disjunctive normal form (DNF).  The description may involve (free)
-parameters and existentially quantified variables.
+\begin{figure}
+\begin{lstlisting}[escapechar=@]{}
+for (i = 1; i <= n; ++i)
+    for (j = 1; j <= i; ++j)
+        /* S */
+\end{lstlisting}
+\caption{A loop nest}
+\label{f:loop nest}
+\end{figure}
+
+\begin{figure}
+\begin{tikzpicture}[>=stealth,x=0.7cm,y=-0.7cm]
+\draw[thick] (1,1)--(5,5)--(1,5)--(1,1);
+\draw[->] (-0.6,0) to (5.6,0) node[anchor=south east] {$j$};
+\draw[->] (0,-0.6) to (0,5.6) node[anchor=south east] {$i$};
+\draw[help lines,step=0.7cm] (-0.6,5.6) grid (5.6,-0.6);
+\foreach \i in {1,...,5}{
+    \foreach \j in {1,...,\i}{
+        \fill (\j,\i) circle (2pt);
+    }
+}
+\end{tikzpicture}
+\caption{The iteration domain of the loop nest in \autoref{f:loop nest}}
+\label{f:iteration domain}
+\end{figure}
+
+Within the polyhedral model for analysis and transformation of
+static affine programs, the most basic kind of set is the
+\defindex{iteration domain}.
+The iteration domain represents the iterations of a statement in a loop nest.
+Take, for example, the loop nest in \autoref{f:loop nest}
+and assume first that \lstinline{n} has a fixed value, say 5.
+The pairs of values of \lstinline{i} and \lstinline{j} for
+which statement \lstinline{S} is executed are shown graphically
+in \autoref{f:iteration domain}.
+Mathematically, this set of pairs can be represented as
+$$
+\{\,
+(i,j) \in \ZZ^2 \mid 1 \le i \le 5 \wedge 1 \le j \le i
+\,\}
+$$
+and the \isl/ notation is very similar:
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ [i,j] : 1 <= i <= 5 and 1 <= j <= i }
+\end{lstlisting}
+In this notation,
+the coordinates are separated by commas and enclosed in square
+brackets.  This description of the space in which the set lives
+is followed by a colon and the constraints on the coordinates.
+Assuming the iterators are incremented by one in every iterations
+of the loop, a lower and upper bound on each loop iterator
+can be read off from the initialization and the test.
+Note that in an \iscc/ set,
+the coordinates are assumed to be integer by default.
+For an iteration domain to be representable by such a set,
+the iterators therefore need to be integers.
+
+The constraints of a set need to be affine, i.e., linear plus constant term.
+The constraints also need to be given in \indac{DNF}, with disjuncts
+separated by the \ai[\tt]{or} keyword and conjuncts separated
+by the \ai[\tt]{and} keyword.
+Note that this is not a real restriction because \iscc/ supports
+basic operations on sets such as intersection (\ai[\tt]{*}),
+union (\ai[\tt]{+}) and difference (\ai[\tt]{-}) that allow
+the user to construct a set of elements satisfying constraints that
+are not in \indac{DNF}.
 For example, the set
-\begin{verbatim}
-[n] -> {[i] : exists a : i = 2a and 0 <= i <= n; D[i,j] : i,j >= 0}
-\end{verbatim}
-contains all the even integer numbers between 0 and the value of
-the parameter $n$, as well
-as the positive orthant of a 2-dimensional \verb!D! space.
+$$
+\{\,
+(i,j) \mid 0 \le i,j \le 10 \wedge \lnot (i = j)
+\,\}
+$$
+can be constructed as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ [i,j] : 0 <= i,j <= 10 } - { [i,i] }
+\end{lstlisting}
+If there are no constraints on the coordinates, i.e., in case of
+a universe set, the colon may be omitted as well.
+For example
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ [] }
+\end{lstlisting}
+represents the entire (unnamed) zero-dimensional space,
+and should not be confused with
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ }
+\end{lstlisting}
+which represents the empty set.
+
+Returning to the iteration domain of the loop nest
+in \autoref{f:loop nest}, we usually do not want to analyze
+such a program for a specific value of \lstinline{n},
+but instead for all possible values of \lstinline{n} at once.
+A generic description of the iteration domain can be obtained
+through the introduction of a (free) parameter, as in
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [i,j] : 1 <= i <= n and 1 <= j <= i }
+\end{lstlisting}
 The optional parameters should
-be declared by placing them in a comma delimited list inside \verb![]!
-(followed by an ``\verb!->!'') in front of the main set description.
+be declared by placing them in a comma delimited list inside \lstinline![]!
+(followed by an ``\lstinline!->!'') in front of the main set description.
 The parameters are global and are identified by their names,
 so the order inside the list is arbitrary.
-The main set description consists of a \verb!{}!-pair containing
-a semicolon delimited list of
-subsets from a given space.  A space is identified by its optional
-name (\verb!D! in the example) and its dimension (the number
-of coordinates in the \verb![]! enclosed tuple following the optional name).
-The names of the coordinates are purely local within the set description.
-The space specification is separated by a colon from the actual constraints in DNF
-describing the elements from that space.
-The disjuncts are delimited by \verb!or!, while the conjuncts are delimited
-by \verb!and!.  Each disjunct may be preceded by \verb!exists!
-followed by a list of existentially quantified variables and a colon.
+This should be contrasted to the coordinates of a space, the names of
+which are only relevant within the description of the set and which
+are instead identified by their positions.
+That is,
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [i,j] : 1 <= i <= n and 1 <= j <= i }
+\end{lstlisting}
+is equal to
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [a,b] : 1 <= a <= n and 1 <= b <= a }
+\end{lstlisting}
+but it is not equal to
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [j,i] : 1 <= i <= n and 1 <= j <= i }
+\end{lstlisting}
+(because the order of the coordinates has changed)
+or
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[m] -> { [i,j] : 1 <= i <= m and 1 <= j <= i }
+\end{lstlisting}
+(because it involves a different parameter).
 
-Maps are binary relations on pairs of spaces and are defined in a similar
-way, except that the single space is replaced by a pair of spaces separated
-by \verb!->!.  Maps need not be single-valued.
+To plug in a particular value for a parameter, the user should
+take the \ai{intersection} (\ai[\tt]{*}) with a (typically universal) set that
+assigns a particular value to the parameter.
+For example,
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+S := [n] -> { [i,j] : 1 <= i <= n and 1 <= j <= i };
+S * [n] -> { [i,j] : n = 5 };
+\end{lstlisting}
+It should be noted, though, that the result is not the same
+as simply replacing \lstinline{n} by 5 as the result of the above
+sequence will still have the global parameter \lstinline{n} set to 5.
+To avoid this assignment, the user should instead compute
+the \ai{gist} (\ai[\tt]{\%}) of the original set in the context
+of setting \lstinline{n} to 5.
+That is, the result of the sequence below is \lstinline{True}.
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+S1 := { [i,j] : 1 <= i <= 5 and 1 <= j <= i };
+S2 := [n] -> { [i,j] : 1 <= i <= n and 1 <= j <= i };
+(S2 % [n] -> { [i,j] : n = 5}) = S1;
+\end{lstlisting}
+
+\begin{figure}
+\begin{lstlisting}[escapechar=@]{}
+for (i = 1; i <= n; i += 3)
+    /* S */
+\end{lstlisting}
+\caption{A loop with non-unit stride}
+\label{f:stride}
+\end{figure}
+
+If a loop has a non-unit stride as in \autoref{f:stride}
+then affine constraints on the coordinates and the parameters
+are not sufficient to represent the iteration domain.
+What is needed is a way to express that the value of
+\lstinline{i} is equal to 1 plus 3 times some integer and
+this is where existentially quantified variables can be used.
+Existentially quantified variables are introduced by the
+\ai[\tt]{exists} keyword and followed by a colon.
+They can only be used within a single disjunct.
+As an example, the iteration domain of the loop in \autoref{f:stride}
+can be represented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [i] : exists a : 1 <= i <= n and i = 1 + 3 a }
+\end{lstlisting}
+
+\begin{figure}
+\begin{lstlisting}[escapechar=@]{}
+for (i = 1; i <= n; ++i)
+    if ((i + 1) % 5 <= 2)
+	/* S */
+\end{lstlisting}
+\caption{A loop with a modulo condition}
+\label{f:modulo}
+\end{figure}
+
+Existentially quantified variables are also useful to represent
+modulo constraints.  Consider for example the loop in
+\autoref{f:modulo}.  The iterator values \lstinline!i! for which
+the statement \lstinline!S! is executed lie between
+1 and \lstinline!n! and are such that the remainder of
+\lstinline!i + 1! on division by 5 is less than or equal to 2.
+The constraint $(i + 1) \bmod 5 \le 2$ can be written
+as $(i + 1) - 5 \floor{\frac{i+1}5} \le 2$, where
+$f = \floor{\frac{i+1}5}$ is the greatest integer part of $\frac{i+1}5$.
+That is, $f$ is the unique integer value satisfying the constraints
+$5 f \le i + 1$ and $5 f \ge (i+1) - 4$.
+The iteration domain of the statement in \autoref{f:modulo}
+can therefore be represented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [i] : exists f : 1 <= i <= n and (i + 1) - 5 f <= 2 and
+	 (i + 1) - 4 <= 5 f <= i + 1 }
+\end{lstlisting}
+Since greatest integer parts occur relatively frequently, there is
+a special notation for them in \isl/ using \lstinline![]!.
+The above set can therefore also be represented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [i] : 1 <= i <= n and (i + 1) - 5 * [(i + 1)/5] <= 2 }
+\end{lstlisting}
+It should be noted that \lstinline![]! always rounds down
+(towards $-\infty$), while integer division in C truncates
+(towards 0).  When translating conditions in C contain integer
+divisions and/or modulos to \isl/ constraints, the user should therefore
+make sure the sign of the dividend is positive.  If not, the integer
+division needs to be translated differently for positive and negative
+values.
+
+\begin{figure}
+\begin{lstlisting}[escapechar=@]{}
+for (i = 0; i < n; ++i)
+T:  t[i] = a[i];
+for (i = 0; i < n; ++i)
+    for (j = 0; j < n - i; ++j)
+F:      t[j] = f(t[j], t[j+1]);
+for (i = 0; i < n; ++i)
+B:  b[i] = t[i];
+\end{lstlisting}
+\caption{A program with three loop nests}
+\label{f:three loops}
+\end{figure}
+
+Most programs involve more than one statement.
+Although it is possible to work with different sets, each
+representing the iteration domain of a statement,
+it is usually more convenient to collect all iteration domains
+in a single set.  To be able to differentiate between iterations
+of different statements with the same values for the iterators,
+\isl/ allows spaces to be named.  The name is placed in front
+of the \lstinline![]! enclosing the iterators.
+Consider for example the program in \autoref{f:three loops}.
+The program contains three statements which have been labeled
+for convenience.
+The iteration domain of the first statement (\lstinline!T!)
+can be represented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { T[i] : 0 <= i < n }
+\end{lstlisting}
+The union of all iteration domains can be represented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> {
+    T[i] : 0 <= i < n;
+    F[i,j] : 0 <= i < n and 0 <= j < n - i;
+    B[i] : 0 <= i < n
+}
+\end{lstlisting}
+The semicolon \lstinline{;} is used to express a disjunction
+between spaces.  This should be contrasted with the \lstinline{or}
+keyword which expresses a disjunction between conjunctions of constraints.
+For example, the result of the following \iscc/ statement is
+\lstinline{True}.
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ [i] : i = 3 or i = 5 } = { [3]; [5] };
+\end{lstlisting}
+
+\subsubsection{Maps and Access Relations}
+
+A second important concept in the polyhedral model is that
+of an \defindex{access relation}.
+An access relation connects iterations of a statement
+to the array elements accessed by those iterations.
+Such a binary relation can be represented by a map in \isl/.
+Maps are defined in similar way to sets,
+except that the single space is replaced by a pair of spaces separated
+by \verb!->!.
+As an example, consider once more the program in \autoref{f:three loops}.
+In particular, consider the access \lstinline{t[j+1]} in
+statement \lstinline{F}.
+The index expression maps the pair of iterations \lstinline{i}
+and \lstinline{j} to \lstinline{t[j+1]}, i.e., element \lstinline{j+1}
+of a space with name \lstinline{t}.
+Ignoring the loop bound constraints, this access relation can
+be represented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ F[i,j] -> t[j + 1] }
+\end{lstlisting}
+It is however customary to include the constraints on the iterators
+in the access relation, resulting in
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { F[i,j] -> t[j + 1] : 0 <= i < n and 0 <= j < n - i }
+\end{lstlisting}
+The constraints can be added by intersecting the domains
+of the access relations with the iteration domains.
+For example, the following sequence constructs the access
+relation for all reads in the program.
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+D := [n] -> {
+    T[i] : 0 <= i < n;
+    F[i,j] : 0 <= i < n and 0 <= j < n - i;
+    B[i] : 0 <= i < n
+};
+Read := {
+    T[i] -> a[i];
+    F[i,j] -> t[j];
+    F[i,j] -> t[j + 1];
+    B[i] -> t[i]
+};
+Read := Read * D;
+\end{lstlisting}
+In this sequence, the \lstinline{*} operator, when applied
+to a map and a set, intersects the domain of the map with the set.
+
+The notation \lstinline{R(S)} can be used to compute the image
+of the set \lstinline{S} under the map \lstinline{R}.
+For example, given the sequence above, \lstinline!Read({F[0,1]})!
+computes the array elements read in iteration $(0,1)$ of statement
+\lstinline{F} and is equal to
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { t[2] : n >= 2; t[1] : n >= 2 }
+\end{lstlisting}
+That is, elements 1 and 2 of the \lstinline{t} array are read,
+provided \lstinline{n} is at least 2.
+
+Maps need not be single-valued.
+As an example, assume that \lstinline{A} is a two-dimensional
+array of size \lstinline{n} in both dimensions.
+Iterations \lstinline{i} of
+a statement \lstinline{S} may pass a pointer to an entire row
+of \lstinline{A} to a function as in \lstinline{f(A[i])}.
+Without knowing anything about \lstinline{f}, we would have
+to assume that this function may access any element of the row.
+The access relation corresponding to \lstinline{A[i]} is therefore
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { S[i] -> A[i,j] : 0 <= i,j < n }
+\end{lstlisting}
+This map associates \lstinline{n} elements of \lstinline{A}
+to each iteration of \lstinline{S}.
+
+\subsubsection{Nested Spaces}
+
 Each space may contain a nested pair of spaces.  Such nested spaces
 are extremely useful in more advanced applications.
 As an example, suppose that during equivalence checking
@@ -130,6 +433,8 @@ then we can apply the cross product of these two dependence maps, i.e.,
 to the original map to find
 out which iterations of \verb!S2! should correspond to which
 iterations of \verb!SB!.
+
+\subsubsection{Basic Operations}
 
 Basic operations on sets and maps include intersection (\ai[\tt]{*}),
 union (\ai[\tt]{+}), difference (\ai[\tt]{-}), cross product (\ai[\tt]{cross}),

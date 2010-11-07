@@ -1,5 +1,11 @@
 \usepackage{amsmath,amsfonts,amssymb,makeidx}
+\usepackage{listings}
 \usepackage{glosstex}
+\usepackage{tikz}
+\usetikzlibrary{fit,chains,positioning,calc,backgrounds,decorations}
+\usetikzlibrary{decorations.pathmorphing}
+
+\lstset{language=C,basicstyle=\tt,flexiblecolumns=false,captionpos=b}
 
 \glxitemorderdefault{acr}{l}
 
@@ -138,6 +144,7 @@
 \def\PolyLib/{\ai[\tt]{PolyLib}}
 \def\Omegalib/{\ai[\tt]{Omega}}
 \def\isl/{\ai[\tt]{isl}}
+\def\iscc/{\ai[\tt]{iscc}}
 \def\barvinok/{\ai[\tt]{barvinok}}
 \def\cloog/{\ai[\tt]{CLooG}}
 \def\piplib/{\ai[\tt]{piplib}}
