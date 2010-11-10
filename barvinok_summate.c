@@ -2,10 +2,27 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "barvinok_summate_options.h"
 #include "evalue_convert.h"
 #include "evalue_read.h"
 #include "verify.h"
+
+struct options {
+	struct convert_options   *convert;
+	struct verify_options    *verify;
+	char *var_list;
+};
+
+struct isl_arg options_arg[] = {
+ISL_ARG_CHILD(struct options, verify, NULL,
+	verify_options_arg, "verification")
+ISL_ARG_CHILD(struct options, convert, NULL,
+	convert_options_arg, "output conversion")
+ISL_ARG_STR(struct options, var_list, 0, "variables", "list", NULL,
+	"comma separated list of variables over which to sum")
+ISL_ARG_END
+};
+
+ISL_ARG_DEF(options, struct options, options_arg)
 
 struct verify_point_sum {
 	struct verify_point_data vpd;
@@ -134,6 +151,7 @@ static int verify(__isl_keep isl_pw_qpolynomial *pwqp,
 
 int main(int argc, char **argv)
 {
+    int i;
     evalue *EP;
     const char **all_vars = NULL;
     unsigned nvar;
@@ -159,7 +177,7 @@ int main(int argc, char **argv)
 			nparam, all_vars);
 
     dim = isl_dim_set_alloc(ctx, nparam, 0);
-    for (int i = 0; i < nparam; ++i)
+    for (i = 0; i < nparam; ++i)
 	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
     dim = isl_dim_insert(dim, isl_dim_param, 0, nvar);
     pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);

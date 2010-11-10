@@ -317,9 +317,7 @@ barvinok_bound_LDADD = \
 	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
-	barvinok_summate_options.c \
-	barvinok_summate_options.h \
-	barvinok_summate.cc \
+	barvinok_summate.c \
 	evalue_convert_options.c \
 	evalue_convert.cc \
 	evalue_convert.h \
