@@ -147,11 +147,9 @@ static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf,
 	struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options } };
-	isl_ctx *ctx;
 	isl_set *context;
 	int r;
 
-	ctx = isl_pw_qpolynomial_fold_get_ctx(pwf);
 	vpb.pwf = pwf;
 	vpb.type = type;
 	vpb.pwqp = pwqp;
