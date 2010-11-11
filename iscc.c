@@ -599,6 +599,24 @@ static __isl_give isl_union_map *union_map_scan(__isl_take isl_union_map *umap)
 	return isl_union_set_unwrap(union_set_scan(isl_union_map_wrap(umap)));
 }
 
+static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_poly(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	return isl_union_pw_qpolynomial_to_polynomial(upwqp, 0);
+}
+
+static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_lpoly(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	return isl_union_pw_qpolynomial_to_polynomial(upwqp, -1);
+}
+
+static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_upoly(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	return isl_union_pw_qpolynomial_to_polynomial(upwqp, 1);
+}
+
 typedef void *(*isc_un_op_fn)(void *arg);
 struct isc_un_op {
 	enum isl_token_type	op;
@@ -662,6 +680,15 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_map_polyhedral_hull } },
 	{"poly",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_set_polyhedral_hull } },
+	{"poly",	{ -1,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &union_pw_qpolynomial_poly } },
+	{"lpoly",	{ -1,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &union_pw_qpolynomial_lpoly } },
+	{"upoly",	{ -1,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &union_pw_qpolynomial_upoly } },
 	{"sample",	{ -1,	isl_obj_union_set,	isl_obj_set,
 		(isc_un_op_fn) &union_set_sample } },
 	{"sample",	{ -1,	isl_obj_union_map,	isl_obj_map,
