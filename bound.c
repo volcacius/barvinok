@@ -3,8 +3,27 @@
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
-#include "bound_options.h"
 #include "verify.h"
+
+struct options {
+	struct verify_options    *verify;
+	long split;
+	int lower;
+	long iterate;
+};
+
+struct isl_arg options_arg[] = {
+ISL_ARG_CHILD(struct options, verify, NULL,
+	verify_options_arg, "verification")
+ISL_ARG_LONG(struct options, split, 0, "split", 0, NULL)
+ISL_ARG_OPT_LONG(struct options, iterate, 0, "iterate", 0, -1,
+	"exact result by iterating over domain (of specified maximal size)")
+ISL_ARG_BOOL(struct options, lower, 0, "lower", 0,
+	"compute lower bound instead of upper bound")
+ISL_ARG_END
+};
+
+ISL_ARG_DEF(options, struct options, options_arg)
 
 struct verify_point_bound {
 	struct verify_point_data vpd;
@@ -281,7 +300,8 @@ static __isl_give isl_pw_qpolynomial_fold *optimize(
     return pwf;
 }
 
-static int optimize(__isl_take isl_pw_qpolynomial *pwqp, struct options *options)
+static int optimize_and_print(__isl_take isl_pw_qpolynomial *pwqp,
+	struct options *options)
 {
     int print_solution = 1;
     int result = 0;
@@ -333,7 +353,7 @@ int main(int argc, char **argv)
     if (options->split)
 	pwqp = isl_pw_qpolynomial_split_periods(pwqp, options->split);
 
-    result = optimize(pwqp, options);
+    result = optimize_and_print(pwqp, options);
 
     isl_stream_free(s);
     isl_ctx_free(ctx);

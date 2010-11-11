@@ -301,9 +301,7 @@ barvinok_enumerate_e_LDADD = \
 	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok.la \
 	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
-	bound_options.h \
-	bound_options.c \
-	bound.cc \
+	bound.c \
 	verify.h \
 	verify.c
 EXTRA_barvinok_bound_SOURCES = fdstream.cc fdstream.h
