@@ -208,7 +208,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 
 	isl_point_free(pnt);
 
-	return 0;
+	return vpb->vpd.n >= 1 ? 0 : -1;
 }
 
 static void test(__isl_keep isl_pw_qpolynomial *pwqp,
