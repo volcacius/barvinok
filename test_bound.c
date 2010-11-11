@@ -211,25 +211,16 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	return 0;
 }
 
-static void test(evalue *EP, unsigned nvar,
+static void test(__isl_keep isl_pw_qpolynomial *pwqp, unsigned nvar,
 	__isl_keep isl_pw_qpolynomial_fold **pwf, struct result_data *result,
 	struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options }, result };
-	isl_ctx *ctx;
-	isl_dim *dim;
 	isl_set *context;
 	int r;
-	int i;
-	unsigned nparam;
 
 	vpb.pwf = pwf;
-	ctx = isl_pw_qpolynomial_fold_get_ctx(pwf[0]);
-	nparam = isl_pw_qpolynomial_fold_dim(pwf[0], isl_dim_param);
-	dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
-	vpb.pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-	vpb.pwqp = isl_pw_qpolynomial_move_dims(vpb.pwqp, isl_dim_set, 0,
-						isl_dim_param, 0, nvar);
+	vpb.pwqp = pwqp;
 	context = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vpb.pwqp));
 	context = isl_set_remove_dims(context, isl_dim_set, 0, nvar);
 	context = verify_context_set_bounds(context, options);
@@ -242,7 +233,6 @@ static void test(evalue *EP, unsigned nvar,
 	assert(!vpb.vpd.error);
 
 	isl_set_free(context);
-	isl_pw_qpolynomial_free(vpb.pwqp);
 
 	verify_point_data_fini(&vpb.vpd);
 }
@@ -256,6 +246,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     unsigned nparam;
     isl_ctx *ctx = isl_ctx_alloc();
     isl_dim *dim;
+    isl_pw_qpolynomial *pwqp;
     isl_pw_qpolynomial_fold *pwf[2*nr_methods];
 
     EP = evalue_read_from_file(in, NULL, &all_vars,
@@ -271,6 +262,12 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     lower = evalue_dup(EP);
     evalue_frac2polynomial(upper, 1, options->barvinok->MaxRays);
     evalue_frac2polynomial(lower, -1, options->barvinok->MaxRays);
+
+    dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
+    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
+    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
+					isl_dim_param, 0, nvar);
+    evalue_free(EP);
 
     dim = isl_dim_set_alloc(ctx, nparam, 0);
     for (i = 0; i < nr_methods; ++i) {
@@ -305,11 +302,11 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	}
     }
     isl_dim_free(dim);
-    test(EP, nvar, pwf, result, options);
+    test(pwqp, nvar, pwf, result, options);
 
     for (i = 0; i < 2*nr_methods; ++i)
 	isl_pw_qpolynomial_fold_free(pwf[i]);
-    evalue_free(EP);
+    isl_pw_qpolynomial_free(pwqp);
     evalue_free(lower);
     evalue_free(upper);
     Free_ParamNames(all_vars, nvar+nparam);
