@@ -240,13 +240,13 @@ static void test(__isl_keep isl_pw_qpolynomial *pwqp, unsigned nvar,
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
 {
     int i;
-    evalue *EP, *upper, *lower;
+    evalue *EP;
     const char **all_vars = NULL;
     unsigned nvar;
     unsigned nparam;
     isl_ctx *ctx = isl_ctx_alloc();
     isl_dim *dim;
-    isl_pw_qpolynomial *pwqp;
+    isl_pw_qpolynomial *pwqp, *upper, *lower;
     isl_pw_qpolynomial_fold *pwf[2*nr_methods];
 
     EP = evalue_read_from_file(in, NULL, &all_vars,
@@ -258,16 +258,14 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	return;
     }
 
-    upper = evalue_dup(EP);
-    lower = evalue_dup(EP);
-    evalue_frac2polynomial(upper, 1, options->barvinok->MaxRays);
-    evalue_frac2polynomial(lower, -1, options->barvinok->MaxRays);
-
     dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
     pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
     pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
 					isl_dim_param, 0, nvar);
     evalue_free(EP);
+
+    upper = isl_pw_qpolynomial_to_polynomial(isl_pw_qpolynomial_copy(pwqp), 1);
+    lower = isl_pw_qpolynomial_to_polynomial(isl_pw_qpolynomial_copy(pwqp), -1);
 
     dim = isl_dim_set_alloc(ctx, nparam, 0);
     for (i = 0; i < nr_methods; ++i) {
@@ -277,16 +275,11 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 
 	times(&st_cpu);
 	for (j = 0; j < 2; ++j) {
-	    evalue *poly = j == 0 ? upper : lower;
+	    isl_pw_qpolynomial *poly = j == 0 ? upper : lower;
 	    enum isl_fold type = j == 0 ? isl_fold_max : isl_fold_min;
-	    isl_dim *dim_poly;
-	    isl_pw_qpolynomial *pwqp;
-	    dim_poly = isl_dim_insert(isl_dim_copy(dim), isl_dim_param, 0, nvar);
-	    pwqp = isl_pw_qpolynomial_from_evalue(dim_poly, poly);
-	    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
-					    isl_dim_param, 0, nvar);
 	    options->barvinok->isl->bound = methods[i].method;
-	    pwf[2*i+j] = isl_pw_qpolynomial_bound(pwqp, type, NULL);
+	    poly = isl_pw_qpolynomial_copy(poly);
+	    pwf[2*i+j] = isl_pw_qpolynomial_bound(poly, type, NULL);
 	}
 	times(&en_cpu);
 	result->ticks[i] = time_diff(&en_cpu, &st_cpu);
@@ -307,8 +300,8 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     for (i = 0; i < 2*nr_methods; ++i)
 	isl_pw_qpolynomial_fold_free(pwf[i]);
     isl_pw_qpolynomial_free(pwqp);
-    evalue_free(lower);
-    evalue_free(upper);
+    isl_pw_qpolynomial_free(lower);
+    isl_pw_qpolynomial_free(upper);
     Free_ParamNames(all_vars, nvar+nparam);
 
     isl_ctx_free(ctx);
