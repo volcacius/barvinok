@@ -3263,9 +3263,11 @@ static void floor2frac_r(evalue *e, int nvar)
 
     p = e->x.p;
 
-    assert(p->type == flooring);
-    for (i = 1; i < p->size; i++)
+    for (i = type_offset(p); i < p->size; i++)
 	floor2frac_r(&p->arr[i], nvar);
+
+    if (p->type != flooring)
+	return;
 
     for (pp = &p->arr[0]; value_zero_p(pp->d); pp = &pp->x.p->arr[0]) {
 	assert(pp->x.p->type == polynomial);
