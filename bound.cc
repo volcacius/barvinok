@@ -1,19 +1,10 @@
 #include <assert.h>
-#include <iostream>
-#include <barvinok/evalue.h>
+#include <isl_stream.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include "bound_options.h"
-#include "evalue_convert.h"
-#include "evalue_read.h"
 #include "verify.h"
-
-using std::cout;
-using std::cerr;
-using std::endl;
-
-#define ALLOCN(type,n) (type*)malloc((n) * sizeof(type))
 
 struct verify_point_bound {
 	struct verify_point_data vpd;
@@ -327,40 +318,24 @@ static int optimize(__isl_take isl_pw_qpolynomial *pwqp, struct options *options
 
 int main(int argc, char **argv)
 {
-    evalue *EP;
-    const char **all_vars = NULL;
-    unsigned nvar;
-    unsigned nparam;
     struct options *options = options_new_with_defaults();
     isl_ctx *ctx;
-    isl_dim *dim;
     isl_pw_qpolynomial *pwqp;
+    struct isl_stream *s;
     int result = 0;
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
     ctx = isl_ctx_alloc_with_options(options_arg, options);
 
-    EP = evalue_read_from_file(stdin, options->var_list, &all_vars,
-			       &nvar, &nparam, options->verify->barvinok->MaxRays);
-    assert(EP);
-
-    evalue_convert(EP, options->convert, options->verify->barvinok->verbose,
-			nvar+nparam, all_vars);
-
-    dim = isl_dim_set_alloc(ctx, nparam, 0);
-    for (int i = 0; i < nparam; ++i)
-	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
-    dim = isl_dim_insert(dim, isl_dim_param, 0, nvar);
-    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
-    evalue_free(EP);
+    s = isl_stream_new_file(ctx, stdin);
+    pwqp = isl_stream_read_pw_qpolynomial(s);
 
     if (options->split)
 	pwqp = isl_pw_qpolynomial_split_periods(pwqp, options->split);
 
     result = optimize(pwqp, options);
 
-    Free_ParamNames(all_vars, nvar+nparam);
+    isl_stream_free(s);
     isl_ctx_free(ctx);
     return result;
 }

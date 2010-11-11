@@ -301,12 +301,6 @@ barvinok_enumerate_e_LDADD = \
 	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok.la \
 	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_bound_SOURCES = \
-	evalue_convert_options.c \
-	evalue_convert.cc \
-	evalue_convert.h \
-	evalue_read.c \
-	evalue_read.h \
-	$(FDSTREAM) \
 	bound_options.h \
 	bound_options.c \
 	bound.cc \
@@ -318,12 +312,6 @@ barvinok_bound_LDADD = \
 	@POLYLIB_LIBS@ @PIPLIB_LIBS@
 barvinok_summate_SOURCES = \
 	barvinok_summate.c \
-	evalue_convert_options.c \
-	evalue_convert.cc \
-	evalue_convert.h \
-	evalue_read.c \
-	evalue_read.h \
-	$(FDSTREAM) \
 	verify.h \
 	verify.c
 EXTRA_barvinok_summate_SOURCES = fdstream.cc fdstream.h
@@ -347,12 +335,6 @@ test_approx_SOURCES = \
 	verify.c
 test_bound_SOURCES = \
 	test_bound.c \
-	evalue_convert_options.c \
-	evalue_convert.cc \
-	evalue_convert.h \
-	evalue_read.c \
-	evalue_read.h \
-	$(FDSTREAM) \
 	verify.h \
 	verify.c
 EXTRA_test_bound_SOURCES = fdstream.cc fdstream.h
@@ -438,7 +420,7 @@ dist-git: dist
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
-	check-lexmin check-approx check-evalue check-euler check-lw
+	check-lexmin check-approx check-pwqp check-euler check-lw
 check-testlib: testlib$(EXEEXT)
 	./testlib$(EXEEXT)
 check-approx: test_approx$(EXEEXT)
@@ -447,8 +429,8 @@ check-approx: test_approx$(EXEEXT)
 		echo $$i | ./test_approx$(EXEEXT) -q -r 10 || exit; \
 	    fi \
 	done
-check-evalue: barvinok_bound$(EXEEXT) test_bound$(EXEEXT) barvinok_summate$(EXEEXT)
-	@for i in $(top_srcdir)/tests/evalue/*; do \
+check-pwqp: barvinok_bound$(EXEEXT) test_bound$(EXEEXT) barvinok_summate$(EXEEXT)
+	@for i in $(top_srcdir)/tests/pwqp/*; do \
 	    if test -f $$i; then \
 		echo $$i; \
 		./barvinok_bound$(EXEEXT) -T -r30 < $$i || exit; \

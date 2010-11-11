@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
+#include <isl_stream.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "evalue_read.h"
 #include "verify.h"
 #include "config.h"
 
@@ -211,17 +211,19 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	return 0;
 }
 
-static void test(__isl_keep isl_pw_qpolynomial *pwqp, unsigned nvar,
+static void test(__isl_keep isl_pw_qpolynomial *pwqp,
 	__isl_keep isl_pw_qpolynomial_fold **pwf, struct result_data *result,
 	struct verify_options *options)
 {
 	struct verify_point_bound vpb = { { options }, result };
 	isl_set *context;
 	int r;
+	unsigned nvar;
 
 	vpb.pwf = pwf;
 	vpb.pwqp = pwqp;
 	context = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vpb.pwqp));
+	nvar = isl_set_dim(context, isl_dim_set);
 	context = isl_set_remove_dims(context, isl_dim_set, 0, nvar);
 	context = verify_context_set_bounds(context, options);
 
@@ -240,34 +242,17 @@ static void test(__isl_keep isl_pw_qpolynomial *pwqp, unsigned nvar,
 void handle(FILE *in, struct result_data *result, struct verify_options *options)
 {
     int i;
-    evalue *EP;
-    const char **all_vars = NULL;
-    unsigned nvar;
-    unsigned nparam;
     isl_ctx *ctx = isl_ctx_alloc();
-    isl_dim *dim;
     isl_pw_qpolynomial *pwqp, *upper, *lower;
     isl_pw_qpolynomial_fold *pwf[2*nr_methods];
+    struct isl_stream *s;
 
-    EP = evalue_read_from_file(in, NULL, &all_vars,
-			       &nvar, &nparam, options->barvinok->MaxRays);
-    assert(EP);
-    if (EVALUE_IS_ZERO(*EP)) {
-	evalue_free(EP);
-	Free_ParamNames(all_vars, nvar+nparam);
-	return;
-    }
-
-    dim = isl_dim_set_alloc(ctx, nvar + nparam, 0);
-    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
-					isl_dim_param, 0, nvar);
-    evalue_free(EP);
+    s = isl_stream_new_file(ctx, in);
+    pwqp = isl_stream_read_pw_qpolynomial(s);
 
     upper = isl_pw_qpolynomial_to_polynomial(isl_pw_qpolynomial_copy(pwqp), 1);
     lower = isl_pw_qpolynomial_to_polynomial(isl_pw_qpolynomial_copy(pwqp), -1);
 
-    dim = isl_dim_set_alloc(ctx, nparam, 0);
     for (i = 0; i < nr_methods; ++i) {
 	int j;
 	struct tms st_cpu;
@@ -294,16 +279,15 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	    isl_printer_free(p);
 	}
     }
-    isl_dim_free(dim);
-    test(pwqp, nvar, pwf, result, options);
+    test(pwqp, pwf, result, options);
 
     for (i = 0; i < 2*nr_methods; ++i)
 	isl_pw_qpolynomial_fold_free(pwf[i]);
     isl_pw_qpolynomial_free(pwqp);
     isl_pw_qpolynomial_free(lower);
     isl_pw_qpolynomial_free(upper);
-    Free_ParamNames(all_vars, nvar+nparam);
 
+    isl_stream_free(s);
     isl_ctx_free(ctx);
 }
 

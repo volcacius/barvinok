@@ -1,24 +1,17 @@
 #include <assert.h>
+#include <isl_stream.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
-#include "evalue_convert.h"
-#include "evalue_read.h"
 #include "verify.h"
 
 struct options {
-	struct convert_options   *convert;
 	struct verify_options    *verify;
-	char *var_list;
 };
 
 struct isl_arg options_arg[] = {
 ISL_ARG_CHILD(struct options, verify, NULL,
 	verify_options_arg, "verification")
-ISL_ARG_CHILD(struct options, convert, NULL,
-	convert_options_arg, "output conversion")
-ISL_ARG_STR(struct options, var_list, 0, "variables", "list", NULL,
-	"comma separated list of variables over which to sum")
 ISL_ARG_END
 };
 
@@ -152,37 +145,26 @@ static int verify(__isl_keep isl_pw_qpolynomial *pwqp,
 int main(int argc, char **argv)
 {
     int i;
-    evalue *EP;
-    const char **all_vars = NULL;
-    unsigned nvar;
-    unsigned nparam;
     int result = 0;
     isl_ctx *ctx;
     isl_dim *dim;
     isl_pw_qpolynomial *pwqp;
     isl_pw_qpolynomial *sum;
+    struct isl_stream *s;
     struct options *options = options_new_with_defaults();
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
     ctx = isl_ctx_alloc_with_options(options_arg, options);
 
-    EP = evalue_read_from_file(stdin, options->var_list, &all_vars,
-			       &nvar, &nparam, options->verify->barvinok->MaxRays);
-    assert(EP);
+    s = isl_stream_new_file(ctx, stdin);
+    pwqp = isl_stream_read_pw_qpolynomial(s);
 
-    if (options->verify->verify)
-	verify_options_set_range(options->verify, nvar+nparam);
-
-    evalue_convert(EP, options->convert, options->verify->barvinok->verbose,
-			nparam, all_vars);
-
-    dim = isl_dim_set_alloc(ctx, nparam, 0);
-    for (i = 0; i < nparam; ++i)
-	dim = isl_dim_set_name(dim, isl_dim_param, i, all_vars[nvar + i]);
-    dim = isl_dim_insert(dim, isl_dim_param, 0, nvar);
-    pwqp = isl_pw_qpolynomial_from_evalue(dim, EP);
-    pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0, isl_dim_param, 0, nvar);
-    evalue_free(EP);
+    if (options->verify->verify) {
+	isl_dim *dim = isl_pw_qpolynomial_get_dim(pwqp);
+	unsigned total = isl_dim_total(dim);
+	isl_dim_free(dim);
+	verify_options_set_range(options->verify, total);
+    }
 
     sum = isl_pw_qpolynomial_sum(isl_pw_qpolynomial_copy(pwqp));
     if (options->verify->verify)
@@ -196,7 +178,7 @@ int main(int argc, char **argv)
     isl_pw_qpolynomial_free(sum);
     isl_pw_qpolynomial_free(pwqp);
 
-    Free_ParamNames(all_vars, nvar+nparam);
+    isl_stream_free(s);
     isl_ctx_free(ctx);
     return result;
 }

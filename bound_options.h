@@ -7,9 +7,7 @@ extern "C" {
 #endif
 
 struct options {
-	struct convert_options   *convert;
 	struct verify_options    *verify;
-	char* var_list;
 	long split;
 	int lower;
 	long iterate;
