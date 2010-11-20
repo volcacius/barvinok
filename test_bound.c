@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
-#include <isl_stream.h>
+#include <isl/stream.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "verify.h"

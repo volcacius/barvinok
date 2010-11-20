@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <isl_obj.h>
-#include <isl_stream.h>
-#include <isl_vertices.h>
+#include <isl/obj.h>
+#include <isl/stream.h>
+#include <isl/vertices.h>
 #include <isl_obj_list.h>
 #include <isl_obj_str.h>
 #include <barvinok/barvinok.h>

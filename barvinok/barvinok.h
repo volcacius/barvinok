@@ -1,8 +1,8 @@
 #ifndef BARVINOK_H
 #define BARVINOK_H
 
-#include <isl_polynomial.h>
-#include <isl_union_set.h>
+#include <isl/polynomial.h>
+#include <isl/union_set.h>
 #include <barvinok/evalue.h>
 
 #if defined(__cplusplus)

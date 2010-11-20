@@ -1,8 +1,8 @@
 #ifndef VERIFY_H
 #define VERIFY_H
 
-#include <isl_arg.h>
-#include <isl_set.h>
+#include <isl/arg.h>
+#include <isl/set.h>
 #include <barvinok/polylib.h>
 
 #if defined(__cplusplus)

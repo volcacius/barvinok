@@ -1,5 +1,5 @@
 #include <isl_set_polylib.h>
-#include <isl_constraint.h>
+#include <isl/constraint.h>
 #include <barvinok/evalue.h>
 
 static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,

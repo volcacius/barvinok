@@ -1,7 +1,7 @@
 #ifndef EVALUE_CONVERT
 #define EVALUE_CONVERT
 
-#include <isl_arg.h>
+#include <isl/arg.h>
 #include <barvinok/evalue.h>
 
 #if defined(__cplusplus)

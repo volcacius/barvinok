@@ -1,7 +1,7 @@
 #ifndef EVALUE_H
 #define EVALUE_H
 
-#include <isl_polynomial.h>
+#include <isl/polynomial.h>
 #include <barvinok/polylib.h>
 
 #if defined(__cplusplus)

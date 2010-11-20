@@ -180,12 +180,12 @@ case "$with_isl" in
 bundled)
 	ISL_CFLAGS="-I\$(top_srcdir)/isl/include -I\$(top_builddir)/isl/include"
 	bv_configure_args="$bv_configure_args --with-isl-builddir=../isl"
-	PACKAGE_CFLAGS_ISL='-I${prefix}/include/isl'
+	PACKAGE_CFLAGS_ISL='-I${prefix}/include'
 	;;
 build)
 	ISL_BUILDDIR=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
 	ISL_CFLAGS="-I$isl_srcdir/include -I$ISL_BUILDDIR/include"
-	PACKAGE_CFLAGS_ISL='-I${prefix}/include/isl'
+	PACKAGE_CFLAGS_ISL='-I${prefix}/include'
 	;;
 system)
 	PKG_CHECK_MODULES([ISL], [isl])

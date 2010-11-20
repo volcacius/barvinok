@@ -1,5 +1,5 @@
 #include <isl_set_polylib.h>
-#include <isl_vertices.h>
+#include <isl/vertices.h>
 #include "isl_param_util.h"
 
 static Matrix *expr2vertex(Polyhedron *E, unsigned nvar)

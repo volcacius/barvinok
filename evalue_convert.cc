@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sstream>
-#include <isl_dim.h>
+#include <isl/dim.h>
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "evalue_convert.h"

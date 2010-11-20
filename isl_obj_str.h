@@ -1,4 +1,4 @@
-#include <isl_obj.h>
+#include <isl/obj.h>
 
 struct isl_str {
 	int ref;

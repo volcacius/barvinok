@@ -2,8 +2,8 @@
 #define BARVINOK_OPTIONS_H
 
 #include <stdio.h>
-#include <isl_arg.h>
-#include <isl_ctx.h>
+#include <isl/arg.h>
+#include <isl/ctx.h>
 
 #if defined(__cplusplus)
 extern "C" {

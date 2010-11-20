@@ -1,4 +1,4 @@
-#include <isl_arg.h>
+#include <isl/arg.h>
 #include <barvinok/options.h>
 
 #if defined(__cplusplus)

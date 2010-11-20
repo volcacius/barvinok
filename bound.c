@@ -1,5 +1,5 @@
 #include <assert.h>
-#include <isl_stream.h>
+#include <isl/stream.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
