@@ -6,7 +6,8 @@
 #include <isl/vertices.h>
 #include <isl_obj_list.h>
 #include <isl_obj_str.h>
-#include <barvinok/barvinok.h>
+#include <barvinok/isl.h>
+#include <barvinok/options.h>
 
 #include "config.h"
 

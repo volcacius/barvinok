@@ -71,6 +71,7 @@ noinst_PROGRAMS = test testlib randomtest \
 EXTRA_PROGRAMS = cone_hilbert_basis
 pkginclude_HEADERS = \
     barvinok/NTL_QQ.h \
+    barvinok/isl.h \
     barvinok/barvinok.h \
     barvinok/util.h \
     barvinok/evalue.h \
