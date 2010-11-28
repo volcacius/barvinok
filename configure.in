@@ -184,6 +184,7 @@ bundled)
 	;;
 build)
 	ISL_BUILDDIR=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
+	bv_configure_args="$bv_configure_args --with-isl-builddir=$ISL_BUILDDIR"
 	ISL_CFLAGS="-I$isl_srcdir/include -I$ISL_BUILDDIR/include"
 	PACKAGE_CFLAGS_ISL='-I${prefix}/include'
 	;;
