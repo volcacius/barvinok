@@ -114,6 +114,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	int i;
 	isl_vec *vec;
 	isl_dim *dim;
+	isl_ctx *ctx;
 	unsigned nparam;
 	isl_pw_qpolynomial *pwqp;
 	struct isl_constraint *c;
@@ -130,14 +131,15 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 		return isl_pw_qpolynomial_zero(dim);
 	}
 
-	isl_assert(set->ctx, e->x.p->size > 0, goto error);
-	isl_assert(set->ctx, e->x.p->size <= 3, goto error);
-	isl_assert(set->ctx, value_zero_p(e->x.p->arr[0].d), goto error);
-	isl_assert(set->ctx, e->x.p->arr[0].x.p->type == fractional, goto error);
+	ctx = isl_set_get_ctx(set);
+	isl_assert(ctx, e->x.p->size > 0, goto error);
+	isl_assert(ctx, e->x.p->size <= 3, goto error);
+	isl_assert(ctx, value_zero_p(e->x.p->arr[0].d), goto error);
+	isl_assert(ctx, e->x.p->arr[0].x.p->type == fractional, goto error);
 	fract = &e->x.p->arr[0];
 
 	nparam = isl_set_dim(set, isl_dim_param);
-	vec = isl_vec_alloc(set->ctx, 2 + nparam + 1);
+	vec = isl_vec_alloc(ctx, 2 + nparam + 1);
 	if (!vec)
 		goto error;
 
