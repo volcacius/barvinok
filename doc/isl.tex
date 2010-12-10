@@ -797,6 +797,8 @@ $m_1(z)$ and $m_3(y)$ overlap, $m_4(z) \llt m_4(y)$ and such that there
 is no $x$ in the domain of $m_2$ with
 $m_2(x) \cap m_3(y) \ne \emptyset$ and $m_4(z) \llt m_4(x) \llt m_4(y)$.
 \\
+$i_3$ := $i_1$ \ai{$+$} $i_2$ & sum
+\\
 $s_3$ := $s_1$ \ai{$+$} $s_2$ & union
 \\
 $m_3$ := $m_1$ \ai{$+$} $m_2$ & union
@@ -815,17 +817,29 @@ concatenation of stringification of $o$ and $S_1$
 $S_2$ := $S_1$ \ai{$+$} $o$ &
 concatenation of $S_1$ and stringification of $o$
 \\
+$i_3$ := $i_1$ \ai{$-$} $i_2$ & difference
+\\
 $s_3$ := $s_1$ \ai{$-$} $s_2$ & set difference
 \\
 $m_3$ := $m_1$ \ai{$-$} $m_2$ & set difference
 \\
 $q_3$ := $q_1$ \ai{$-$} $q_2$ & difference
 \\
+$i_3$ := $i_1$ \ai{$*$} $i_2$ & product
+\\
 $s_3$ := $s_1$ \ai{$*$} $s_2$ & intersection
 \\
 $m_3$ := $m_1$ \ai{$*$} $m_2$ & intersection
 \\
+$q_2$ := $i$ \ai{$*$} $q_1$ & product
+\\
+$q_2$ := $q_1$ \ai{$*$} $i$ & product
+\\
 $q_3$ := $q_1$ \ai{$*$} $q_2$ & product
+\\
+$f_2$ := $i$ \ai{$*$} $f_1$ & product
+\\
+$f_2$ := $f_1$ \ai{$*$} $i$ & product
 \\
 $m_2$ := $m_1$ \ai{$*$} $s$ & intersect domain of $m_1$ with $s$
 \\

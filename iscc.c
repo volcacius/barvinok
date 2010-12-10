@@ -300,7 +300,69 @@ error:
 	return NULL;
 }
 
+static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_int_mul(
+	__isl_take isl_union_pw_qpolynomial *upwqp, __isl_take isl_int_obj *i)
+{
+	isl_int v;
+
+	if (!i)
+		goto error;
+
+	isl_int_init(v);
+	isl_int_obj_get_int(i, &v);
+	upwqp = isl_union_pw_qpolynomial_mul_isl_int(upwqp, v);
+	isl_int_clear(v);
+
+	isl_int_obj_free(i);
+
+	return upwqp;
+error:
+	isl_union_pw_qpolynomial_free(upwqp);
+	return NULL;
+}
+
+static __isl_give isl_union_pw_qpolynomial *int_union_pw_qpolynomial_mul(
+	__isl_take isl_int_obj *i, __isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	return union_pw_qpolynomial_int_mul(upwqp, i);
+}
+
+static __isl_give isl_union_pw_qpolynomial_fold *union_pw_qpolynomial_fold_int_mul(
+	__isl_take isl_union_pw_qpolynomial_fold *upwf,
+	__isl_take isl_int_obj *i)
+{
+	isl_int v;
+
+	if (!i)
+		goto error;
+
+	isl_int_init(v);
+	isl_int_obj_get_int(i, &v);
+	upwf = isl_union_pw_qpolynomial_fold_mul_isl_int(upwf, v);
+	isl_int_clear(v);
+
+	isl_int_obj_free(i);
+
+	return upwf;
+error:
+	isl_union_pw_qpolynomial_fold_free(upwf);
+	return NULL;
+}
+
+static __isl_give isl_union_pw_qpolynomial_fold *int_union_pw_qpolynomial_fold_mul(
+	__isl_take isl_int_obj *i,
+	__isl_take isl_union_pw_qpolynomial_fold *upwf)
+{
+	return union_pw_qpolynomial_fold_int_mul(upwf, i);
+}
+
 struct isc_bin_op bin_ops[] = {
+	{ '+',	isl_obj_int,	isl_obj_int, isl_obj_int,
+		(isc_bin_op_fn) &isl_int_obj_add },
+	{ '-',	isl_obj_int,	isl_obj_int, isl_obj_int,
+		(isc_bin_op_fn) &isl_int_obj_sub },
+	{ '*',	isl_obj_int,	isl_obj_int, isl_obj_int,
+		(isc_bin_op_fn) &isl_int_obj_mul },
 	{ '+',	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_set,
 		(isc_bin_op_fn) &isl_union_set_union },
@@ -396,6 +458,18 @@ struct isc_bin_op bin_ops[] = {
 	{ '-',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_sub },
+	{ '*',	isl_obj_int,	isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &int_union_pw_qpolynomial_mul },
+	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_int,
+		isl_obj_union_pw_qpolynomial,
+		(isc_bin_op_fn) &union_pw_qpolynomial_int_mul },
+	{ '*',	isl_obj_int,	isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &int_union_pw_qpolynomial_fold_mul },
+	{ '*',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_int,
+		isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &union_pw_qpolynomial_fold_int_mul },
 	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_mul },
@@ -1336,6 +1410,8 @@ static struct isl_obj type_of(struct isl_stream *s,
 		type = "boolean";
 	if (obj.type == isl_obj_str)
 		type = "string";
+	if (obj.type == isl_obj_int)
+		type = "int";
 
 	free_obj(obj);
 	obj.type = isl_obj_str;
@@ -1771,6 +1847,18 @@ static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
 	return NULL;
 }
 
+static int next_is_neg_int(struct isl_stream *s)
+{
+	struct isl_token *tok;
+	int ret;
+
+	tok = isl_stream_next_token(s);
+	ret = tok && tok->type == ISL_TOKEN_VALUE && isl_int_is_neg(tok->u.v);
+	isl_stream_push_token(s, tok);
+
+	return ret;
+}
+
 static struct isl_obj read_expr(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -1798,6 +1886,11 @@ static struct isl_obj read_expr(struct isl_stream *s,
 		right_obj = convert(s->ctx, right_obj, op->rhs);
 		obj.v = op->fn(obj.v, right_obj.v);
 		obj.type = op->res;
+	}
+
+	if (obj.type == isl_obj_int && next_is_neg_int(s)) {
+		right_obj = read_obj(s, table);
+		obj.v = isl_int_obj_add(obj.v, right_obj.v);
 	}
 
 	return obj;
