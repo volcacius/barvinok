@@ -320,8 +320,6 @@ lexmin_SOURCES = \
 	lexmin_options.c \
 	lexmin.h \
 	lexmin.cc \
-	combine.c \
-	combine.h \
 	edomain.cc \
 	edomain.h \
 	evalue_util.cc \

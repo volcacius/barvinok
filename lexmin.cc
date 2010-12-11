@@ -18,7 +18,6 @@
 #include "lattice_point.h"
 #include "reduce_domain.h"
 #include "mat_util.h"
-#include "combine.h"
 #include "edomain.h"
 #include "evalue_util.h"
 #include "remove_equalities.h"
