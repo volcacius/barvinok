@@ -85,6 +85,7 @@ struct barvinok_options {
     #define	BV_LP_CDD		2
     #define	BV_LP_CDDF		3
     #define	BV_LP_PIP		4
+    #define	BV_LP_ISL		5
     int		lp_solver;
 
     #define	BV_SUM_BOX		0

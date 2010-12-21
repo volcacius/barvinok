@@ -63,6 +63,8 @@ enum order_sign polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 	return cdd_polyhedron_affine_sign(D, T, options);
     else if (options->lp_solver == BV_LP_CDDF)
 	return cddf_polyhedron_affine_sign(D, T, options);
+    else if (options->lp_solver == BV_LP_ISL)
+	return isl_polyhedron_affine_sign(D, T, options);
     else
 	assert(0);
 }
@@ -87,6 +89,8 @@ enum lp_result constraints_opt(Matrix *C, Value *obj, Value denom,
 	return cddf_constraints_opt(C, obj, denom, dir, opt);
     else if (options->lp_solver == BV_LP_PIP)
 	return pip_constraints_opt(C, obj, denom, dir, opt);
+    else if (options->lp_solver == BV_LP_ISL)
+	return isl_constraints_opt(C, obj, denom, dir, opt);
     else
 	assert(0);
 }

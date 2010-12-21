@@ -163,6 +163,7 @@ libbarvinok_la_SOURCES = \
     $(POLYSIGN_GLPK) \
     $(POLYSIGN_PIP) \
     polysign.c \
+    polysign_isl.c \
     polysign_polylib.c \
     polysign.h \
     power.h \

@@ -162,16 +162,6 @@ static struct isl_arg_choice gbr[] = {
 	{0}
 };
 
-#ifdef HAVE_LIBGLPK
-#define DEFAULT_LP BV_LP_GLPK
-#elif defined HAVE_LIBCDDGMP
-#define DEFAULT_LP BV_LP_CDD
-#elif defined HAVE_PIPLIB
-#define DEFAULT_LP BV_LP_PIP
-#else
-#define DEFAULT_LP BV_LP_POLYLIB
-#endif
-
 static struct isl_arg_choice lp[] = {
 #ifdef HAVE_LIBGLPK
 	{"glpk",	BV_LP_GLPK},
@@ -184,6 +174,7 @@ static struct isl_arg_choice lp[] = {
 	{"pip",		BV_LP_PIP},
 #endif
 	{"polylib",	BV_LP_POLYLIB},
+	{"isl",		BV_LP_ISL},
 	{0}
 };
 
@@ -234,7 +225,7 @@ ISL_ARG_USER(struct barvinok_options, try_Delaunay_triangulation, &int_init_zero
 ISL_ARG_CHOICE(struct barvinok_options, gbr_lp_solver, 0, "gbr", gbr,
 	BV_GBR_ISL, "lp solver to use for basis reduction")
 ISL_ARG_CHOICE(struct barvinok_options, lp_solver, 0, "lp", lp,
-	DEFAULT_LP, "lp solver to use")
+	BV_LP_ISL, "lp solver to use")
 ISL_ARG_CHOICE(struct barvinok_options, summation, 0, "summation", summation,
 	BV_SUM_LAURENT, NULL)
 ISL_ARG_CHOICE(struct barvinok_options, chambers, 0, "chamber-decomposition",
