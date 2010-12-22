@@ -722,6 +722,11 @@ lexicographically maximal element of $s_1$
 $m_2$ := \ai[\tt]{lexmax} $m_1$ &
 lexicographically maximal image element
 \\
+$s_2$ := \ai[\tt]{lift} $s_1$ &
+lift $s_1$ to a space with extra dimensions corresponding
+to the existentially quantified variables in $s_1$ such
+that \lstinline!domain(unwrap(lift S))! is equal to \lstinline!S!
+\\
 $s_2$ := \ai[\tt]{poly} $s_1$ & polyhedral hull of $s_1$
 \\
 $m_2$ := \ai[\tt]{poly} $m_1$ & polyhedral hull of $m_1$
