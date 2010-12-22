@@ -16,13 +16,6 @@ enum lp_result glpk_constraints_opt(Matrix *C, Value *obj, Value denom,
 {
     assert(0);
 }
-
-enum lp_result glpk_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    assert(0);
-}
 #endif
 
 #ifndef HAVE_LIBCDDGMP
@@ -49,32 +42,11 @@ enum lp_result cddf_constraints_opt(Matrix *C, Value *obj, Value denom,
 {
     assert(0);
 }
-
-enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    assert(0);
-}
-
-enum lp_result cddf_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    assert(0);
-}
 #endif
 
 #ifndef HAVE_PIPLIB
 enum lp_result pip_constraints_opt(Matrix *C, Value *obj, Value denom,
 				    enum lp_dir dir, Value *opt)
-{
-    assert(0);
-}
-
-enum lp_result pip_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
 {
     assert(0);
 }
@@ -136,22 +108,4 @@ enum lp_result polyhedron_opt(Polyhedron *P, Value *obj, Value denom,
 	Polyhedron_Matrix_View(P, &M, P->NbConstraints);
 	return constraints_opt(&M, obj, denom, dir, opt, options);
     }
-}
-
-enum lp_result polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    if (options->lp_solver == BV_LP_POLYLIB)
-	return PL_polyhedron_range(D, obj, denom, min, max, options);
-    else if (options->lp_solver == BV_LP_GLPK)
-	return glpk_polyhedron_range(D, obj, denom, min, max, options);
-    else if (options->lp_solver == BV_LP_CDD)
-	return cdd_polyhedron_range(D, obj, denom, min, max, options);
-    else if (options->lp_solver == BV_LP_CDDF)
-	return cddf_polyhedron_range(D, obj, denom, min, max, options);
-    else if (options->lp_solver == BV_LP_PIP)
-	return pip_polyhedron_range(D, obj, denom, min, max, options);
-    else
-	assert(0);
 }

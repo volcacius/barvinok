@@ -147,22 +147,3 @@ enum lp_result cdd_constraints_opt(Matrix *C, Value *obj, Value denom,
     INIT_CDD;
     return constraints_affine_minmax(cdd_dir, C, obj, denom, opt);
 }
-
-enum lp_result cdd_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    lp_result res;
-    Matrix M;
-
-    if (emptyQ2(D))
-	return lp_empty;
-
-    INIT_CDD;
-    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
-    res = constraints_affine_minmax(DD_LPmin, &M, obj, denom, min);
-    if (res != lp_ok)
-	return res;
-    res = constraints_affine_minmax(DD_LPmax, &M, obj, denom, max);
-    return res;
-}

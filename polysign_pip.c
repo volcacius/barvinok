@@ -57,21 +57,3 @@ enum lp_result pip_constraints_opt(Matrix *C, Value *obj, Value denom,
     int maximize = dir == lp_min ? 0 : 1;
     return constraints_affine_minmax(maximize, C, obj, denom, opt);
 }
-
-enum lp_result pip_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    enum lp_result res;
-    Matrix M;
-
-    if (emptyQ(D))
-	return lp_empty;
-
-    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
-    res = constraints_affine_minmax(0, &M, obj, denom, min);
-    if (res != lp_ok)
-	return res;
-    res = constraints_affine_minmax(1, &M, obj, denom, max);
-    return res;
-}

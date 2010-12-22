@@ -176,21 +176,3 @@ enum lp_result glpk_constraints_opt(Matrix *C, Value *obj, Value denom,
     int glpk_dir = dir == lp_min ? LPX_MIN : LPX_MAX;
     return constraints_affine_minmax(glpk_dir, C, obj, denom, opt);
 }
-
-enum lp_result glpk_polyhedron_range(Polyhedron *D, Value *obj, Value denom,
-				Value *min, Value *max,
-				struct barvinok_options *options)
-{
-    enum lp_result res;
-    Matrix M;
-
-    if (emptyQ2(D))
-	return lp_empty;
-
-    Polyhedron_Matrix_View(D, &M, D->NbConstraints);
-    res = constraints_affine_minmax(LPX_MIN, &M, obj, denom, min);
-    if (res != lp_ok)
-	return res;
-    res = constraints_affine_minmax(LPX_MAX, &M, obj, denom, max);
-    return res;
-}

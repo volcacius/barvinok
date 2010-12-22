@@ -41,6 +41,5 @@
 					sign = ddf_sgn(val);			\
 				    } while (0)
 #define cdd_constraints_opt	    cddf_constraints_opt
-#define	cdd_polyhedron_range  	    cddf_polyhedron_range
 
 #include "polysign_cdd_template.cc"
