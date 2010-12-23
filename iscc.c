@@ -824,6 +824,9 @@ struct isc_named_un_op named_un_ops[] = {
 	{"codegen",	{ -1,	isl_obj_union_map, isl_obj_none,
 		&map_codegen } },
 #endif
+	{"coefficients",	{ -1,	isl_obj_union_set,
+		isl_obj_union_set,
+		(isc_un_op_fn) &isl_union_set_coefficients } },
 	{"deltas",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_deltas } },
 	{"deltas_map",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
