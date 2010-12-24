@@ -104,7 +104,6 @@ if USE_ZSOLVE
 endif
 if HAVE_PIPLIB
     BR_PIP = basis_reduction_pip.c basis_reduction_pip_dual.c
-    POLYSIGN_PIP = polysign_pip.c
 endif
 libbarvinok_la_SOURCES = \
     barvinok/evalue.h \

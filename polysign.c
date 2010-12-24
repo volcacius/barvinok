@@ -44,14 +44,6 @@ enum lp_result cddf_constraints_opt(Matrix *C, Value *obj, Value denom,
 }
 #endif
 
-#ifndef HAVE_PIPLIB
-enum lp_result pip_constraints_opt(Matrix *C, Value *obj, Value denom,
-				    enum lp_dir dir, Value *opt)
-{
-    assert(0);
-}
-#endif
-
 enum order_sign polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {
@@ -87,8 +79,6 @@ enum lp_result constraints_opt(Matrix *C, Value *obj, Value denom,
 	return cdd_constraints_opt(C, obj, denom, dir, opt);
     else if (options->lp_solver == BV_LP_CDDF)
 	return cddf_constraints_opt(C, obj, denom, dir, opt);
-    else if (options->lp_solver == BV_LP_PIP)
-	return pip_constraints_opt(C, obj, denom, dir, opt);
     else if (options->lp_solver == BV_LP_ISL)
 	return isl_constraints_opt(C, obj, denom, dir, opt);
     else

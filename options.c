@@ -170,9 +170,6 @@ static struct isl_arg_choice lp[] = {
 	{"cdd",		BV_LP_CDD},
 	{"cddf",	BV_LP_CDDF},
 #endif
-#ifdef HAVE_PIPLIB
-	{"pip",		BV_LP_PIP},
-#endif
 	{"polylib",	BV_LP_POLYLIB},
 	{"isl",		BV_LP_ISL},
 	{0}
