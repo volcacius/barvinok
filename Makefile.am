@@ -545,7 +545,6 @@ check-lw: test$(EXEEXT)
 		echo "$$failed tests failed"; \
 		exit -1; \
 	fi
-if HAVE_GLPK
 check-lexmin: lexmin$(EXEEXT)
 	@for i in $(top_srcdir)/tests/lexmin/*; do \
 	    if test -f $$i; then \
@@ -556,9 +555,6 @@ check-lexmin: lexmin$(EXEEXT)
 		done \
 	    fi \
 	done
-else
-check-lexmin:
-endif
 
 version.h: @GIT_HEAD@
 	echo '#define GIT_HEAD_ID "'@GIT_HEAD_VERSION@'"' > $@
