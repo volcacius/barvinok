@@ -4678,18 +4678,6 @@ Earlier versions (\verb+0.93+--\verb+0.94d+) have
 a bug that may sometimes result in a polytope being
 reported as (rationally) empty even though it is not.
 
-\item \piplib/~\shortcite{Feautrier:PIP}
-
-This solver is also based on exact integer arithmetic
-and uses the \ai{dual simplex} method to solve a linear program.
-Two versions are available, \ai[\tt]{pip} will present the
-original program to \piplib/, while \ai[\tt]{pip-dual} will present
-the dual program to \piplib/, effectively having it apply the primal
-simplex method to the original problem.
-The latter may seem more appropriate since the computation
-of the reduced basis only requires the dual solution of
-any linear program.  However, in practice, it appears
-that \ai[\tt]{pip} is often faster than \ai[\tt]{pip-dual}.
 \end{itemize}
 The LP solver to use can be selected with the \ai[\tt]{--gbr} option.
 

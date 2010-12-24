@@ -131,47 +131,6 @@ esac
 
 AM_CONDITIONAL(BUNDLED_POLYLIB, test $with_polylib = bundled)
 
-AX_SUBMODULE(piplib,no|bundled|system,bundled)
-
-AC_SUBST(PIPLIB_CPPFLAGS)
-AC_SUBST(PIPLIB_LDFLAGS)
-AC_SUBST(PIPLIB_LIBS)
-have_piplib=false
-case "$with_piplib" in
-bundled)
-	have_piplib=true
-	bv_configure_args="$bv_configure_args --with-piplib-builddir=../piplib"
-	bv_configure_args="$bv_configure_args --with-bits=gmp"
-	PIPLIB_CPPFLAGS="-I$srcdir/piplib/include"
-	;;
-system)
-	PIPLIB_LIBS="-lpiplibMP"
-	if test "x$with_piplib_prefix" != "x"; then
-		PIPLIB_CPPFLAGS="-I$with_piplib_prefix/include"
-		PIPLIB_LDFLAGS="-L$with_piplib_prefix/lib"
-	fi
-	SAVE_CPPFLAGS="$CPPFLAGS"
-	SAVE_LDFLAGS="$LDFLAGS"
-	CPPFLAGS="$PIPLIB_CPPFLAGS $CPPFLAGS"
-	LDFLAGS="$PIPLIB_LDFLAGS $LDFLAGS"
-	AC_CHECK_LIB(piplibMP, pip_solve,[
-	    AC_CHECK_MEMBER(PipOptions.Urs_parms, [have_piplib=true], [
-		AC_MSG_ERROR([Piplib too old; please install version 1.3.6 or newer])
-	    ],[#include <stdio.h>
-	       #include <piplib/piplibMP.h>])
-	],[
-	    AC_MSG_WARN([Piplib not found])
-	])
-	CPPFLAGS="$SAVE_CPPFLAGS"
-	LDFLAGS="$SAVE_LDFLAGS"
-	;;
-esac
-if test "$have_piplib" = true; then
-	AC_DEFINE(HAVE_PIPLIB,[],[use piplib])
-fi
-AM_CONDITIONAL(HAVE_PIPLIB, test x$have_piplib = xtrue)
-AM_CONDITIONAL(BUNDLED_PIPLIB, test $with_piplib = bundled)
-
 AX_SUBMODULE(isl,build|bundled|system,bundled)
 
 AC_SUBST(ISL_CFLAGS)
@@ -559,7 +518,7 @@ AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
 
 PACKAGE_CFLAGS="$PACKAGE_CFLAGS_ISL"
-PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lisl-polylib -lpolylibgmp -lpiplibMP -lisl"
+PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lisl-polylib -lpolylibgmp -lisl"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
@@ -567,9 +526,6 @@ AC_CONFIG_FILES(Makefile zsolve/Makefile doc/Makefile)
 AC_CONFIG_FILES(parker/Makefile)
 if test $with_polylib = bundled; then
 	AC_CONFIG_SUBDIRS(polylib)
-fi
-if test $with_piplib = bundled; then
-	AC_CONFIG_SUBDIRS(piplib)
 fi
 if test $with_isl = bundled; then
 	AC_CONFIG_SUBDIRS(isl)

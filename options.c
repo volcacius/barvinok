@@ -154,10 +154,6 @@ static struct isl_arg_choice gbr[] = {
 #ifdef HAVE_LIBCDDGMP
 	{"cdd",		BV_GBR_CDD},
 #endif
-#ifdef HAVE_PIPLIB
-	{"pip",		BV_GBR_PIP},
-	{"pip-dual",	BV_GBR_PIP_DUAL},
-#endif
 	{"isl",		BV_GBR_ISL},
 	{0}
 };

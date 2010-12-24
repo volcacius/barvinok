@@ -19,11 +19,6 @@ const char *barvinok_version(void)
 	" -INCREMENTAL"
 #endif
     "\n"
-#ifdef HAVE_PIPLIB
-	" +PIPLIB"
-#else
-	" -PIPLIB"
-#endif
 #ifdef HAVE_OMEGA
 	" +OMEGA"
 #else
