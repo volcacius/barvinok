@@ -1,5 +1,7 @@
 if BUNDLED_POLYLIB
     MAYBE_POLYLIB = polylib
+    POLYLIB_LA = $(top_builddir)/polylib/libpolylibgmp.la
+    LOCAL_POLYLIB_LA = polylib/libpolylibgmp.la
 endif
 if BUNDLED_PIPLIB
     MAYBE_PIPLIB = piplib
@@ -7,6 +9,7 @@ endif
 if BUNDLED_ISL
     MAYBE_ISL = isl
     ISL_LA = $(top_builddir)/isl/libisl.la
+    LOCAL_ISL_LA = isl/libisl.la
 endif
 if BUILD_ISL
     ISL_LA = $(ISL_BUILDDIR)/libisl.la
@@ -39,7 +42,7 @@ piplib/libpiplibMP.la: FORCE
 	cd piplib; $(MAKE) $(AM_MAKEFLAGS) libpiplibMP.la
 isl/libisl.la: FORCE
 	cd isl; $(MAKE) $(AM_MAKEFLAGS) libisl.la
-isl-polylib/libisl-polylib.la: FORCE
+isl-polylib/libisl-polylib.la: $(LOCAL_ISL_LA) $(LOCAL_POLYLIB_LA) FORCE
 	cd isl-polylib; $(MAKE) $(AM_MAKEFLAGS) libisl-polylib.la
 omega/omega_lib/libomega.la: FORCE
 	cd omega/omega_lib; $(MAKE) $(AM_MAKEFLAGS) libomega.la
@@ -202,9 +205,6 @@ EXTRA_libbarvinok_la_SOURCES = \
     initcdd.h \
     topcom.c \
     topcom.h
-if BUNDLED_POLYLIB
-    POLYLIB_LA = $(top_builddir)/polylib/libpolylibgmp.la
-endif
 if BUNDLED_PIPLIB
     PIPLIB_LA = $(top_builddir)/piplib/libpiplibMP.la
 endif
