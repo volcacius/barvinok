@@ -1656,6 +1656,16 @@ __isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set)
 	return isl_map_card(isl_map_from_range(set));
 }
 
+__isl_give isl_pw_qpolynomial *isl_basic_map_card(__isl_take isl_basic_map *bmap)
+{
+	return isl_map_card(isl_map_from_basic_map(bmap));
+}
+
+__isl_give isl_pw_qpolynomial *isl_basic_set_card(__isl_take isl_basic_set *bset)
+{
+	return isl_basic_map_card(isl_basic_map_from_range(bset));
+}
+
 static int set_card(__isl_take isl_set *set, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
