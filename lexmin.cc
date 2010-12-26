@@ -9,6 +9,7 @@
 #include <gmp.h>
 #include <NTL/vec_ZZ.h>
 #include <NTL/mat_ZZ.h>
+#include <isl_set_polylib.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/evalue.h>
 #include <barvinok/options.h>
@@ -2655,57 +2656,64 @@ static void verify_results(Polyhedron *A, Polyhedron *C,
 			   vector<max_term*>& maxima,
 			   struct verify_options *options);
 
+static struct isl_basic_set *to_parameter_domain(struct isl_basic_set *context)
+{
+	return isl_basic_set_move_dims(context, isl_dim_param, 0, isl_dim_set, 0,
+				       isl_basic_set_dim(context, isl_dim_set));
+}
+
 int main(int argc, char **argv)
 {
-    Polyhedron *A, *C;
-    Matrix *MA;
-    int bignum;
-    char **iter_names, **param_names;
-    int print_solution = 1;
-    struct lexmin_options *options = lexmin_options_new_with_defaults();
-    options->verify->barvinok->lookup_table = 0;
+	isl_ctx *ctx;
+	isl_basic_set *context, *bset;
+	Polyhedron *A, *C;
+	int neg_one, n;
+	int print_solution = 1;
+	struct lexmin_options *options = lexmin_options_new_with_defaults();
+	options->verify->barvinok->lookup_table = 0;
 
-    argc = lexmin_options_parse(options, argc, argv, ISL_ARG_ALL);
+	argc = lexmin_options_parse(options, argc, argv, ISL_ARG_ALL);
+	ctx = isl_ctx_alloc_with_options(lexmin_options_arg, options);
 
-    MA = Matrix_Read();
-    C = Constraints2Polyhedron(MA, options->verify->barvinok->MaxRays);
-    Matrix_Free(MA);
-    fscanf(stdin, " %d", &bignum);
-    assert(bignum == -1);
-    MA = Matrix_Read();
-    A = Constraints2Polyhedron(MA, options->verify->barvinok->MaxRays);
-    Matrix_Free(MA);
+	context = isl_basic_set_read_from_file(ctx, stdin, 0);
+	assert(context);
+	n = fscanf(stdin, "%d", &neg_one);
+	assert(n == 1);
+	assert(neg_one == -1);
+	bset = isl_basic_set_read_from_file(ctx, stdin,
+		isl_basic_set_dim(context, isl_dim_set));
+	context = to_parameter_domain(context);
 
-    verify_options_set_range(options->verify, A->Dimension);
+	if (options->verify->verify)
+		print_solution = 0;
 
-    if (options->verify->verify)
-	print_solution = 0;
+	A = isl_basic_set_to_polylib(bset);
+	verify_options_set_range(options->verify, A->Dimension);
+	C = isl_basic_set_to_polylib(context);
+	vector<max_term*> maxima = lexmin(A, C, options);
+	if (print_solution) {
+		char **param_names;
+		param_names = util_generate_names(C->Dimension, "p");
+		for (int i = 0; i < maxima.size(); ++i)
+			maxima[i]->print(cout, param_names,
+					 options->verify->barvinok);
+		util_free_names(C->Dimension, param_names);
+	}
 
-    iter_names = util_generate_names(A->Dimension - C->Dimension, "i");
-    param_names = util_generate_names(C->Dimension, "p");
-    if (print_solution) {
-	Polyhedron_Print(stdout, P_VALUE_FMT, A);
-	Polyhedron_Print(stdout, P_VALUE_FMT, C);
-    }
-    vector<max_term*> maxima = lexmin(A, C, options);
-    if (print_solution)
+	if (options->verify->verify)
+		verify_results(A, C, maxima, options->verify);
+
 	for (int i = 0; i < maxima.size(); ++i)
-	    maxima[i]->print(cout, param_names, options->verify->barvinok);
+		delete maxima[i];
 
-    if (options->verify->verify)
-	verify_results(A, C, maxima, options->verify);
+	Polyhedron_Free(A);
+	Polyhedron_Free(C);
 
-    for (int i = 0; i < maxima.size(); ++i)
-	delete maxima[i];
+	isl_basic_set_free(bset);
+	isl_basic_set_free(context);
+	isl_ctx_free(ctx);
 
-    util_free_names(A->Dimension - C->Dimension, iter_names);
-    util_free_names(C->Dimension, param_names);
-    Polyhedron_Free(A);
-    Polyhedron_Free(C);
-
-    lexmin_options_free(options);
-
-    return 0;
+	return 0;
 }
 
 static bool lexmin(int pos, Polyhedron *P, Value *context)
