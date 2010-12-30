@@ -547,6 +547,11 @@ void *set_codegen(void *arg)
 	CloogInput *input;
 	struct clast_stmt *stmt;
 
+	if (isl_union_set_n_set(uset) > 1)
+		isl_die(ctx, isl_error_invalid,
+			"code generation for more than one domain "
+			"requires a schedule", goto error);
+
 	state = cloog_isl_state_malloc(ctx);
 	options = cloog_options_malloc(state);
 	options->language = LANGUAGE_C;
@@ -563,9 +568,9 @@ void *set_codegen(void *arg)
 	clast_pprint(stdout, stmt, 0, options);
 	cloog_clast_free(stmt);
 
-error:
 	cloog_options_free(options);
 	cloog_state_free(state);
+error:
 	isl_union_set_free(uset);
 	return NULL;
 }
