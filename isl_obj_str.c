@@ -18,6 +18,25 @@ __isl_give isl_str *isl_str_alloc(struct isl_ctx *ctx)
 	return str;
 }
 
+__isl_give isl_str *isl_str_from_string(isl_ctx *ctx, __isl_take char *s)
+{
+	isl_str *str;
+
+	if (!s)
+		return NULL;
+
+	str = isl_str_alloc(ctx);
+	if (!str)
+		goto error;
+
+	str->s = s;
+
+	return str;
+error:
+	free(s);
+	return NULL;
+}
+
 __isl_give isl_str *isl_str_copy(__isl_keep isl_str *str)
 {
 	if (!str)

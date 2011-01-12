@@ -908,12 +908,9 @@ static struct isl_obj convert(isl_ctx *ctx, struct isl_obj obj,
 		s = isl_printer_get_str(p);
 		isl_printer_free(p);
 
-		str = isl_str_alloc(ctx);
-		if (!str) {
-			free(s);
+		str = isl_str_from_string(ctx, s);
+		if (!str)
 			goto error;
-		}
-		str->s = s;
 		free_obj(obj);
 		obj.v = str;
 		obj.type = isl_obj_str;

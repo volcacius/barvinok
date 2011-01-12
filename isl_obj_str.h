@@ -10,6 +10,7 @@ struct isl_str {
 typedef struct isl_str		isl_str;
 
 __isl_give isl_str *isl_str_alloc(struct isl_ctx *ctx);
+__isl_give isl_str *isl_str_from_string(isl_ctx *ctx, __isl_take char *s);
 __isl_give isl_str *isl_str_concat(__isl_take isl_str *str1,
 	__isl_take isl_str *str2);
 
