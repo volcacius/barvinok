@@ -1044,7 +1044,11 @@ static struct isl_obj read_un_op_expr(struct isl_stream *s,
 
 	op = find_matching_un_op(op, obj);
 
-	isl_assert(s->ctx, op, goto error);
+	if (!op)
+		isl_die(s->ctx, isl_error_invalid,
+			"no such unary operator defined on given operand",
+			goto error);
+
 	obj = convert(s->ctx, obj, op->arg);
 	obj.v = op->fn(obj.v);
 	obj.type = op->res;
@@ -1671,7 +1675,11 @@ static struct isl_obj read_expr(struct isl_stream *s,
 
 		op = find_matching_bin_op(op, obj, right_obj);
 
-		isl_assert(s->ctx, op, goto error);
+		if (!op)
+			isl_die(s->ctx, isl_error_invalid,
+			    "no such binary operator defined on given operands",
+			    goto error);
+
 		obj = convert(s->ctx, obj, op->lhs);
 		right_obj = convert(s->ctx, right_obj, op->rhs);
 		obj.v = op->fn(obj.v, right_obj.v);
