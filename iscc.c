@@ -22,7 +22,14 @@ static int isl_bool_error = -1;
 enum iscc_op { ISCC_READ, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER, ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
-	"read", "source", "vertices", "last", "any", "before", "under" };
+	[ISCC_READ] = "read",
+	[ISCC_SOURCE] = "source",
+	[ISCC_VERTICES] = "vertices",
+	[ISCC_LAST] = "last",
+	[ISCC_ANY] = "any",
+	[ISCC_BEFORE] = "before",
+	[ISCC_UNDER] = "under"
+};
 static enum isl_token_type iscc_op[ISCC_N_OP];
 
 struct isl_arg_choice iscc_format[] = {
