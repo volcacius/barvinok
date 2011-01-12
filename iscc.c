@@ -20,7 +20,9 @@ static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
 enum iscc_op { ISCC_READ, ISCC_SOURCE, ISCC_VERTICES,
-	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER, ISCC_N_OP };
+	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
+	       ISCC_TYPEOF,
+	       ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
 	[ISCC_READ] = "read",
 	[ISCC_SOURCE] = "source",
@@ -28,7 +30,8 @@ static const char *op_name[ISCC_N_OP] = {
 	[ISCC_LAST] = "last",
 	[ISCC_ANY] = "any",
 	[ISCC_BEFORE] = "before",
-	[ISCC_UNDER] = "under"
+	[ISCC_UNDER] = "under",
+	[ISCC_TYPEOF] = "typeof"
 };
 static enum isl_token_type iscc_op[ISCC_N_OP];
 
@@ -1292,6 +1295,41 @@ error:
 	return obj;
 }
 
+static struct isl_obj type_of(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	isl_ctx *ctx;
+	struct isl_obj obj;
+	const char *type = "unknown";
+
+	obj = read_expr(s, table);
+
+	if (obj.type == isl_obj_map ||
+	    obj.type == isl_obj_union_map)
+		type = "map";
+	if (obj.type == isl_obj_set ||
+	    obj.type == isl_obj_union_set)
+		type = "set";
+	if (obj.type == isl_obj_pw_qpolynomial ||
+	    obj.type == isl_obj_union_pw_qpolynomial)
+		type = "piecewise quasipolynomial";
+	if (obj.type == isl_obj_pw_qpolynomial_fold ||
+	    obj.type == isl_obj_union_pw_qpolynomial_fold)
+		type = "piecewise quasipolynomial fold";
+	if (obj.type == isl_obj_list)
+		type = "list";
+	if (obj.type == isl_obj_bool)
+		type = "boolean";
+	if (obj.type == isl_obj_str)
+		type = "string";
+
+	free_obj(obj);
+	obj.type = isl_obj_str;
+	obj.v = isl_str_from_string(s->ctx, strdup(type));
+
+	return obj;
+}
+
 static __isl_give isl_union_map *read_map(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -1591,6 +1629,8 @@ static struct isl_obj read_obj(struct isl_stream *s,
 			return any(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_LAST]))
 			return last(s, table);
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_TYPEOF]))
+			return type_of(s, table);
 
 		name = isl_stream_read_ident_if_available(s);
 		if (name)
