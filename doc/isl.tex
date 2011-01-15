@@ -821,6 +821,15 @@ $f_2$ := $f_1$ \ai{$*$} $s$ & intersect domain of $f_1$ with $s$
 \\
 $s_2$ := $m$($s_1$) & apply map $m$ to set $s_1$
 \\
+$q_2$ := $q_1$($s$) & apply $q_1$ to each element in $s$ and compute
+the sum of the results
+\\
+$l$ := $f$($s$) & apply $f$ to each element in $s$, compute
+a bound of the results
+and return a list containing the bound
+and a boolean that is true if the bound
+is known to be tight.
+\\
 $m_3$ := $m_1$ \ai[\tt]{.} $m_2$ & join of $m_1$ and $m_2$
 \\
 $m_3$ := $m_1$ \ai[\tt]{before} $m_2$ & join of $m_1$ and $m_2$
