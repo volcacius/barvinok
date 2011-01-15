@@ -146,7 +146,7 @@ basic operations on sets such as intersection (\ai[\tt]{*}),
 union (\ai[\tt]{+}) and difference (\ai[\tt]{-}) that allow
 the user to construct a set of elements satisfying constraints that
 are not in \indac{DNF}.
-For example, the set
+For example, the following square with its diagonal removed,
 $$
 \{\,
 (i,j) \mid 0 \le i,j \le 10 \wedge \lnot (i = j)
@@ -156,6 +156,9 @@ can be constructed as
 \begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
 { [i,j] : 0 <= i,j <= 10 } - { [i,i] }
 \end{lstlisting}
+Note that an occurrence of a relational operator in a set description
+may define several constraints, one for each pair of arguments.
+The elements in a list of arguments are separated by a comma.
 If there are no constraints on the coordinates, i.e., in case of
 a universe set, the colon may be omitted as well.
 For example
