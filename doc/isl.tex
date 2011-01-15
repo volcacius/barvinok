@@ -842,15 +842,16 @@ $q_2$ := $q_1(m)$ & $q_2$ := $m$ \ai[\tt]{.} $q_1$
 \\
 $q_2$ := $q_1$ \ai[\tt]{after} $m$ & $q_2$ := $m$ \ai[\tt]{.} $q_1$
 \\
-$f_2$ := $m$ \ai[\tt]{.} $f_1$ & join of $m$ and $f_1$, computing a bound
+$l$ := $m$ \ai[\tt]{.} $f$ & join of $m$ and $f$, computing a bound
 over all elements in the intersection of the range of $m$ and the domain
-of $f_1$
+of $f$ and returning a list containing the bound
+and a boolean that is true if the bound is known to be tight.
 \\
-$f_2$ := $m$ \ai[\tt]{before} $f_1$ & $f_2$ := $m$ \ai[\tt]{.} $f_1$
+$l$ := $m$ \ai[\tt]{before} $f$ & $l$ := $m$ \ai[\tt]{.} $f$
 \\
-$f_2$ := $f_1(m)$ & $f_2$ := $m$ \ai[\tt]{.} $f_1$
+$l$ := $f(m)$ & $l$ := $m$ \ai[\tt]{.} $f$
 \\
-$f_2$ := $f_1$ \ai[\tt]{after} $m$ & $f_2$ := $m$ \ai[\tt]{.} $f_1$
+$l$ := $f$ \ai[\tt]{after} $m$ & $l$ := $m$ \ai[\tt]{.} $f$
 \\
 $m$ := $s_1$ \ai[\tt]{->} $s_2$ & universal map with domain $s_1$
 and range $s_2$
