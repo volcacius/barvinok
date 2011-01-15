@@ -969,6 +969,15 @@ error:
 	return NULL;
 }
 
+__isl_give isl_pw_qpolynomial *isl_set_apply_pw_qpolynomial(
+	__isl_take isl_set *set, __isl_take isl_pw_qpolynomial *pwqp)
+{
+	isl_map *map;
+
+	map = isl_map_from_range(set);
+	return isl_map_apply_pw_qpolynomial(map, pwqp);
+}
+
 struct barvinok_apply_data {
 	isl_union_pw_qpolynomial *upwqp;
 	isl_union_pw_qpolynomial *res;
@@ -1039,6 +1048,16 @@ error:
 	isl_union_pw_qpolynomial_free(upwqp);
 	isl_union_pw_qpolynomial_free(data.res);
 	return NULL;
+}
+
+__isl_give isl_union_pw_qpolynomial *isl_union_set_apply_union_pw_qpolynomial(
+	__isl_take isl_union_set *uset,
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	isl_union_map *umap;
+
+	umap = isl_union_map_from_range(uset);
+	return isl_union_map_apply_union_pw_qpolynomial(umap, upwqp);
 }
 
 evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays)
