@@ -49,6 +49,16 @@ in the range of that relation and the domain of the relation
 becomes the domain of the result.
 
 \begin{verbatim}
+__isl_give isl_pw_qpolynomial *isl_set_apply_pw_qpolynomial(
+        __isl_take isl_set *set, __isl_take isl_pw_qpolynomial *pwqp);
+__isl_give isl_union_pw_qpolynomial *isl_union_set_apply_union_pw_qpolynomial(
+        __isl_take isl_union_set *uset,
+        __isl_take isl_union_pw_qpolynomial *upwqp);
+\end{verbatim}
+Compute the sum of the given piecewise quasipolynomial over
+all integer points in the intersection of the domain and the given set.
+
+\begin{verbatim}
 __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
         __isl_take isl_map *map, __isl_take isl_pw_qpolynomial *pwqp);
 __isl_give isl_union_pw_qpolynomial *isl_union_map_apply_union_pw_qpolynomial(
