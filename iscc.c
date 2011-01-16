@@ -48,6 +48,7 @@ struct isl_arg_choice iscc_format[] = {
 struct iscc_options {
 	struct barvinok_options	*barvinok;
 	unsigned		 format;
+	int			 io;
 };
 
 struct isl_arg iscc_options_arg[] = {
@@ -55,10 +56,13 @@ ISL_ARG_CHILD(struct iscc_options, barvinok, "barvinok", barvinok_options_arg,
 	"barvinok options")
 ISL_ARG_CHOICE(struct iscc_options, format, 0, "format", \
 	iscc_format,	ISL_FORMAT_ISL, "output format")
+ISL_ARG_BOOL(struct iscc_options, io, 0, "io", 1,
+	"allow read operations")
 ISL_ARG_END
 };
 
 ISL_ARG_DEF(iscc_options, struct iscc_options, iscc_options_arg)
+ISL_ARG_CTX_DEF(iscc_options, struct iscc_options, iscc_options_arg)
 
 static void *isl_obj_bool_copy(void *v)
 {
@@ -1546,6 +1550,7 @@ static struct isl_obj read_from_file(struct isl_stream *s)
 	struct isl_obj obj;
 	struct isl_token *tok;
 	struct isl_stream *s_file;
+	struct iscc_options *options;
 	FILE *file;
 
 	tok = isl_stream_next_token(s);
@@ -1553,6 +1558,13 @@ static struct isl_obj read_from_file(struct isl_stream *s)
 		isl_stream_error(s, tok, "expecting filename");
 		isl_token_free(tok);
 		goto error;
+	}
+
+	options = isl_ctx_peek_iscc_options(s->ctx);
+	if (!options || !options->io) {
+		isl_token_free(tok);
+		isl_die(s->ctx, isl_error_invalid,
+			"read operation not allowed", goto error);
 	}
 
 	file = fopen(tok->u.s, "r");
