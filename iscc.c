@@ -19,12 +19,13 @@ static int isl_bool_false = 0;
 static int isl_bool_true = 1;
 static int isl_bool_error = -1;
 
-enum iscc_op { ISCC_READ, ISCC_SOURCE, ISCC_VERTICES,
+enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
 	       ISCC_TYPEOF,
 	       ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
 	[ISCC_READ] = "read",
+	[ISCC_WRITE] = "write",
 	[ISCC_SOURCE] = "source",
 	[ISCC_VERTICES] = "vertices",
 	[ISCC_LAST] = "last",
@@ -57,7 +58,7 @@ ISL_ARG_CHILD(struct iscc_options, barvinok, "barvinok", barvinok_options_arg,
 ISL_ARG_CHOICE(struct iscc_options, format, 0, "format", \
 	iscc_format,	ISL_FORMAT_ISL, "output format")
 ISL_ARG_BOOL(struct iscc_options, io, 0, "io", 1,
-	"allow read operations")
+	"allow read and write operations")
 ISL_ARG_END
 };
 
@@ -1589,6 +1590,52 @@ error:
 	return obj;
 }
 
+static struct isl_obj write_to_file(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	struct isl_obj obj;
+	struct isl_token *tok;
+	struct isl_stream *s_file;
+	struct iscc_options *options;
+	FILE *file;
+	isl_printer *p;
+
+	tok = isl_stream_next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_STRING) {
+		isl_stream_error(s, tok, "expecting filename");
+		isl_token_free(tok);
+		goto error;
+	}
+
+	obj = read_expr(s, table);
+
+	options = isl_ctx_peek_iscc_options(s->ctx);
+	if (!options || !options->io) {
+		isl_token_free(tok);
+		isl_die(s->ctx, isl_error_invalid,
+			"write operation not allowed", goto error);
+	}
+
+	file = fopen(tok->u.s, "w");
+	isl_token_free(tok);
+	if (!file)
+		isl_die(s->ctx, isl_error_unknown,
+			"could not open file for writing", goto error);
+
+	p = isl_printer_to_file(s->ctx, file);
+	p = isl_printer_set_output_format(p, options->format);
+	p = obj.type->print(p, obj.v);
+	p = isl_printer_end_line(p);
+	isl_printer_free(p);
+
+	fclose(file);
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj read_string_if_available(struct isl_stream *s)
 {
 	struct isl_token *tok;
@@ -1635,6 +1682,8 @@ static struct isl_obj read_obj(struct isl_stream *s,
 
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_READ]))
 			return read_from_file(s);
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_WRITE]))
+			return write_to_file(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_VERTICES]))
 			return vertices(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_ANY]))
