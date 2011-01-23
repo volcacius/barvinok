@@ -1936,7 +1936,7 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 
 	if (assign) {
 		if (do_assign(s->ctx, table, lhs, obj))
-			return;
+			return p;
 	} else {
 		p = obj.type->print(p, obj.v);
 		p = isl_printer_end_line(p);
