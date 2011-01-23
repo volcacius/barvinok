@@ -411,7 +411,7 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 	evalue *sum = (evalue *)user;
 	unsigned dim;
 
-	e = isl_alloc_type(set->ctx, evalue);
+	e = isl_alloc_type(isl_set_get_ctx(set), evalue);
 	if (!e)
 		goto error;
 
