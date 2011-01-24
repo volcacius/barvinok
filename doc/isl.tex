@@ -300,9 +300,14 @@ The above set can therefore also be represented as
 \begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
 [n] -> { [i] : 1 <= i <= n and (i + 1) - 5 * [(i + 1)/5] <= 2 }
 \end{lstlisting}
+Actually, since modulos are pretty common too, \isl/ also has
+a special notation for them and the set can therefore also be respresented as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+[n] -> { [i] : 1 <= i <= n and (i + 1) % 5 <= 2 }
+\end{lstlisting}
 It should be noted that \lstinline![]! always rounds down
 (towards $-\infty$), while integer division in C truncates
-(towards 0).  When translating conditions in C contain integer
+(towards 0).  When translating conditions in C containing integer
 divisions and/or modulos to \isl/ constraints, the user should therefore
 make sure the sign of the dividend is positive.  If not, the integer
 division needs to be translated differently for positive and negative
