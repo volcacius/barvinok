@@ -4,6 +4,7 @@
 #include <isl/obj.h>
 #include <isl/stream.h>
 #include <isl/vertices.h>
+#include <isl/flow.h>
 #include <isl_obj_list.h>
 #include <isl_obj_str.h>
 #include <barvinok/isl.h>
@@ -1542,7 +1543,7 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	isl_union_map *sink = NULL;
 	isl_union_map *schedule = NULL;
 	isl_union_map *must_dep;
-	isl_union_set *must_no_source;
+	isl_union_map *must_no_source;
 
 	must_source = read_map(s, table);
 	if (!must_source)
@@ -1581,7 +1582,7 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 
 	list->obj[0].type = isl_obj_union_map;
 	list->obj[0].v = must_dep;
-	list->obj[1].type = isl_obj_union_set;
+	list->obj[1].type = isl_obj_union_map;
 	list->obj[1].v = must_no_source;
 
 	obj.v = list;
