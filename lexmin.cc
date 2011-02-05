@@ -2668,6 +2668,9 @@ int main(int argc, char **argv)
 	isl_basic_set *context, *bset;
 	Polyhedron *A, *C;
 	int neg_one, n;
+	char s[1024];
+	int urs_parms = 0;
+	int urs_unknowns = 0;
 	int print_solution = 1;
 	struct lexmin_options *options = lexmin_options_new_with_defaults();
 	options->verify->barvinok->lookup_table = 0;
@@ -2682,7 +2685,28 @@ int main(int argc, char **argv)
 	assert(neg_one == -1);
 	bset = isl_basic_set_read_from_file(ctx, stdin,
 		isl_basic_set_dim(context, isl_dim_set));
+
+	while (fgets(s, sizeof(s), stdin)) {
+		if (strncasecmp(s, "Maximize", 8) == 0) {
+			fprintf(stderr, "Maximize option not supported\n");
+			abort();
+		}
+		if (strncasecmp(s, "Rational", 8) == 0) {
+			fprintf(stderr, "Rational option not supported\n");
+			abort();
+		}
+		if (strncasecmp(s, "Urs_parms", 9) == 0)
+			urs_parms = 1;
+		if (strncasecmp(s, "Urs_unknowns", 12) == 0)
+			urs_unknowns = 1;
+	}
+	if (!urs_parms)
+		context = isl_basic_set_intersect(context,
+		isl_basic_set_positive_orthant(isl_basic_set_get_dim(context)));
 	context = to_parameter_domain(context);
+	if (!urs_unknowns)
+		bset = isl_basic_set_intersect(bset,
+		isl_basic_set_positive_orthant(isl_basic_set_get_dim(bset)));
 
 	if (options->verify->verify)
 		print_solution = 0;
