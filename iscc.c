@@ -561,6 +561,33 @@ __isl_give isl_map *union_map_sample(__isl_take isl_union_map *umap)
 	return isl_map_from_basic_map(isl_union_map_sample(umap));
 }
 
+static __isl_give struct isl_list *union_map_power(
+	__isl_take isl_union_map *umap)
+{
+	isl_ctx *ctx;
+	struct isl_list *list;
+	int exact;
+
+	ctx = isl_union_map_get_ctx(umap);
+	list = isl_list_alloc(ctx, 2);
+	if (!list)
+		goto error2;
+
+	list->obj[0].type = isl_obj_union_map;
+	list->obj[0].v = isl_union_map_power(umap, &exact);
+	list->obj[1].type = isl_obj_bool;
+	list->obj[1].v = exact ? &isl_bool_true : &isl_bool_false;
+	if (exact < 0 || !list->obj[0].v)
+		goto error;
+
+	return list;
+error2:
+	isl_union_map_free(umap);
+error:
+	isl_list_free(list);
+	return NULL;
+}
+
 static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
 	__isl_take isl_union_pw_qpolynomial *upwqp)
 {
@@ -801,6 +828,8 @@ struct isc_named_un_op named_un_ops[] = {
 	{"upoly",	{ -1,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_un_op_fn) &union_pw_qpolynomial_upoly } },
+	{"pow",	{ -1,	isl_obj_union_map,	isl_obj_list,
+		(isc_un_op_fn) &union_map_power } },
 	{"sample",	{ -1,	isl_obj_union_set,	isl_obj_set,
 		(isc_un_op_fn) &union_set_sample } },
 	{"sample",	{ -1,	isl_obj_union_map,	isl_obj_map,
