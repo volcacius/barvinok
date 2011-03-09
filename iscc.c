@@ -818,6 +818,8 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_set_unwrap } },
 	{"wrap",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_wrap } },
+	{"zip",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_map_zip } },
 	NULL
 };
 
