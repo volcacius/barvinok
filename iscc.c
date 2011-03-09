@@ -753,6 +753,8 @@ struct isc_named_un_op named_un_ops[] = {
 #endif
 	{"deltas",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_deltas } },
+	{"deltas_map",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
+		(isc_un_op_fn) &isl_union_map_deltas_map } },
 	{"dom",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_domain } },
 	{"dom",	{ -1,	isl_obj_union_pw_qpolynomial,	isl_obj_union_set,
