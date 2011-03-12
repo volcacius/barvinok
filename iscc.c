@@ -1,6 +1,8 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <isl/obj.h>
 #include <isl/stream.h>
 #include <isl/vertices.h>
@@ -22,11 +24,12 @@ static int isl_bool_error = -1;
 
 enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
-	       ISCC_TYPEOF,
+	       ISCC_TYPEOF, ISCC_PRINT,
 	       ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
 	[ISCC_READ] = "read",
 	[ISCC_WRITE] = "write",
+	[ISCC_PRINT] = "print",
 	[ISCC_SOURCE] = "source",
 	[ISCC_VERTICES] = "vertices",
 	[ISCC_LAST] = "last",
@@ -913,7 +916,9 @@ static struct isl_obj stored_obj(struct isl_ctx *ctx,
 		struct isl_named_obj *named;
 		named = entry->data;
 		obj = named->obj;
-	} else
+	} else if (isdigit(name[0]))
+		fprintf(stderr, "unknown identifier '$%s'\n", name);
+	else
 		fprintf(stderr, "unknown identifier '%s'\n", name);
 
 	free(name);
@@ -1780,6 +1785,37 @@ error:
 	return obj;
 }
 
+static __isl_give char *read_ident(struct isl_stream *s)
+{
+	char *name;
+	struct isl_token *tok, *tok2;
+
+	name = isl_stream_read_ident_if_available(s);
+	if (name)
+		return name;
+
+	tok = isl_stream_next_token(s);
+	if (!tok)
+		return NULL;
+	if (tok->type != '$') {
+		isl_stream_push_token(s, tok);
+		return NULL;
+	}
+	tok2 = isl_stream_next_token(s);
+	if (!tok2 || tok2->type != ISL_TOKEN_VALUE) {
+		if (tok2)
+			isl_stream_push_token(s, tok2);
+		isl_stream_push_token(s, tok);
+		return NULL;
+	}
+	
+	name = isl_int_get_str(tok2->u.v);
+	isl_token_free(tok);
+	isl_token_free(tok2);
+
+	return name;
+}
+
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -1812,7 +1848,7 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_TYPEOF]))
 			return type_of(s, table);
 
-		name = isl_stream_read_ident_if_available(s);
+		name = read_ident(s);
 		if (name)
 			obj = stored_obj(s->ctx, table, name);
 		else
@@ -1940,12 +1976,14 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p);
 
 static __isl_give isl_printer *read_line(struct isl_stream *s,
-	struct isl_hash_table *table, __isl_take isl_printer *p)
+	struct isl_hash_table *table, __isl_take isl_printer *p, int tty)
 {
 	struct isl_obj obj = { isl_obj_none, NULL };
 	char *lhs = NULL;
 	int assign = 0;
+	int only_print = 0;
 	struct isc_bin_op *op = NULL;
+	char buf[30];
 
 	if (!p)
 		return NULL;
@@ -1960,7 +1998,10 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		lhs = isl_stream_read_ident_if_available(s);
 		if (isl_stream_eat(s, ISL_TOKEN_DEF))
 			goto error;
-	}
+	} else if (isl_stream_eat_if_available(s, iscc_op[ISCC_PRINT]))
+		only_print = 1;
+	else if (!tty)
+		only_print = 1;
 
 	obj = read_expr(s, table);
 	if (obj.type == isl_obj_none || obj.v == NULL)
@@ -1968,14 +2009,24 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 	if (isl_stream_eat(s, ';'))
 		goto error;
 
-	if (assign) {
-		if (do_assign(s->ctx, table, lhs, obj))
-			return p;
-	} else {
+	if (only_print) {
 		p = obj.type->print(p, obj.v);
 		p = isl_printer_end_line(p);
 		free_obj(obj);
+		return p;
 	}
+	if (!assign) {
+		static int count = 0;
+		snprintf(buf, sizeof(buf), "$%d", count++);
+		lhs = strdup(buf + 1);
+
+		p = isl_printer_print_str(p, buf);
+		p = isl_printer_print_str(p, " := ");
+		p = obj.type->print(p, obj.v);
+		p = isl_printer_end_line(p);
+	}
+	if (do_assign(s->ctx, table, lhs, obj))
+		return p;
 
 	return p;
 error:
@@ -2050,7 +2101,7 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 	register_named_ops(s_file);
 
 	while (!s_file->eof)
-		p = read_line(s_file, table, p);
+		p = read_line(s_file, table, p, 0);
 
 	isl_stream_free(s_file);
 	fclose(file);
@@ -2067,6 +2118,7 @@ int main(int argc, char **argv)
 	struct isl_hash_table *table;
 	struct iscc_options *options;
 	isl_printer *p;
+	int tty = isatty(0);
 
 	options = iscc_options_new_with_defaults();
 	assert(options);
@@ -2084,7 +2136,7 @@ int main(int argc, char **argv)
 	register_named_ops(s);
 
 	while (p && !s->eof) {
-		p = read_line(s, table, p);
+		p = read_line(s, table, p, tty);
 	}
 
 	isl_printer_free(p);
