@@ -76,7 +76,9 @@ static __isl_give isl_printer *isl_obj_str_print(__isl_take isl_printer *p,
 {
 	isl_str *str = (isl_str *)v;
 
+	isl_printer_print_str(p, "\"");
 	isl_printer_print_str(p, str->s);
+	isl_printer_print_str(p, "\"");
 }
 
 __isl_give isl_str *isl_str_concat(__isl_take isl_str *str1,
