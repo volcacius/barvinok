@@ -1592,7 +1592,7 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
 	barvinok_options *options)
 {
-	isl_ctx *ctx;
+	isl_int one;
 	isl_dim *dim;
 	isl_set *set;
 	isl_qpolynomial *qp;
@@ -1602,13 +1602,14 @@ static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
 	if (!map)
 		return NULL;
 
-	ctx = isl_map_get_ctx(map);
-
 	options->summation = BV_SUM_BERNOULLI;
 
 	set = isl_map_wrap(map);
 	dim = isl_set_get_dim(set);
-	qp = isl_qpolynomial_rat_cst(dim, ctx->one, ctx->one);
+	isl_int_init(one);
+	isl_int_set_si(one, 1);
+	qp = isl_qpolynomial_rat_cst(dim, one, one);
+	isl_int_clear(one);
 
 	pwqp = isl_pw_qpolynomial_alloc(set, qp);
 	pwqp = isl_pw_qpolynomial_sum(pwqp);
