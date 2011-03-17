@@ -1828,6 +1828,27 @@ error:
 	return obj;
 }
 
+static struct isl_obj read_bool_if_available(struct isl_stream *s)
+{
+	struct isl_token *tok;
+	struct isl_obj obj = { isl_obj_none, NULL };
+
+	tok = isl_stream_next_token(s);
+	if (!tok)
+		return obj;
+	if (tok->type == ISL_TOKEN_FALSE || tok->type == ISL_TOKEN_TRUE) {
+		int is_true = tok->type == ISL_TOKEN_TRUE;
+		isl_token_free(tok);
+		obj.v = is_true ? &isl_bool_true : &isl_bool_false;
+		obj.type = isl_obj_bool;
+	} else
+		isl_stream_push_token(s, tok);
+	return obj;
+error:
+	isl_token_free(tok);
+	return obj;
+}
+
 static __isl_give char *read_ident(struct isl_stream *s)
 {
 	char *name;
@@ -1867,6 +1888,9 @@ static struct isl_obj read_obj(struct isl_stream *s,
 	struct isc_un_op *op = NULL;
 
 	obj = read_string_if_available(s);
+	if (obj.v)
+		return obj;
+	obj = read_bool_if_available(s);
 	if (obj.v)
 		return obj;
 	if (isl_stream_eat_if_available(s, '(')) {
