@@ -108,6 +108,31 @@ error:
 	return NULL;
 }
 
+__isl_give isl_list *isl_list_add_obj(__isl_take isl_list *list,
+	__isl_take struct isl_obj obj)
+{
+	struct isl_list *new_list;
+
+	if (!list || !obj.v)
+		goto error;
+
+	new_list = isl_realloc(ctx, list, struct isl_list,
+			sizeof(struct isl_list) +
+			list->n * sizeof(struct isl_obj));
+	if (!new_list)
+		goto error;
+
+	list = new_list;
+	list->obj[list->n] = obj;
+	list->n++;
+
+	return list;
+error:
+	obj.type->free(obj.v);
+	isl_list_free(list);
+	return NULL;
+}
+
 static void *isl_obj_list_add(void *v1, void *v2)
 {
 	struct isl_list *list1 = (struct isl_list *)v1;
