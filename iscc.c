@@ -1880,6 +1880,36 @@ static __isl_give char *read_ident(struct isl_stream *s)
 	return name;
 }
 
+static struct isl_obj read_list(struct isl_stream *s,
+	struct isl_hash_table *table, struct isl_obj obj)
+{
+	struct isl_list *list;
+
+	list = isl_list_alloc(s->ctx, 2);
+	if (!list)
+		goto error;
+	list->obj[0] = obj;
+	list->obj[1] = read_obj(s, table);
+	obj.v = list;
+	obj.type = isl_obj_list;
+
+	if (!list->obj[1].v)
+		goto error;
+
+	while (isl_stream_eat_if_available(s, ',')) {
+		obj.v = list = isl_list_add_obj(list, read_obj(s, table));
+		if (!obj.v)
+			goto error;
+	}
+
+	return obj;
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -1895,6 +1925,8 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		return obj;
 	if (isl_stream_eat_if_available(s, '(')) {
 		obj = read_expr(s, table);
+		if (obj.v && isl_stream_eat_if_available(s, ','))
+			obj = read_list(s, table, obj);
 		if (!obj.v || isl_stream_eat(s, ')'))
 			goto error;
 	} else {
