@@ -152,14 +152,14 @@ For an iteration domain to be representable by such a set,
 the iterators therefore need to be integers.
 
 The constraints of a set need to be affine, i.e., linear plus constant term.
-The constraints also need to be given in \indac{DNF}, with disjuncts
-separated by the \ai[\tt]{or} keyword and conjuncts separated
-by the \ai[\tt]{and} keyword.
-Note that this is not a real restriction because \iscc/ supports
-basic operations on sets such as intersection (\ai[\tt]{*}),
-union (\ai[\tt]{+}) and difference (\ai[\tt]{-}) that allow
-the user to construct a set of elements satisfying constraints that
-are not in \indac{DNF}.
+These affine constraint may be combined through conjunctions (\texttt{and}),
+disjunctions (\texttt{or}), projections (\texttt{exists}) and
+negations (\texttt{not}).
+Note that the formula is immediately converted
+into \indac{DNF}, so it may sometimes be more efficient
+to construct a set from smaller sets by applying
+basic operations such as intersection ({\tt *}),
+union ({\tt +}) and difference ({\tt -}).
 For example, the following square with its diagonal removed,
 $$
 \{\,
@@ -169,6 +169,10 @@ $$
 can be constructed as
 \begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
 { [i,j] : 0 <= i,j <= 10 } - { [i,i] }
+\end{lstlisting}
+or as
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ [i,j] : 0 <= i,j <= 10 and not (i = j) }
 \end{lstlisting}
 Note that an occurrence of a relational operator in a set description
 may define several constraints, one for each pair of arguments.
