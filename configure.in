@@ -26,6 +26,7 @@ PKG_PROG_PKG_CONFIG
 
 AC_CHECK_HEADERS(getopt.h)
 AC_CHECK_HEADERS(sys/times.h)
+AC_CHECK_FUNCS(sigaction)
 
 AC_MSG_CHECKING(whether to build shared libbarvinok)
 AC_ARG_ENABLE(shared_barvinok,

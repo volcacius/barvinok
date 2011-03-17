@@ -14,6 +14,49 @@
 
 #include "config.h"
 
+#ifdef HAVE_SIGACTION
+#include <signal.h>
+
+static isl_ctx *main_ctx;
+
+static void handler(int signum)
+{
+	if (isl_ctx_aborted(main_ctx))
+		exit(EXIT_FAILURE);
+	isl_ctx_abort(main_ctx);
+}
+
+static struct sigaction sa_old;
+
+static void install_signal_handler(isl_ctx *ctx)
+{
+	struct sigaction sa;
+
+	main_ctx = ctx;
+
+	memset(&sa, 0, sizeof(struct sigaction));
+	sa.sa_handler = &handler;
+	sa.sa_flags = SA_RESTART;
+	sigaction(SIGINT, &sa, &sa_old);
+}
+
+static void remove_signal_handler(isl_ctx *ctx)
+{
+	sigaction(SIGINT, &sa_old, NULL);
+}
+
+#else
+
+static void install_signal_handler(isl_ctx *ctx)
+{
+}
+
+static void remove_signal_handler(isl_ctx *ctx)
+{
+}
+
+#endif
+
 #ifdef HAVE_CLOOG
 #include <cloog/isl/cloog.h>
 #endif
@@ -2004,8 +2047,13 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		only_print = 1;
 
 	obj = read_expr(s, table);
-	if (obj.type == isl_obj_none || obj.v == NULL)
+	if (obj.type == isl_obj_none || obj.v == NULL) {
+		if (isl_ctx_last_error(s->ctx) == isl_error_abort) {
+			fprintf(stderr, "Interrupted\n");
+			isl_ctx_reset_error(s->ctx);
+		}
 		goto error;
+	}
 	if (isl_stream_eat(s, ';'))
 		goto error;
 
@@ -2135,9 +2183,14 @@ int main(int argc, char **argv)
 
 	register_named_ops(s);
 
+	install_signal_handler(ctx);
+
 	while (p && !s->eof) {
+		isl_ctx_resume(main_ctx);
 		p = read_line(s, table, p, tty);
 	}
+
+	remove_signal_handler(ctx);
 
 	isl_printer_free(p);
 	isl_hash_table_foreach(ctx, table, free_cb, NULL);
