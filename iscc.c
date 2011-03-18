@@ -2242,7 +2242,7 @@ int main(int argc, char **argv)
 	install_signal_handler(ctx);
 
 	while (p && !s->eof) {
-		isl_ctx_resume(main_ctx);
+		isl_ctx_resume(ctx);
 		p = read_line(s, table, p, tty);
 	}
 
