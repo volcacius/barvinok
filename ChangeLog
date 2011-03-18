@@ -1,3 +1,12 @@
+version: 0.33
+date: Fri Mar 18 17:35:10 CET 2011
+changes:
+    - add isl_set_apply_pw_qpolynomial
+    - drop piplib submodule
+    - barvinok_bound and barvinok_summate now accept input in isl notation
+    - use isl for more operations
+    - improved iscc
+---
 version: 0.32.1
 date: Mon Sep 13 11:38:47 CEST 2010
 changes:
