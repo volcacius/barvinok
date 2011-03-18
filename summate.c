@@ -724,7 +724,6 @@ struct barvinok_summate_data {
 	__isl_take isl_qpolynomial *qp;
 	isl_pw_qpolynomial *sum;
 	int n_in;
-	int nvar;
 	int wrapping;
 	evalue *e;
 	struct evalue_section_array sections;
@@ -739,6 +738,7 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	isl_pw_qpolynomial *pwqp;
 	int bounded;
 	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
+	unsigned nvar = isl_basic_set_dim(bset, isl_dim_set);
 	isl_dim *dim;
 
 	if (!bset)
@@ -758,7 +758,7 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	dim = isl_dim_domain(isl_dim_from_range(dim));
 
 	P = isl_basic_set_to_polylib(bset);
-	tmp = barvinok_sum_over_polytope(P, data->e, data->nvar,
+	tmp = barvinok_sum_over_polytope(P, data->e, nvar,
 					 &data->sections, data->options);
 	Polyhedron_Free(P);
 	assert(tmp);
@@ -827,6 +827,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	isl_ctx *ctx;
 	struct barvinok_summate_data data;
 	int options_allocated = 0;
+	int nvar;
 
 	data.dim = NULL;
 	data.options = NULL;
@@ -834,8 +835,8 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	if (!pwqp)
 		return NULL;
 
-	data.nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
-	if (data.nvar == 0)
+	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
+	if (nvar == 0)
 		return isl_pw_qpolynomial_drop_dims(pwqp, isl_dim_set, 0, 0);
 
 	data.dim = isl_pw_qpolynomial_get_dim(pwqp);
@@ -843,13 +844,13 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	if (data.wrapping) {
 		data.dim = isl_dim_unwrap(data.dim);
 		data.n_in = isl_dim_size(data.dim, isl_dim_in);
-		data.nvar = isl_dim_size(data.dim, isl_dim_out);
+		nvar = isl_dim_size(data.dim, isl_dim_out);
 		data.dim = isl_dim_domain(data.dim);
-		if (data.nvar == 0)
+		if (nvar == 0)
 			return isl_pw_qpolynomial_reset_dim(pwqp, data.dim);
 	} else {
 		data.n_in = 0;
-		data.dim = isl_dim_drop(data.dim, isl_dim_set, 0, data.nvar);
+		data.dim = isl_dim_drop(data.dim, isl_dim_set, 0, nvar);
 	}
 
 	data.sum = isl_pw_qpolynomial_zero(isl_dim_copy(data.dim));
