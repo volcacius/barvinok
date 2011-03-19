@@ -834,6 +834,15 @@ $m_1(z)$ and $m_3(y)$ overlap, $m_4(z) \llt m_4(y)$ and such that there
 is no $x$ in the domain of $m_2$ with
 $m_2(x) \cap m_3(y) \ne \emptyset$ and $m_4(z) \llt m_4(x) \llt m_4(y)$.
 \\
+$m_3$ := \ai[\tt]{schedule} $s$ \ai[\tt]{respecting} $m_1$ \ai[\tt]{minimizing} $m_2$ &
+compute a schedule for the domains in $s$ that respects all dependences
+in $m_1$ and tries to minimize the dependences in $m_2$.
+\\
+$l$ := \ai[\tt]{schedule\_bands} $s$ \ai[\tt]{respecting} $m_1$ \ai[\tt]{minimizing} $m_2$ &
+compute a schedule for the domains in $s$ that respects all dependences
+in $m_1$ and tries to minimize the dependences in $m_2$ and return
+a list of the bands in the schedule.
+\\
 $i_3$ := $i_1$ \ai{$+$} $i_2$ & sum
 \\
 $s_3$ := $s_1$ \ai{$+$} $s_2$ & union

@@ -7,6 +7,7 @@
 #include <isl/stream.h>
 #include <isl/vertices.h>
 #include <isl/flow.h>
+#include <isl/schedule.h>
 #include <isl_obj_list.h>
 #include <isl_obj_str.h>
 #include <barvinok/isl.h>
@@ -67,6 +68,8 @@ static int isl_bool_error = -1;
 
 enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
+	       ISCC_SCHEDULE, ISCC_SCHEDULE_BANDS,
+	       ISCC_MINIMIZING, ISCC_RESPECTING,
 	       ISCC_TYPEOF, ISCC_PRINT,
 	       ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
@@ -79,6 +82,10 @@ static const char *op_name[ISCC_N_OP] = {
 	[ISCC_ANY] = "any",
 	[ISCC_BEFORE] = "before",
 	[ISCC_UNDER] = "under",
+	[ISCC_SCHEDULE] = "schedule",
+	[ISCC_SCHEDULE_BANDS] = "schedule_bands",
+	[ISCC_MINIMIZING] = "minimizing",
+	[ISCC_RESPECTING] = "respecting",
 	[ISCC_TYPEOF] = "typeof"
 };
 static enum isl_token_type iscc_op[ISCC_N_OP];
@@ -1509,6 +1516,20 @@ static struct isl_obj type_of(struct isl_stream *s,
 	return obj;
 }
 
+static __isl_give isl_union_set *read_set(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	struct isl_obj obj;
+
+	obj = read_obj(s, table);
+	obj = convert(s->ctx, obj, isl_obj_union_set);
+	isl_assert(s->ctx, obj.type == isl_obj_union_set, goto error);
+	return obj.v;
+error:
+	free_obj(obj);
+	return NULL;
+}
+
 static __isl_give isl_union_map *read_map(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -1685,6 +1706,90 @@ error:
 	isl_union_map_free(must_source);
 	isl_union_map_free(sink);
 	isl_union_map_free(schedule);
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
+static __isl_give isl_schedule *get_schedule(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	isl_union_set *domain;
+	isl_union_map *validity;
+	isl_union_map *proximity;
+
+	domain = read_set(s, table);
+	if (!domain)
+		return NULL;
+
+	validity = isl_union_map_empty(isl_union_set_get_dim(domain));
+	proximity = isl_union_map_empty(isl_union_set_get_dim(domain));
+
+	for (;;) {
+		isl_union_map *umap;
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_RESPECTING])) {
+			umap = read_map(s, table);
+			validity = isl_union_map_union(validity, umap);
+		} else if (isl_stream_eat_if_available(s, iscc_op[ISCC_MINIMIZING])) {
+			umap = read_map(s, table);
+			proximity = isl_union_map_union(proximity, umap);
+		} else
+			break;
+	}
+
+	return isl_union_set_compute_schedule(domain, validity, proximity);
+}
+
+static struct isl_obj schedule(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	struct isl_obj obj = { isl_obj_none, NULL };
+	isl_schedule *schedule;
+
+	schedule = get_schedule(s, table);
+
+	obj.v = isl_schedule_get_map(schedule);
+	obj.type = isl_obj_union_map;
+
+	isl_schedule_free(schedule);
+
+	return obj;
+}
+
+static struct isl_obj schedule_bands(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	int i;
+	int n_band;
+	struct isl_obj obj = { isl_obj_none, NULL };
+	struct isl_list *list;
+	isl_schedule *schedule;
+
+	schedule = get_schedule(s, table);
+	if (!schedule)
+		return obj;
+
+	n_band = isl_schedule_n_band(schedule);
+	list = isl_list_alloc(s->ctx, n_band);
+	if (!list)
+		goto error;
+
+	obj.v = list;
+	obj.type = isl_obj_list;
+
+	for (i = 0; i < n_band; ++i) {
+		list->obj[i].type = isl_obj_union_map;
+		list->obj[i].v = isl_schedule_get_band(schedule, i);
+		if (!list->obj[i].v)
+			goto error;
+	}
+
+	isl_schedule_free(schedule);
+
+	return obj;
+error:
+	isl_schedule_free(schedule);
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
@@ -1953,6 +2058,10 @@ static struct isl_obj read_obj(struct isl_stream *s,
 			return any(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_LAST]))
 			return last(s, table);
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_SCHEDULE]))
+			return schedule(s, table);
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_SCHEDULE_BANDS]))
+			return schedule_bands(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_TYPEOF]))
 			return type_of(s, table);
 
