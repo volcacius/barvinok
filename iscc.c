@@ -1658,8 +1658,10 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	may_source = isl_union_map_empty(isl_union_map_get_dim(sink));
 	if (isl_union_map_compute_flow(sink, must_source, may_source,
 				       schedule, &must_dep, NULL,
-				       &must_no_source, NULL) < 0)
+				       &must_no_source, NULL) < 0) {
+		isl_list_free(list);
 		return obj;
+	}
 
 	list->obj[0].type = isl_obj_union_map;
 	list->obj[0].v = must_dep;
