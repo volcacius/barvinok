@@ -2105,12 +2105,9 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		only_print = 1;
 
 	obj = read_expr(s, table);
-	if (obj.type == isl_obj_none || obj.v == NULL) {
-		if (isl_ctx_last_error(s->ctx) == isl_error_abort) {
-			fprintf(stderr, "Interrupted\n");
-			isl_ctx_reset_error(s->ctx);
-		}
-		goto error;
+	if (isl_ctx_last_error(s->ctx) == isl_error_abort) {
+		fprintf(stderr, "Interrupted\n");
+		isl_ctx_reset_error(s->ctx);
 	}
 	if (isl_stream_eat(s, ';'))
 		goto error;
@@ -2121,7 +2118,7 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		free_obj(obj);
 		return p;
 	}
-	if (!assign) {
+	if (!assign && obj.type != isl_obj_none && obj.v != NULL) {
 		static int count = 0;
 		snprintf(buf, sizeof(buf), "$%d", count++);
 		lhs = strdup(buf + 1);
@@ -2131,7 +2128,7 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		p = obj.type->print(p, obj.v);
 		p = isl_printer_end_line(p);
 	}
-	if (do_assign(s->ctx, table, lhs, obj))
+	if (lhs && do_assign(s->ctx, table, lhs, obj))
 		return p;
 
 	return p;
