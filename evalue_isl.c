@@ -256,6 +256,7 @@ static evalue *evalue_pow(evalue *e, int exp)
 static evalue *div2evalue(__isl_take isl_div *div)
 {
 	int i;
+	isl_ctx *ctx;
 	isl_vec *vec;
 	unsigned dim;
 	unsigned nparam;
@@ -268,7 +269,8 @@ static evalue *div2evalue(__isl_take isl_div *div)
 	dim = isl_div_dim(div, isl_dim_set);
 	nparam = isl_div_dim(div, isl_dim_param);
 
-	vec = isl_vec_alloc(div->ctx, 1 + dim + nparam + 1);
+	ctx = isl_div_get_ctx(div);
+	vec = isl_vec_alloc(ctx, 1 + dim + nparam + 1);
 	if (!vec)
 		goto error;
 	for (i = 0; i < dim; ++i)
@@ -279,7 +281,7 @@ static evalue *div2evalue(__isl_take isl_div *div)
 	isl_div_get_denominator(div, &vec->el[0]);
 	isl_div_get_constant(div, &vec->el[1 + dim + nparam]);
 
-	e = isl_alloc_type(div->ctx, evalue);
+	e = isl_alloc_type(ctx, evalue);
 	if (!e)
 		goto error;
 	value_init(e->d);
