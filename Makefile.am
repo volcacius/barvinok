@@ -15,6 +15,10 @@ if BUNDLED_ISL_POLYLIB
     MAYBE_ISL_POLYLIB = isl-polylib
     ISL_POLYLIB_LA = $(top_builddir)/isl-polylib/libisl-polylib.la
 endif
+if BUNDLED_CLOOG
+    MAYBE_CLOOG = cloog
+    CLOOG_LA = $(top_builddir)/cloog/libcloog-isl.la
+endif
 if BUNDLED_OMEGA
     MAYBE_OMEGA = omega
     OMEGA_LA = $(top_builddir)/omega/omega_lib/libomega.la
@@ -26,10 +30,10 @@ if USE_PARKER
     MAYBE_PARKER = parker
 endif
 SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POLYLIB) \
-		$(MAYBE_OMEGA) \
+		$(MAYBE_CLOOG) $(MAYBE_OMEGA) \
 		$(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) \
-		$(MAYBE_ISL_POLYLIB) $(MAYBE_OMEGA) \
+		$(MAYBE_ISL_POLYLIB) $(MAYBE_CLOOG) $(MAYBE_OMEGA) \
 		zsolve parker doc
 
 FORCE:
@@ -39,6 +43,8 @@ isl/libisl.la: FORCE
 	cd isl; $(MAKE) $(AM_MAKEFLAGS) libisl.la
 isl-polylib/libisl-polylib.la: $(LOCAL_ISL_LA) $(LOCAL_POLYLIB_LA) FORCE
 	cd isl-polylib; $(MAKE) $(AM_MAKEFLAGS) libisl-polylib.la
+cloog/libcloog-isl.la: $(LOCAL_ISL_LA) FORCE
+	cd cloog; $(MAKE) $(AM_MAKEFLAGS) libcloog-isl.la
 omega/omega_lib/libomega.la: FORCE
 	cd omega/omega_lib; $(MAKE) $(AM_MAKEFLAGS) libomega.la
 zsolve/libzsolve.la: FORCE
@@ -52,6 +58,7 @@ AM_LDFLAGS = @POLYLIB_LDFLAGS@ @NTL_LDFLAGS@
 
 LIB_ISL = $(ISL_LA) @ISL_LIBS@
 LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
+LIB_CLOOG = $(CLOOG_LA) @CLOOG_LIBS@
 
 lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
@@ -342,7 +349,7 @@ iscc_SOURCES =	\
 	iscc.c
 iscc_CPPFLAGS = @CLOOG_CFLAGS@ $(AM_CPPFLAGS)
 iscc_LDADD = \
-	libbarvinok.la @CLOOG_LIBS@ @CLOOG_LIBS@ @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	libbarvinok.la $(LIB_CLOOG) @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')

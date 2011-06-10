@@ -10,3 +10,6 @@
 [submodule "isl-polylib"]
 	path = isl-polylib
 	url = git://repo.or.cz/isl-polylib.git
+[submodule "cloog"]
+	path = cloog
+	url = git://repo.or.cz/cloog.git
