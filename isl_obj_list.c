@@ -116,7 +116,7 @@ __isl_give isl_list *isl_list_add_obj(__isl_take isl_list *list,
 	if (!list || !obj.v)
 		goto error;
 
-	new_list = isl_realloc(ctx, list, struct isl_list,
+	new_list = isl_realloc(list->ctx, list, struct isl_list,
 			sizeof(struct isl_list) +
 			list->n * sizeof(struct isl_obj));
 	if (!new_list)
