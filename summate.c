@@ -1,3 +1,4 @@
+#include <isl/map.h>
 #include <isl_set_polylib.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
