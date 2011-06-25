@@ -7,6 +7,7 @@
 #include <gmp.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/LLL.h>
+#include <isl/map.h>
 #include <isl_set_polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/evalue.h>
