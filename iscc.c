@@ -2040,9 +2040,14 @@ static struct isl_obj read_obj(struct isl_stream *s,
 	if (obj.v)
 		return obj;
 	if (isl_stream_eat_if_available(s, '(')) {
-		obj = read_expr(s, table);
-		if (obj.v && isl_stream_eat_if_available(s, ','))
-			obj = read_list(s, table, obj);
+		if (isl_stream_next_token_is(s, ')')) {
+			obj.type = isl_obj_list;
+			obj.v = isl_list_alloc(s->ctx, 0);
+		} else {
+			obj = read_expr(s, table);
+			if (obj.v && isl_stream_eat_if_available(s, ','))
+				obj = read_list(s, table, obj);
+		}
 		if (!obj.v || isl_stream_eat(s, ')'))
 			goto error;
 	} else {
