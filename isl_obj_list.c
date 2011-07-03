@@ -65,13 +65,14 @@ static __isl_give isl_printer *isl_obj_list_print(__isl_take isl_printer *p,
 	struct isl_list *list = (struct isl_list *)v;
 	int i;
 
-	isl_printer_print_str(p, "(");
+	p = isl_printer_print_str(p, "(");
 	for (i = 0; i < list->n; ++i) {
 		if (i)
-			isl_printer_print_str(p, ", ");
-		list->obj[i].type->print(p, list->obj[i].v);
+			p = isl_printer_print_str(p, ", ");
+		p = list->obj[i].type->print(p, list->obj[i].v);
 	}
-	isl_printer_print_str(p, ")");
+	p = isl_printer_print_str(p, ")");
+	return p;
 }
 
 __isl_give isl_list *isl_list_concat(__isl_take isl_list *list1,
