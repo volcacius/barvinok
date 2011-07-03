@@ -201,30 +201,6 @@ int test_substitute(struct barvinok_options *options)
     return 0;
 }
 
-int test_split_periods(struct barvinok_options *options)
-{
-    unsigned nvar, nparam;
-    const char **all_vars;
-    evalue *e;
-
-    e = evalue_read_from_str("U + 2V + 3 >= 0\n- U -2V  >= 0\n- U  10 >= 0\n"
-			     "U  >= 0\n\n({( 1/3 * U + ( 2/3 * V + 0 ))})",
-			     NULL, &all_vars, &nvar, &nparam,
-			     options->MaxRays);
-    Free_ParamNames(all_vars, nvar+nparam);
-
-    evalue_split_periods(e, 2, options->MaxRays);
-    assert(value_zero_p(e->d));
-    assert(e->x.p->type == partition);
-    assert(e->x.p->size == 4);
-    assert(value_zero_p(e->x.p->arr[1].d));
-    assert(e->x.p->arr[1].x.p->type == polynomial);
-    assert(value_zero_p(e->x.p->arr[3].d));
-    assert(e->x.p->arr[3].x.p->type == polynomial);
-    evalue_free(e);
-    return 0;
-}
-
 int test_specialization(struct barvinok_options *options)
 {
     Value v;
@@ -782,7 +758,6 @@ int main(int argc, char **argv)
     test_eadd(options);
     test_evalue(options);
     test_substitute(options);
-    test_split_periods(options);
     test_specialization(options);
     test_lattice_points(options);
     test_icounter(options);

@@ -132,7 +132,6 @@ void evalue_mul_div(evalue *e, Value n, Value d);
 void evalue_negate(evalue *e);
 void evalue_add_constant(evalue *e, const Value cst);
 void evalue_split_domains_into_orthants(evalue *e, unsigned MaxRays);
-void evalue_split_periods(evalue *e, int max_periods, unsigned int MaxRays);
 void evalue_extract_affine(const evalue *e, Value *coeff, Value *cst, Value *d);
 evalue *affine2evalue(Value *coeff, Value denom, int nvar);
 void evalue_substitute(evalue *e, evalue **subs);
