@@ -7,8 +7,7 @@ struct isl_list *isl_list_alloc(struct isl_ctx *ctx, int n)
 
 	isl_assert(ctx, n >= 0, return NULL);
 	list = isl_alloc(ctx, struct isl_list,
-			sizeof(struct isl_list) +
-			(n - 1) * sizeof(struct isl_obj));
+			sizeof(struct isl_list) + n * sizeof(struct isl_obj));
 	if (!list)
 		return NULL;
 
@@ -118,7 +117,7 @@ __isl_give isl_list *isl_list_add_obj(__isl_take isl_list *list,
 
 	new_list = isl_realloc(list->ctx, list, struct isl_list,
 			sizeof(struct isl_list) +
-			list->n * sizeof(struct isl_obj));
+			(list->n + 1) * sizeof(struct isl_obj));
 	if (!new_list)
 		goto error;
 

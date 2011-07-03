@@ -6,7 +6,7 @@ struct isl_list {
 	struct isl_ctx *ctx;
 
 	int n;
-	struct isl_obj obj[1];
+	struct isl_obj obj[];
 };
 typedef struct isl_list		isl_list;
 
