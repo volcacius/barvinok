@@ -1,3 +1,5 @@
+#include <isl/polynomial.h>
+#include <isl/union_set.h>
 #include <barvinok/polylib.h>
 
 #if defined(__cplusplus)
@@ -28,6 +30,12 @@ struct width_direction_array *
 Polyhedron_Lattice_Width_Directions(Polyhedron *P, Polyhedron *C,
 				    struct barvinok_options *options);
 void free_width_direction_array(struct width_direction_array *dirs);
+
+__isl_give isl_pw_qpolynomial *isl_basic_set_lattice_width(
+	__isl_take isl_basic_set *bset);
+__isl_give isl_pw_qpolynomial *isl_set_lattice_width(__isl_take isl_set *set);
+__isl_give isl_union_pw_qpolynomial *isl_union_set_lattice_width(
+	__isl_take isl_union_set *uset);
 
 #if defined(__cplusplus)
 }

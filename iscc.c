@@ -13,6 +13,7 @@
 #include <isl_obj_str.h>
 #include <barvinok/isl.h>
 #include <barvinok/options.h>
+#include "lattice_width.h"
 
 #include "config.h"
 
@@ -868,6 +869,9 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_map_range_map } },
 	{"identity",	{ -1,	isl_obj_union_set,	isl_obj_union_map,
 		(isc_un_op_fn) &isl_union_set_identity } },
+	{"lattice_width",	{ -1,	isl_obj_union_set,
+		isl_obj_union_pw_qpolynomial,
+		(isc_un_op_fn) &isl_union_set_lattice_width } },
 	{"lexmin",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
 		(isc_un_op_fn) &isl_union_map_lexmin } },
 	{"lexmax",	{ -1,	isl_obj_union_map,	isl_obj_union_map,

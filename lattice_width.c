@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <isl_set_polylib.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "hilbert.h"
@@ -444,4 +445,101 @@ evalue *Polyhedron_Lattice_Width(Polyhedron *P, Polyhedron *C,
     free(s);
 
     return width;
+}
+
+__isl_give isl_pw_qpolynomial *isl_basic_set_lattice_width(
+	__isl_take isl_basic_set *bset)
+{
+	isl_ctx *ctx;
+	isl_dim *dim;
+	isl_pw_qpolynomial *pwqp;
+	unsigned nparam;
+	Polyhedron *U;
+	Polyhedron *P;
+	evalue *E;
+	struct barvinok_options *options;
+	int options_allocated = 0;
+
+	if (!bset)
+		return NULL;
+
+	ctx = isl_basic_set_get_ctx(bset);
+	options = isl_ctx_peek_barvinok_options(ctx);
+	if (!options) {
+		options = barvinok_options_new_with_defaults();
+		options_allocated = 1;
+	}
+
+	nparam = isl_basic_set_dim(bset, isl_dim_param);
+	dim = isl_basic_set_get_dim(bset);
+	dim = isl_dim_domain(isl_dim_from_range(dim));
+
+	U = Universe_Polyhedron(nparam);
+	P = isl_basic_set_to_polylib(bset);
+
+	E = Polyhedron_Lattice_Width(P, U, options);
+
+	pwqp = isl_pw_qpolynomial_from_evalue(dim, E);
+	isl_basic_set_free(bset);
+
+	evalue_free(E);
+	Polyhedron_Free(P);
+	Polyhedron_Free(U);
+	if (options_allocated)
+		barvinok_options_free(options);
+
+	return pwqp;
+}
+
+__isl_give isl_pw_qpolynomial *isl_set_lattice_width(__isl_take isl_set *set)
+{
+	if (!set)
+		return NULL;
+
+	if (isl_set_fast_is_empty(set)) {
+		isl_dim *dim;
+		dim = isl_set_get_dim(set);
+		dim = isl_dim_domain(isl_dim_from_range(dim));
+		isl_set_free(set);
+		return isl_pw_qpolynomial_zero(dim);
+	}
+
+	if (isl_set_n_basic_set(set) != 1)
+		isl_die(isl_set_get_ctx(set), isl_error_unsupported,
+			"unions not supported (yet)", goto error);
+
+	return isl_basic_set_lattice_width(isl_set_simple_hull(set));
+error:
+	isl_set_free(set);
+	return NULL;
+}
+
+static int set_lw(__isl_take isl_set *set, void *user)
+{
+	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
+	isl_pw_qpolynomial *pwqp;
+
+	pwqp = isl_set_lattice_width(set);
+	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, pwqp);
+
+	return 0;
+}
+
+__isl_give isl_union_pw_qpolynomial *isl_union_set_lattice_width(
+	__isl_take isl_union_set *uset)
+{
+	isl_dim *dim;
+	isl_union_pw_qpolynomial *res;
+
+	dim = isl_union_set_get_dim(uset);
+	res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_set_foreach_set(uset, &set_lw, &res) < 0)
+		goto error;
+	isl_union_set_free(uset);
+
+	return res;
+error:
+	isl_union_set_free(uset);
+	isl_union_pw_qpolynomial_free(res);
+	return NULL;
 }
