@@ -71,7 +71,7 @@ noinst_PROGRAMS = test testlib randomtest \
 		  @bv_cone_hilbert_basis@ cone_integer_hull \
 		  polytope_lattice_width \
 		  polyhedron_integer_hull vector_partition_chambers \
-		  semigroup_holes evalue_convert \
+		  semigroup_holes \
 		  barvinok_bound test_bound
 EXTRA_PROGRAMS = cone_hilbert_basis
 pkginclude_HEADERS = \
@@ -333,14 +333,6 @@ EXTRA_test_bound_SOURCES = fdstream.cc fdstream.h
 test_bound_LDADD = \
 	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@
-evalue_convert_SOURCES = \
-	evalue_convert_main.c \
-	evalue_convert_options.c \
-	evalue_convert.cc \
-	evalue_convert.h \
-	evalue_read.c \
-	evalue_read.h \
-	$(FDSTREAM)
 iscc_SOURCES =	\
 	isl_obj_list.h \
 	isl_obj_list.c \
