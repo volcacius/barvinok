@@ -216,8 +216,6 @@ LDADD = libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
 	@POLYLIB_LIBS@
 
 test_SOURCES = \
-	evalue_read.c \
-	evalue_read.h \
 	test.c
 testlib_SOURCES = \
 	evalue_read.c \

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <isl_set_polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/sample.h>
@@ -35,12 +36,14 @@ static void time_diff(struct tms *before, struct tms *after)
 
 int main(int argc, char **argv)
 {
+    isl_ctx *ctx;
     int i, nbPol, nbVec, nbMat, func, j, n;
     Polyhedron *A, *B, *C, *D, *E, *F, *G;
     char s[128];
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
+    ctx = isl_ctx_alloc_with_options(barvinok_options_arg, options);
 
     nbPol = nbVec = nbMat = 0;
     fgets(s, 128, stdin);
@@ -207,22 +210,20 @@ int main(int argc, char **argv)
 	    break;
 	}
 	case 11: {
-	    evalue *expected, *computed;
-	    unsigned nvar, nparam;
-	    const char **pp;
+	    isl_dim *dim;
+	    isl_basic_set *bset;
+	    isl_pw_qpolynomial *expected, *computed;
+	    unsigned nparam;
 
-	    expected = evalue_read_from_file(stdin, NULL, &pp, &nvar, &nparam,
-					     options->MaxRays);
-	    C = Universe_Polyhedron(0);
-	    computed = Polyhedron_Lattice_Width(A, C, options);
-	    assert(value_zero_p(computed->d));
-	    assert(computed->x.p->type == partition);
-	    if (!eequal(expected, &computed->x.p->arr[1]))
+	    expected = isl_pw_qpolynomial_read_from_file(ctx, stdin);
+	    nparam = isl_pw_qpolynomial_dim(expected, isl_dim_param);
+	    dim = isl_dim_set_alloc(ctx, nparam, A->Dimension - nparam);
+	    bset = isl_basic_set_new_from_polylib(A, dim);
+	    computed = isl_basic_set_lattice_width(bset);
+	    computed = isl_pw_qpolynomial_sub(computed, expected);
+	    if (!isl_pw_qpolynomial_is_zero(computed))
 		return -1;
-	    free(pp);
-	    Domain_Free(C);
-	    evalue_free(computed);
-	    evalue_free(expected);
+	    isl_pw_qpolynomial_free(computed);
 	    break;
 	}
 	case 12: {
@@ -267,6 +268,6 @@ int main(int argc, char **argv)
 	Matrix_Free(S);
     }
 
-    barvinok_options_free(options);
+    isl_ctx_free(ctx);
     return 0;
 }
