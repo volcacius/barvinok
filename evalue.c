@@ -1,10 +1,13 @@
 /***********************************************************************/
 /*                copyright 1997, Doran Wilde                          */
 /*                copyright 1997-2000, Vincent Loechner                */
+/*                copyright 1999, Emmanuel Jeannot                     */
+/*                copyright 2003, Rachid Seghir                        */
 /*                copyright 2003-2006, Sven Verdoolaege                */
 /*       Permission is granted to copy, use, and distribute            */
 /*       for any commercial or noncommercial purpose under the terms   */
-/*       of the GNU General Public license, version 2, June 1991       */
+/*       of the GNU General Public License, either version 2           */
+/*       of the License, or (at your option) any later version.        */
 /*       (see file : LICENSE).                                         */
 /***********************************************************************/
 
@@ -4570,3 +4573,115 @@ void evalue_drop_floor(evalue *e, const evalue *floor)
 	assert(0);
     }
 }
+
+/** 
+
+PROCEDURES TO COMPUTE ENUMERATION. recursive procedure, recurse for
+each imbriquation
+
+@param pos index position of current loop index (1..hdim-1)
+@param P loop domain
+@param context context values for fixed indices 
+@param exist	number of existential variables
+@return the number of integer points in this
+polyhedron 
+
+*/
+void count_points_e (int pos, Polyhedron *P, int exist, int nparam,
+		     Value *context, Value *res)
+{
+    Value LB, UB, k, c;
+
+    if (emptyQ(P)) {
+	value_set_si(*res, 0);
+	return;
+    }
+
+    if (!exist) {
+	count_points(pos, P, context, res);
+	return;
+    }
+
+    value_init(LB); value_init(UB); value_init(k);
+    value_set_si(LB,0);
+    value_set_si(UB,0);
+
+    if (lower_upper_bounds(pos,P,context,&LB,&UB) !=0) {
+        /* Problem if UB or LB is INFINITY */
+        value_clear(LB); value_clear(UB); value_clear(k);
+	if (pos > P->Dimension - nparam - exist)
+	    value_set_si(*res, 1);
+	else 
+	    value_set_si(*res, -1);
+	return;
+    }
+  
+#ifdef EDEBUG1
+    if (!P->next) {
+        int i;
+        for (value_assign(k,LB); value_le(k,UB); value_increment(k,k)) {
+            fprintf(stderr, "(");
+            for (i=1; i<pos; i++) {
+                value_print(stderr,P_VALUE_FMT,context[i]);
+                fprintf(stderr,",");
+            }
+            value_print(stderr,P_VALUE_FMT,k);
+            fprintf(stderr,")\n");
+        }
+    }
+#endif
+  
+    value_set_si(context[pos],0);
+    if (value_lt(UB,LB)) {
+        value_clear(LB); value_clear(UB); value_clear(k);
+	value_set_si(*res, 0);
+	return;  
+    }  
+    if (!P->next) {
+	if (exist)
+	    value_set_si(*res, 1);
+	else {
+	    value_subtract(k,UB,LB);
+	    value_add_int(k,k,1);
+	    value_assign(*res, k);
+	}
+        value_clear(LB); value_clear(UB); value_clear(k);
+        return;
+    } 
+
+    /*-----------------------------------------------------------------*/
+    /* Optimization idea                                               */
+    /*   If inner loops are not a function of k (the current index)    */
+    /*   i.e. if P->Constraint[i][pos]==0 for all P following this and */
+    /*        for all i,                                               */
+    /*   Then CNT = (UB-LB+1)*count_points(pos+1, P->next, context)    */
+    /*   (skip the for loop)                                           */
+    /*-----------------------------------------------------------------*/
+  
+    value_init(c);
+    value_set_si(*res, 0);
+    for (value_assign(k,LB);value_le(k,UB);value_increment(k,k)) {
+        /* Insert k in context */
+        value_assign(context[pos],k);
+	count_points_e(pos+1, P->next, exist, nparam, context, &c);
+	if(value_notmone_p(c))
+	    value_addto(*res, *res, c);
+	else {
+	    value_set_si(*res, -1);
+	    break;
+        }
+	if (pos > P->Dimension - nparam - exist &&
+		value_pos_p(*res))
+	    break;
+    }
+    value_clear(c);
+  
+#ifdef EDEBUG11
+    fprintf(stderr,"%d\n",CNT);
+#endif
+  
+    /* Reset context */
+    value_set_si(context[pos],0);
+    value_clear(LB); value_clear(UB); value_clear(k);
+    return;
+} /* count_points_e */
