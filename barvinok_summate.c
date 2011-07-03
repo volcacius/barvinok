@@ -75,7 +75,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	vps->manual = isl_qpolynomial_drop_dims(vps->manual,
 						isl_dim_set, 0, nvar);
 
-	ok = isl_qpolynomial_is_equal(eval, vps->manual);
+	ok = isl_qpolynomial_plain_is_equal(eval, vps->manual);
 
 	if (vps->vpd.options->print_all || !ok) {
 		isl_ctx *ctx = isl_pw_qpolynomial_get_ctx(vps->pwqp);
