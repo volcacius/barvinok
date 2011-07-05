@@ -2855,6 +2855,8 @@ static int check_poly_lexmin(const struct check_poly_data *data,
 
     for (k = 1; k <= S->Dimension-nparam; ++k)
 	value_set_si(lexmin_data->z[k], 0);
+
+    return 0;
 }
 
 void verify_results(Polyhedron *A, Polyhedron *C, vector<max_term*>& maxima, 
