@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <barvinok/util.h>
 #include "evalue_read.h"
 
