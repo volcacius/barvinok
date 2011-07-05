@@ -132,7 +132,7 @@ static void stream_push_char(struct stream *s, int c)
     s->buffer[s->len++] = c;
 }
 
-static struct token *stream_push_token(struct stream *s, struct token *tok)
+static void stream_push_token(struct stream *s, struct token *tok)
 {
     assert(s->n_token < 5);
     s->tokens[s->n_token++] = tok;
