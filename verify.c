@@ -26,6 +26,7 @@ static int set_m(void *opt, long val)
 	struct verify_options *options = (struct verify_options *)opt;
 	options->m = val;
 	options->verify = 1;
+	return 0;
 }
 
 static int set_M(void *opt, long val)
@@ -33,6 +34,7 @@ static int set_M(void *opt, long val)
 	struct verify_options *options = (struct verify_options *)opt;
 	options->M = val;
 	options->verify = 1;
+	return 0;
 }
 
 static int set_r(void *opt, long val)
@@ -42,6 +44,7 @@ static int set_r(void *opt, long val)
 	options->m = -val;
 	options->M = val;
 	options->verify = 1;
+	return 0;
 }
 
 struct isl_arg verify_options_arg[] = {
