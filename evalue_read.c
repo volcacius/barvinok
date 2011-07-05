@@ -916,7 +916,7 @@ static evalue *evalue_read(struct stream *s, const char *var_list,
 	}
 	if (!tok)
 	    return NULL;
-	if (nv = -1)
+	if (nv == -1)
 	    nv = p ? p->pos+1 : 0;
     }
 
