@@ -1,4 +1,4 @@
-AC_INIT([barvinok], [0.33], [isl-development@googlegroups.com])
+AC_INIT([barvinok], [0.34], [isl-development@googlegroups.com])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -8,7 +8,7 @@ AC_PROG_CXX
 AM_PROG_LEX
 AC_PROG_YACC
 AC_SUBST(versioninfo)
-versioninfo=22:0:2
+versioninfo=22:1:2
 
 AC_CANONICAL_HOST
 AC_LIBTOOL_WIN32_DLL
