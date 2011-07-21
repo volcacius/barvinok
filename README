@@ -45,6 +45,12 @@ Also note that if you have previously installed a shared library of an older
 version of barvinok, and you do not install one for this version, then the
 linker may pick up the old shared library rather than the new static library.
 
+If you want to compile and use the included pet library, then
+you need the following packages:
+- libyaml (http://pyyaml.org/wiki/LibYAML)
+- LLVM/clang (http://clang.llvm.org/get_started.html)
+Additionally, you need to configure with the --with-pet=bundled option.
+
 If you want to compile and use the included Omega, then configure with
 the --with-omega=bundled option.
 

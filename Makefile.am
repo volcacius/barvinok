@@ -11,6 +11,13 @@ endif
 if BUILD_ISL
     ISL_LA = $(ISL_BUILDDIR)/libisl.la
 endif
+if BUNDLED_PET
+    MAYBE_PET = pet
+    PET_LA = $(top_builddir)/pet/libpet.la
+endif
+if BUILD_PET
+    PET_LA = $(PET_BUILDDIR)/libpet.la
+endif
 if BUNDLED_ISL_POLYLIB
     MAYBE_ISL_POLYLIB = isl-polylib
     ISL_POLYLIB_LA = $(top_builddir)/isl-polylib/libisl-polylib.la
@@ -29,7 +36,7 @@ endif
 if USE_PARKER
     MAYBE_PARKER = parker
 endif
-SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_ISL_POLYLIB) \
+SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_PET) $(MAYBE_ISL_POLYLIB) \
 		$(MAYBE_CLOOG) $(MAYBE_OMEGA) \
 		$(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) \
@@ -41,6 +48,8 @@ polylib/libpolylibgmp.la: FORCE
 	cd polylib; $(MAKE) $(AM_MAKEFLAGS) libpolylibgmp.la
 isl/libisl.la: FORCE
 	cd isl; $(MAKE) $(AM_MAKEFLAGS) libisl.la
+pet/libpet.la: FORCE
+	cd pet; $(MAKE) $(AM_MAKEFLAGS) libpet.la
 isl-polylib/libisl-polylib.la: $(LOCAL_ISL_LA) $(LOCAL_POLYLIB_LA) FORCE
 	cd isl-polylib; $(MAKE) $(AM_MAKEFLAGS) libisl-polylib.la
 cloog/libcloog-isl.la: $(LOCAL_ISL_LA) FORCE
@@ -57,6 +66,7 @@ AM_CPPFLAGS = @POLYLIB_CPPFLAGS@ \
 AM_LDFLAGS = @POLYLIB_LDFLAGS@ @NTL_LDFLAGS@
 
 LIB_ISL = $(ISL_LA) @ISL_LIBS@
+LIB_PET = $(PET_LA) @PET_LIBS@
 LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
 LIB_CLOOG = $(CLOOG_LA) @CLOOG_LIBS@
 

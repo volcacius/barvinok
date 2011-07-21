@@ -19,6 +19,11 @@ const char *barvinok_version(void)
 	" -INCREMENTAL"
 #endif
     "\n"
+#ifdef HAVE_PET
+	" +PET"
+#else
+	" -PET"
+#endif
 #ifdef HAVE_OMEGA
 	" +OMEGA"
 #else

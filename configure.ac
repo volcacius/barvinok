@@ -156,6 +156,27 @@ esac
 AM_CONDITIONAL(BUNDLED_ISL, test $with_isl = bundled)
 AM_CONDITIONAL(BUILD_ISL, test $with_isl = build)
 
+AX_SUBMODULE(pet,bundled|build|system|no,no)
+AC_SUBST(PET_CFLAGS)
+AC_SUBST(PET_LIBS)
+AC_SUBST(PET_BUILDDIR)
+case "$with_pet" in
+bundled)
+	PET_CFLAGS="-I\$(top_srcdir)/pet/include"
+	AC_DEFINE(HAVE_PET,[],[use Pet])
+	;;
+build)
+	PET_BUILDDIR=`echo @abs_builddir@ | $with_pet_builddir/config.status --file=-`
+	PET_CFLAGS="-I$pet_srcdir/include"
+	AC_DEFINE(HAVE_PET,[],[use Pet])
+	;;
+system)
+	PKG_CHECK_MODULES([PET], [pet])
+	AC_DEFINE(HAVE_PET,[],[use Pet])
+esac
+AM_CONDITIONAL(BUNDLED_PET, test $with_pet = bundled)
+AM_CONDITIONAL(BUILD_PET, test $with_pet = build)
+
 AX_SUBMODULE(isl-polylib,build|bundled|system,bundled)
 
 AC_SUBST(ISL_POLYLIB_CFLAGS)
@@ -535,6 +556,9 @@ if test $with_polylib = bundled; then
 fi
 if test $with_isl = bundled; then
 	AC_CONFIG_SUBDIRS(isl)
+fi
+if test $with_pet = bundled; then
+	AC_CONFIG_SUBDIRS(pet)
 fi
 if test $with_isl_polylib = bundled; then
 	AC_CONFIG_SUBDIRS(isl-polylib)

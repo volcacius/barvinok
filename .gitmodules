@@ -13,3 +13,6 @@
 [submodule "cloog"]
 	path = cloog
 	url = git://repo.or.cz/cloog.git
+[submodule "pet"]
+	path = pet
+	url = git://repo.or.cz/pet.git
