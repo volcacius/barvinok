@@ -64,6 +64,10 @@ static void remove_signal_handler(isl_ctx *ctx)
 #include <cloog/isl/cloog.h>
 #endif
 
+#ifdef HAVE_PET
+#include <pet.h>
+#endif
+
 static int isl_bool_false = 0;
 static int isl_bool_true = 1;
 static int isl_bool_error = -1;
@@ -750,6 +754,60 @@ error:
 }
 #endif
 
+#ifdef HAVE_PET
+static __isl_give isl_list *parse(__isl_take isl_str *str)
+{
+	isl_ctx *ctx;
+	struct isl_list *list;
+	struct pet_scop *scop;
+	isl_union_map *sched, *reads, *writes;
+	isl_union_set *domain;
+	struct iscc_options *options;
+
+	if (!str)
+		return NULL;
+	ctx = str->ctx;
+
+	options = isl_ctx_peek_iscc_options(ctx);
+	if (!options || !options->io) {
+		isl_str_free(str);
+		isl_die(ctx, isl_error_invalid,
+			"parse_file operation not allowed", return NULL);
+	}
+
+	list = isl_list_alloc(ctx, 4);
+	if (!list)
+		goto error;
+
+	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL, 1);
+	domain = pet_scop_collect_domains(scop);
+	sched = pet_scop_collect_schedule(scop);
+	reads = pet_scop_collect_reads(scop);
+	writes = pet_scop_collect_writes(scop);
+	pet_scop_free(scop);
+
+	list->obj[0].type = isl_obj_union_set;
+	list->obj[0].v = domain;
+	list->obj[1].type = isl_obj_union_map;
+	list->obj[1].v = writes;
+	list->obj[2].type = isl_obj_union_map;
+	list->obj[2].v = reads;
+	list->obj[3].type = isl_obj_union_map;
+	list->obj[3].v = sched;
+
+	if (!list->obj[0].v || !list->obj[1].v ||
+	    !list->obj[2].v || !list->obj[3].v)
+		goto error;
+
+	isl_str_free(str);
+	return list;
+error:
+	isl_list_free(list);
+	isl_str_free(str);
+	return NULL;
+}
+#endif
+
 static int add_point(__isl_take isl_point *pnt, void *user)
 {
 	isl_union_set **scan = (isl_union_set **) user;
@@ -895,6 +953,10 @@ struct isc_named_un_op named_un_ops[] = {
 	{"upoly",	{ -1,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_un_op_fn) &union_pw_qpolynomial_upoly } },
+#ifdef HAVE_PET
+	{"parse_file",	{ -1,	isl_obj_str,	isl_obj_list,
+		(isc_un_op_fn) &parse } },
+#endif
 	{"pow",	{ -1,	isl_obj_union_map,	isl_obj_list,
 		(isc_un_op_fn) &union_map_power } },
 	{"sample",	{ -1,	isl_obj_union_set,	isl_obj_set,

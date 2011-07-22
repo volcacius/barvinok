@@ -736,6 +736,13 @@ lift $s_1$ to a space with extra dimensions corresponding
 to the existentially quantified variables in $s_1$ such
 that \lstinline!domain(unwrap(lift S))! is equal to \lstinline!S!
 \\
+$l$ := \ai[\tt]{parse\_file} $S$ &
+parse the file names $S$ and return a list consisting of
+the iteration domains, the write access relations,
+the read access relations and the original schedule.
+This operation is only available if \ai[\tt]{pet}
+support was compiled in.
+\\
 $s_2$ := \ai[\tt]{poly} $s_1$ & polyhedral hull of $s_1$
 \\
 $m_2$ := \ai[\tt]{poly} $m_1$ & polyhedral hull of $m_1$

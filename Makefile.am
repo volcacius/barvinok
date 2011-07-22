@@ -347,9 +347,9 @@ iscc_SOURCES =	\
 	isl_obj_str.h \
 	isl_obj_str.c \
 	iscc.c
-iscc_CPPFLAGS = @CLOOG_CFLAGS@ $(AM_CPPFLAGS)
+iscc_CPPFLAGS = @PET_CFLAGS@ @CLOOG_CFLAGS@ $(AM_CPPFLAGS)
 iscc_LDADD = \
-	libbarvinok.la $(LIB_CLOOG) @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
+	libbarvinok.la $(LIB_CLOOG) @ISL_POLYLIB_LIBS@ $(LIB_PET) @ISL_LIBS@ \
 	@POLYLIB_LIBS@
 
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
