@@ -346,6 +346,11 @@ iscc_LDADD = \
 	libbarvinok.la $(LIB_CLOOG) @ISL_POLYLIB_LIBS@ $(LIB_PET) @ISL_LIBS@ \
 	@POLYLIB_LIBS@
 
+isl.py: interface/isl.py.top
+	(cat $(srcdir)/interface/isl.py.top; \
+		@ISL_BUILDDIR@/interface/extract_interface$(EXEEXT) $(DEFAULT_INCLUDES) @ISL_CFLAGS@ $(srcdir)/interface/all.h) \
+			> isl.py
+
 TESTFILES = $(shell find $(top_srcdir)/tests -type f ! -path '*CVS*')
 
 EXTRA_DIST = \
