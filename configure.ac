@@ -139,6 +139,7 @@ AC_SUBST(ISL_LIBS)
 AC_SUBST(ISL_BUILDDIR)
 case "$with_isl" in
 bundled)
+	ISL_BUILDDIR=isl
 	ISL_CFLAGS="-I\$(top_srcdir)/isl/include -I\$(top_builddir)/isl/include"
 	bv_configure_args="$bv_configure_args --with-isl-builddir=../isl"
 	PACKAGE_CFLAGS_ISL='-I${prefix}/include'
