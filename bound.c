@@ -185,14 +185,14 @@ static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf,
 static __isl_give isl_pw_qpolynomial_fold *iterate(
 	__isl_take isl_pw_qpolynomial *pwqp, enum isl_fold type)
 {
-	isl_dim *dim = isl_pw_qpolynomial_get_dim(pwqp);
+	isl_space *dim = isl_pw_qpolynomial_get_space(pwqp);
 	isl_set *set;
 	isl_qpolynomial *qp;
 	isl_qpolynomial_fold *fold;
 	unsigned nvar;
 
-	assert(isl_dim_size(dim, isl_dim_param) == 0);
-	nvar = isl_dim_size(dim, isl_dim_set);
+	assert(isl_space_dim(dim, isl_dim_param) == 0);
+	nvar = isl_space_dim(dim, isl_dim_set);
 
 	if (type == isl_fold_min)
 		qp = isl_pw_qpolynomial_min(pwqp);
@@ -201,7 +201,7 @@ static __isl_give isl_pw_qpolynomial_fold *iterate(
 
 	qp = isl_qpolynomial_drop_dims(qp, isl_dim_set, 0, nvar);
 	fold = isl_qpolynomial_fold_alloc(type, qp);
-	dim = isl_dim_drop(dim, isl_dim_set, 0, nvar);
+	dim = isl_space_drop_dims(dim, isl_dim_set, 0, nvar);
 	set = isl_set_universe(dim);
 
 	return isl_pw_qpolynomial_fold_alloc(type, set, fold);
@@ -265,12 +265,12 @@ static int split_on_domain_size(__isl_take isl_pw_qpolynomial *pwqp,
 	__isl_give isl_pw_qpolynomial **pwqp_more,
 	int size)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	struct bv_split_data data = { size };
 	int r;
 
-	dim = isl_pw_qpolynomial_get_dim(pwqp);
-	data.pwqp_less = isl_pw_qpolynomial_zero(isl_dim_copy(dim));
+	dim = isl_pw_qpolynomial_get_space(pwqp);
+	data.pwqp_less = isl_pw_qpolynomial_zero(isl_space_copy(dim));
 	data.pwqp_more = isl_pw_qpolynomial_zero(dim);
 	r = isl_pw_qpolynomial_foreach_piece(pwqp, &split_on_size, &data);
 	*pwqp_less = data.pwqp_less;
@@ -309,9 +309,9 @@ static int optimize_and_print(__isl_take isl_pw_qpolynomial *pwqp,
     enum isl_fold type = options->lower ? isl_fold_min : isl_fold_max;
 
     if (options->verify->verify) {
-	isl_dim *dim = isl_pw_qpolynomial_get_dim(pwqp);
-	unsigned total = isl_dim_total(dim);
-	isl_dim_free(dim);
+	isl_space *dim = isl_pw_qpolynomial_get_space(pwqp);
+	unsigned total = isl_space_dim(dim, isl_dim_all);
+	isl_space_free(dim);
 	verify_options_set_range(options->verify, total);
 	if (!options->verify->barvinok->verbose)
 	    print_solution = 0;

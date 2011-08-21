@@ -2702,11 +2702,11 @@ int main(int argc, char **argv)
 	}
 	if (!urs_parms)
 		context = isl_basic_set_intersect(context,
-		isl_basic_set_positive_orthant(isl_basic_set_get_dim(context)));
+		isl_basic_set_positive_orthant(isl_basic_set_get_space(context)));
 	context = to_parameter_domain(context);
 	if (!urs_unknowns)
 		bset = isl_basic_set_intersect(bset,
-		isl_basic_set_positive_orthant(isl_basic_set_get_dim(bset)));
+		isl_basic_set_positive_orthant(isl_basic_set_get_space(bset)));
 
 	if (options->verify->verify)
 		print_solution = 0;

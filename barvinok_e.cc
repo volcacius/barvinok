@@ -1129,14 +1129,14 @@ evalue *barvinok_enumerate_isl(Polyhedron *P,
 	  unsigned exist, unsigned nparam, struct barvinok_options *options)
 {
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dims;
+	isl_space *dims;
 	isl_basic_set *bset;
 	isl_set *set;
 	evalue *EP = evalue_zero();
 	Polyhedron *D, *Q, *N;
 	Polyhedron *U = Universe_Polyhedron(nparam);
 
-	dims = isl_dim_set_alloc(ctx, nparam, P->Dimension - nparam - exist);
+	dims = isl_space_set_alloc(ctx, nparam, P->Dimension - nparam - exist);
 	bset = isl_basic_set_new_from_polylib(P, dims);
 
 	set = isl_basic_set_compute_divs(bset);

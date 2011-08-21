@@ -69,7 +69,7 @@ enum order_sign isl_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dim;
+	isl_space *dim;
 	isl_vec *aff;
 	isl_basic_set *bset;
 	isl_int denom;
@@ -89,7 +89,7 @@ enum order_sign isl_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 	values2isl(T->p[0] + T->NbColumns - 1, aff->el, 1);
 	values2isl(T->p[1] + T->NbColumns - 1, &denom, 1);
 
-	dim = isl_dim_set_alloc(ctx, 0, D->Dimension);
+	dim = isl_space_set_alloc(ctx, 0, D->Dimension);
 	bset = isl_basic_set_new_from_polylib(D, dim);
 
 	lp_min = isl_basic_set_solve_lp(bset, 0, aff->el, denom, &min,
@@ -146,7 +146,7 @@ enum lp_result isl_constraints_opt(Matrix *C, Value *obj, Value denom,
 				    enum lp_dir dir, Value *opt)
 {
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dim;
+	isl_space *dim;
 	isl_mat *eq, *ineq;
 	isl_basic_set *bset;
 	isl_int isl_denom, isl_opt;
@@ -159,7 +159,7 @@ enum lp_result isl_constraints_opt(Matrix *C, Value *obj, Value denom,
 
 	eq = extract_equalities(ctx, C);
 	ineq = extract_inequalities(ctx, C);
-	dim = isl_dim_set_alloc(ctx, 0, C->NbColumns - 2);
+	dim = isl_space_set_alloc(ctx, 0, C->NbColumns - 2);
 	bset = isl_basic_set_from_constraint_matrices(dim, eq, ineq,
 			isl_dim_set, isl_dim_div, isl_dim_param, isl_dim_cst);
 	aff = isl_vec_alloc(ctx, C->NbColumns - 1);

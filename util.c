@@ -19,13 +19,13 @@
 void manual_count(Polyhedron *P, Value* result)
 {
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dim;
+	isl_space *dim;
 	isl_set *set;
 	isl_int v;
 	int nvar = P->Dimension;
 	int r;
 
-	dim = isl_dim_set_alloc(ctx, 0, nvar);
+	dim = isl_space_set_alloc(ctx, 0, nvar);
 	set = isl_set_new_from_polylib(P, dim);
 
 	isl_int_init(v);

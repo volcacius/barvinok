@@ -64,7 +64,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	eval = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vps->sum),
 					isl_point_copy(pnt));
 
-	vps->manual = isl_qpolynomial_zero(isl_pw_qpolynomial_get_dim(vps->pwqp));
+	vps->manual = isl_qpolynomial_zero(isl_pw_qpolynomial_get_space(vps->pwqp));
 	dom = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vps->fixed));
 	r = isl_set_foreach_point(dom, &manual_sum, user);
 	isl_set_free(dom);
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
     int i;
     int result = 0;
     isl_ctx *ctx;
-    isl_dim *dim;
+    isl_space *dim;
     isl_pw_qpolynomial *pwqp;
     isl_pw_qpolynomial *sum;
     struct isl_stream *s;
@@ -165,9 +165,9 @@ int main(int argc, char **argv)
     pwqp = isl_stream_read_pw_qpolynomial(s);
 
     if (options->verify->verify) {
-	isl_dim *dim = isl_pw_qpolynomial_get_dim(pwqp);
-	unsigned total = isl_dim_total(dim);
-	isl_dim_free(dim);
+	isl_space *dim = isl_pw_qpolynomial_get_space(pwqp);
+	unsigned total = isl_space_dim(dim, isl_dim_all);
+	isl_space_free(dim);
 	verify_options_set_range(options->verify, total);
     }
 

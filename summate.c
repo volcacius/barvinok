@@ -698,14 +698,14 @@ static __isl_give isl_pw_qpolynomial *add_unbounded_guarded_qp(
 		goto error;
 
 	if (!zero) {
-		isl_dim *dim;
+		isl_space *dim;
 		isl_set *set;
 		isl_pw_qpolynomial *pwqp;
 
-		dim = isl_pw_qpolynomial_get_dim(sum);
+		dim = isl_pw_qpolynomial_get_space(sum);
 		set = isl_set_from_basic_set(isl_basic_set_copy(bset));
 		set = isl_map_domain(isl_map_from_range(set));
-		set = isl_set_reset_dim(set, isl_dim_copy(dim));
+		set = isl_set_reset_space(set, isl_space_copy(dim));
 		pwqp = isl_pw_qpolynomial_alloc(set, isl_qpolynomial_nan(dim));
 		sum = isl_pw_qpolynomial_add(sum, pwqp);
 	}
@@ -721,7 +721,7 @@ error:
 }
 
 struct barvinok_summate_data {
-	isl_dim *dim;
+	isl_space *dim;
 	__isl_take isl_qpolynomial *qp;
 	isl_pw_qpolynomial *sum;
 	int n_in;
@@ -740,7 +740,7 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	int bounded;
 	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
 	unsigned nvar = isl_basic_set_dim(bset, isl_dim_set);
-	isl_dim *dim;
+	isl_space *dim;
 
 	if (!bset)
 		return -1;
@@ -755,8 +755,8 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 		return 0;
 	}
 
-	dim = isl_basic_set_get_dim(bset);
-	dim = isl_dim_domain(isl_dim_from_range(dim));
+	dim = isl_basic_set_get_space(bset);
+	dim = isl_space_domain(isl_space_from_range(dim));
 
 	P = isl_basic_set_to_polylib(bset);
 	tmp = barvinok_sum_over_polytope(P, data->e, nvar,
@@ -765,7 +765,7 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	assert(tmp);
 	pwqp = isl_pw_qpolynomial_from_evalue(dim, tmp);
 	evalue_free(tmp);
-	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, isl_dim_copy(data->dim));
+	pwqp = isl_pw_qpolynomial_reset_space(pwqp, isl_space_copy(data->dim));
 	data->sum = isl_pw_qpolynomial_add(data->sum, pwqp);
 
 	isl_basic_set_free(bset);
@@ -840,21 +840,21 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	if (nvar == 0)
 		return isl_pw_qpolynomial_drop_dims(pwqp, isl_dim_set, 0, 0);
 
-	data.dim = isl_pw_qpolynomial_get_dim(pwqp);
-	data.wrapping = isl_dim_is_wrapping(data.dim);
+	data.dim = isl_pw_qpolynomial_get_space(pwqp);
+	data.wrapping = isl_space_is_wrapping(data.dim);
 	if (data.wrapping) {
-		data.dim = isl_dim_unwrap(data.dim);
-		data.n_in = isl_dim_size(data.dim, isl_dim_in);
-		nvar = isl_dim_size(data.dim, isl_dim_out);
-		data.dim = isl_dim_domain(data.dim);
+		data.dim = isl_space_unwrap(data.dim);
+		data.n_in = isl_space_dim(data.dim, isl_dim_in);
+		nvar = isl_space_dim(data.dim, isl_dim_out);
+		data.dim = isl_space_domain(data.dim);
 		if (nvar == 0)
-			return isl_pw_qpolynomial_reset_dim(pwqp, data.dim);
+			return isl_pw_qpolynomial_reset_space(pwqp, data.dim);
 	} else {
 		data.n_in = 0;
-		data.dim = isl_dim_drop(data.dim, isl_dim_set, 0, nvar);
+		data.dim = isl_space_drop_dims(data.dim, isl_dim_set, 0, nvar);
 	}
 
-	data.sum = isl_pw_qpolynomial_zero(isl_dim_copy(data.dim));
+	data.sum = isl_pw_qpolynomial_zero(isl_space_copy(data.dim));
 
 	ctx = isl_pw_qpolynomial_get_ctx(pwqp);
 	data.options = isl_ctx_peek_barvinok_options(ctx);
@@ -870,7 +870,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	if (options_allocated)
 		barvinok_options_free(data.options);
 
-	isl_dim_free(data.dim);
+	isl_space_free(data.dim);
 
 	isl_pw_qpolynomial_free(pwqp);
 
@@ -879,7 +879,7 @@ error:
 	if (options_allocated)
 		barvinok_options_free(data.options);
 	isl_pw_qpolynomial_free(pwqp);
-	isl_dim_free(data.dim);
+	isl_space_free(data.dim);
 	isl_pw_qpolynomial_free(data.sum);
 	return NULL;
 }
@@ -898,10 +898,10 @@ static int pw_qpolynomial_sum(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_sum(
 	__isl_take isl_union_pw_qpolynomial *upwqp)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	isl_union_pw_qpolynomial *res;
 
-	dim = isl_union_pw_qpolynomial_get_dim(upwqp);
+	dim = isl_union_pw_qpolynomial_get_space(upwqp);
 	res = isl_union_pw_qpolynomial_zero(dim);
 	if (isl_union_pw_qpolynomial_foreach_pw_qpolynomial(upwqp,
 						&pw_qpolynomial_sum, &res) < 0)
@@ -915,13 +915,13 @@ error:
 	return NULL;
 }
 
-static int compatible_range(__isl_keep isl_dim *dim1, __isl_keep isl_dim *dim2)
+static int compatible_range(__isl_keep isl_space *dim1, __isl_keep isl_space *dim2)
 {
 	int m;
-	m = isl_dim_match(dim1, isl_dim_param, dim2, isl_dim_param);
+	m = isl_space_match(dim1, isl_dim_param, dim2, isl_dim_param);
 	if (m < 0 || !m)
 		return m;
-	return isl_dim_tuple_match(dim1, isl_dim_out, dim2, isl_dim_set);
+	return isl_space_tuple_match(dim1, isl_dim_out, dim2, isl_dim_set);
 }
 
 /* Compute the intersection of the range of the map and the domain
@@ -937,8 +937,8 @@ __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 {
 	isl_ctx *ctx;
 	isl_set *dom;
-	isl_dim *map_dim;
-	isl_dim *pwqp_dim;
+	isl_space *map_dim;
+	isl_space *pwqp_dim;
 	unsigned n_in;
 	int ok;
 
@@ -946,11 +946,11 @@ __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 	if (!ctx)
 		goto error;
 
-	map_dim = isl_map_get_dim(map);
-	pwqp_dim = isl_pw_qpolynomial_get_dim(pwqp);
+	map_dim = isl_map_get_space(map);
+	pwqp_dim = isl_pw_qpolynomial_get_space(pwqp);
 	ok = compatible_range(map_dim, pwqp_dim);
-	isl_dim_free(map_dim);
-	isl_dim_free(pwqp_dim);
+	isl_space_free(map_dim);
+	isl_space_free(pwqp_dim);
 	if (!ok)
 		isl_die(ctx, isl_error_invalid, "incompatible dimensions",
 			goto error);
@@ -959,7 +959,7 @@ __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 	pwqp = isl_pw_qpolynomial_insert_dims(pwqp, isl_dim_set, 0, n_in);
 
 	dom = isl_map_wrap(map);
-	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, isl_set_get_dim(dom));
+	pwqp = isl_pw_qpolynomial_reset_space(pwqp, isl_set_get_space(dom));
 
 	pwqp = isl_pw_qpolynomial_intersect_domain(pwqp, dom);
 	pwqp = isl_pw_qpolynomial_sum(pwqp);
@@ -988,16 +988,16 @@ struct barvinok_apply_data {
 
 static int pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 {
-	isl_dim *map_dim;
-	isl_dim *pwqp_dim;
+	isl_space *map_dim;
+	isl_space *pwqp_dim;
 	struct barvinok_apply_data *data = user;
 	int ok;
 
-	map_dim = isl_map_get_dim(data->map);
-	pwqp_dim = isl_pw_qpolynomial_get_dim(pwqp);
+	map_dim = isl_map_get_space(data->map);
+	pwqp_dim = isl_pw_qpolynomial_get_space(pwqp);
 	ok = compatible_range(map_dim, pwqp_dim);
-	isl_dim_free(map_dim);
-	isl_dim_free(pwqp_dim);
+	isl_space_free(map_dim);
+	isl_space_free(pwqp_dim);
 
 	if (ok) {
 		pwqp = isl_map_apply_pw_qpolynomial(isl_map_copy(data->map),
@@ -1027,16 +1027,16 @@ __isl_give isl_union_pw_qpolynomial *isl_union_map_apply_union_pw_qpolynomial(
 	__isl_take isl_union_map *umap,
 	__isl_take isl_union_pw_qpolynomial *upwqp)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	struct barvinok_apply_data data;
 
 	upwqp = isl_union_pw_qpolynomial_align_params(upwqp,
-				isl_union_map_get_dim(umap));
+				isl_union_map_get_space(umap));
 	umap = isl_union_map_align_params(umap,
-				isl_union_pw_qpolynomial_get_dim(upwqp));
+				isl_union_pw_qpolynomial_get_space(upwqp));
 
 	data.upwqp = upwqp;
-	dim = isl_union_pw_qpolynomial_get_dim(upwqp);
+	dim = isl_union_pw_qpolynomial_get_space(upwqp);
 	data.res = isl_union_pw_qpolynomial_zero(dim);
 	if (isl_union_map_foreach_map(umap, &map_apply, &data) < 0)
 		goto error;

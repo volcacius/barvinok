@@ -457,12 +457,12 @@ __isl_give isl_set *verify_context_set_bounds(__isl_take isl_set *set,
 		isl_int v;
 
 		isl_int_init(v);
-		pt = isl_point_zero(isl_set_get_dim(set));
+		pt = isl_point_zero(isl_set_get_space(set));
 		isl_int_set_si(v, options->m);
 		for (i = 0; i < nparam; ++i)
 			pt = isl_point_set_coordinate(pt, isl_dim_param, i, v);
 
-		pt2 = isl_point_zero(isl_set_get_dim(set));
+		pt2 = isl_point_zero(isl_set_get_space(set));
 		isl_int_set_si(v, options->M);
 		for (i = 0; i < nparam; ++i)
 			pt2 = isl_point_set_coordinate(pt2, isl_dim_param, i, v);

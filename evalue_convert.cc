@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sstream>
-#include <isl/dim.h>
+#include <isl/space.h>
 #include <barvinok/util.h>
 #include "conversion.h"
 #include "evalue_convert.h"
@@ -363,12 +363,12 @@ static void evalue_print_isl(FILE *out, const evalue *e, int nparam,
 {
 	int i;
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dim = isl_dim_set_alloc(ctx, nparam, 0);
+	isl_space *dim = isl_space_set_alloc(ctx, nparam, 0);
 	isl_printer *p;
 	isl_pw_qpolynomial *pwqp;
 
 	for (i = 0; i < nparam; ++i)
-		dim = isl_dim_set_name(dim, isl_dim_param, i, params[i]);
+		dim = isl_space_set_dim_name(dim, isl_dim_param, i, params[i]);
 
 	pwqp = isl_pw_qpolynomial_from_evalue(dim, e);
 

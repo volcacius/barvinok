@@ -6,13 +6,13 @@ Vector *Polyhedron_Sample(Polyhedron *P, struct barvinok_options *options)
 {
 	int i;
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dim;
+	isl_space *dim;
 	int nvar = P->Dimension;
 	isl_basic_set *bset;
 	isl_point *pnt;
 	Vector *sample = NULL;
 
-	dim = isl_dim_set_alloc(ctx, 0, nvar);
+	dim = isl_space_set_alloc(ctx, 0, nvar);
 	bset = isl_basic_set_new_from_polylib(P, dim);
 	pnt = isl_basic_set_sample_point(bset);
 

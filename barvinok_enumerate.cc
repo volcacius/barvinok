@@ -131,16 +131,17 @@ static int verify_isl(Polyhedron *P, Polyhedron *C,
 	struct verify_point_enum vpe = { { options } };
 	int i;
 	isl_ctx *ctx = isl_ctx_alloc();
-	isl_dim *dim;
+	isl_space *dim;
 	isl_set *set;
 	isl_set *set_C;
 	int r;
 
-	dim = isl_dim_set_alloc(ctx, C->Dimension, P->Dimension - C->Dimension);
+	dim = isl_space_set_alloc(ctx, C->Dimension, P->Dimension - C->Dimension);
 	for (i = 0; i < C->Dimension; ++i)
-		dim = isl_dim_set_name(dim, isl_dim_param, i, options->params[i]);
-	set = isl_set_new_from_polylib(P, isl_dim_copy(dim));
-	dim = isl_dim_drop(dim, isl_dim_set, 0, P->Dimension - C->Dimension);
+		dim = isl_space_set_dim_name(dim, isl_dim_param, i, options->params[i]);
+	set = isl_set_new_from_polylib(P, isl_space_copy(dim));
+	dim = isl_space_drop_dims(dim,
+				isl_dim_set, 0, P->Dimension - C->Dimension);
 	set_C = isl_set_new_from_polylib(C, dim);
 	set_C = isl_set_intersect(isl_set_copy(set), set_C);
 	set_C = isl_set_remove_dims(set_C,
@@ -151,7 +152,7 @@ static int verify_isl(Polyhedron *P, Polyhedron *C,
 	r = verify_point_data_init(&vpe.vpd, set_C);
 
 	vpe.set = set;
-	vpe.pwqp = isl_pw_qpolynomial_from_evalue(isl_set_get_dim(set_C), EP);
+	vpe.pwqp = isl_pw_qpolynomial_from_evalue(isl_set_get_space(set_C), EP);
 	if (r == 0)
 		isl_set_foreach_point(set_C, verify_point, &vpe);
 	if (vpe.vpd.error)

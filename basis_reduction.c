@@ -26,7 +26,7 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 	int i, j;
 	isl_int v;
 	isl_ctx *ctx;
-	isl_dim *dim;
+	isl_space *dim;
 	int nvar = P->Dimension;
 	isl_basic_set *bset;
 	isl_mat *basis;
@@ -37,7 +37,7 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 	ctx = isl_ctx_alloc_with_options(barvinok_options_arg, options);
 	assert(ctx);
 
-	dim = isl_dim_set_alloc(ctx, 0, nvar);
+	dim = isl_space_set_alloc(ctx, 0, nvar);
 	bset = isl_basic_set_new_from_polylib(P, dim);
 
 	basis = isl_basic_set_reduced_basis(bset);

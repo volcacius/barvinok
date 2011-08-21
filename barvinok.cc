@@ -1529,7 +1529,7 @@ static __isl_give isl_pw_qpolynomial *basic_set_card(
 	__isl_take isl_basic_set *bset)
 {
 	isl_ctx *ctx;
-	isl_dim *dim;
+	isl_space *dim;
 	isl_pw_qpolynomial *pwqp;
 	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
 	Polyhedron *U = Universe_Polyhedron(nparam);
@@ -1545,8 +1545,8 @@ static __isl_give isl_pw_qpolynomial *basic_set_card(
 		options_allocated = 1;
 	}
 
-	dim = isl_basic_set_get_dim(bset);
-	dim = isl_dim_domain(dim);
+	dim = isl_basic_set_get_space(bset);
+	dim = isl_space_domain(dim);
 
 	P = isl_basic_set_to_polylib(bset);
 	E = enumerate(P, U, options);
@@ -1569,11 +1569,11 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	isl_pw_qpolynomial *pwqp;
 	unsigned nparam = isl_basic_map_dim(bmap, isl_dim_param);
 	unsigned n_in = isl_basic_map_dim(bmap, isl_dim_in);
-	isl_dim *target_dim;
+	isl_space *target_dim;
 	isl_basic_set *bset;
 
-	target_dim = isl_basic_map_get_dim(bmap);
-	target_dim = isl_dim_domain(target_dim);
+	target_dim = isl_basic_map_get_space(bmap);
+	target_dim = isl_space_domain(target_dim);
 
 	bmap = isl_basic_map_move_dims(bmap, isl_dim_param, nparam,
 					isl_dim_in, 0, n_in);
@@ -1584,7 +1584,7 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 
 	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
 						isl_dim_param, nparam, n_in);
-	pwqp = isl_pw_qpolynomial_reset_dim(pwqp, target_dim);
+	pwqp = isl_pw_qpolynomial_reset_space(pwqp, target_dim);
 	*sum = isl_pw_qpolynomial_add(*sum, pwqp);
 
 	return 0;
@@ -1594,7 +1594,7 @@ static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
 	barvinok_options *options)
 {
 	isl_int one;
-	isl_dim *dim;
+	isl_space *dim;
 	isl_set *set;
 	isl_qpolynomial *qp;
 	isl_pw_qpolynomial *pwqp;
@@ -1606,7 +1606,7 @@ static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
 	options->summation = BV_SUM_BERNOULLI;
 
 	set = isl_map_wrap(map);
-	dim = isl_set_get_dim(set);
+	dim = isl_set_get_space(set);
 	isl_int_init(one);
 	isl_int_set_si(one, 1);
 	qp = isl_qpolynomial_rat_cst(dim, one, one);
@@ -1623,7 +1623,7 @@ static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
 __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 {
 	isl_ctx *ctx;
-	isl_dim *dim;
+	isl_space *dim;
 	isl_pw_qpolynomial *sum;
 	barvinok_options *options;
 
@@ -1634,8 +1634,8 @@ __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 	     options->summation == BV_SUM_BERNOULLI))
 		return card_as_sum(map, options);
 
-	dim = isl_map_get_dim(map);
-	dim = isl_dim_domain(dim);
+	dim = isl_map_get_space(map);
+	dim = isl_space_domain(dim);
 	sum = isl_pw_qpolynomial_zero(dim);
 
 	map = isl_map_make_disjoint(map);
@@ -1682,10 +1682,10 @@ static int set_card(__isl_take isl_set *set, void *user)
 __isl_give isl_union_pw_qpolynomial *isl_union_set_card(
 	__isl_take isl_union_set *uset)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	isl_union_pw_qpolynomial *res;
 
-	dim = isl_union_set_get_dim(uset);
+	dim = isl_union_set_get_space(uset);
 	res = isl_union_pw_qpolynomial_zero(dim);
 	if (isl_union_set_foreach_set(uset, &set_card, &res) < 0)
 		goto error;
@@ -1712,10 +1712,10 @@ static int map_card(__isl_take isl_map *map, void *user)
 __isl_give isl_union_pw_qpolynomial *isl_union_map_card(
 	__isl_take isl_union_map *umap)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	isl_union_pw_qpolynomial *res;
 
-	dim = isl_union_map_get_dim(umap);
+	dim = isl_union_map_get_space(umap);
 	res = isl_union_pw_qpolynomial_zero(dim);
 	if (isl_union_map_foreach_map(umap, &map_card, &res) < 0)
 		goto error;

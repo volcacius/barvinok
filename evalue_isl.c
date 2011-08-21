@@ -3,7 +3,7 @@
 #include <isl/seq.h>
 #include <barvinok/evalue.h>
 
-static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
+static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	const evalue *e)
 {
 	int i;
@@ -19,8 +19,8 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
 	if (e->x.p->type == polynomial)
 		return isl_qpolynomial_var(dim, isl_dim_param, e->x.p->pos - 1);
 
-	ctx = isl_dim_get_ctx(dim);
-	nparam = isl_dim_size(dim, isl_dim_param);
+	ctx = isl_space_get_ctx(dim);
+	nparam = isl_space_dim(dim, isl_dim_param);
 	v = isl_vec_alloc(ctx, 2 + nparam);
 	if (!v)
 		goto error;
@@ -28,7 +28,7 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
 	isl_seq_clr(v->el + 2, nparam);
 	evalue_extract_affine(&e->x.p->arr[0], v->el + 2, &v->el[1], &v->el[0]);
 
-	div = isl_div_alloc(isl_dim_copy(dim));
+	div = isl_div_alloc(isl_space_copy(dim));
 	isl_div_set_constant(div, v->el[1]);
 	isl_div_set_denominator(div, v->el[0]);
 
@@ -40,14 +40,14 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
 	if (e->x.p->type == fractional) {
 		base = isl_qpolynomial_neg(base);
 
-		c = isl_qpolynomial_rat_cst(isl_dim_copy(dim), v->el[1], v->el[0]);
+		c = isl_qpolynomial_rat_cst(isl_space_copy(dim), v->el[1], v->el[0]);
 		base = isl_qpolynomial_add(base, c);
 
 		for (i = 0; i < nparam; ++i) {
 			isl_qpolynomial *t;
-			c = isl_qpolynomial_rat_cst(isl_dim_copy(dim),
+			c = isl_qpolynomial_rat_cst(isl_space_copy(dim),
 							v->el[2 + i], v->el[0]);
-			t = isl_qpolynomial_var(isl_dim_copy(dim),
+			t = isl_qpolynomial_var(isl_space_copy(dim),
 						isl_dim_param, i);
 			t = isl_qpolynomial_mul(c, t);
 			base = isl_qpolynomial_add(base, t);
@@ -55,11 +55,11 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_dim *dim,
 	}
 
 	isl_vec_free(v);
-	isl_dim_free(dim);
+	isl_space_free(dim);
 
 	return base;
 error:
-	isl_dim_free(dim);
+	isl_space_free(dim);
 	return NULL;
 }
 
@@ -69,7 +69,7 @@ static int type_offset(enode *p)
 	       p->type == flooring ? 1 : 0;
 }
 
-__isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(__isl_take isl_dim *dim,
+__isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(__isl_take isl_space *dim,
 	const evalue *e)
 {
 	int i;
@@ -89,19 +89,19 @@ __isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(__isl_take isl_dim *dim,
 	       e->x.p->type == fractional);
 	assert(e->x.p->size >= 1 + offset);
 
-	base = extract_base(isl_dim_copy(dim), e);
-	qp = isl_qpolynomial_from_evalue(isl_dim_copy(dim),
+	base = extract_base(isl_space_copy(dim), e);
+	qp = isl_qpolynomial_from_evalue(isl_space_copy(dim),
 					 &e->x.p->arr[e->x.p->size - 1]);
 
 	for (i = e->x.p->size - 2; i >= offset; --i) {
 		qp = isl_qpolynomial_mul(qp, isl_qpolynomial_copy(base));
 		qp = isl_qpolynomial_add(qp,
-				    isl_qpolynomial_from_evalue(isl_dim_copy(dim),
+				    isl_qpolynomial_from_evalue(isl_space_copy(dim),
 				    &e->x.p->arr[i]));
 	}
 
 	isl_qpolynomial_free(base);
-	isl_dim_free(dim);
+	isl_space_free(dim);
 
 	return qp;
 }
@@ -114,7 +114,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 {
 	int i;
 	isl_vec *vec;
-	isl_dim *dim;
+	isl_space *dim;
 	isl_ctx *ctx;
 	unsigned nparam;
 	isl_pw_qpolynomial *pwqp;
@@ -127,7 +127,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 		goto error;
 
 	if (e->x.p->size == 1) {
-		dim = isl_set_get_dim(set);
+		dim = isl_set_get_space(set);
 		isl_set_free(set);
 		return isl_pw_qpolynomial_zero(dim);
 	}
@@ -148,11 +148,11 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	evalue_extract_affine(&fract->x.p->arr[0],
 				vec->el + 2, &vec->el[1], &vec->el[0]);
 
-	dim = isl_set_get_dim(set);
-	dim = isl_dim_add(dim, isl_dim_set, 1);
+	dim = isl_set_get_space(set);
+	dim = isl_space_add_dims(dim, isl_dim_set, 1);
 
 	bset = isl_basic_set_universe(dim);
-	c = isl_equality_alloc(isl_dim_copy(dim));
+	c = isl_equality_alloc(isl_space_copy(dim));
 	isl_int_neg(vec->el[0], vec->el[0]);
 	isl_constraint_set_coefficient(c, isl_dim_set, 0, vec->el[0]);
 	isl_constraint_set_constant(c, vec->el[1]);
@@ -193,12 +193,12 @@ static __isl_give isl_pw_qpolynomial *guarded_evalue2pwqp(__isl_take isl_set *se
 	if (value_zero_p(e->d) && e->x.p->type == relation)
 		return relation2pwqp(set, e);
 
-	qp = isl_qpolynomial_from_evalue(isl_set_get_dim(set), e);
+	qp = isl_qpolynomial_from_evalue(isl_set_get_space(set), e);
 
 	return isl_pw_qpolynomial_alloc(set, qp);
 }
 
-__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_dim *dim, const evalue *e)
+__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_space *dim, const evalue *e)
 {
 	int i;
 	isl_pw_qpolynomial *pwqp;
@@ -209,7 +209,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_dim
 		return isl_pw_qpolynomial_zero(dim);
 
 	if (value_notzero_p(e->d)) {
-		isl_set *set = isl_set_universe(isl_dim_copy(dim));
+		isl_set *set = isl_set_universe(isl_space_copy(dim));
 		isl_qpolynomial *qp = isl_qpolynomial_rat_cst(dim, e->x.n, e->d);
 		return isl_pw_qpolynomial_alloc(set, qp);
 	}
@@ -218,11 +218,11 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_dim
 
 	assert(e->x.p->type == partition);
 
-	pwqp = isl_pw_qpolynomial_zero(isl_dim_copy(dim));
+	pwqp = isl_pw_qpolynomial_zero(isl_space_copy(dim));
 
 	for (i = 0; i < e->x.p->size/2; ++i) {
 		Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2 * i]);
-		isl_set *set = isl_set_new_from_polylib(D, isl_dim_copy(dim));
+		isl_set *set = isl_set_new_from_polylib(D, isl_space_copy(dim));
 		isl_pw_qpolynomial *pwqp_i;
 
 		pwqp_i = guarded_evalue2pwqp(set, &e->x.p->arr[2 * i + 1]);
@@ -230,11 +230,11 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_dim
 		pwqp = isl_pw_qpolynomial_add_disjoint(pwqp, pwqp_i);
 	}
 
-	isl_dim_free(dim);
+	isl_space_free(dim);
 
 	return pwqp;
 error:
-	isl_dim_free(dim);
+	isl_space_free(dim);
 	return NULL;
 }
 

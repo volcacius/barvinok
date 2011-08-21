@@ -273,7 +273,7 @@ __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_at(
 	struct iscc_at at;
 
 	at.upwqp = upwqp;
-	at.res = isl_union_pw_qpolynomial_zero(isl_union_set_get_dim(uset));
+	at.res = isl_union_pw_qpolynomial_zero(isl_union_set_get_space(uset));
 
 	isl_union_set_foreach_point(uset, eval_at, &at);
 
@@ -312,7 +312,7 @@ __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_fold_at(
 	struct iscc_fold_at at;
 
 	at.upwf = upwf;
-	at.res = isl_union_pw_qpolynomial_zero(isl_union_set_get_dim(uset));
+	at.res = isl_union_pw_qpolynomial_zero(isl_union_set_get_space(uset));
 
 	isl_union_set_foreach_point(uset, eval_fold_at, &at);
 
@@ -678,7 +678,7 @@ error:
 #ifdef HAVE_CLOOG
 void *map_codegen(void *arg)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	isl_union_map *umap = (isl_union_map *)arg;
 	isl_ctx *ctx = isl_union_map_get_ctx(umap);
 	CloogState *state;
@@ -696,7 +696,7 @@ void *map_codegen(void *arg)
 
 	ud = cloog_union_domain_from_isl_union_map(isl_union_map_copy(umap));
 
-	dim = isl_union_map_get_dim(umap);
+	dim = isl_union_map_get_space(umap);
 	context = cloog_domain_from_isl_set(isl_set_universe(dim));
 
 	input = cloog_input_alloc(context, ud);
@@ -714,7 +714,7 @@ error:
 
 void *set_codegen(void *arg)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	isl_union_set *uset = (isl_union_set *)arg;
 	isl_ctx *ctx = isl_union_set_get_ctx(uset);
 	CloogState *state;
@@ -737,7 +737,7 @@ void *set_codegen(void *arg)
 
 	ud = cloog_union_domain_from_isl_union_set(isl_union_set_copy(uset));
 
-	dim = isl_union_set_get_dim(uset);
+	dim = isl_union_set_get_space(uset);
 	context = cloog_domain_from_isl_set(isl_set_universe(dim));
 
 	input = cloog_input_alloc(context, ud);
@@ -821,7 +821,7 @@ static __isl_give isl_union_set *union_set_scan(__isl_take isl_union_set *uset)
 {
 	isl_union_set *scan;
 
-	scan = isl_union_set_empty(isl_union_set_get_dim(uset));
+	scan = isl_union_set_empty(isl_union_set_get_space(uset));
 
 	if (isl_union_set_foreach_point(uset, add_point, &scan) < 0) {
 		isl_union_set_free(scan);
@@ -1123,14 +1123,14 @@ static struct isl_obj convert(isl_ctx *ctx, struct isl_obj obj,
 			return obj;
 		}
 		if (type == isl_obj_union_pw_qpolynomial) {
-			isl_dim *dim = isl_union_set_get_dim(obj.v);
+			isl_space *dim = isl_union_set_get_space(obj.v);
 			isl_union_set_free(obj.v);
 			obj.v = isl_union_pw_qpolynomial_zero(dim);
 			obj.type = isl_obj_union_pw_qpolynomial;
 			return obj;
 		}
 		if (type == isl_obj_union_pw_qpolynomial_fold) {
-			isl_dim *dim = isl_union_set_get_dim(obj.v);
+			isl_space *dim = isl_union_set_get_space(obj.v);
 			isl_union_set_free(obj.v);
 			obj.v = isl_union_pw_qpolynomial_fold_zero(dim,
 								isl_fold_list);
@@ -1691,7 +1691,7 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 	if (!schedule)
 		goto error;
 
-	must_source = isl_union_map_empty(isl_union_map_get_dim(sink));
+	must_source = isl_union_map_empty(isl_union_map_get_space(sink));
 	if (isl_union_map_compute_flow(sink, must_source, may_source,
 				       schedule, NULL, &may_dep,
 				       NULL, NULL) < 0)
@@ -1752,7 +1752,7 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	if (!schedule)
 		goto error;
 
-	may_source = isl_union_map_empty(isl_union_map_get_dim(sink));
+	may_source = isl_union_map_empty(isl_union_map_get_space(sink));
 	if (isl_union_map_compute_flow(sink, must_source, may_source,
 				       schedule, &must_dep, NULL,
 				       &must_no_source, NULL) < 0) {
@@ -1792,8 +1792,8 @@ static __isl_give isl_schedule *get_schedule(struct isl_stream *s,
 	if (!domain)
 		return NULL;
 
-	validity = isl_union_map_empty(isl_union_set_get_dim(domain));
-	proximity = isl_union_map_empty(isl_union_set_get_dim(domain));
+	validity = isl_union_map_empty(isl_union_set_get_space(domain));
+	proximity = isl_union_map_empty(isl_union_set_get_space(domain));
 
 	for (;;) {
 		isl_union_map *umap;

@@ -451,7 +451,7 @@ __isl_give isl_pw_qpolynomial *isl_basic_set_lattice_width(
 	__isl_take isl_basic_set *bset)
 {
 	isl_ctx *ctx;
-	isl_dim *dim;
+	isl_space *dim;
 	isl_pw_qpolynomial *pwqp;
 	unsigned nparam;
 	Polyhedron *U;
@@ -471,8 +471,8 @@ __isl_give isl_pw_qpolynomial *isl_basic_set_lattice_width(
 	}
 
 	nparam = isl_basic_set_dim(bset, isl_dim_param);
-	dim = isl_basic_set_get_dim(bset);
-	dim = isl_dim_domain(isl_dim_from_range(dim));
+	dim = isl_basic_set_get_space(bset);
+	dim = isl_space_domain(isl_space_from_range(dim));
 
 	U = Universe_Polyhedron(nparam);
 	P = isl_basic_set_to_polylib(bset);
@@ -497,9 +497,9 @@ __isl_give isl_pw_qpolynomial *isl_set_lattice_width(__isl_take isl_set *set)
 		return NULL;
 
 	if (isl_set_fast_is_empty(set)) {
-		isl_dim *dim;
-		dim = isl_set_get_dim(set);
-		dim = isl_dim_domain(isl_dim_from_range(dim));
+		isl_space *dim;
+		dim = isl_set_get_space(set);
+		dim = isl_space_domain(isl_space_from_range(dim));
 		isl_set_free(set);
 		return isl_pw_qpolynomial_zero(dim);
 	}
@@ -528,10 +528,10 @@ static int set_lw(__isl_take isl_set *set, void *user)
 __isl_give isl_union_pw_qpolynomial *isl_union_set_lattice_width(
 	__isl_take isl_union_set *uset)
 {
-	isl_dim *dim;
+	isl_space *dim;
 	isl_union_pw_qpolynomial *res;
 
-	dim = isl_union_set_get_dim(uset);
+	dim = isl_union_set_get_space(uset);
 	res = isl_union_pw_qpolynomial_zero(dim);
 	if (isl_union_set_foreach_set(uset, &set_lw, &res) < 0)
 		goto error;
