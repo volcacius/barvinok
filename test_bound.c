@@ -218,13 +218,11 @@ static void test(__isl_keep isl_pw_qpolynomial *pwqp,
 	struct verify_point_bound vpb = { { options }, result };
 	isl_set *context;
 	int r;
-	unsigned nvar;
 
 	vpb.pwf = pwf;
 	vpb.pwqp = pwqp;
 	context = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vpb.pwqp));
-	nvar = isl_set_dim(context, isl_dim_set);
-	context = isl_set_remove_dims(context, isl_dim_set, 0, nvar);
+	context = isl_set_params(context);
 	context = verify_context_set_bounds(context, options);
 
 	r = verify_point_data_init(&vpb.vpd, context);
