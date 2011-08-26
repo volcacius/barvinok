@@ -472,7 +472,7 @@ __isl_give isl_pw_qpolynomial *isl_basic_set_lattice_width(
 
 	nparam = isl_basic_set_dim(bset, isl_dim_param);
 	dim = isl_basic_set_get_space(bset);
-	dim = isl_space_domain(isl_space_from_range(dim));
+	dim = isl_space_params(dim);
 
 	U = Universe_Polyhedron(nparam);
 	P = isl_basic_set_to_polylib(bset);
