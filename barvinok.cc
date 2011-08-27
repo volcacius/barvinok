@@ -1655,7 +1655,10 @@ error:
 
 __isl_give isl_pw_qpolynomial *isl_set_card(__isl_take isl_set *set)
 {
-	return isl_map_card(isl_map_from_range(set));
+	isl_pw_qpolynomial *pwqp;
+	pwqp = isl_map_card(isl_map_from_range(set));
+	pwqp = isl_pw_qpolynomial_project_domain_on_params(pwqp);
+	return pwqp;
 }
 
 __isl_give isl_pw_qpolynomial *isl_basic_map_card(__isl_take isl_basic_map *bmap)
@@ -1665,7 +1668,10 @@ __isl_give isl_pw_qpolynomial *isl_basic_map_card(__isl_take isl_basic_map *bmap
 
 __isl_give isl_pw_qpolynomial *isl_basic_set_card(__isl_take isl_basic_set *bset)
 {
-	return isl_basic_map_card(isl_basic_map_from_range(bset));
+	isl_pw_qpolynomial *pwqp;
+	pwqp = isl_basic_map_card(isl_basic_map_from_range(bset));
+	pwqp = isl_pw_qpolynomial_project_domain_on_params(pwqp);
+	return pwqp;
 }
 
 static int set_card(__isl_take isl_set *set, void *user)
