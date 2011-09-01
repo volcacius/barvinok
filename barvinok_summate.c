@@ -72,8 +72,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		goto error;
 
 	nvar = isl_set_dim(dom, isl_dim_set);
-	vps->manual = isl_qpolynomial_drop_dims(vps->manual,
-						isl_dim_set, 0, nvar);
+	vps->manual = isl_qpolynomial_project_domain_on_params(vps->manual);
 
 	ok = isl_qpolynomial_plain_is_equal(eval, vps->manual);
 
