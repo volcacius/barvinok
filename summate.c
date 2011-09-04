@@ -974,7 +974,9 @@ __isl_give isl_pw_qpolynomial *isl_set_apply_pw_qpolynomial(
 	isl_map *map;
 
 	map = isl_map_from_range(set);
-	return isl_map_apply_pw_qpolynomial(map, pwqp);
+	pwqp = isl_map_apply_pw_qpolynomial(map, pwqp);
+	pwqp = isl_pw_qpolynomial_project_domain_on_params(pwqp);
+	return pwqp;
 }
 
 struct barvinok_apply_data {
@@ -1049,14 +1051,77 @@ error:
 	return NULL;
 }
 
+struct barvinok_apply_set_data {
+	isl_union_pw_qpolynomial *upwqp;
+	isl_union_pw_qpolynomial *res;
+	isl_set *set;
+};
+
+static int pw_qpolynomial_apply_set(__isl_take isl_pw_qpolynomial *pwqp,
+	void *user)
+{
+	isl_space *set_dim;
+	isl_space *pwqp_dim;
+	struct barvinok_apply_set_data *data = user;
+	int ok;
+
+	set_dim = isl_set_get_space(data->set);
+	pwqp_dim = isl_pw_qpolynomial_get_space(pwqp);
+	ok = compatible_range(set_dim, pwqp_dim);
+	isl_space_free(set_dim);
+	isl_space_free(pwqp_dim);
+
+	if (ok) {
+		pwqp = isl_set_apply_pw_qpolynomial(isl_set_copy(data->set),
+							pwqp);
+		data->res = isl_union_pw_qpolynomial_add_pw_qpolynomial(
+							data->res, pwqp);
+	} else
+		isl_pw_qpolynomial_free(pwqp);
+
+	return 0;
+}
+
+static int set_apply(__isl_take isl_set *set, void *user)
+{
+	struct barvinok_apply_set_data *data = user;
+	int r;
+
+	data->set = set;
+	r = isl_union_pw_qpolynomial_foreach_pw_qpolynomial(data->upwqp,
+					    &pw_qpolynomial_apply_set, data);
+
+	isl_set_free(set);
+	return r;
+}
+
 __isl_give isl_union_pw_qpolynomial *isl_union_set_apply_union_pw_qpolynomial(
 	__isl_take isl_union_set *uset,
 	__isl_take isl_union_pw_qpolynomial *upwqp)
 {
-	isl_union_map *umap;
+	isl_space *dim;
+	struct barvinok_apply_set_data data;
 
-	umap = isl_union_map_from_range(uset);
-	return isl_union_map_apply_union_pw_qpolynomial(umap, upwqp);
+	upwqp = isl_union_pw_qpolynomial_align_params(upwqp,
+				isl_union_set_get_space(uset));
+	uset = isl_union_set_align_params(uset,
+				isl_union_pw_qpolynomial_get_space(upwqp));
+
+	data.upwqp = upwqp;
+	dim = isl_union_pw_qpolynomial_get_space(upwqp);
+	data.res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_set_foreach_set(uset, &set_apply, &data) < 0)
+		goto error;
+
+	isl_union_set_free(uset);
+	isl_union_pw_qpolynomial_free(upwqp);
+
+	return data.res;
+error:
+	isl_union_set_free(uset);
+	isl_union_pw_qpolynomial_free(upwqp);
+	isl_union_pw_qpolynomial_free(data.res);
+	return NULL;
 }
 
 evalue *evalue_sum(evalue *E, int nvar, unsigned MaxRays)
