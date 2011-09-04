@@ -837,8 +837,6 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 		return NULL;
 
 	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
-	if (nvar == 0)
-		return isl_pw_qpolynomial_drop_dims(pwqp, isl_dim_set, 0, 0);
 
 	data.dim = isl_pw_qpolynomial_get_space(pwqp);
 	data.wrapping = isl_space_is_wrapping(data.dim);
@@ -846,13 +844,12 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 		data.dim = isl_space_unwrap(data.dim);
 		data.n_in = isl_space_dim(data.dim, isl_dim_in);
 		nvar = isl_space_dim(data.dim, isl_dim_out);
-		data.dim = isl_space_domain(data.dim);
-		if (nvar == 0)
-			return isl_pw_qpolynomial_reset_space(pwqp, data.dim);
-	} else {
+	} else
 		data.n_in = 0;
-		data.dim = isl_space_drop_dims(data.dim, isl_dim_set, 0, nvar);
-	}
+
+	data.dim = isl_space_domain(data.dim);
+	if (nvar == 0)
+		return isl_pw_qpolynomial_reset_space(pwqp, data.dim);
 
 	data.sum = isl_pw_qpolynomial_zero(isl_space_copy(data.dim));
 
