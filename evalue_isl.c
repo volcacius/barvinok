@@ -17,7 +17,7 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 		return NULL;
 
 	if (e->x.p->type == polynomial)
-		return isl_qpolynomial_var(dim, isl_dim_param, e->x.p->pos - 1);
+		return isl_qpolynomial_var_on_domain(dim, isl_dim_param, e->x.p->pos - 1);
 
 	ctx = isl_space_get_ctx(dim);
 	nparam = isl_space_dim(dim, isl_dim_param);
@@ -40,14 +40,14 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	if (e->x.p->type == fractional) {
 		base = isl_qpolynomial_neg(base);
 
-		c = isl_qpolynomial_rat_cst(isl_space_copy(dim), v->el[1], v->el[0]);
+		c = isl_qpolynomial_rat_cst_on_domain(isl_space_copy(dim), v->el[1], v->el[0]);
 		base = isl_qpolynomial_add(base, c);
 
 		for (i = 0; i < nparam; ++i) {
 			isl_qpolynomial *t;
-			c = isl_qpolynomial_rat_cst(isl_space_copy(dim),
+			c = isl_qpolynomial_rat_cst_on_domain(isl_space_copy(dim),
 							v->el[2 + i], v->el[0]);
-			t = isl_qpolynomial_var(isl_space_copy(dim),
+			t = isl_qpolynomial_var_on_domain(isl_space_copy(dim),
 						isl_dim_param, i);
 			t = isl_qpolynomial_mul(c, t);
 			base = isl_qpolynomial_add(base, t);
@@ -78,9 +78,9 @@ __isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(__isl_take isl_space *di
 	int offset;
 
 	if (EVALUE_IS_NAN(*e))
-		return isl_qpolynomial_infty(dim);
+		return isl_qpolynomial_infty_on_domain(dim);
 	if (value_notzero_p(e->d))
-		return isl_qpolynomial_rat_cst(dim, e->x.n, e->d);
+		return isl_qpolynomial_rat_cst_on_domain(dim, e->x.n, e->d);
 
 	offset = type_offset(e->x.p);
 
@@ -201,6 +201,7 @@ static __isl_give isl_pw_qpolynomial *guarded_evalue2pwqp(__isl_take isl_set *se
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_space *dim, const evalue *e)
 {
 	int i;
+	isl_space *pw_space;
 	isl_pw_qpolynomial *pwqp;
 
 	if (!dim || !e)
@@ -210,7 +211,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_spa
 
 	if (value_notzero_p(e->d)) {
 		isl_set *set = isl_set_universe(isl_space_copy(dim));
-		isl_qpolynomial *qp = isl_qpolynomial_rat_cst(dim, e->x.n, e->d);
+		isl_qpolynomial *qp = isl_qpolynomial_rat_cst_on_domain(dim, e->x.n, e->d);
 		return isl_pw_qpolynomial_alloc(set, qp);
 	}
 
@@ -218,7 +219,10 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_spa
 
 	assert(e->x.p->type == partition);
 
-	pwqp = isl_pw_qpolynomial_zero(isl_space_copy(dim));
+	pw_space = isl_space_copy(dim);
+	pw_space = isl_space_from_domain(pw_space);
+	pw_space = isl_space_add_dims(pw_space, isl_dim_out, 1);
+	pwqp = isl_pw_qpolynomial_zero(pw_space);
 
 	for (i = 0; i < e->x.p->size/2; ++i) {
 		Polyhedron *D = EVALUE_DOMAIN(e->x.p->arr[2 * i]);

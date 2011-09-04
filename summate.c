@@ -706,7 +706,7 @@ static __isl_give isl_pw_qpolynomial *add_unbounded_guarded_qp(
 		set = isl_set_from_basic_set(isl_basic_set_copy(bset));
 		set = isl_map_domain(isl_map_from_range(set));
 		set = isl_set_reset_space(set, isl_space_copy(dim));
-		pwqp = isl_pw_qpolynomial_alloc(set, isl_qpolynomial_nan(dim));
+		pwqp = isl_pw_qpolynomial_alloc(set, isl_qpolynomial_nan_on_domain(dim));
 		sum = isl_pw_qpolynomial_add(sum, pwqp);
 	}
 
@@ -765,7 +765,8 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	assert(tmp);
 	pwqp = isl_pw_qpolynomial_from_evalue(dim, tmp);
 	evalue_free(tmp);
-	pwqp = isl_pw_qpolynomial_reset_space(pwqp, isl_space_copy(data->dim));
+	pwqp = isl_pw_qpolynomial_reset_domain_space(pwqp,
+				    isl_space_domain(isl_space_copy(data->dim)));
 	data->sum = isl_pw_qpolynomial_add(data->sum, pwqp);
 
 	isl_basic_set_free(bset);
@@ -793,7 +794,7 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 		set = isl_set_move_dims(set, isl_dim_param, nparam,
 					isl_dim_set, 0, data->n_in);
 		qp2 = isl_qpolynomial_move_dims(qp2, isl_dim_param, nparam,
-						isl_dim_set, 0, data->n_in);
+						isl_dim_in, 0, data->n_in);
 		data->e = isl_qpolynomial_to_evalue(qp2);
 		isl_qpolynomial_free(qp2);
 	} else
@@ -838,7 +839,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 
 	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
 
-	data.dim = isl_pw_qpolynomial_get_space(pwqp);
+	data.dim = isl_pw_qpolynomial_get_domain_space(pwqp);
 	data.wrapping = isl_space_is_wrapping(data.dim);
 	if (data.wrapping) {
 		data.dim = isl_space_unwrap(data.dim);
@@ -849,8 +850,10 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 
 	data.dim = isl_space_domain(data.dim);
 	if (nvar == 0)
-		return isl_pw_qpolynomial_reset_space(pwqp, data.dim);
+		return isl_pw_qpolynomial_reset_domain_space(pwqp, data.dim);
 
+	data.dim = isl_space_from_domain(data.dim);
+	data.dim = isl_space_add_dims(data.dim, isl_dim_out, 1);
 	data.sum = isl_pw_qpolynomial_zero(isl_space_copy(data.dim));
 
 	ctx = isl_pw_qpolynomial_get_ctx(pwqp);
@@ -912,13 +915,13 @@ error:
 	return NULL;
 }
 
-static int compatible_range(__isl_keep isl_space *dim1, __isl_keep isl_space *dim2)
+static int join_compatible(__isl_keep isl_space *dim1, __isl_keep isl_space *dim2)
 {
 	int m;
 	m = isl_space_match(dim1, isl_dim_param, dim2, isl_dim_param);
 	if (m < 0 || !m)
 		return m;
-	return isl_space_tuple_match(dim1, isl_dim_out, dim2, isl_dim_set);
+	return isl_space_tuple_match(dim1, isl_dim_out, dim2, isl_dim_in);
 }
 
 /* Compute the intersection of the range of the map and the domain
@@ -945,7 +948,7 @@ __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 
 	map_dim = isl_map_get_space(map);
 	pwqp_dim = isl_pw_qpolynomial_get_space(pwqp);
-	ok = compatible_range(map_dim, pwqp_dim);
+	ok = join_compatible(map_dim, pwqp_dim);
 	isl_space_free(map_dim);
 	isl_space_free(pwqp_dim);
 	if (!ok)
@@ -953,10 +956,11 @@ __isl_give isl_pw_qpolynomial *isl_map_apply_pw_qpolynomial(
 			goto error);
 
 	n_in = isl_map_dim(map, isl_dim_in);
-	pwqp = isl_pw_qpolynomial_insert_dims(pwqp, isl_dim_set, 0, n_in);
+	pwqp = isl_pw_qpolynomial_insert_dims(pwqp, isl_dim_in, 0, n_in);
 
 	dom = isl_map_wrap(map);
-	pwqp = isl_pw_qpolynomial_reset_space(pwqp, isl_set_get_space(dom));
+	pwqp = isl_pw_qpolynomial_reset_domain_space(pwqp,
+						    isl_set_get_space(dom));
 
 	pwqp = isl_pw_qpolynomial_intersect_domain(pwqp, dom);
 	pwqp = isl_pw_qpolynomial_sum(pwqp);
@@ -994,7 +998,7 @@ static int pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 
 	map_dim = isl_map_get_space(data->map);
 	pwqp_dim = isl_pw_qpolynomial_get_space(pwqp);
-	ok = compatible_range(map_dim, pwqp_dim);
+	ok = join_compatible(map_dim, pwqp_dim);
 	isl_space_free(map_dim);
 	isl_space_free(pwqp_dim);
 
@@ -1067,7 +1071,7 @@ static int pw_qpolynomial_apply_set(__isl_take isl_pw_qpolynomial *pwqp,
 
 	set_dim = isl_set_get_space(data->set);
 	pwqp_dim = isl_pw_qpolynomial_get_space(pwqp);
-	ok = compatible_range(set_dim, pwqp_dim);
+	ok = join_compatible(set_dim, pwqp_dim);
 	isl_space_free(set_dim);
 	isl_space_free(pwqp_dim);
 

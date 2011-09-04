@@ -45,6 +45,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	unsigned nvar;
 	unsigned nparam;
 	isl_int v;
+	isl_space *space;
 	isl_set *dom;
 	isl_qpolynomial *eval;
 	int r;
@@ -64,7 +65,8 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	eval = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vps->sum),
 					isl_point_copy(pnt));
 
-	vps->manual = isl_qpolynomial_zero(isl_pw_qpolynomial_get_space(vps->pwqp));
+	space = isl_pw_qpolynomial_get_domain_space(vps->pwqp);
+	vps->manual = isl_qpolynomial_zero_on_domain(space);
 	dom = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vps->fixed));
 	r = isl_set_foreach_point(dom, &manual_sum, user);
 	isl_set_free(dom);

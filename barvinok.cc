@@ -1582,9 +1582,9 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	bset = isl_basic_set_lift(bset);
 	pwqp = isl_basic_set_multiplicative_call(bset, &basic_set_card);
 
-	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_set, 0,
+	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_in, 0,
 						isl_dim_param, nparam, n_in);
-	pwqp = isl_pw_qpolynomial_reset_space(pwqp, target_dim);
+	pwqp = isl_pw_qpolynomial_reset_domain_space(pwqp, target_dim);
 	*sum = isl_pw_qpolynomial_add(*sum, pwqp);
 
 	return 0;
@@ -1609,7 +1609,7 @@ static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
 	dim = isl_set_get_space(set);
 	isl_int_init(one);
 	isl_int_set_si(one, 1);
-	qp = isl_qpolynomial_rat_cst(dim, one, one);
+	qp = isl_qpolynomial_rat_cst_on_domain(dim, one, one);
 	isl_int_clear(one);
 
 	pwqp = isl_pw_qpolynomial_alloc(set, qp);
@@ -1636,6 +1636,8 @@ __isl_give isl_pw_qpolynomial *isl_map_card(__isl_take isl_map *map)
 
 	dim = isl_map_get_space(map);
 	dim = isl_space_domain(dim);
+	dim = isl_space_from_domain(dim);
+	dim = isl_space_add_dims(dim, isl_dim_out, 1);
 	sum = isl_pw_qpolynomial_zero(dim);
 
 	map = isl_map_make_disjoint(map);
