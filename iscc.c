@@ -360,6 +360,36 @@ error:
 	return NULL;
 }
 
+static __isl_give struct isl_list *union_set_apply_union_pw_qpolynomial_fold(
+	__isl_take isl_union_set *uset,
+	__isl_take isl_union_pw_qpolynomial_fold *upwf)
+{
+	isl_ctx *ctx;
+	struct isl_list *list;
+	int tight;
+
+	ctx = isl_union_set_get_ctx(uset);
+	list = isl_list_alloc(ctx, 2);
+	if (!list)
+		goto error2;
+
+	list->obj[0].type = isl_obj_union_pw_qpolynomial_fold;
+	list->obj[0].v = isl_union_set_apply_union_pw_qpolynomial_fold(uset,
+							upwf, &tight);
+	list->obj[1].type = isl_obj_bool;
+	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
+	if (tight < 0 || !list->obj[0].v)
+		goto error;
+
+	return list;
+error2:
+	isl_union_set_free(uset);
+	isl_union_pw_qpolynomial_fold_free(upwf);
+error:
+	isl_list_free(list);
+	return NULL;
+}
+
 static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_int_mul(
 	__isl_take isl_union_pw_qpolynomial *upwqp, __isl_take isl_int_obj *i)
 {
@@ -1406,6 +1436,30 @@ error2:
 	return obj;
 }
 
+static struct isl_obj apply_fun_set(struct isl_obj obj,
+	__isl_take isl_union_set *uset)
+{
+	if (obj.type == isl_obj_union_pw_qpolynomial) {
+		obj.v = isl_union_set_apply_union_pw_qpolynomial(uset, obj.v);
+	} else {
+		obj.type = isl_obj_list;
+		obj.v = union_set_apply_union_pw_qpolynomial_fold(uset, obj.v);
+	}
+	return obj;
+}
+
+static struct isl_obj apply_fun_map(struct isl_obj obj,
+	__isl_take isl_union_map *umap)
+{
+	if (obj.type == isl_obj_union_pw_qpolynomial) {
+		obj.v = isl_union_map_apply_union_pw_qpolynomial(umap, obj.v);
+	} else {
+		obj.type = isl_obj_list;
+		obj.v = union_map_apply_union_pw_qpolynomial_fold(umap, obj.v);
+	}
+	return obj;
+}
+
 static struct isl_obj apply_fun(struct isl_stream *s,
 	struct isl_obj obj, struct isl_hash_table *table)
 {
@@ -1426,16 +1480,10 @@ static struct isl_obj apply_fun(struct isl_stream *s,
 		arg = convert(s->ctx, arg, isl_obj_union_set);
 	else if (arg.type == isl_obj_map)
 		arg = convert(s->ctx, arg, isl_obj_union_map);
-	if (arg.type == isl_obj_union_set) {
-		arg.v = isl_union_map_from_range(arg.v);
-		arg.type = isl_obj_union_map;
-	}
-	if (obj.type == isl_obj_union_pw_qpolynomial) {
-		obj.v = isl_union_map_apply_union_pw_qpolynomial(arg.v, obj.v);
-	} else {
-		obj.type = isl_obj_list;
-		obj.v = union_map_apply_union_pw_qpolynomial_fold(arg.v, obj.v);
-	}
+	if (arg.type == isl_obj_union_set)
+		obj = apply_fun_set(obj, arg.v);
+	else
+		obj = apply_fun_map(obj, arg.v);
 	if (!obj.v)
 		goto error2;
 
