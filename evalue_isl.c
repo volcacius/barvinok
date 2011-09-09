@@ -1,3 +1,4 @@
+#include <isl/aff.h>
 #include <isl_set_polylib.h>
 #include <isl/constraint.h>
 #include <isl/seq.h>
@@ -9,7 +10,8 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	int i;
 	isl_ctx *ctx;
 	isl_vec *v;
-	isl_div *div;
+	isl_local_space *ls;
+	isl_aff *aff;
 	isl_qpolynomial *base, *c;
 	unsigned nparam;
 
@@ -28,14 +30,17 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	isl_seq_clr(v->el + 2, nparam);
 	evalue_extract_affine(&e->x.p->arr[0], v->el + 2, &v->el[1], &v->el[0]);
 
-	div = isl_div_alloc(isl_space_copy(dim));
-	isl_div_set_constant(div, v->el[1]);
-	isl_div_set_denominator(div, v->el[0]);
+	ls = isl_local_space_from_space(isl_space_copy(dim));
+	aff = isl_aff_zero_on_domain(ls);
+	aff = isl_aff_set_constant(aff, v->el[1]);
+	aff = isl_aff_set_denominator(aff, v->el[0]);
 
 	for (i = 0; i < nparam; ++i)
-		isl_div_set_coefficient(div, isl_dim_param, i, v->el[2 + i]);
+		aff = isl_aff_set_coefficient(aff, isl_dim_param, i,
+						v->el[2 + i]);
 
-	base = isl_qpolynomial_div(div);
+	aff = isl_aff_floor(aff);
+	base = isl_qpolynomial_from_aff(aff);
 
 	if (e->x.p->type == fractional) {
 		base = isl_qpolynomial_neg(base);
@@ -258,7 +263,7 @@ static evalue *evalue_pow(evalue *e, int exp)
 	return pow;
 }
 
-static evalue *div2evalue(__isl_take isl_div *div)
+static evalue *div2evalue(__isl_take isl_aff *div)
 {
 	int i;
 	isl_ctx *ctx;
@@ -271,20 +276,20 @@ static evalue *div2evalue(__isl_take isl_div *div)
 	if (!div)
 		return NULL;
 
-	dim = isl_div_dim(div, isl_dim_set);
-	nparam = isl_div_dim(div, isl_dim_param);
+	dim = isl_aff_dim(div, isl_dim_in);
+	nparam = isl_aff_dim(div, isl_dim_param);
 
-	ctx = isl_div_get_ctx(div);
+	ctx = isl_aff_get_ctx(div);
 	vec = isl_vec_alloc(ctx, 1 + dim + nparam + 1);
 	if (!vec)
 		goto error;
 	for (i = 0; i < dim; ++i)
-		isl_div_get_coefficient(div, isl_dim_set, i, &vec->el[1 + i]);
+		isl_aff_get_coefficient(div, isl_dim_in, i, &vec->el[1 + i]);
 	for (i = 0; i < nparam; ++i)
-		isl_div_get_coefficient(div, isl_dim_param, i,
+		isl_aff_get_coefficient(div, isl_dim_param, i,
 					&vec->el[1 + dim + i]);
-	isl_div_get_denominator(div, &vec->el[0]);
-	isl_div_get_constant(div, &vec->el[1 + dim + nparam]);
+	isl_aff_get_denominator(div, &vec->el[0]);
+	isl_aff_get_constant(div, &vec->el[1 + dim + nparam]);
 
 	e = isl_alloc_type(ctx, evalue);
 	if (!e)
@@ -299,11 +304,11 @@ static evalue *div2evalue(__isl_take isl_div *div)
 	e->x.p->arr[0] = *aff;
 	free(aff);
 	isl_vec_free(vec);
-	isl_div_free(div);
+	isl_aff_free(div);
 	return e;
 error:
 	isl_vec_free(vec);
-	isl_div_free(div);
+	isl_aff_free(div);
 	return NULL;
 }
 
@@ -365,7 +370,7 @@ static int add_term(__isl_take isl_term *term, void *user)
 	for (i = 0; i < n_div; ++i) {
 		evalue *pow;
 		evalue *floor;
-		isl_div *div;
+		isl_aff *div;
 		int exp = isl_term_get_exp(term, isl_dim_div, i);
 
 		if (!exp)
