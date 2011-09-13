@@ -151,8 +151,8 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	dim = isl_set_get_space(set);
 	dim = isl_space_add_dims(dim, isl_dim_set, 1);
 
-	bset = isl_basic_set_universe(dim);
-	c = isl_equality_alloc(isl_space_copy(dim));
+	bset = isl_basic_set_universe(isl_space_copy(dim));
+	c = isl_equality_alloc(isl_local_space_from_space(dim));
 	isl_int_neg(vec->el[0], vec->el[0]);
 	isl_constraint_set_coefficient(c, isl_dim_set, 0, vec->el[0]);
 	isl_constraint_set_constant(c, vec->el[1]);
