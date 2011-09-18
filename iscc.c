@@ -163,81 +163,42 @@ int *isl_bool_from_int(int res)
 	return res < 0 ? &isl_bool_error : res ? &isl_bool_true : &isl_bool_false;
 }
 
-int *union_map_is_equal(__isl_take isl_union_map *map1,
+static int isl_union_map_is_superset(__isl_take isl_union_map *map1,
 	__isl_take isl_union_map *map2)
 {
-	int res = isl_union_map_is_equal(map1, map2);
-	isl_union_map_free(map1);
-	isl_union_map_free(map2);
-	return isl_bool_from_int(res);
+	return isl_union_map_is_subset(map2, map1);
 }
-int *union_set_is_equal(__isl_take isl_union_set *set1,
+static int isl_union_set_is_superset(__isl_take isl_union_set *set1,
 	__isl_take isl_union_set *set2)
 {
-	return union_map_is_equal((isl_union_map *)set1, (isl_union_map *)set2);
+	return isl_union_set_is_subset(set2, set1);
 }
 
-int *union_map_is_subset(__isl_take isl_union_map *map1,
+static int isl_union_map_is_strict_superset(__isl_take isl_union_map *map1,
 	__isl_take isl_union_map *map2)
 {
-	int res = isl_union_map_is_subset(map1, map2);
-	isl_union_map_free(map1);
-	isl_union_map_free(map2);
-	return isl_bool_from_int(res);
+	return isl_union_map_is_strict_subset(map2, map1);
 }
-int *union_set_is_subset(__isl_take isl_union_set *set1,
+static int isl_union_set_is_strict_superset(__isl_take isl_union_set *set1,
 	__isl_take isl_union_set *set2)
 {
-	return union_map_is_subset((isl_union_map *)set1, (isl_union_map *)set2);
-}
-
-int *union_map_is_strict_subset(__isl_take isl_union_map *map1,
-	__isl_take isl_union_map *map2)
-{
-	int res = isl_union_map_is_strict_subset(map1, map2);
-	isl_union_map_free(map1);
-	isl_union_map_free(map2);
-	return isl_bool_from_int(res);
-}
-int *union_set_is_strict_subset(__isl_take isl_union_set *set1,
-	__isl_take isl_union_set *set2)
-{
-	return union_map_is_strict_subset((isl_union_map *)set1,
-					  (isl_union_map *)set2);
-}
-
-int *union_map_is_superset(__isl_take isl_union_map *map1,
-	__isl_take isl_union_map *map2)
-{
-	return union_map_is_subset(map2, map1);
-}
-int *union_set_is_superset(__isl_take isl_union_set *set1,
-	__isl_take isl_union_set *set2)
-{
-	return union_set_is_subset(set2, set1);
-}
-
-int *union_map_is_strict_superset(__isl_take isl_union_map *map1,
-	__isl_take isl_union_map *map2)
-{
-	return union_map_is_strict_subset(map2, map1);
-}
-int *union_set_is_strict_superset(__isl_take isl_union_set *set1,
-	__isl_take isl_union_set *set2)
-{
-	return union_set_is_strict_subset(set2, set1);
+	return isl_union_set_is_strict_subset(set2, set1);
 }
 
 extern struct isl_obj_vtable isl_obj_list_vtable;
 #define isl_obj_list		(&isl_obj_list_vtable)
 
 typedef void *(*isc_bin_op_fn)(void *lhs, void *rhs);
+typedef int (*isc_bin_test_fn)(void *lhs, void *rhs);
 struct isc_bin_op {
 	enum isl_token_type	op;
 	isl_obj_type		lhs;
 	isl_obj_type		rhs;
 	isl_obj_type		res;
-	isc_bin_op_fn		fn;
+	union {
+		isc_bin_op_fn		fn;
+		isc_bin_test_fn		test;
+	} o;
 };
 struct isc_named_bin_op {
 	char			*name;
@@ -487,25 +448,35 @@ struct isc_bin_op bin_ops[] = {
 		isl_obj_union_map,
 		(isc_bin_op_fn) &isl_union_map_from_domain_and_range },
 	{ '=', isl_obj_union_set,	isl_obj_union_set,	isl_obj_bool,
-		(isc_bin_op_fn) &union_set_is_equal },
+		{ .test = (isc_bin_test_fn) &isl_union_set_is_equal } },
 	{ '=', isl_obj_union_map,	isl_obj_union_map,	isl_obj_bool,
-		(isc_bin_op_fn) &union_map_is_equal },
+		{ .test = (isc_bin_test_fn) &isl_union_map_is_equal } },
 	{ ISL_TOKEN_LE, isl_obj_union_set,	isl_obj_union_set,
-		isl_obj_bool, (isc_bin_op_fn) &union_set_is_subset },
+		isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &isl_union_set_is_subset } },
 	{ ISL_TOKEN_LE, isl_obj_union_map,	isl_obj_union_map,
-		isl_obj_bool, (isc_bin_op_fn) &union_map_is_subset },
+		isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &isl_union_map_is_subset } },
 	{ ISL_TOKEN_LT, isl_obj_union_set,	isl_obj_union_set,
-		isl_obj_bool, (isc_bin_op_fn) &union_set_is_strict_subset },
+		isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &isl_union_set_is_strict_subset } },
 	{ ISL_TOKEN_LT, isl_obj_union_map,	isl_obj_union_map,
-		isl_obj_bool, (isc_bin_op_fn) &union_map_is_strict_subset },
+		isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &isl_union_map_is_strict_subset } },
 	{ ISL_TOKEN_GE, isl_obj_union_set,	isl_obj_union_set,
-		isl_obj_bool, (isc_bin_op_fn) &union_set_is_superset },
+		isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &isl_union_set_is_superset } },
 	{ ISL_TOKEN_GE, isl_obj_union_map,	isl_obj_union_map,
-		isl_obj_bool, (isc_bin_op_fn) &union_map_is_superset },
+		isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &isl_union_map_is_superset } },
 	{ ISL_TOKEN_GT, isl_obj_union_set,	isl_obj_union_set,
-		isl_obj_bool, (isc_bin_op_fn) &union_set_is_strict_superset },
+		isl_obj_bool,
+		{ .test =
+			(isc_bin_test_fn) &isl_union_set_is_strict_superset } },
 	{ ISL_TOKEN_GT, isl_obj_union_map,	isl_obj_union_map,
-		isl_obj_bool, (isc_bin_op_fn) &union_map_is_strict_superset },
+		isl_obj_bool,
+		{ .test =
+			(isc_bin_test_fn) &isl_union_map_is_strict_superset } },
 	{ ISL_TOKEN_LEX_LE,	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_map,
 		(isc_bin_op_fn) &isl_union_set_lex_le_union_set },
@@ -2330,7 +2301,14 @@ static struct isl_obj call_bin_op(isl_ctx *ctx, struct isc_bin_op *op,
 
 	lhs = convert(ctx, lhs, op->lhs);
 	rhs = convert(ctx, rhs, op->rhs);
-	obj.v = op->fn(lhs.v, rhs.v);
+	if (op->res != isl_obj_bool)
+		obj.v = op->o.fn(lhs.v, rhs.v);
+	else {
+		int res = op->o.test(lhs.v, rhs.v);
+		free_obj(lhs);
+		free_obj(rhs);
+		obj.v = isl_bool_from_int(res);
+	}
 	obj.type = op->res;
 
 	return obj;
