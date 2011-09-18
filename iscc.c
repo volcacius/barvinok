@@ -558,6 +558,14 @@ struct isc_bin_op bin_ops[] = {
 	{ '%',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_union_set,
 		isl_obj_union_pw_qpolynomial_fold,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_gist },
+	{ ISL_TOKEN_EQ_EQ, isl_obj_union_pw_qpolynomial,
+		isl_obj_union_pw_qpolynomial, isl_obj_bool,
+		{ .test = (isc_bin_test_fn)
+			    &isl_union_pw_qpolynomial_plain_is_equal } },
+	{ ISL_TOKEN_EQ_EQ, isl_obj_union_pw_qpolynomial_fold,
+		isl_obj_union_pw_qpolynomial_fold, isl_obj_bool,
+		{ .test = (isc_bin_test_fn)
+			    &isl_union_pw_qpolynomial_fold_plain_is_equal } },
 	{ '+',	isl_obj_str,	isl_obj_str,	isl_obj_str,
 		(isc_bin_op_fn) &isl_str_concat },
 	0
