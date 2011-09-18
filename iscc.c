@@ -2323,6 +2323,19 @@ static int next_is_neg_int(struct isl_stream *s)
 	return ret;
 }
 
+static struct isl_obj call_bin_op(isl_ctx *ctx, struct isc_bin_op *op,
+	struct isl_obj lhs, struct isl_obj rhs)
+{
+	struct isl_obj obj;
+
+	lhs = convert(ctx, lhs, op->lhs);
+	rhs = convert(ctx, rhs, op->rhs);
+	obj.v = op->fn(lhs.v, rhs.v);
+	obj.type = op->res;
+
+	return obj;
+}
+
 static struct isl_obj read_expr(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
@@ -2346,10 +2359,7 @@ static struct isl_obj read_expr(struct isl_stream *s,
 			    "no such binary operator defined on given operands",
 			    goto error);
 
-		obj = convert(s->ctx, obj, op->lhs);
-		right_obj = convert(s->ctx, right_obj, op->rhs);
-		obj.v = op->fn(obj.v, right_obj.v);
-		obj.type = op->res;
+		obj = call_bin_op(s->ctx, op, obj, right_obj);
 	}
 
 	if (obj.type == isl_obj_int && next_is_neg_int(s)) {
