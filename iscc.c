@@ -2424,9 +2424,10 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		goto error;
 
 	if (only_print) {
-		if (obj.type != isl_obj_none && obj.v != NULL)
+		if (obj.type != isl_obj_none && obj.v != NULL) {
 			p = obj.type->print(p, obj.v);
-		p = isl_printer_end_line(p);
+			p = isl_printer_end_line(p);
+		}
 		free_obj(obj);
 		return p;
 	}
