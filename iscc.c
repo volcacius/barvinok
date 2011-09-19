@@ -76,9 +76,10 @@ enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
 	       ISCC_SCHEDULE, ISCC_SCHEDULE_FOREST,
 	       ISCC_MINIMIZING, ISCC_RESPECTING,
-	       ISCC_TYPEOF, ISCC_PRINT,
+	       ISCC_TYPEOF, ISCC_PRINT, ISCC_ASSERT,
 	       ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
+	[ISCC_ASSERT] = "assert",
 	[ISCC_READ] = "read",
 	[ISCC_WRITE] = "write",
 	[ISCC_PRINT] = "print",
@@ -1978,6 +1979,25 @@ error:
 	return obj;
 }
 
+static struct isl_obj check_assert(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	struct isl_obj obj;
+
+	obj = read_expr(s, table);
+	if (obj.type != isl_obj_bool)
+		isl_die(s->ctx, isl_error_invalid,
+			"expecting boolean expression", goto error);
+	if (obj.v != &isl_bool_true)
+		isl_die(s->ctx, isl_error_unknown,
+			"assertion failed", abort());
+error:
+	free_obj(obj);
+	obj.type = isl_obj_none;
+	obj.v = NULL;
+	return obj;
+}
+
 static struct isl_obj read_from_file(struct isl_stream *s)
 {
 	struct isl_obj obj;
@@ -2204,6 +2224,8 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		if (op)
 			return read_un_op_expr(s, table, op);
 
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_ASSERT]))
+			return check_assert(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_READ]))
 			return read_from_file(s);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_WRITE]))
