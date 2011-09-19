@@ -412,7 +412,7 @@ dist-git: dist
 BEE_TESTDIRS = ehrhart_e ehrhart_e/scarf ehrhart_e/piplib
 
 check: check-testlib check-enumerate check-enumerate_e check-test \
-	check-lexmin check-approx check-pwqp check-euler check-lw
+	check-lexmin check-approx check-pwqp check-euler check-lw check-iscc
 check-testlib: testlib$(EXEEXT)
 	./testlib$(EXEEXT)
 check-approx: test_approx$(EXEEXT)
@@ -548,6 +548,13 @@ check-lexmin: lexmin$(EXEEXT)
 		    ./lexmin$(EXEEXT) --verify $$opt < $$i || exit; \
 		done \
 	    fi \
+	done
+check-iscc: iscc$(EXEEXT)
+	@for i in $(top_srcdir)/tests/iscc/*; do \
+		if test -f $$i; then \
+			echo $$i; \
+			./iscc$(EXEEXT) < $$i || exit; \
+		fi \
 	done
 
 version.h: @GIT_HEAD@
