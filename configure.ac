@@ -307,9 +307,9 @@ bundled)
 	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/omega_calc/include"
 	;;
 system)
-    if test "x$omega_package" != "xyes"; then
-	OMEGA_CPPFLAGS="-I$omega_package/include/omega"
-	OMEGA_LDFLAGS="-L$omega_package/lib"
+    if test "x$with_omega_prefix" != "xyes"; then
+	OMEGA_CPPFLAGS="-I$with_omega_prefix/include/omega"
+	OMEGA_LDFLAGS="-L$with_omega_prefix/lib"
     else
 	for i in /usr/include /usr/local/include; do
 	    if test -f $i/omega/omega.h; then
