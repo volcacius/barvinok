@@ -26,10 +26,6 @@ if BUNDLED_CLOOG
     MAYBE_CLOOG = cloog
     CLOOG_LA = $(top_builddir)/cloog/libcloog-isl.la
 endif
-if BUNDLED_OMEGA
-    MAYBE_OMEGA = omega
-    OMEGA_LA = $(top_builddir)/omega/omega_lib/libomega.la
-endif
 if USE_ZSOLVE
     MAYBE_ZSOLVE = zsolve
 endif
@@ -37,10 +33,10 @@ if USE_PARKER
     MAYBE_PARKER = parker
 endif
 SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_PET) $(MAYBE_ISL_POLYLIB) \
-		$(MAYBE_CLOOG) $(MAYBE_OMEGA) \
+		$(MAYBE_CLOOG) \
 		$(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) \
-		$(MAYBE_ISL_POLYLIB) $(MAYBE_CLOOG) $(MAYBE_OMEGA) \
+		$(MAYBE_ISL_POLYLIB) $(MAYBE_CLOOG) \
 		zsolve parker doc
 
 FORCE:
@@ -54,8 +50,6 @@ isl-polylib/libisl-polylib.la: $(LOCAL_ISL_LA) $(LOCAL_POLYLIB_LA) FORCE
 	cd isl-polylib; $(MAKE) $(AM_MAKEFLAGS) libisl-polylib.la
 cloog/libcloog-isl.la: $(LOCAL_ISL_LA) FORCE
 	cd cloog; $(MAKE) $(AM_MAKEFLAGS) libcloog-isl.la
-omega/omega_lib/libomega.la: FORCE
-	cd omega/omega_lib; $(MAKE) $(AM_MAKEFLAGS) libomega.la
 zsolve/libzsolve.la: FORCE
 	cd zsolve; $(MAKE) $(AM_MAKEFLAGS) libzsolve.la
 parker/libparker.la: FORCE
@@ -302,7 +296,7 @@ barvinok_enumerate_e_CPPFLAGS = \
 	$(PARKERCPPFLAGS) @OMEGA_CPPFLAGS@ $(AM_CPPFLAGS)
 barvinok_enumerate_e_LDFLAGS = $(PARKERLDFLAGS) @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
-	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ $(OMEGA_LA) libbarvinok.la \
+	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ libbarvinok.la \
 	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@
 barvinok_bound_SOURCES = \
 	bound.c \

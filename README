@@ -10,8 +10,7 @@ The second is a generalization of an Ehrhart series.
 
 This library shares some functionality with LattE
 (http://www.math.ucdavis.edu/~latte/)
-and uses PolyLib (included), PIP (included), NTL (http://shoup.net/ntl/)
-and optionally Omega (included).
+and uses PolyLib (included), PIP (included), NTL (http://shoup.net/ntl/).
 If you have cloned the git repository, you need to run
 	git submodule init
 	git submodule update
@@ -19,6 +18,7 @@ If you have cloned the git repository, you need to run
 to get the submodules and create the configure scripts.
 
 Additionally, the following packages can optionally be used
+- Omega+ (http://chunchen.info/omega/)
 - GLPK (http://www.gnu.org/software/glpk/)
 
 NTL needs to have been compiled with GMP support.
@@ -50,9 +50,6 @@ you need the following packages:
 - libyaml (http://pyyaml.org/wiki/LibYAML)
 - LLVM/clang (http://clang.llvm.org/get_started.html)
 Additionally, you need to configure with the --with-pet=bundled option.
-
-If you want to compile and use the included Omega, then configure with
-the --with-omega=bundled option.
 
 Then
 

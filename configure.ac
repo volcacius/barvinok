@@ -289,7 +289,7 @@ if test "$with_zsolve" != "no"; then
 fi
 AM_CONDITIONAL(USE_ZSOLVE, test x$use_zsolve = xtrue)
 
-AX_SUBMODULE(omega,no|bundled|system,no)
+AX_SUBMODULE(omega,no|system,no)
 
 AC_SUBST(OMEGA_CPPFLAGS)
 AC_SUBST(OMEGA_LDFLAGS)
@@ -298,14 +298,6 @@ AC_SUBST(OMEGA_CODEGEN_LIBS)
 have_omega=false
 have_codegen=false
 case "$with_omega" in
-bundled)
-	have_omega=true
-	have_codegen=true
-	OMEGA_CPPFLAGS="-I\$(top_srcdir)/omega/omega_lib/include"
-	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/basic/include"
-	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/code_gen/include"
-	OMEGA_CPPFLAGS="$OMEGA_CPPFLAGS -I\$(top_srcdir)/omega/omega_calc/include"
-	;;
 system)
     if test "x$with_omega_prefix" != "xyes"; then
 	OMEGA_CPPFLAGS="-I$with_omega_prefix/include/omega"
@@ -340,7 +332,6 @@ if test "$have_omega" = true; then
 	AC_DEFINE(HAVE_OMEGA,[],[use omega])
 fi
 AM_CONDITIONAL(HAVE_OMEGA, test x$have_omega = xtrue)
-AM_CONDITIONAL(BUNDLED_OMEGA, test $with_omega = bundled)
 
 use_parker=false
 AC_MSG_CHECKING(whether to compile parker)
@@ -565,9 +556,6 @@ if test $with_isl_polylib = bundled; then
 fi
 if test $with_cloog = bundled; then
 	AC_CONFIG_SUBDIRS(cloog)
-fi
-if test $with_omega = bundled; then
-	AC_CONFIG_SUBDIRS(omega)
 fi
 AC_CONFIG_COMMANDS_POST([
 	dnl pass on arguments to subdir configures, but don't
