@@ -726,6 +726,7 @@ void *set_codegen(void *arg)
 {
 	isl_space *dim;
 	isl_union_set *uset = (isl_union_set *)arg;
+	isl_set *set;
 	isl_ctx *ctx = isl_union_set_get_ctx(uset);
 	CloogState *state;
 	CloogOptions *options;
@@ -745,7 +746,8 @@ void *set_codegen(void *arg)
 	options->strides = 1;
 	options->sh = 1;
 
-	ud = cloog_union_domain_from_isl_union_set(isl_union_set_copy(uset));
+	set = isl_set_from_union_set(isl_union_set_copy(uset));
+	ud = cloog_union_domain_from_isl_set(set);
 
 	dim = isl_union_set_get_space(uset);
 	context = cloog_domain_from_isl_set(isl_set_universe(dim));
