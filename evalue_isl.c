@@ -164,7 +164,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	for (i = 0; i < nparam; ++i)
 		isl_constraint_set_coefficient(c, isl_dim_param, i, vec->el[2+i]);
 	bset = isl_basic_set_add_constraint(bset, c);
-	bset = isl_basic_set_project_out(bset, isl_dim_set, 0, 1);
+	bset = isl_basic_set_params(bset);
 	guard = isl_set_from_basic_set(bset);
 	isl_vec_free(vec);
 
