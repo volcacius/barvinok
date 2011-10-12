@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
+#include <barvinok/barvinok.h>
 #include "reduce_domain.h"
 
 Polyhedron *true_context(Polyhedron *P, Polyhedron *C, unsigned MaxRays)
