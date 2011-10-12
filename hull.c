@@ -6,6 +6,7 @@
 #include "hull.h"
 #include "ilp.h"
 #include "polysign.h"
+#include "remove_equalities.h"
 #include "config.h"
 
 #ifndef USE_ZSOLVE
