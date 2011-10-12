@@ -140,12 +140,10 @@ static int verify_isl(Polyhedron *P, Polyhedron *C,
 	for (i = 0; i < C->Dimension; ++i)
 		dim = isl_space_set_dim_name(dim, isl_dim_param, i, options->params[i]);
 	set = isl_set_new_from_polylib(P, isl_space_copy(dim));
-	dim = isl_space_drop_dims(dim,
-				isl_dim_set, 0, P->Dimension - C->Dimension);
+	dim = isl_space_params(dim);
 	set_C = isl_set_new_from_polylib(C, dim);
-	set_C = isl_set_intersect(isl_set_copy(set), set_C);
-	set_C = isl_set_remove_dims(set_C,
-				isl_dim_set, 0, P->Dimension - C->Dimension);
+	set_C = isl_set_intersect_params(isl_set_copy(set), set_C);
+	set_C = isl_set_params(set_C);
 
 	set_C = verify_context_set_bounds(set_C, options);
 
