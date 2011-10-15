@@ -10,6 +10,8 @@ enum order_sign { order_lt, order_le, order_eq, order_ge, order_gt, order_unknow
 		  order_undefined };
 
 /* Returns the sign of the affine function specified by T on the polyhedron D */
+enum order_sign glpk_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
+					    struct barvinok_options *options);
 enum order_sign polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options);
 enum order_sign PL_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
