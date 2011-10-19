@@ -703,7 +703,7 @@ void *map_codegen(void *arg)
 
 	state = cloog_isl_state_malloc(ctx);
 	options = cloog_options_malloc(state);
-	options->language = LANGUAGE_C;
+	options->language = CLOOG_LANGUAGE_C;
 	options->strides = 1;
 	options->sh = 1;
 
@@ -745,7 +745,7 @@ void *set_codegen(void *arg)
 
 	state = cloog_isl_state_malloc(ctx);
 	options = cloog_options_malloc(state);
-	options->language = LANGUAGE_C;
+	options->language = CLOOG_LANGUAGE_C;
 	options->strides = 1;
 	options->sh = 1;
 
