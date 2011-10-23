@@ -386,7 +386,7 @@ if test "$cddlib_package" != "no"; then
 		LIBS="-lcddgmp $LIBS"
 		AC_DEFINE_UNQUOTED([SRCDIR], ["$srcdir"], [srcdir])
 		AC_LANG_PUSH(C++)
-		AC_RUN_IFELSE(AC_LANG_PROGRAM([[#define GMPRATIONAL
+		AC_RUN_IFELSE([AC_LANG_PROGRAM([[#define GMPRATIONAL
 #include <setoper.h>
 #include <cdd.h>]],
 		[[
@@ -403,7 +403,7 @@ if test "$cddlib_package" != "no"; then
 	lp = dd_Matrix2LP(M, &err);
 	dd_LPSolve(lp, dd_DualSimplex, &err);
 	return lp->LPS == dd_Inconsistent;
-		]]),[
+		]])],[
 			AC_DEFINE(HAVE_LIBCDDGMP, [], [Define to 1 if you have the `cddgmp' library (-lcddgmp).])
 		],[
 			AC_MSG_WARN(please upgrade cddlib to 0.94e or later)
