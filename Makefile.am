@@ -63,6 +63,7 @@ LIB_ISL = $(ISL_LA) @ISL_LIBS@
 LIB_PET = $(PET_LA) @PET_LIBS@
 LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
 LIB_CLOOG = $(CLOOG_LA) @CLOOG_LIBS@
+LIB_POLYLIB = $(POLYLIB_LA) @POLYLIB_LIBS@
 
 lib_LTLIBRARIES = libbarvinok.la
 bin_PROGRAMS = barvinok_count barvinok_enumerate barvinok_enumerate_e \
@@ -212,12 +213,10 @@ if USE_ZSOLVE
     ZSOLVE_LA = zsolve/libzsolve.la
 endif
 libbarvinok_la_LIBADD = @LTLIBOBJS@ $(LIB_ISL_POLYLIB) $(LIB_ISL) \
-			     $(POLYLIB_LA) @POLYLIB_LIBS@ \
-			     $(ZSOLVE_LA)
+			     $(LIB_POLYLIB) $(ZSOLVE_LA)
 libbarvinok_la_LDFLAGS = @BV_LDFLAGS@ -version-info @versioninfo@ \
 				$(AM_LDFLAGS)
-LDADD = libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
-	@POLYLIB_LIBS@
+LDADD = libbarvinok.la $(LIB_ISL_POLYLIB) $(LIB_ISL) $(LIB_POLYLIB)
 
 test_SOURCES = \
 	test.c
@@ -297,15 +296,12 @@ barvinok_enumerate_e_CPPFLAGS = \
 barvinok_enumerate_e_LDFLAGS = $(PARKERLDFLAGS) @OMEGA_LDFLAGS@ @LDFLAGS@
 barvinok_enumerate_e_LDADD = \
 	$(PARKER_LA) $(MONA_LIBS) @OMEGA_LIBS@ libbarvinok.la \
-	@ISL_POLYLIB_LIBS@ @ISL_LIBS@ @POLYLIB_LIBS@
+	$(LIB_ISL_POLYLIB) $(LIB_ISL) $(LIB_POLYLIB)
 barvinok_bound_SOURCES = \
 	bound.c \
 	verify.h \
 	verify.c
 EXTRA_barvinok_bound_SOURCES = fdstream.cc fdstream.h
-barvinok_bound_LDADD = \
-	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
-	@POLYLIB_LIBS@
 barvinok_summate_SOURCES = \
 	barvinok_summate.c \
 	verify.h \
@@ -332,9 +328,6 @@ test_bound_SOURCES = \
 	verify.h \
 	verify.c
 EXTRA_test_bound_SOURCES = fdstream.cc fdstream.h
-test_bound_LDADD = \
-	libbarvinok.la @ISL_POLYLIB_LIBS@ @ISL_LIBS@ \
-	@POLYLIB_LIBS@
 iscc_SOURCES =	\
 	isl_obj_list.h \
 	isl_obj_list.c \
@@ -343,8 +336,8 @@ iscc_SOURCES =	\
 	iscc.c
 iscc_CPPFLAGS = @PET_CFLAGS@ @CLOOG_CFLAGS@ $(AM_CPPFLAGS)
 iscc_LDADD = \
-	libbarvinok.la $(LIB_CLOOG) @ISL_POLYLIB_LIBS@ $(LIB_PET) @ISL_LIBS@ \
-	@POLYLIB_LIBS@
+	libbarvinok.la $(LIB_CLOOG) $(LIB_ISL_POLYLIB) $(LIB_PET) $(LIB_ISL) \
+	$(LIB_POLYLIB)
 
 isl.py: interface/isl.py.top
 	(cat $(srcdir)/interface/isl.py.top; \
