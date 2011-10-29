@@ -10,7 +10,7 @@ The second is a generalization of an Ehrhart series.
 
 This library shares some functionality with LattE
 (http://www.math.ucdavis.edu/~latte/)
-and uses PolyLib (included), PIP (included), NTL (http://shoup.net/ntl/).
+and uses PolyLib (included), NTL (http://shoup.net/ntl/).
 If you have cloned the git repository, you need to run
 	git submodule init
 	git submodule update
