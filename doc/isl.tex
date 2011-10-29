@@ -226,13 +226,25 @@ or
 \end{lstlisting}
 (because it involves a different parameter).
 
+It is sometimes convenient to represent constraints that only
+involve parameters and that are not tied to any particular space.
+To construct such a parameter domain, the list of coordinates
+should simply be omitted.  Note that the colon is required
+in this case, even if there are no constraints.
+In particular,
+\begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
+{ : }
+\end{lstlisting}
+represents the universal parameter domain, which is very different
+from the empty set.
+
 To plug in a particular value for a parameter, the user should
-take the \ai{intersection} (\ai[\tt]{*}) with a (typically universal) set that
+take the \ai{intersection} (\ai[\tt]{*}) with a parameter domain
 assigns a particular value to the parameter.
 For example,
 \begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
 S := [n] -> { [i,j] : 1 <= i <= n and 1 <= j <= i };
-S * [n] -> { [i,j] : n = 5 };
+S * [n] -> { : n = 5 };
 \end{lstlisting}
 It should be noted, though, that the result is not the same
 as simply replacing \lstinline{n} by 5 as the result of the above
@@ -244,7 +256,7 @@ That is, the result of the sequence below is \lstinline{True}.
 \begin{lstlisting}[columns=flexible,escapechar=@,language=]{}
 S1 := { [i,j] : 1 <= i <= 5 and 1 <= j <= i };
 S2 := [n] -> { [i,j] : 1 <= i <= n and 1 <= j <= i };
-(S2 % [n] -> { [i,j] : n = 5}) = S1;
+(S2 % [n] -> { : n = 5}) = S1;
 \end{lstlisting}
 
 \begin{figure}
