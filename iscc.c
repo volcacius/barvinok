@@ -66,6 +66,12 @@ static void remove_signal_handler(isl_ctx *ctx)
 
 #ifdef HAVE_PET
 #include <pet.h>
+#else
+struct pet_options;
+int pet_options_set_autodetect(isl_ctx *ctx, int val)
+{
+	return -1;
+}
 #endif
 
 static int isl_bool_false = 0;
@@ -109,6 +115,7 @@ struct isl_arg_choice iscc_format[] = {
 
 struct iscc_options {
 	struct barvinok_options	*barvinok;
+	struct pet_options	*pet;
 	unsigned		 format;
 	int			 io;
 };
@@ -116,6 +123,9 @@ struct iscc_options {
 ISL_ARGS_START(struct iscc_options, iscc_options_args)
 ISL_ARG_CHILD(struct iscc_options, barvinok, "barvinok", &barvinok_options_args,
 	"barvinok options")
+#ifdef HAVE_PET
+ISL_ARG_CHILD(struct iscc_options, pet, "pet", &pet_options_args, "pet options")
+#endif
 ISL_ARG_CHOICE(struct iscc_options, format, 0, "format", \
 	iscc_format,	ISL_FORMAT_ISL, "output format")
 ISL_ARG_BOOL(struct iscc_options, io, 0, "io", 1,
@@ -793,7 +803,7 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 	if (!list)
 		goto error;
 
-	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL, 1);
+	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL);
 	domain = pet_scop_collect_domains(scop);
 	sched = pet_scop_collect_schedule(scop);
 	reads = pet_scop_collect_reads(scop);
@@ -2548,6 +2558,7 @@ int main(int argc, char **argv)
 	assert(options);
 
 	ctx = isl_ctx_alloc_with_options(&iscc_options_args, options);
+	pet_options_set_autodetect(ctx, 1);
 	argc = isl_ctx_parse_options(ctx, argc, argv, ISL_ARG_ALL);
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
