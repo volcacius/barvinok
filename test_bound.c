@@ -47,13 +47,12 @@ struct options {
     int quiet;
 };
 
-struct isl_arg options_arg[] = {
-ISL_ARG_CHILD(struct options, verify, NULL, verify_options_arg, NULL)
+ISL_ARGS_START(struct options, options_args)
+ISL_ARG_CHILD(struct options, verify, NULL, &verify_options_args, NULL)
 ISL_ARG_BOOL(struct options, quiet, 'q', "quiet", 0, NULL)
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(options, struct options, options_arg)
+ISL_ARG_DEF(options, struct options, options_args)
 
 struct result_data {
     isl_int		    n;

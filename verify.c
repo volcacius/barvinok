@@ -47,8 +47,9 @@ static int set_r(void *opt, long val)
 	return 0;
 }
 
-struct isl_arg verify_options_arg[] = {
-ISL_ARG_CHILD(struct verify_options, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARGS_START(struct verify_options, verify_options_args)
+ISL_ARG_CHILD(struct verify_options, barvinok, NULL, &barvinok_options_args,
+	NULL)
 ISL_ARG_BOOL(struct verify_options, verify, 'T', "verify", 0, NULL)
 ISL_ARG_BOOL(struct verify_options, exact, 'E', "exact", 0, NULL)
 ISL_ARG_BOOL(struct verify_options, print_all, 'A', "print-all", 0, NULL)
@@ -57,8 +58,7 @@ ISL_ARG_BOOL(struct verify_options, continue_on_error, 'C',
 ISL_ARG_USER_LONG(struct verify_options, m, 'm', "min", set_m, INT_MAX, NULL)
 ISL_ARG_USER_LONG(struct verify_options, M, 'M', "max", set_M, INT_MIN, NULL)
 ISL_ARG_USER_LONG(struct verify_options, r, 'r', "range", set_r, -1, NULL)
-ISL_ARG_END
-};
+ISL_ARGS_END
 
 void verify_options_set_range(struct verify_options *options, int dim)
 {

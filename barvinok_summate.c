@@ -9,13 +9,12 @@ struct options {
 	struct verify_options    *verify;
 };
 
-struct isl_arg options_arg[] = {
+ISL_ARGS_START(struct options, options_args)
 ISL_ARG_CHILD(struct options, verify, NULL,
-	verify_options_arg, "verification")
-ISL_ARG_END
-};
+	&verify_options_args, "verification")
+ISL_ARGS_END
 
-ISL_ARG_DEF(options, struct options, options_arg)
+ISL_ARG_DEF(options, struct options, options_args)
 
 struct verify_point_sum {
 	struct verify_point_data vpd;
@@ -160,7 +159,7 @@ int main(int argc, char **argv)
     struct options *options = options_new_with_defaults();
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
-    ctx = isl_ctx_alloc_with_options(options_arg, options);
+    ctx = isl_ctx_alloc_with_options(&options_args, options);
 
     s = isl_stream_new_file(ctx, stdin);
     pwqp = isl_stream_read_pw_qpolynomial(s);

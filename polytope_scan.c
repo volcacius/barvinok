@@ -13,14 +13,13 @@ struct options {
     int direct;
 };
 
-struct isl_arg options_arg[] = {
-ISL_ARG_CHILD(struct options, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARGS_START(struct options, options_args)
+ISL_ARG_CHILD(struct options, barvinok, NULL, &barvinok_options_args, NULL)
 ISL_ARG_BOOL(struct options, direct, 'd', "direct", 0,
 	"don't apply generalized basis reduction first")
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(options, struct options, options_arg)
+ISL_ARG_DEF(options, struct options, options_args)
 
 static void scan_poly(Polyhedron *S, int pos, Value *z, Matrix *T)
 {

@@ -9,14 +9,13 @@ struct arguments {
     int direction;
 };
 
-struct isl_arg options_arg[] = {
-ISL_ARG_CHILD(struct arguments, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARGS_START(struct arguments, options_args)
+ISL_ARG_CHILD(struct arguments, barvinok, NULL, &barvinok_options_args, NULL)
 ISL_ARG_BOOL(struct arguments, direction, 'd', "direction", 0,
 	"print width directions")
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(options, struct arguments, options_arg)
+ISL_ARG_DEF(options, struct arguments, options_args)
 
 int main(int argc, char **argv)
 {

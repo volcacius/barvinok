@@ -81,7 +81,7 @@ static int set_method(void *opt, unsigned val)
 	return 0;
 }
 
-static struct isl_arg approx_options_arg[] = {
+ISL_ARGS_START(struct barvinok_approximation_options, approx_options_args)
 ISL_ARG_USER_OPT_CHOICE(struct barvinok_approximation_options, approximation, 0,
 	"polynomial-approximation", approx, &set_approx,
 	BV_APPROX_SIGN_NONE, BV_APPROX_SIGN_APPROX, NULL)
@@ -94,8 +94,7 @@ ISL_ARG_FLAGS(struct barvinok_approximation_options, scale_flags, 0,
 ISL_ARG_CHOICE(struct barvinok_approximation_options, volume_triangulate, 0,
 	"volume-triangulation", triangulation, BV_VOL_VERTEX,
 	"type of triangulation to perform in volume computation")
-ISL_ARG_END
-};
+ISL_ARGS_END
 
 static int stats_init(void *user)
 {
@@ -197,10 +196,11 @@ static struct isl_arg_choice hull[] = {
 	{0}
 };
 
-struct isl_arg barvinok_options_arg[] = {
-ISL_ARG_CHILD(struct barvinok_options, isl, "isl", isl_options_arg, "isl options")
+ISL_ARGS_START(struct barvinok_options, barvinok_options_args)
+ISL_ARG_CHILD(struct barvinok_options, isl, "isl", &isl_options_args,
+	"isl options")
 ISL_ARG_CHILD(struct barvinok_options, approx, NULL,
-	approx_options_arg, "polynomial approximation")
+	&approx_options_args, "polynomial approximation")
 ISL_ARG_USER(struct barvinok_options, stats, &stats_init, &stats_clear)
 ISL_ARG_USER(struct barvinok_options, MaxRays, &maxrays_init, NULL)
 ISL_ARG_LONG(struct barvinok_options, LLL_a, 0, "lll-reduction-num", 1,
@@ -229,8 +229,8 @@ ISL_ARG_USER(struct barvinok_options, gbr_only_first, &int_init_zero, NULL)
 ISL_ARG_BOOL(struct barvinok_options, print_stats, 0, "print-stats", 0, NULL)
 ISL_ARG_BOOL(struct barvinok_options, verbose, 0, "verbose", 0, NULL)
 ISL_ARG_VERSION(print_version)
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(barvinok_options, struct barvinok_options, barvinok_options_arg)
-ISL_ARG_CTX_DEF(barvinok_options, struct barvinok_options, barvinok_options_arg)
+ISL_ARG_DEF(barvinok_options, struct barvinok_options, barvinok_options_args)
+ISL_ARG_CTX_DEF(barvinok_options, struct barvinok_options,
+	barvinok_options_args)

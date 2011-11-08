@@ -2677,7 +2677,7 @@ int main(int argc, char **argv)
 	options->verify->barvinok->lookup_table = 0;
 
 	argc = lexmin_options_parse(options, argc, argv, ISL_ARG_ALL);
-	ctx = isl_ctx_alloc_with_options(lexmin_options_arg, options);
+	ctx = isl_ctx_alloc_with_options(&lexmin_options_args, options);
 
 	context = isl_basic_set_read_from_file(ctx, stdin);
 	assert(context);

@@ -14,7 +14,8 @@ struct enumerate_options {
 	struct convert_options   *convert;
 };
 
-ISL_ARG_DECL(enumerate_options, struct enumerate_options, enumerate_options_arg)
+ISL_ARG_DECL(enumerate_options, struct enumerate_options,
+	enumerate_options_args)
 
 #if defined(__cplusplus)
 }

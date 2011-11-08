@@ -113,18 +113,17 @@ struct iscc_options {
 	int			 io;
 };
 
-struct isl_arg iscc_options_arg[] = {
-ISL_ARG_CHILD(struct iscc_options, barvinok, "barvinok", barvinok_options_arg,
+ISL_ARGS_START(struct iscc_options, iscc_options_args)
+ISL_ARG_CHILD(struct iscc_options, barvinok, "barvinok", &barvinok_options_args,
 	"barvinok options")
 ISL_ARG_CHOICE(struct iscc_options, format, 0, "format", \
 	iscc_format,	ISL_FORMAT_ISL, "output format")
 ISL_ARG_BOOL(struct iscc_options, io, 0, "io", 1,
 	"allow read and write operations")
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(iscc_options, struct iscc_options, iscc_options_arg)
-ISL_ARG_CTX_DEF(iscc_options, struct iscc_options, iscc_options_arg)
+ISL_ARG_DEF(iscc_options, struct iscc_options, iscc_options_args)
+ISL_ARG_CTX_DEF(iscc_options, struct iscc_options, iscc_options_args)
 
 static void *isl_obj_bool_copy(void *v)
 {
@@ -2549,7 +2548,7 @@ int main(int argc, char **argv)
 	assert(options);
 	argc = iscc_options_parse(options, argc, argv, ISL_ARG_ALL);
 
-	ctx = isl_ctx_alloc_with_options(iscc_options_arg, options);
+	ctx = isl_ctx_alloc_with_options(&iscc_options_args, options);
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
 	table = isl_hash_table_alloc(ctx, 10);

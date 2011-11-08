@@ -24,7 +24,7 @@ struct verify_options {
     struct barvinok_options *barvinok;
 };
 
-ISL_ARG_DECL(verify_options, struct verify_options, verify_options_arg)
+ISL_ARG_DECL(verify_options, struct verify_options, verify_options_args)
 
 void verify_options_set_range(struct verify_options *options, int dim);
 

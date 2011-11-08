@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     struct barvinok_options *options = barvinok_options_new_with_defaults();
 
     argc = barvinok_options_parse(options, argc, argv, ISL_ARG_ALL);
-    ctx = isl_ctx_alloc_with_options(barvinok_options_arg, options);
+    ctx = isl_ctx_alloc_with_options(&barvinok_options_args, options);
 
     nbPol = nbVec = nbMat = 0;
     fgets(s, 128, stdin);

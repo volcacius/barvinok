@@ -34,7 +34,7 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 	int isl_gbr_only_first = options->isl->gbr_only_first;
 
 	options->isl->gbr_only_first = options->gbr_only_first;
-	ctx = isl_ctx_alloc_with_options(barvinok_options_arg, options);
+	ctx = isl_ctx_alloc_with_options(&barvinok_options_args, options);
 	assert(ctx);
 
 	dim = isl_space_set_alloc(ctx, 0, nvar);

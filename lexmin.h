@@ -19,7 +19,7 @@ struct lexmin_options {
     struct verify_options    *verify;
 };
 
-ISL_ARG_DECL(lexmin_options, struct lexmin_options, lexmin_options_arg)
+ISL_ARG_DECL(lexmin_options, struct lexmin_options, lexmin_options_args)
 
 #if defined(__cplusplus)
 }

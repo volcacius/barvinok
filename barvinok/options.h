@@ -112,8 +112,9 @@ struct barvinok_options {
     int		gbr_only_first;
 };
 
-ISL_ARG_DECL(barvinok_options, struct barvinok_options, barvinok_options_arg)
-ISL_ARG_CTX_DECL(barvinok_options, struct barvinok_options, barvinok_options_arg)
+ISL_ARG_DECL(barvinok_options, struct barvinok_options, barvinok_options_args)
+ISL_ARG_CTX_DECL(barvinok_options, struct barvinok_options,
+	barvinok_options_args)
 
 #if defined(__cplusplus)
 }

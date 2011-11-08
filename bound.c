@@ -12,18 +12,17 @@ struct options {
 	long iterate;
 };
 
-struct isl_arg options_arg[] = {
+ISL_ARGS_START(struct options, options_args)
 ISL_ARG_CHILD(struct options, verify, NULL,
-	verify_options_arg, "verification")
+	&verify_options_args, "verification")
 ISL_ARG_LONG(struct options, split, 0, "split", 0, NULL)
 ISL_ARG_OPT_LONG(struct options, iterate, 0, "iterate", 0, -1,
 	"exact result by iterating over domain (of specified maximal size)")
 ISL_ARG_BOOL(struct options, lower, 0, "lower", 0,
 	"compute lower bound instead of upper bound")
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(options, struct options, options_arg)
+ISL_ARG_DEF(options, struct options, options_args)
 
 struct verify_point_bound {
 	struct verify_point_data vpd;
@@ -345,7 +344,7 @@ int main(int argc, char **argv)
     int result = 0;
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
-    ctx = isl_ctx_alloc_with_options(options_arg, options);
+    ctx = isl_ctx_alloc_with_options(&options_args, options);
 
     s = isl_stream_new_file(ctx, stdin);
     pwqp = isl_stream_read_pw_qpolynomial(s);

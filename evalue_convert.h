@@ -21,7 +21,7 @@ struct convert_options {
 int evalue_convert(evalue *EP, struct convert_options *options,
 		   int verbose, unsigned nparam, const char **params);
 
-ISL_ARG_DECL(convert_options, struct convert_options, convert_options_arg)
+ISL_ARG_DECL(convert_options, struct convert_options, convert_options_args)
 
 #if defined(__cplusplus)
 }

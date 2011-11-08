@@ -10,15 +10,14 @@ struct arguments {
     struct barvinok_options	*barvinok;
 };
 
-struct isl_arg arguments_arg[] = {
-ISL_ARG_CHILD(struct arguments, barvinok, NULL, barvinok_options_arg, NULL)
+ISL_ARGS_START(struct arguments, arguments_args)
+ISL_ARG_CHILD(struct arguments, barvinok, NULL, &barvinok_options_args, NULL)
 ISL_ARG_BOOL(struct arguments, live, 'l', "live", 0, NULL)
 ISL_ARG_BOOL(struct arguments, print_max, 'M', "max", 0, NULL)
 ISL_ARG_BOOL(struct arguments, keep_going, 'k', "continue", 0, NULL)
-ISL_ARG_END
-};
+ISL_ARGS_END
 
-ISL_ARG_DEF(arguments, struct arguments, arguments_arg)
+ISL_ARG_DEF(arguments, struct arguments, arguments_args)
 
 #define LS_OK	    1
 #define LS_P	    2	    /* continue searching P */
