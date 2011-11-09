@@ -2546,9 +2546,9 @@ int main(int argc, char **argv)
 
 	options = iscc_options_new_with_defaults();
 	assert(options);
-	argc = iscc_options_parse(options, argc, argv, ISL_ARG_ALL);
 
 	ctx = isl_ctx_alloc_with_options(&iscc_options_args, options);
+	argc = isl_ctx_parse_options(ctx, argc, argv, ISL_ARG_ALL);
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
 	table = isl_hash_table_alloc(ctx, 10);
