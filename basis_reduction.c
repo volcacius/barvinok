@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <isl/options.h>
 #include <isl_set_polylib.h>
 #include <barvinok/basis_reduction.h>
 #include <barvinok/options.h>
@@ -31,11 +32,13 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 	isl_basic_set *bset;
 	isl_mat *basis;
 	Matrix *M;
-	int isl_gbr_only_first = options->isl->gbr_only_first;
+	int isl_gbr_only_first;
 
-	options->isl->gbr_only_first = options->gbr_only_first;
 	ctx = isl_ctx_alloc_with_options(&barvinok_options_args, options);
 	assert(ctx);
+
+	isl_gbr_only_first = isl_options_get_gbr_only_first(ctx);
+	isl_options_set_gbr_only_first(ctx, options->gbr_only_first);
 
 	dim = isl_space_set_alloc(ctx, 0, nvar);
 	bset = isl_basic_set_new_from_polylib(P, dim);
@@ -57,7 +60,7 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 
 	isl_ctx_free(ctx);
 
-	options->isl->gbr_only_first = isl_gbr_only_first;
+	isl_options_set_gbr_only_first(ctx, isl_gbr_only_first);
 
 	return M;
 }

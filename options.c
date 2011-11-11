@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <unistd.h>
+#include <isl/options.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "config.h"

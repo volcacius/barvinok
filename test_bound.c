@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <math.h>
 #include <isl/stream.h>
+#include <isl/options.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "verify.h"
@@ -259,7 +260,7 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	for (j = 0; j < 2; ++j) {
 	    isl_pw_qpolynomial *poly = j == 0 ? upper : lower;
 	    enum isl_fold type = j == 0 ? isl_fold_max : isl_fold_min;
-	    options->barvinok->isl->bound = methods[i].method;
+	    isl_options_set_bound(ctx, methods[i].method);
 	    poly = isl_pw_qpolynomial_copy(poly);
 	    pwf[2*i+j] = isl_pw_qpolynomial_bound(poly, type, NULL);
 	}
