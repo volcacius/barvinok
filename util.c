@@ -1096,6 +1096,13 @@ static evalue *ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, unsigned MaxRa
     data.C = C;
     for_each_lower_upper_bound(P, PLL_init, PLL_cb, &data);
 
+    free_evalue_refs(&data.mone); 
+
+    if (data.nd == 0) {
+	free(data.s);
+	return evalue_zero();
+    }
+
     F = ALLOC(evalue);
     value_init(F->d);
     value_set_si(F->d, 0);
@@ -1106,8 +1113,6 @@ static evalue *ParamLine_Length_mod(Polyhedron *P, Polyhedron *C, unsigned MaxRa
 	F->x.p->arr[2*k+1] = data.s[k].E;
     }
     free(data.s);
-
-    free_evalue_refs(&data.mone); 
 
     return F;
 }
