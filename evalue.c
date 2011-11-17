@@ -3071,7 +3071,7 @@ Enumeration* partition2enumeration(evalue *EP)
     Enumeration *en, *res = NULL;
 
     if (EVALUE_IS_ZERO(*EP)) {
-	free(EP);
+	evalue_free(EP);
 	return res;
     }
 
