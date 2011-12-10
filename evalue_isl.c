@@ -211,8 +211,11 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_evalue(__isl_take isl_spa
 
 	if (!dim || !e)
 		goto error;
-	if (EVALUE_IS_ZERO(*e))
+	if (EVALUE_IS_ZERO(*e)) {
+		dim = isl_space_from_domain(dim);
+		dim = isl_space_add_dims(dim, isl_dim_out, 1);
 		return isl_pw_qpolynomial_zero(dim);
+	}
 
 	if (value_notzero_p(e->d)) {
 		isl_set *set = isl_set_universe(isl_space_copy(dim));
