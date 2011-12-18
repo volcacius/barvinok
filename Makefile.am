@@ -369,6 +369,8 @@ EXTRA_DIST = \
     doc/chicago.bst \
     doc/chicago.sty \
     doc/mydefs.sty \
+    interface/all.h \
+    interface/isl.py.top \
     polymake/Makefile.in \
     polymake/README \
     polymake/autogen.sh \
