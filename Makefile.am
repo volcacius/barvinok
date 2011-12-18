@@ -389,7 +389,8 @@ install-data-local:
 uninstall-local:
 	rm -f "$(DESTDIR)$(pkgconfig_libdir)/$(pkgconfig_libfile)"
 
-dist-hook:
+dist-hook: isl.py
+	cp isl.py $(distdir)/
 	(cd $(distdir)/polymake; \
 	    ./autogen.sh; rm -rf autogen.sh autom4te.cache)
 	(cd doc; make barvinok.pdf)
