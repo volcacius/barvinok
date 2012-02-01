@@ -56,10 +56,12 @@ static void transform_polynomial(evalue *E, Matrix *T, Matrix *CP,
     free(subs);
 }
 
-static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
-				 unsigned nvar,
-				 struct evalue_section_array *sections,
-				 struct barvinok_options *options)
+static evalue *sum_with_equalities(Polyhedron *P, evalue *E,
+	unsigned nvar, struct evalue_section_array *sections,
+	struct barvinok_options *options,
+	evalue *(*base)(Polyhedron *P, evalue *E, unsigned nvar,
+		struct evalue_section_array *sections,
+		struct barvinok_options *options))
 {
     unsigned dim = P->Dimension;
     unsigned new_dim, new_nparam;
@@ -87,8 +89,7 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
 			 new_dim-new_nparam, new_nparam);
 
     if (new_dim-new_nparam > 0) {
-	sum = barvinok_sum_over_polytope(P, E, new_dim-new_nparam,
-					 sections, options);
+	sum = base(P, E, new_dim-new_nparam, sections, options);
 	evalue_free(E);
 	Polyhedron_Free(P);
     } else {
@@ -112,9 +113,38 @@ static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
     return sum;
 }
 
+static evalue *sum_over_polytope_with_equalities(Polyhedron *P, evalue *E,
+	unsigned nvar, struct evalue_section_array *sections,
+	struct barvinok_options *options)
+{
+	return sum_with_equalities(P, E, nvar, sections, options,
+				    &barvinok_sum_over_polytope);
+}
+
+static evalue *sum_base(Polyhedron *P, evalue *E, unsigned nvar,
+	struct barvinok_options *options);
+
+static evalue *sum_base_wrap(Polyhedron *P, evalue *E, unsigned nvar,
+	struct evalue_section_array *sections, struct barvinok_options *options)
+{
+	return sum_base(P, E, nvar, options);
+}
+
+static evalue *sum_base_with_equalities(Polyhedron *P, evalue *E,
+	unsigned nvar, struct barvinok_options *options)
+{
+	return sum_with_equalities(P, E, nvar, NULL, options, &sum_base_wrap);
+}
+
+/* The substitutions in sum_step_polynomial may have reintroduced equalities
+ * (in particular, one of the floor expressions may be equal to one of
+ * the variables), so we need to check for them again.
+ */
 static evalue *sum_base(Polyhedron *P, evalue *E, unsigned nvar,
 				     struct barvinok_options *options)
 {
+    if (P->NbEq)
+	return sum_base_with_equalities(P, E, nvar, options);
     if (options->summation == BV_SUM_EULER)
 	return euler_summate(P, E, nvar, options);
     else if (options->summation == BV_SUM_LAURENT)
