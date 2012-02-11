@@ -600,7 +600,7 @@ static evalue* enumerate_line(Polyhedron *P,
 	    break;
     assert(i < nparam);
     for (j = i+1; j < nparam; ++j)
-	if (value_notzero_p(P->Ray[0][1+nvar+exist+i]))
+	if (value_notzero_p(P->Ray[0][1+nvar+exist+j]))
 	    break;
     assert(j >= nparam); // for now
 
