@@ -732,7 +732,7 @@ static __isl_give isl_pw_qpolynomial *add_unbounded_guarded_qp(
 		isl_set *set;
 		isl_pw_qpolynomial *pwqp;
 
-		dim = isl_pw_qpolynomial_get_space(sum);
+		dim = isl_pw_qpolynomial_get_domain_space(sum);
 		set = isl_set_from_basic_set(isl_basic_set_copy(bset));
 		set = isl_map_domain(isl_map_from_range(set));
 		set = isl_set_reset_space(set, isl_space_copy(dim));
