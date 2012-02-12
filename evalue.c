@@ -2215,7 +2215,7 @@ int in_domain(Polyhedron *P, Value *list_args)
     Inner_Product(P->Constraint[row]+1, list_args, P->Dimension, &v);
     value_addto(v, v, P->Constraint[row][P->Dimension+1]); /*constant part*/
     if (value_neg_p(v) ||
-	value_zero_p(P->Constraint[row][0]) && value_notzero_p(v)) {
+	(value_zero_p(P->Constraint[row][0]) && value_notzero_p(v))) {
       in = 0;
       break;
     }
