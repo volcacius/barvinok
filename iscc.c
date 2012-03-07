@@ -1973,19 +1973,20 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 	if (isl_stream_eat_if_available(s, '+'))
 		return transitive_closure(s->ctx, obj);
 
-	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_VALUE || isl_int_cmp_si(tok->u.v, -1)) {
-		isl_stream_error(s, tok, "expecting -1");
-		if (tok)
-			isl_stream_push_token(s, tok);
-		goto error;
-	}
-	isl_token_free(tok);
 	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_map), goto error);
 	if (obj.type != isl_obj_union_map)
 		obj = convert(s->ctx, obj, isl_obj_union_map);
 
-	obj.v = isl_union_map_reverse(obj.v);
+	tok = isl_stream_next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_VALUE || isl_int_is_zero(tok->u.v)) {
+		isl_stream_error(s, tok, "expecting non-zero integer exponent");
+		if (tok)
+			isl_stream_push_token(s, tok);
+		goto error;
+	}
+
+	obj.v = isl_union_map_fixed_power(obj.v, tok->u.v);
+	isl_token_free(tok);
 	if (!obj.v)
 		goto error;
 
