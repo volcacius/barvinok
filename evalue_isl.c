@@ -381,6 +381,8 @@ static int add_term(__isl_take isl_term *term, void *user)
 
 		div = isl_term_get_div(term, i);
 		floor = div2evalue(div);
+		if (!floor)
+			goto error2;
 		pow = evalue_pow(floor, exp);
 		emul(pow, e);
 		evalue_free(pow);
@@ -395,6 +397,10 @@ static int add_term(__isl_take isl_term *term, void *user)
 	isl_term_free(term);
 
 	return 0;
+error2:
+	evalue_free(e);
+	isl_int_clear(n);
+	isl_int_clear(d);
 error:
 	isl_term_free(term);
 	return -1;
