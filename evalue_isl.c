@@ -270,7 +270,7 @@ static evalue *div2evalue(__isl_take isl_aff *div)
 {
 	int i;
 	isl_ctx *ctx;
-	isl_vec *vec;
+	isl_vec *vec = NULL;
 	unsigned dim;
 	unsigned nparam;
 	evalue *e;
@@ -278,6 +278,10 @@ static evalue *div2evalue(__isl_take isl_aff *div)
 
 	if (!div)
 		return NULL;
+
+	if (isl_aff_dim(div, isl_dim_div) != 0)
+		isl_die(isl_aff_get_ctx(div), isl_error_unsupported,
+			"cannot handle nested divs", goto error);
 
 	dim = isl_aff_dim(div, isl_dim_in);
 	nparam = isl_aff_dim(div, isl_dim_param);
