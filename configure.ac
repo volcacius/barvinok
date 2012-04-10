@@ -458,35 +458,6 @@ if test "$topcom_package" != no; then
 fi
 AM_CONDITIONAL(HAVE_TOPCOM, test x$have_topcom = xtrue)
 
-AX_SUBMODULE(cloog,no|build|bundled|system,bundled)
-
-AC_SUBST(CLOOG_LDFLAGS)
-AC_SUBST(CLOOG_CFLAGS)
-AC_SUBST(CLOOG_LIBS)
-CLOOG_CFLAGS="-DCLOOG_INT_GMP=1"
-case "$with_cloog" in
-bundled)
-	CLOOG_CFLAGS="$CLOOG_CFLAGS -I\$(top_srcdir)/cloog/include -I\$(top_builddir)/cloog/include"
-	AC_DEFINE(HAVE_CLOOG,[],[use CLooG])
-	;;
-build)
-	with_cloog_builddir=`echo @abs_builddir@ | $with_cloog_builddir/config.status --file=-`
-	CLOOG_CFLAGS="$CLOOG_CFLAGS -I$cloog_srcdir/include -I$with_cloog_builddir/include"
-	CLOOG_LIBS="$with_cloog_builddir/libcloog-isl.la"
-	AC_DEFINE(HAVE_CLOOG,[],[use CLooG])
-	;;
-system)
-	if test "x$with_cloog_prefix" != "x"; then
-		CLOOG_CFLAGS="$CLOOG_CFLAGS -I$with_cloog_prefix/include"
-	fi
-	if test "x$with_cloog_exec_prefix" != "x"; then
-		CLOOG_LDFLAGS="-L$with_cloog_exec_prefix/lib"
-	fi
-	CLOOG_LIBS="-lcloog-isl"
-	AC_DEFINE(HAVE_CLOOG,[],[use CLooG])
-esac
-AM_CONDITIONAL(BUNDLED_CLOOG, test $with_cloog = bundled)
-
 AC_SUBST(GIT_HEAD_ID)
 AC_SUBST(GIT_HEAD)
 AC_SUBST(GIT_HEAD_VERSION)
@@ -557,9 +528,6 @@ if test $with_pet = bundled; then
 fi
 if test $with_isl_polylib = bundled; then
 	AC_CONFIG_SUBDIRS(isl-polylib)
-fi
-if test $with_cloog = bundled; then
-	AC_CONFIG_SUBDIRS(cloog)
 fi
 AC_CONFIG_COMMANDS_POST([
 	dnl pass on arguments to subdir configures, but don't

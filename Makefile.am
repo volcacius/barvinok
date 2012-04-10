@@ -22,10 +22,6 @@ if BUNDLED_ISL_POLYLIB
     MAYBE_ISL_POLYLIB = isl-polylib
     ISL_POLYLIB_LA = $(top_builddir)/isl-polylib/libisl-polylib.la
 endif
-if BUNDLED_CLOOG
-    MAYBE_CLOOG = cloog
-    CLOOG_LA = $(top_builddir)/cloog/libcloog-isl.la
-endif
 if USE_ZSOLVE
     MAYBE_ZSOLVE = zsolve
 endif
@@ -33,10 +29,9 @@ if USE_PARKER
     MAYBE_PARKER = parker
 endif
 SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_PET) $(MAYBE_ISL_POLYLIB) \
-		$(MAYBE_CLOOG) \
 		$(MAYBE_ZSOLVE) $(MAYBE_PARKER) . doc
 DIST_SUBDIRS = $(MAYBE_POLYLIB) $(MAYBE_ISL) $(MAYBE_PET) \
-		$(MAYBE_ISL_POLYLIB) $(MAYBE_CLOOG) \
+		$(MAYBE_ISL_POLYLIB) \
 		zsolve parker doc
 
 FORCE:
@@ -48,8 +43,6 @@ pet/libpet.la: FORCE
 	cd pet; $(MAKE) $(AM_MAKEFLAGS) libpet.la
 isl-polylib/libisl-polylib.la: $(LOCAL_ISL_LA) $(LOCAL_POLYLIB_LA) FORCE
 	cd isl-polylib; $(MAKE) $(AM_MAKEFLAGS) libisl-polylib.la
-cloog/libcloog-isl.la: $(LOCAL_ISL_LA) FORCE
-	cd cloog; $(MAKE) $(AM_MAKEFLAGS) libcloog-isl.la
 zsolve/libzsolve.la: FORCE
 	cd zsolve; $(MAKE) $(AM_MAKEFLAGS) libzsolve.la
 parker/libparker.la: FORCE
@@ -62,7 +55,6 @@ AM_LDFLAGS = @POLYLIB_LDFLAGS@ @NTL_LDFLAGS@
 LIB_ISL = $(ISL_LA) @ISL_LIBS@
 LIB_PET = $(PET_LA) @PET_LIBS@
 LIB_ISL_POLYLIB = $(ISL_POLYLIB_LA) @ISL_POLYLIB_LIBS@
-LIB_CLOOG = $(CLOOG_LA) @CLOOG_LIBS@
 LIB_POLYLIB = $(POLYLIB_LA) @POLYLIB_LIBS@
 
 lib_LTLIBRARIES = libbarvinok.la
@@ -334,9 +326,9 @@ iscc_SOURCES =	\
 	isl_obj_str.h \
 	isl_obj_str.c \
 	iscc.c
-iscc_CPPFLAGS = @PET_CFLAGS@ @CLOOG_CFLAGS@ $(AM_CPPFLAGS)
+iscc_CPPFLAGS = @PET_CFLAGS@ $(AM_CPPFLAGS)
 iscc_LDADD = \
-	libbarvinok.la $(LIB_CLOOG) $(LIB_ISL_POLYLIB) $(LIB_PET) $(LIB_ISL) \
+	libbarvinok.la $(LIB_ISL_POLYLIB) $(LIB_PET) $(LIB_ISL) \
 	$(LIB_POLYLIB)
 
 isl.py: interface/isl.py.top

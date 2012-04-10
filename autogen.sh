@@ -12,6 +12,3 @@ fi
 if test -f isl-polylib/autogen.sh; then
 	(cd isl-polylib; ./autogen.sh)
 fi
-if test -f cloog/autogen.sh; then
-	(cd cloog; ./autogen.sh)
-fi
