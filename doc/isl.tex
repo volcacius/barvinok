@@ -77,7 +77,7 @@ as a function of an element in the domain of the map.
 \subsection{Calculator}
 
 The \ai[\tt]{iscc} calculator offers an interface to some
-of the functionality provided by the \isl/, \cloog/ and \barvinok/
+of the functionality provided by the \isl/ and \barvinok/
 libraries.
 The language used by \ai[\tt]{iscc} is extremely simple.  The calculator
 supports operations on constants and dynamically typed variables and
@@ -669,13 +669,15 @@ of $f_1$ into a single basic set
 \\
 \ai[\tt]{codegen} $s$ &
 generate code for the given domain.
-This operation is only available if \ai[\tt]{CLooG}
-support was compiled in.
 \\
 \ai[\tt]{codegen} $m$ &
-generate code for the given scattering function.
-This operation is only available if \ai[\tt]{CLooG}
-support was compiled in.
+generate code for the given schedule.
+\\
+\ai[\tt]{codegen} $s$ \ai[\tt]{using} $m$ &
+generate code for the domain $s$ using the options $m$.
+\\
+\ai[\tt]{codegen} $m_1$ \ai[\tt]{using} $m_2$ &
+generate code for the schedule $m_1$ using the options $m_2$.
 \\
 $s_2$ := \ai[\tt]{coefficients} $s_1$ &
 The set of coefficients of valid constraints for $s_1$

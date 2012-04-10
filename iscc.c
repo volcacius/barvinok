@@ -11,6 +11,7 @@
 #include <isl/flow.h>
 #include <isl/band.h>
 #include <isl/schedule.h>
+#include <isl/ast_build.h>
 #include <isl_obj_list.h>
 #include <isl_obj_str.h>
 #include <barvinok/isl.h>
@@ -62,10 +63,6 @@ static void remove_signal_handler(isl_ctx *ctx)
 
 #endif
 
-#ifdef HAVE_CLOOG
-#include <cloog/isl/cloog.h>
-#endif
-
 #ifdef HAVE_PET
 #include <pet.h>
 #else
@@ -84,6 +81,7 @@ enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
 	       ISCC_SCHEDULE, ISCC_SCHEDULE_FOREST,
 	       ISCC_MINIMIZING, ISCC_RESPECTING,
+	       ISCC_CODEGEN, ISCC_USING,
 	       ISCC_TYPEOF, ISCC_PRINT, ISCC_ASSERT,
 	       ISCC_N_OP };
 static const char *op_name[ISCC_N_OP] = {
@@ -101,6 +99,8 @@ static const char *op_name[ISCC_N_OP] = {
 	[ISCC_SCHEDULE_FOREST] = "schedule_forest",
 	[ISCC_MINIMIZING] = "minimizing",
 	[ISCC_RESPECTING] = "respecting",
+	[ISCC_CODEGEN] = "codegen",
+	[ISCC_USING] = "using",
 	[ISCC_TYPEOF] = "typeof"
 };
 static enum isl_token_type iscc_op[ISCC_N_OP];
@@ -699,87 +699,6 @@ error:
 	return NULL;
 }
 
-#ifdef HAVE_CLOOG
-void *map_codegen(void *arg)
-{
-	isl_space *dim;
-	isl_union_map *umap = (isl_union_map *)arg;
-	isl_ctx *ctx = isl_union_map_get_ctx(umap);
-	CloogState *state;
-	CloogOptions *options;
-	CloogDomain *context;
-	CloogUnionDomain *ud;
-	CloogInput *input;
-	struct clast_stmt *stmt;
-
-	state = cloog_isl_state_malloc(ctx);
-	options = cloog_options_malloc(state);
-	options->language = CLOOG_LANGUAGE_C;
-	options->strides = 1;
-	options->sh = 1;
-
-	ud = cloog_union_domain_from_isl_union_map(isl_union_map_copy(umap));
-
-	dim = isl_union_map_get_space(umap);
-	context = cloog_domain_from_isl_set(isl_set_universe(dim));
-
-	input = cloog_input_alloc(context, ud);
-
-	stmt = cloog_clast_create_from_input(input, options);
-	clast_pprint(stdout, stmt, 0, options);
-	cloog_clast_free(stmt);
-
-error:
-	cloog_options_free(options);
-	cloog_state_free(state);
-	isl_union_map_free(umap);
-	return NULL;
-}
-
-void *set_codegen(void *arg)
-{
-	isl_space *dim;
-	isl_union_set *uset = (isl_union_set *)arg;
-	isl_set *set;
-	isl_ctx *ctx = isl_union_set_get_ctx(uset);
-	CloogState *state;
-	CloogOptions *options;
-	CloogDomain *context;
-	CloogUnionDomain *ud;
-	CloogInput *input;
-	struct clast_stmt *stmt;
-
-	if (isl_union_set_n_set(uset) > 1)
-		isl_die(ctx, isl_error_invalid,
-			"code generation for more than one domain "
-			"requires a schedule", goto error);
-
-	state = cloog_isl_state_malloc(ctx);
-	options = cloog_options_malloc(state);
-	options->language = CLOOG_LANGUAGE_C;
-	options->strides = 1;
-	options->sh = 1;
-
-	set = isl_set_from_union_set(isl_union_set_copy(uset));
-	ud = cloog_union_domain_from_isl_set(set);
-
-	dim = isl_union_set_get_space(uset);
-	context = cloog_domain_from_isl_set(isl_set_universe(dim));
-
-	input = cloog_input_alloc(context, ud);
-
-	stmt = cloog_clast_create_from_input(input, options);
-	clast_pprint(stdout, stmt, 0, options);
-	cloog_clast_free(stmt);
-
-	cloog_options_free(options);
-	cloog_state_free(state);
-error:
-	isl_union_set_free(uset);
-	return NULL;
-}
-#endif
-
 #ifdef HAVE_PET
 static __isl_give isl_list *parse(__isl_take isl_str *str)
 {
@@ -913,12 +832,6 @@ struct isc_named_un_op named_un_ops[] = {
 	{"coalesce",	{ -1,	isl_obj_union_pw_qpolynomial_fold,
 		isl_obj_union_pw_qpolynomial_fold,
 		(isc_un_op_fn) &isl_union_pw_qpolynomial_fold_coalesce } },
-#ifdef HAVE_CLOOG
-	{"codegen",	{ -1,	isl_obj_union_set, isl_obj_none,
-		&set_codegen } },
-	{"codegen",	{ -1,	isl_obj_union_map, isl_obj_none,
-		&map_codegen } },
-#endif
 	{"coefficients",	{ -1,	isl_obj_union_set,
 		isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_set_coefficients } },
@@ -1874,6 +1787,90 @@ static struct isl_obj schedule(struct isl_stream *s,
 	return obj;
 }
 
+/* Read a schedule for code generation.
+ * If the input is a set rather than a map, then we construct
+ * an identity schedule on the given set.
+ */
+static __isl_give isl_union_map *get_codegen_schedule(struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	struct isl_obj obj;
+
+	obj = read_obj(s, table);
+
+	if (is_subtype(obj, isl_obj_union_map)) {
+		obj = convert(s->ctx, obj, isl_obj_union_map);
+		return obj.v;
+	}
+
+	if (is_subtype(obj, isl_obj_union_set)) {
+		obj = convert(s->ctx, obj, isl_obj_union_set);
+		return isl_union_set_identity(obj.v);
+	}
+
+	free_obj(obj);
+	isl_die(s->ctx, isl_error_invalid, "expecting set or map", return NULL);
+}
+
+/* Generate an AST for the given schedule and options and print
+ * the AST on the printer.
+ */
+static __isl_give isl_printer *print_code(__isl_take isl_printer *p,
+	__isl_take isl_union_map *schedule,
+	__isl_take isl_union_map *options)
+{
+	isl_set *context;
+	isl_ast_build *build;
+	isl_ast_node *tree;
+	int format;
+
+	context = isl_set_universe(isl_union_map_get_space(schedule));
+
+	build = isl_ast_build_from_context(context);
+	build = isl_ast_build_set_options(build, options);
+	tree = isl_ast_build_ast_from_schedule(build, schedule);
+	isl_ast_build_free(build);
+
+	if (!tree)
+		return p;
+
+	format = isl_printer_get_output_format(p);
+	p = isl_printer_set_output_format(p, ISL_FORMAT_C);
+	p = isl_printer_print_ast_node(p, tree);
+	p = isl_printer_set_output_format(p, format);
+
+	isl_ast_node_free(tree);
+
+	return p;
+}
+
+/* Perform the codegen operation.
+ * In particular, read a schedule, check if the user has specified any options
+ * and then generate an AST from the schedule (and options) and print it.
+ */
+static __isl_give isl_printer *codegen(struct isl_stream *s,
+	struct isl_hash_table *table, __isl_take isl_printer *p)
+{
+	isl_union_map *schedule;
+	isl_union_map *options;
+
+	schedule = get_codegen_schedule(s, table);
+	if (!schedule)
+		return p;
+
+	if (isl_stream_eat_if_available(s, iscc_op[ISCC_USING]))
+		options = read_map(s, table);
+	else
+		options = isl_union_map_empty(
+					isl_union_map_get_space(schedule));
+
+	p = print_code(p, schedule, options);
+
+	isl_stream_eat(s, ';');
+
+	return p;
+}
+
 static struct isl_obj band_list_to_obj_list(__isl_take isl_band_list *bands);
 
 static struct isl_obj band_to_obj_list(__isl_take isl_band *band)
@@ -2425,6 +2422,8 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 
 	if (isl_stream_eat_if_available(s, iscc_op[ISCC_SOURCE]))
 		return source_file(s, table, p);
+	if (isl_stream_eat_if_available(s, iscc_op[ISCC_CODEGEN]))
+		return codegen(s, table, p);
 
 	assign = is_assign(s);
 	if (assign) {
