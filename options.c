@@ -5,6 +5,7 @@
 #include <barvinok/util.h>
 #include "config.h"
 
+#define ALLOC(type) (type*)malloc(sizeof(type))
 #define MAXRAYS    (POL_NO_DUAL | POL_INTEGER)
 
 void barvinok_stats_clear(struct barvinok_stats *stats)
@@ -100,7 +101,7 @@ ISL_ARGS_END
 static int stats_init(void *user)
 {
 	struct barvinok_stats **stats = (struct barvinok_stats **)user;
-	*stats = isl_alloc_type(NULL, struct barvinok_stats);
+	*stats = ALLOC(struct barvinok_stats);
 	if (*stats)
 		barvinok_stats_clear(*stats);
 	return *stats ? 0 : -1;
