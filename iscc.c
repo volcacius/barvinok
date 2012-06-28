@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <isl/obj.h>
 #include <isl/stream.h>
+#include <isl/set.h>
+#include <isl/map.h>
 #include <isl/vertices.h>
 #include <isl/flow.h>
 #include <isl/band.h>
