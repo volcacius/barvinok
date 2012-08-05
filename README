@@ -25,7 +25,7 @@ NTL needs to have been compiled with GMP support.
 That is, you have to specify
     NTL_GMP_LIP=on
 
-Suppose you want to put everything in /opt,
+Suppose you want to install everything in /opt,
 Then you configure/compile NTL using
 
 cd src
