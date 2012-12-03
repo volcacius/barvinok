@@ -2639,7 +2639,6 @@ static vector<max_term*> lexmin(Polyhedron *P, Polyhedron *C,
 			      options->verify->barvinok->MaxRays);
     if (!emptyQ2(P))
 	lexmin_base(P, C, CP, T, all_max, options);
-done:
     if (CP)
 	Matrix_Free(CP);
     if (T)
