@@ -242,7 +242,6 @@ evalue *fractional_part(Value *coef, Value denom, int nvar, Polyhedron *PD)
 
     free_evalue_refs(&tmp); 
 
-out:
     value_clear(m);
 
     return EP;
