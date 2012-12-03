@@ -2147,9 +2147,6 @@ static struct isl_obj read_bool_if_available(struct isl_stream *s)
 	} else
 		isl_stream_push_token(s, tok);
 	return obj;
-error:
-	isl_token_free(tok);
-	return obj;
 }
 
 static __isl_give char *read_ident(struct isl_stream *s)
