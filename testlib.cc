@@ -617,13 +617,13 @@ int test_hilbert(struct barvinok_options *options)
     Matrix_Free(M);
 
     M = Cone_Hilbert_Basis(P, options->MaxRays);
-    assert(M->NbRows = 5);
-    assert(M->NbColumns = 3);
+    assert(M->NbRows == 5);
+    assert(M->NbColumns == 3);
     Matrix_Free(M);
 
     M = Cone_Integer_Hull(P, NULL, 0, options);
-    assert(M->NbRows = 4);
-    assert(M->NbColumns = 3);
+    assert(M->NbRows == 4);
+    assert(M->NbColumns == 3);
     Matrix_Free(M);
 
     Polyhedron_Free(P);
