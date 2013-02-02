@@ -31,6 +31,8 @@ vertex_cone::vertex_cone(unsigned dim) : dim(dim)
     E_vertex = new evalue *[dim];
     bernoulli_t = new evalue **[dim];
 
+    assert(dim > 0);
+
     coeff = ALLOCN(Vector *, dim);
     for (int i = 0; i < dim; ++i)
 	coeff[i] = Vector_Alloc(dim);
