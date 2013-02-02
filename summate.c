@@ -681,6 +681,9 @@ evalue *barvinok_sum_over_polytope(Polyhedron *P, evalue *E, unsigned nvar,
     if (P->NbEq)
 	return sum_over_polytope_with_equalities(P, E, nvar, sections, options);
 
+    if (nvar == 0)
+	return sum_over_polytope_0D(Polyhedron_Copy(P), evalue_dup(E));
+
     if (options->summation == BV_SUM_BERNOULLI)
 	return bernoulli_summate(P, E, nvar, sections, options);
     else if (options->summation == BV_SUM_BOX)
