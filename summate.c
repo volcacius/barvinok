@@ -56,6 +56,28 @@ static void transform_polynomial(evalue *E, Matrix *T, Matrix *CP,
     free(subs);
 }
 
+/* Compute the sum of the quasi-polynomial E
+ * over a 0D (non-empty, but possibly parametric) polytope P.
+ *
+ * Consumes P and E.
+ *
+ * We simply return a partition evalue with P as domain and E as value.
+ */
+static evalue *sum_over_polytope_0D(Polyhedron *P, evalue *E)
+{
+	evalue *sum;
+
+	sum = ALLOC(evalue);
+	value_init(sum->d);
+	sum->x.p = new_enode(partition, 2, P->Dimension);
+	EVALUE_SET_DOMAIN(sum->x.p->arr[0], P);
+	value_clear(sum->x.p->arr[1].d);
+	sum->x.p->arr[1] = *E;
+	free(E);
+
+	return sum;
+}
+
 static evalue *sum_with_equalities(Polyhedron *P, evalue *E,
 	unsigned nvar, struct evalue_section_array *sections,
 	struct barvinok_options *options,
@@ -93,13 +115,7 @@ static evalue *sum_with_equalities(Polyhedron *P, evalue *E,
 	evalue_free(E);
 	Polyhedron_Free(P);
     } else {
-	sum = ALLOC(evalue);
-	value_init(sum->d);
-	sum->x.p = new_enode(partition, 2, new_dim);
-	EVALUE_SET_DOMAIN(sum->x.p->arr[0], P);
-	value_clear(sum->x.p->arr[1].d);
-	sum->x.p->arr[1] = *E;
-	free(E);
+	sum = sum_over_polytope_0D(P, E);
     }
 
     if (CP) {
