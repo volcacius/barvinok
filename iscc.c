@@ -1819,12 +1819,14 @@ static __isl_give isl_printer *print_code(__isl_take isl_printer *p,
 	__isl_take isl_union_map *schedule,
 	__isl_take isl_union_map *options)
 {
+	isl_space *space;
 	isl_set *context;
 	isl_ast_build *build;
 	isl_ast_node *tree;
 	int format;
 
-	context = isl_set_universe(isl_union_map_get_space(schedule));
+	space = isl_union_map_get_space(schedule);
+	context = isl_set_universe(isl_space_params(space));
 
 	build = isl_ast_build_from_context(context);
 	build = isl_ast_build_set_options(build, options);
