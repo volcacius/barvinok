@@ -882,6 +882,7 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 
 	data.dim = NULL;
 	data.options = NULL;
+	data.sum = NULL;
 
 	if (!pwqp)
 		return NULL;
@@ -889,6 +890,11 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
 	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_set);
 
 	data.dim = isl_pw_qpolynomial_get_domain_space(pwqp);
+	if (!data.dim)
+		goto error;
+	if (isl_space_is_params(data.dim))
+		isl_die(isl_pw_qpolynomial_get_ctx(pwqp), isl_error_invalid,
+			"input polynomial has no domain", goto error);
 	data.wrapping = isl_space_is_wrapping(data.dim);
 	if (data.wrapping) {
 		data.dim = isl_space_unwrap(data.dim);
