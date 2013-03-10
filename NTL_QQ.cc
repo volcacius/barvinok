@@ -3,7 +3,9 @@
 #include <stdlib.h>	// needed for abort hidden in NTL_vector_impl
 #include <barvinok/NTL_QQ.h>
 
+#ifdef NTL_vector_impl
 NTL_vector_impl(QQ,vec_QQ);
+#endif
 
 ZZ QQ::tmp;
 
@@ -36,4 +38,6 @@ std::istream& operator>> (std::istream& is, QQ& q)
     return is;
 }
 
+#ifdef NTL_io_vector_impl
 NTL_io_vector_impl(QQ,vec_QQ);
+#endif

@@ -46,7 +46,11 @@ struct QQ {
     }
 };
 
+#ifdef NTL_vector_decl
 NTL_vector_decl(QQ,vec_QQ);
+#else
+typedef Vec<QQ> vec_QQ;
+#endif
 
 vec_QQ& operator *= (vec_QQ& a, const ZZ& b);
 vec_QQ& operator *= (vec_QQ& a, const QQ& b);
@@ -54,6 +58,8 @@ vec_QQ& operator *= (vec_QQ& a, const QQ& b);
 std::ostream& operator<< (std::ostream& os, const QQ& q);
 std::istream& operator>> (std::istream& os, QQ& q);
 
+#ifdef NTL_io_vector_decl
 NTL_io_vector_decl(QQ,vec_QQ);
+#endif
 
 #endif
