@@ -39,8 +39,8 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	isl_set *set;
 	int i;
 	unsigned nparam;
-	isl_int v, n, d;
-	isl_qpolynomial *cnt = NULL;
+	isl_val *v, *n, *t;
+	isl_qpolynomial *cnt;
 	int pa = vpe->vpd.options->barvinok->approx->approximation;
 	int cst;
 	int ok;
@@ -48,59 +48,59 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 
 	vpe->vpd.n--;
 
-	isl_int_init(v);
-	isl_int_init(n);
-	isl_int_init(d);
 	set = isl_set_copy(vpe->set);
 	nparam = isl_set_dim(set, isl_dim_param);
 	for (i = 0; i < nparam; ++i) {
-		isl_point_get_coordinate(pnt, isl_dim_param, i, &v);
-		set = isl_set_fix(set, isl_dim_param, i, v);
+		v = isl_point_get_coordinate_val(pnt, isl_dim_param, i);
+		set = isl_set_fix_val(set, isl_dim_param, i, v);
 	}
 
-	if (isl_set_count(set, &v) < 0)
-		goto error;
+	v = isl_set_count_val(set);
 
 	cnt = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vpe->pwqp),
 					isl_point_copy(pnt));
-
-	cst = isl_qpolynomial_is_cst(cnt, &n, &d);
-	if (cst != 1)
-		goto error;
+	n = isl_qpolynomial_get_constant_val(cnt);
+	isl_qpolynomial_free(cnt);
 
 	if (pa == BV_APPROX_SIGN_LOWER)
-		isl_int_cdiv_q(n, n, d);
+		n = isl_val_ceil(n);
 	else if (pa == BV_APPROX_SIGN_UPPER)
-		isl_int_fdiv_q(n, n, d);
+		n = isl_val_floor(n);
 	else
-		isl_int_tdiv_q(n, n, d);
+		n = isl_val_trunc(n);
 
 	if (pa == BV_APPROX_SIGN_APPROX)
 		/* just accept everything */
 		ok = 1;
 	else if (pa == BV_APPROX_SIGN_LOWER)
-		ok = isl_int_le(n, v);
+		ok = isl_val_le(n, v);
 	else if (pa == BV_APPROX_SIGN_UPPER)
-		ok = isl_int_ge(n, v);
+		ok = isl_val_ge(n, v);
 	else
-		ok = isl_int_eq(n, v);
+		ok = isl_val_eq(n, v);
 
 	if (vpe->vpd.options->print_all || !ok) {
-		fprintf(out, "EP(");
+		isl_ctx *ctx = isl_point_get_ctx(pnt);
+		isl_printer *p;
+		p = isl_printer_to_file(ctx, out);
+		p = isl_printer_print_str(p, "EP(");
 		for (i = 0; i < nparam; ++i) {
 			if (i)
-				fprintf(out, ", ");
-			isl_point_get_coordinate(pnt, isl_dim_param, i, &d);
-			isl_int_print(out, d, 0);
+				p = isl_printer_print_str(p, ", ");
+			t = isl_point_get_coordinate_val(pnt, isl_dim_param, i);
+			p = isl_printer_print_val(p, t);
+			isl_val_free(t);
 		}
-		fprintf(out, ") = ");
-		isl_int_print(out, n, 0);
-		fprintf(out, ", count = ");
-		isl_int_print(out, v, 0);
+		p = isl_printer_print_str(p, ") = ");
+		p = isl_printer_print_val(p, n);
+		p = isl_printer_print_str(p, ", count = ");
+		p = isl_printer_print_val(p, v);
 		if (ok)
-			fprintf(out, ". OK\n");
+			p = isl_printer_print_str(p, ". OK");
 		else
-			fprintf(out, ". NOT OK\n");
+			p = isl_printer_print_str(p, ". NOT OK");
+		p = isl_printer_end_line(p);
+		isl_printer_free(p);
 	} else if ((vpe->vpd.n % vpe->vpd.s) == 0) {
 		printf("o");
 		fflush(stdout);
@@ -111,10 +111,8 @@ error:
 		ok = 0;
 	}
 	isl_set_free(set);
-	isl_qpolynomial_free(cnt);
-	isl_int_clear(v);
-	isl_int_clear(n);
-	isl_int_clear(d);
+	isl_val_free(v);
+	isl_val_free(n);
 	isl_point_free(pnt);
 
 	if (!ok)
