@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <isl/options.h>
+#include <isl/val_gmp.h>
 #include <isl_set_polylib.h>
 #include <barvinok/basis_reduction.h>
 #include <barvinok/options.h>
@@ -25,7 +26,7 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 				     struct barvinok_options *options)
 {
 	int i, j;
-	isl_int v;
+	isl_val *v;
 	isl_ctx *ctx;
 	isl_space *dim;
 	int nvar = P->Dimension;
@@ -48,13 +49,12 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 
 	M = Matrix_Alloc(nvar, nvar);
 
-	isl_int_init(v);
 	for (i = 0; i < nvar; ++i)
 		for (j = 0; j < nvar; ++j) {
-			isl_mat_get_element(basis, 1 + i, 1 + j, &v);
-			isl_int_get_gmp(v, M->p[i][j]);
+			v = isl_mat_get_element_val(basis, 1 + i, 1 + j);
+			isl_val_get_num_gmp(v, M->p[i][j]);
+			isl_val_free(v);
 		}
-	isl_int_clear(v);
 
 	isl_mat_free(basis);
 
