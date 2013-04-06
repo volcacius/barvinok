@@ -225,17 +225,14 @@ static int split_on_size(__isl_take isl_set *set,
 	if (bounded) {
 		isl_pw_qpolynomial *pwqp;
 		isl_qpolynomial *cst;
-		isl_int m;
-		int is_cst;
+		isl_val *m;
 
 		pwqp = isl_set_card(set_np);
 		cst = isl_pw_qpolynomial_max(pwqp);
-		isl_int_init(m);
-		is_cst = isl_qpolynomial_is_cst(cst, &m, NULL);
+		m = isl_qpolynomial_get_constant_val(cst);
 		isl_qpolynomial_free(cst);
-		assert(is_cst);
-		bounded = isl_int_cmp_si(m, data->size) <= 0;
-		isl_int_clear(m);
+		bounded = isl_val_cmp_si(m, data->size) <= 0;
+		isl_val_free(m);
 	} else
 		isl_set_free(set_np);
 
