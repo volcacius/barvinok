@@ -363,69 +363,26 @@ error:
 	return NULL;
 }
 
-static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_int_mul(
-	__isl_take isl_union_pw_qpolynomial *upwqp, __isl_take isl_int_obj *i)
+static __isl_give isl_union_pw_qpolynomial *isl_val_mul_union_pw_qpolynomial(
+	__isl_take isl_val *v, __isl_take isl_union_pw_qpolynomial *upwqp)
 {
-	isl_int v;
-
-	if (!i)
-		goto error;
-
-	isl_int_init(v);
-	isl_int_obj_get_int(i, &v);
-	upwqp = isl_union_pw_qpolynomial_mul_isl_int(upwqp, v);
-	isl_int_clear(v);
-
-	isl_int_obj_free(i);
-
-	return upwqp;
-error:
-	isl_union_pw_qpolynomial_free(upwqp);
-	return NULL;
+	return isl_union_pw_qpolynomial_scale_val(upwqp, v);
 }
 
-static __isl_give isl_union_pw_qpolynomial *int_union_pw_qpolynomial_mul(
-	__isl_take isl_int_obj *i, __isl_take isl_union_pw_qpolynomial *upwqp)
-{
-	return union_pw_qpolynomial_int_mul(upwqp, i);
-}
-
-static __isl_give isl_union_pw_qpolynomial_fold *union_pw_qpolynomial_fold_int_mul(
-	__isl_take isl_union_pw_qpolynomial_fold *upwf,
-	__isl_take isl_int_obj *i)
-{
-	isl_int v;
-
-	if (!i)
-		goto error;
-
-	isl_int_init(v);
-	isl_int_obj_get_int(i, &v);
-	upwf = isl_union_pw_qpolynomial_fold_mul_isl_int(upwf, v);
-	isl_int_clear(v);
-
-	isl_int_obj_free(i);
-
-	return upwf;
-error:
-	isl_union_pw_qpolynomial_fold_free(upwf);
-	return NULL;
-}
-
-static __isl_give isl_union_pw_qpolynomial_fold *int_union_pw_qpolynomial_fold_mul(
-	__isl_take isl_int_obj *i,
+static __isl_give isl_union_pw_qpolynomial_fold *
+int_val_mul_union_pw_qpolynomial_fold(__isl_take isl_val *v,
 	__isl_take isl_union_pw_qpolynomial_fold *upwf)
 {
-	return union_pw_qpolynomial_fold_int_mul(upwf, i);
+	return isl_union_pw_qpolynomial_fold_scale_val(upwf, v);
 }
 
 struct isc_bin_op bin_ops[] = {
-	{ '+',	isl_obj_int,	isl_obj_int, isl_obj_int,
-		(isc_bin_op_fn) &isl_int_obj_add },
-	{ '-',	isl_obj_int,	isl_obj_int, isl_obj_int,
-		(isc_bin_op_fn) &isl_int_obj_sub },
-	{ '*',	isl_obj_int,	isl_obj_int, isl_obj_int,
-		(isc_bin_op_fn) &isl_int_obj_mul },
+	{ '+',	isl_obj_val,	isl_obj_val, isl_obj_val,
+		(isc_bin_op_fn) &isl_val_add },
+	{ '-',	isl_obj_val,	isl_obj_val, isl_obj_val,
+		(isc_bin_op_fn) &isl_val_sub },
+	{ '*',	isl_obj_val,	isl_obj_val, isl_obj_val,
+		(isc_bin_op_fn) &isl_val_mul },
 	{ '+',	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_set,
 		(isc_bin_op_fn) &isl_union_set_union },
@@ -531,18 +488,18 @@ struct isc_bin_op bin_ops[] = {
 	{ '-',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_sub },
-	{ '*',	isl_obj_int,	isl_obj_union_pw_qpolynomial,
+	{ '*',	isl_obj_val,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
-		(isc_bin_op_fn) &int_union_pw_qpolynomial_mul },
-	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_int,
+		(isc_bin_op_fn) &isl_val_mul_union_pw_qpolynomial },
+	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_val,
 		isl_obj_union_pw_qpolynomial,
-		(isc_bin_op_fn) &union_pw_qpolynomial_int_mul },
-	{ '*',	isl_obj_int,	isl_obj_union_pw_qpolynomial_fold,
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_scale_val },
+	{ '*',	isl_obj_val,	isl_obj_union_pw_qpolynomial_fold,
 		isl_obj_union_pw_qpolynomial_fold,
-		(isc_bin_op_fn) &int_union_pw_qpolynomial_fold_mul },
-	{ '*',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_int,
+		(isc_bin_op_fn) &int_val_mul_union_pw_qpolynomial_fold },
+	{ '*',	isl_obj_union_pw_qpolynomial_fold,	isl_obj_val,
 		isl_obj_union_pw_qpolynomial_fold,
-		(isc_bin_op_fn) &union_pw_qpolynomial_fold_int_mul },
+		(isc_bin_op_fn) &isl_union_pw_qpolynomial_fold_scale_val },
 	{ '*',	isl_obj_union_pw_qpolynomial,	isl_obj_union_pw_qpolynomial,
 		isl_obj_union_pw_qpolynomial,
 		(isc_bin_op_fn) &isl_union_pw_qpolynomial_mul },
@@ -1539,8 +1496,8 @@ static struct isl_obj type_of(struct isl_stream *s,
 		type = "boolean";
 	if (obj.type == isl_obj_str)
 		type = "string";
-	if (obj.type == isl_obj_int)
-		type = "int";
+	if (obj.type == isl_obj_val)
+		type = "value";
 
 	free_obj(obj);
 	obj.type = isl_obj_str;
@@ -2417,9 +2374,9 @@ static struct isl_obj read_expr(struct isl_stream *s,
 		obj = call_bin_op(s->ctx, op, obj, right_obj);
 	}
 
-	if (obj.type == isl_obj_int && next_is_neg_int(s)) {
+	if (obj.type == isl_obj_val && next_is_neg_int(s)) {
 		right_obj = read_obj(s, table);
-		obj.v = isl_int_obj_add(obj.v, right_obj.v);
+		obj.v = isl_val_add(obj.v, right_obj.v);
 	}
 
 	return obj;
