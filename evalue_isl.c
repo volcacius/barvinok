@@ -334,7 +334,8 @@ static int add_term(__isl_take isl_term *term, void *user)
 	unsigned dim;
 	unsigned n_div;
 	isl_ctx *ctx;
-	isl_int n, d;
+	isl_val *v;
+	Value n, d;
 	evalue *e;
 
 	if (!term)
@@ -349,11 +350,15 @@ static int add_term(__isl_take isl_term *term, void *user)
 	if (!e)
 		goto error;
 
-	isl_int_init(n);
-	isl_int_init(d);
+	value_init(n);
+	value_init(d);
 
-	isl_term_get_num(term, &n);
-	isl_term_get_den(term, &d);
+	v = isl_term_get_coefficient_val(term);
+	isl_val_get_num_gmp(v, n);
+	isl_val_get_den_gmp(v, d);
+	isl_val_free(v);
+	if (!v)
+		goto error2;
 	value_init(e->d);
 	evalue_set(e, n, d);
 
@@ -402,16 +407,16 @@ static int add_term(__isl_take isl_term *term, void *user)
 	eadd(e, sum);
 	evalue_free(e);
 
-	isl_int_clear(n);
-	isl_int_clear(d);
+	value_clear(n);
+	value_clear(d);
 
 	isl_term_free(term);
 
 	return 0;
 error2:
 	evalue_free(e);
-	isl_int_clear(n);
-	isl_int_clear(d);
+	value_clear(n);
+	value_clear(d);
 error:
 	isl_term_free(term);
 	return -1;
