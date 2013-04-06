@@ -43,7 +43,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	int ok;
 	unsigned nvar;
 	unsigned nparam;
-	isl_int v;
+	isl_val *v;
 	isl_space *space;
 	isl_set *dom;
 	isl_qpolynomial *eval;
@@ -52,12 +52,11 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 
 	vps->vpd.n--;
 
-	isl_int_init(v);
 	vps->fixed = isl_pw_qpolynomial_copy(vps->pwqp);
 	nparam = isl_pw_qpolynomial_dim(vps->sum, isl_dim_param);
 	for (i = 0; i < nparam; ++i) {
-		isl_point_get_coordinate(pnt, isl_dim_param, i, &v);
-		vps->fixed = isl_pw_qpolynomial_fix_dim(vps->fixed,
+		v = isl_point_get_coordinate_val(pnt, isl_dim_param, i);
+		vps->fixed = isl_pw_qpolynomial_fix_val(vps->fixed,
 						    	isl_dim_param, i, v);
 	}
 
@@ -84,8 +83,9 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		for (i = 0; i < nparam; ++i) {
 			if (i)
 				fprintf(out, ", ");
-			isl_point_get_coordinate(pnt, isl_dim_param, i, &v);
-			isl_int_print(out, v, 0);
+			v = isl_point_get_coordinate_val(pnt, isl_dim_param, i);
+			p = isl_printer_print_val(p, v);
+			isl_val_free(v);
 		}
 		fprintf(out, ") = ");
 		p = isl_printer_print_qpolynomial(p, eval);
@@ -108,7 +108,6 @@ error:
 	isl_qpolynomial_free(vps->manual);
 	isl_pw_qpolynomial_free(vps->fixed);
 	isl_qpolynomial_free(eval);
-	isl_int_clear(v);
 	isl_point_free(pnt);
 
 	if (!ok)
