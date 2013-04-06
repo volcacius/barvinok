@@ -1,6 +1,7 @@
 #include <isl/aff.h>
 #include <isl_set_polylib.h>
 #include <isl/constraint.h>
+#include <isl/val_gmp.h>
 #include <barvinok/evalue.h>
 
 static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
@@ -121,6 +122,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	Vector *vec;
 	isl_space *dim;
 	isl_ctx *ctx;
+	isl_val *v;
 	unsigned nparam;
 	isl_pw_qpolynomial *pwqp;
 	struct isl_constraint *c;
@@ -159,11 +161,15 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 
 	bset = isl_basic_set_universe(isl_space_copy(dim));
 	c = isl_equality_alloc(isl_local_space_from_space(dim));
-	isl_int_neg(vec->p[0], vec->p[0]);
-	isl_constraint_set_coefficient(c, isl_dim_set, 0, vec->p[0]);
-	isl_constraint_set_constant(c, vec->p[1]);
-	for (i = 0; i < nparam; ++i)
-		isl_constraint_set_coefficient(c, isl_dim_param, i, vec->p[2+i]);
+	v = isl_val_int_from_gmp(ctx, vec->p[0]);
+	v = isl_val_neg(v);
+	c = isl_constraint_set_coefficient_val(c, isl_dim_set, 0, v);
+	v = isl_val_int_from_gmp(ctx, vec->p[1]);
+	c = isl_constraint_set_constant_val(c, v);
+	for (i = 0; i < nparam; ++i) {
+		v = isl_val_int_from_gmp(ctx, vec->p[2 + i]);
+		c = isl_constraint_set_coefficient_val(c, isl_dim_param, i, v);
+	}
 	bset = isl_basic_set_add_constraint(bset, c);
 	bset = isl_basic_set_params(bset);
 	guard = isl_set_from_basic_set(bset);
