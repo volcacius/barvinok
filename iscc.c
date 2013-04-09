@@ -2335,7 +2335,13 @@ static int next_is_neg_int(struct isl_stream *s)
 	int ret;
 
 	tok = isl_stream_next_token(s);
-	ret = tok && tok->type == ISL_TOKEN_VALUE && isl_int_is_neg(tok->u.v);
+	if (tok && tok->type == ISL_TOKEN_VALUE) {
+		isl_val *v;
+		v = isl_token_get_val(s->ctx, tok);
+		ret = isl_val_is_neg(v);
+		isl_val_free(v);
+	} else
+		ret = 0;
 	isl_stream_push_token(s, tok);
 
 	return ret;
