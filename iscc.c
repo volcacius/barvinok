@@ -1288,6 +1288,7 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_list *list = obj.v;
 	struct isl_token *tok;
+	isl_val *v;
 	int i;
 
 	tok = isl_stream_next_token(s);
@@ -1297,7 +1298,9 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 			isl_stream_push_token(s, tok);
 		goto error;
 	}
-	i = isl_int_get_si(tok->u.v);
+	v = isl_token_get_val(s->ctx, tok);
+	i = isl_val_get_num_si(v);
+	isl_val_free(v);
 	isl_token_free(tok);
 	isl_assert(s->ctx, i < list->n, goto error);
 	if (isl_stream_eat(s, ']'))
