@@ -1970,6 +1970,7 @@ static struct isl_obj schedule_forest(struct isl_stream *s,
 static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_token *tok;
+	isl_val *v;
 
 	if (isl_stream_eat_if_available(s, '+'))
 		return transitive_closure(s->ctx, obj);
@@ -1979,14 +1980,23 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 		obj = convert(s->ctx, obj, isl_obj_union_map);
 
 	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_VALUE || isl_int_is_zero(tok->u.v)) {
-		isl_stream_error(s, tok, "expecting non-zero integer exponent");
+	if (!tok || tok->type != ISL_TOKEN_VALUE) {
+		isl_stream_error(s, tok, "expecting integer exponent");
 		if (tok)
 			isl_stream_push_token(s, tok);
 		goto error;
 	}
 
-	obj.v = isl_union_map_fixed_power(obj.v, tok->u.v);
+	v = isl_token_get_val(s->ctx, tok);
+	if (isl_val_is_zero(v)) {
+		isl_stream_error(s, tok, "expecting non-zero exponent");
+		isl_val_free(v);
+		if (tok)
+			isl_stream_push_token(s, tok);
+		goto error;
+	}
+
+	obj.v = isl_union_map_fixed_power_val(obj.v, v);
 	isl_token_free(tok);
 	if (!obj.v)
 		goto error;
