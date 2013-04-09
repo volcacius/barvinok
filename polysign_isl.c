@@ -65,61 +65,60 @@ static __isl_give isl_mat *extract_inequalities(isl_ctx *ctx, Matrix *M)
 enum order_sign isl_polyhedron_affine_sign(Polyhedron *D, Matrix *T,
 					    struct barvinok_options *options)
 {
+	int i;
 	isl_ctx *ctx = isl_ctx_alloc();
 	isl_space *dim;
-	isl_vec *aff;
+	isl_local_space *ls;
+	isl_aff *aff;
 	isl_basic_set *bset;
-	isl_int denom;
-	isl_int min, max;
-	enum isl_lp_result lp_min, lp_max;
+	isl_val *min, *max = NULL;
+	isl_val *v;
 	enum order_sign sign = order_undefined;
-
-	isl_int_init(denom);
-	isl_int_init(min);
-	isl_int_init(max);
 
 	assert(D->Dimension == T->NbColumns - 1);
 
-	aff = isl_vec_alloc(ctx, T->NbColumns);
-	assert(aff);
-	values2isl(T->p[0], aff->el + 1, T->NbColumns - 1);
-	values2isl(T->p[0] + T->NbColumns - 1, aff->el, 1);
-	values2isl(T->p[1] + T->NbColumns - 1, &denom, 1);
-
 	dim = isl_space_set_alloc(ctx, 0, D->Dimension);
+	ls = isl_local_space_from_space(isl_space_copy(dim));
 	bset = isl_basic_set_new_from_polylib(D, dim);
+	aff = isl_aff_zero_on_domain(ls);
+	for (i = 0; i < D->Dimension; ++i) {
+		v = isl_val_int_from_gmp(ctx, T->p[0][i]);
+		aff = isl_aff_set_coefficient_val(aff, isl_dim_in, i, v);
+	}
+	v = isl_val_int_from_gmp(ctx, T->p[0][D->Dimension]);
+	aff = isl_aff_set_constant_val(aff, v);
+	v = isl_val_int_from_gmp(ctx, T->p[1][D->Dimension]);
+	aff = isl_aff_scale_down_val(aff, v);
 
-	lp_min = isl_basic_set_solve_lp(bset, 0, aff->el, denom, &min,
-					NULL, NULL);
-	assert(lp_min != isl_lp_error);
+	min = isl_basic_set_min_lp_val(bset, aff);
+	min = isl_val_ceil(min);
+	assert(min);
 
-	if (lp_min == isl_lp_empty)
+	if (isl_val_is_nan(min))
 		sign = order_undefined;
-	else if (lp_min == isl_lp_ok && isl_int_is_pos(min))
+	else if (isl_val_is_pos(min))
 		sign = order_gt;
 	else {
-		lp_max = isl_basic_set_solve_lp(bset, 1, aff->el, denom, &max,
-						NULL, NULL);
-		assert(lp_max != isl_lp_error);
+		max = isl_basic_set_max_lp_val(bset, aff);
+		max = isl_val_floor(max);
+		assert(max);
 
-		if (lp_max == isl_lp_ok && isl_int_is_neg(max))
+		if (isl_val_is_neg(max))
 			sign = order_lt;
-		else if (lp_min == isl_lp_ok && lp_max == isl_lp_ok &&
-			 isl_int_is_zero(min) && isl_int_is_zero(max))
+		else if (isl_val_is_zero(min) && isl_val_is_zero(max))
 			sign = order_eq;
-		else if (lp_min == isl_lp_ok && isl_int_is_zero(min))
+		else if (isl_val_is_zero(min))
 			sign = order_ge;
-		else if (lp_max == isl_lp_ok && isl_int_is_zero(max))
+		else if (isl_val_is_zero(max))
 			sign = order_le;
 		else
 			sign = order_unknown;
 	}
 
 	isl_basic_set_free(bset);
-	isl_vec_free(aff);
-	isl_int_clear(min);
-	isl_int_clear(max);
-	isl_int_clear(denom);
+	isl_aff_free(aff);
+	isl_val_free(min);
+	isl_val_free(max);
 	isl_ctx_free(ctx);
 
 	return sign;
