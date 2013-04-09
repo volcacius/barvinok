@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <isl/val_gmp.h>
 #include <isl/lp.h>
 #include <isl_set_polylib.h>
 #include "polysign.h"
@@ -15,7 +16,7 @@ static __isl_give isl_mat *extract_equalities(isl_ctx *ctx, Matrix *M)
 {
 	int i, j;
 	int n;
-	isl_int v;
+	isl_val *v;
 	isl_mat *eq;
 
 	n = 0;
@@ -23,17 +24,15 @@ static __isl_give isl_mat *extract_equalities(isl_ctx *ctx, Matrix *M)
 		if (value_zero_p(M->p[i][0]))
 			++n;
 
-	isl_int_init(v);
 	eq = isl_mat_alloc(ctx, n, M->NbColumns - 1);
 	for (i = 0; i < M->NbRows; ++i) {
 		if (!value_zero_p(M->p[i][0]))
 			continue;
 		for (j = 0; j < M->NbColumns - 1; ++j) {
-			isl_int_set_gmp(v, M->p[i][1 + j]);
-			eq = isl_mat_set_element(eq, i, j, v);
+			v = isl_val_int_from_gmp(ctx, M->p[i][1 + j]);
+			eq = isl_mat_set_element_val(eq, i, j, v);
 		}
 	}
-	isl_int_clear(v);
 
 	return eq;
 }
