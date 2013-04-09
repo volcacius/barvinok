@@ -2167,6 +2167,7 @@ static struct isl_obj read_bool_if_available(struct isl_stream *s)
 static __isl_give char *read_ident(struct isl_stream *s)
 {
 	char *name;
+	isl_val *v;
 	struct isl_token *tok, *tok2;
 
 	name = isl_stream_read_ident_if_available(s);
@@ -2188,7 +2189,9 @@ static __isl_give char *read_ident(struct isl_stream *s)
 		return NULL;
 	}
 	
-	name = isl_int_get_str(tok2->u.v);
+	v = isl_token_get_val(s->ctx, tok2);
+	name = isl_val_to_str(v);
+	isl_val_free(v);
 	isl_token_free(tok);
 	isl_token_free(tok2);
 
