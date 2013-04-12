@@ -76,7 +76,6 @@ void result_data_init(struct result_data *result)
 
 void result_data_clear(struct result_data *result)
 {
-    int i;
     isl_int_clear(result->n);
 }
 
