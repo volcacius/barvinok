@@ -113,49 +113,45 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	const struct verify_options *options = vpb->vpd.options;
 	int i;
 	unsigned nparam;
-	isl_int max, min, exact, approx;
-	isl_int n, d;
+	isl_val *max, *min, *exact, *approx, *t;
 	isl_qpolynomial *opt;
 	isl_pw_qpolynomial *pwqp;
-	int cst;
+	isl_printer *p;
 
 	vpb->vpd.n--;
-
-	isl_int_init(max);
-	isl_int_init(min);
-	isl_int_init(exact);
-	isl_int_init(approx);
-	isl_int_init(n);
-	isl_int_init(d);
 
 	pwqp = isl_pw_qpolynomial_copy(vpb->pwqp);
 
 	nparam = isl_pw_qpolynomial_dim(pwqp, isl_dim_param);
 	for (i = 0; i < nparam; ++i) {
-		isl_point_get_coordinate(pnt, isl_dim_param, i, &n);
-		pwqp = isl_pw_qpolynomial_fix_dim(pwqp, isl_dim_param, i, n);
+		t = isl_point_get_coordinate_val(pnt, isl_dim_param, i);
+		pwqp = isl_pw_qpolynomial_fix_val(pwqp, isl_dim_param, i, t);
 	}
 
 	opt = isl_pw_qpolynomial_max(isl_pw_qpolynomial_copy(pwqp));
-	cst = isl_qpolynomial_is_cst(opt, &n, &d);
+	max = isl_qpolynomial_get_constant_val(opt);
 	isl_qpolynomial_free(opt);
-	assert(cst == 1);
-	isl_int_fdiv_q(max, n, d);
+	max = isl_val_floor(max);
 
 	opt = isl_pw_qpolynomial_min(pwqp);
-	cst = isl_qpolynomial_is_cst(opt, &n, &d);
+	min = isl_qpolynomial_get_constant_val(opt);
 	isl_qpolynomial_free(opt);
-	assert(cst == 1);
-	isl_int_cdiv_q(min, n, d);
+	min = isl_val_ceil(min);
 
-	isl_int_sub(exact, max, min);
-	isl_int_add_ui(exact, exact, 1);
+	exact = isl_val_sub(isl_val_copy(max), isl_val_copy(min));
+	exact = isl_val_add_ui(exact, 1);
 
 	if (options->print_all) {
-		fprintf(stderr, "max: "); isl_int_print(stderr, max, 0);
-		fprintf(stderr, ", min: "); isl_int_print(stderr, min, 0);
-		fprintf(stderr, ", range: "); isl_int_print(stderr, exact, 0);
+		p = isl_printer_to_file(isl_point_get_ctx(pnt), stderr);
+		p = isl_printer_print_str(p, "max: ");
+		p = isl_printer_print_val(p, max);
+		p = isl_printer_print_str(p, ", min: ");
+		p = isl_printer_print_val(p, min);
+		p = isl_printer_print_str(p, ", range: ");
+		p = isl_printer_print_val(p, exact);
 	}
+	isl_val_free(max);
+	isl_val_free(min);
 
 	for (i = 0; i < nr_methods; ++i) {
 		double error;
@@ -163,48 +159,44 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		opt = isl_pw_qpolynomial_fold_eval(
 				isl_pw_qpolynomial_fold_copy(vpb->pwf[2 * i]),
 				isl_point_copy(pnt));
-		cst = isl_qpolynomial_is_cst(opt, &n, &d);
+		max = isl_qpolynomial_get_constant_val(opt);
 		isl_qpolynomial_free(opt);
-		assert(cst == 1);
-		isl_int_fdiv_q(max, n, d);
+		max = isl_val_floor(max);
 	
 		opt = isl_pw_qpolynomial_fold_eval(
 				isl_pw_qpolynomial_fold_copy(vpb->pwf[2 * i + 1]),
 				isl_point_copy(pnt));
-		cst = isl_qpolynomial_is_cst(opt, &n, &d);
+		min = isl_qpolynomial_get_constant_val(opt);
 		isl_qpolynomial_free(opt);
-		assert(cst == 1);
-		isl_int_cdiv_q(min, n, d);
+		min = isl_val_ceil(min);
 
-		isl_int_sub(approx, max, min);
-		isl_int_add_ui(approx, approx, 1);
+		approx = isl_val_sub(max, min);
+		approx = isl_val_add_ui(approx, 1);
 		if (options->print_all) {
-			fprintf(stderr, ", "); isl_int_print(stderr, approx, 0);
+			p = isl_printer_print_str(p, ", ");
+			p = isl_printer_print_val(p, approx);
 		}
 
-		assert(isl_int_ge(approx, exact));
-		isl_int_sub(approx, approx, exact);
+		assert(isl_val_ge(approx, exact));
+		approx = isl_val_sub(approx, isl_val_copy(exact));
 
-		error = fabs(isl_int_get_d(approx)) / isl_int_get_d(exact);
+		error = fabs(isl_val_get_d(approx)) / isl_val_get_d(exact);
 		if (options->print_all)
 			fprintf(stderr, " (%g)", error);
 		vpb->result->RE_sum[i] += error;
+
+		isl_val_free(approx);
 	}
 
 	if (options->print_all) {
-		fprintf(stderr, "\n");
+		p = isl_printer_end_line(p);
+		isl_printer_free(p);
 	} else if ((vpb->vpd.n % vpb->vpd.s) == 0) {
 		printf("o");
 		fflush(stdout);
 	}
 
-	isl_int_clear(max);
-	isl_int_clear(min);
-	isl_int_clear(exact);
-	isl_int_clear(approx);
-	isl_int_clear(n);
-	isl_int_clear(d);
-
+	isl_val_free(exact);
 	isl_point_free(pnt);
 
 	return vpb->vpd.n >= 1 ? 0 : -1;
