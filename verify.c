@@ -481,14 +481,12 @@ __isl_give isl_set *verify_context_set_bounds(__isl_take isl_set *set,
 int verify_point_data_init(struct verify_point_data *vpd,
 	__isl_keep isl_set *context)
 {
-	isl_int v;
+	isl_val *v;
 	int i;
-	int r;
 
-	isl_int_init(v);
-	r = isl_set_count(context, &v);
-	vpd->n = isl_int_cmp_si(v, 200) < 0 ? isl_int_get_si(v) : 200;
-	isl_int_clear(v);
+	v = isl_set_count_val(context);
+	vpd->n = isl_val_cmp_si(v, 200) < 0 ? isl_val_get_num_si(v) : 200;
+	isl_val_free(v);
 
 	if (!vpd->options->print_all) {
 		vpd->s = vpd->n < 80 ? 1 : 1 + vpd->n/80;
@@ -498,9 +496,9 @@ int verify_point_data_init(struct verify_point_data *vpd,
 		fflush(stdout);
 	}
 
-	vpd->error = r < 0 ? -1 : 0;
+	vpd->error = !v ? -1 : 0;
 
-	return r;
+	return vpd->error;
 }
 
 void verify_point_data_fini(struct verify_point_data *vpd)
