@@ -56,14 +56,14 @@ ISL_ARGS_END
 ISL_ARG_DEF(options, struct options, options_args)
 
 struct result_data {
-    isl_int		    n;
+    isl_val		    *n;
     double		    RE_sum[nr_methods];
 
     my_clock_t		    ticks[nr_methods];
     size_t		    size[nr_methods];
 };
 
-void result_data_init(struct result_data *result)
+void result_data_init(isl_ctx *ctx, struct result_data *result)
 {
     int i;
     for (i = 0; i < nr_methods; ++i) {
@@ -71,12 +71,12 @@ void result_data_init(struct result_data *result)
 	result->ticks[i] = 0;
 	result->size[i] = 0;
     }
-    isl_int_init(result->n);
+    result->n = isl_val_zero(ctx);
 }
 
 void result_data_clear(struct result_data *result)
 {
-    isl_int_clear(result->n);
+	isl_val_free(result->n);
 }
 
 void result_data_print(struct result_data *result, int n)
@@ -93,10 +93,10 @@ void result_data_print(struct result_data *result, int n)
 	fprintf(stderr, ", %zd/%d", result->size[i], n);
     fprintf(stderr, "\n");
 
-    fprintf(stderr, "%g\n", isl_int_get_d(result->n));
-    fprintf(stderr, "%g", result->RE_sum[0]/isl_int_get_d(result->n));
+    fprintf(stderr, "%g\n", isl_val_get_d(result->n));
+    fprintf(stderr, "%g", result->RE_sum[0]/isl_val_get_d(result->n));
     for (i = 1; i < nr_methods; ++i)
-	fprintf(stderr, ", %g", result->RE_sum[i]/isl_int_get_d(result->n));
+	fprintf(stderr, ", %g", result->RE_sum[i]/isl_val_get_d(result->n));
     fprintf(stderr, "\n");
 }
 
@@ -218,7 +218,7 @@ static void test(__isl_keep isl_pw_qpolynomial *pwqp,
 
 	r = verify_point_data_init(&vpb.vpd, context);
 	assert(r == 0);
-	isl_int_set_si(result->n, vpb.vpd.n);
+	result->n = isl_val_set_si(result->n, vpb.vpd.n);
 
 	isl_set_foreach_point(context, verify_point, &vpb);
 	assert(!vpb.vpd.error);
@@ -228,10 +228,10 @@ static void test(__isl_keep isl_pw_qpolynomial *pwqp,
 	verify_point_data_fini(&vpb.vpd);
 }
 
-void handle(FILE *in, struct result_data *result, struct verify_options *options)
+static void handle(isl_ctx *ctx, FILE *in, struct result_data *result,
+	struct verify_options *options)
 {
     int i;
-    isl_ctx *ctx = isl_ctx_alloc();
     isl_pw_qpolynomial *pwqp, *upper, *lower;
     isl_pw_qpolynomial_fold *pwf[2*nr_methods];
     struct isl_stream *s;
@@ -277,7 +277,6 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
     isl_pw_qpolynomial_free(upper);
 
     isl_stream_free(s);
-    isl_ctx_free(ctx);
 }
 
 int main(int argc, char **argv)
@@ -286,6 +285,7 @@ int main(int argc, char **argv)
     struct result_data all_result;
     int n = 0;
     struct options *options = options_new_with_defaults();
+    isl_ctx *ctx = isl_ctx_alloc();
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
 
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
     if (options->verify->m == INT_MAX)
 	options->verify->m = -100;
 
-    result_data_init(&all_result);
+    result_data_init(ctx, &all_result);
 
     while (fgets(path, sizeof(path), stdin)) {
 	struct result_data result;
@@ -302,18 +302,18 @@ int main(int argc, char **argv)
 	int i;
 
 	++n;
-	result_data_init(&result);
+	result_data_init(ctx, &result);
 	fprintf(stderr, "%s", path);
 	*strchr(path, '\n') = '\0';
 	in = fopen(path, "r");
 	assert(in);
-	handle(in, &result, options->verify);
+	handle(ctx, in, &result, options->verify);
 	fclose(in);
 
 	if (!options->quiet)
 	    result_data_print(&result, 1);
 
-	isl_int_add(all_result.n, all_result.n, result.n);
+	all_result.n = isl_val_add(all_result.n, isl_val_copy(result.n));
 	for (i = 0; i < nr_methods; ++i) {
 	    all_result.RE_sum[i] += result.RE_sum[i];
 	    all_result.ticks[i] += result.ticks[i];
@@ -331,6 +331,7 @@ int main(int argc, char **argv)
     result_data_clear(&all_result);
 
     options_free(options);
+    isl_ctx_free(ctx);
 
     return 0;
 }
