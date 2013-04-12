@@ -454,20 +454,23 @@ __isl_give isl_set *verify_context_set_bounds(__isl_take isl_set *set,
 			pt2 = isl_point_sub_ui(pt2, isl_dim_param, i, options->r);
 		}
 	} else {
-		isl_int v;
+		isl_ctx *ctx;
+		isl_val *v;
 
-		isl_int_init(v);
+		ctx = isl_set_get_ctx(set);
 		pt = isl_point_zero(isl_set_get_space(set));
-		isl_int_set_si(v, options->m);
+		v = isl_val_int_from_si(ctx, options->m);
 		for (i = 0; i < nparam; ++i)
-			pt = isl_point_set_coordinate(pt, isl_dim_param, i, v);
+			pt = isl_point_set_coordinate_val(pt, isl_dim_param, i,
+							    isl_val_copy(v));
+		isl_val_free(v);
 
 		pt2 = isl_point_zero(isl_set_get_space(set));
-		isl_int_set_si(v, options->M);
+		v = isl_val_int_from_si(ctx, options->M);
 		for (i = 0; i < nparam; ++i)
-			pt2 = isl_point_set_coordinate(pt2, isl_dim_param, i, v);
-
-		isl_int_clear(v);
+			pt2 = isl_point_set_coordinate_val(pt2, isl_dim_param,
+							    i, isl_val_copy(v));
+		isl_val_free(v);
 	}
 
 	box = isl_set_box_from_points(pt, pt2);
