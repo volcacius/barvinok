@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <isl/val_gmp.h>
 #include <isl_set_polylib.h>
 #include <barvinok/util.h>
 #include <barvinok/options.h>
@@ -21,22 +22,20 @@ void manual_count(Polyhedron *P, Value* result)
 	isl_ctx *ctx = isl_ctx_alloc();
 	isl_space *dim;
 	isl_set *set;
-	isl_int v;
+	isl_val *v;
 	int nvar = P->Dimension;
-	int r;
 
 	dim = isl_space_set_alloc(ctx, 0, nvar);
 	set = isl_set_new_from_polylib(P, dim);
 
-	isl_int_init(v);
-	r = isl_set_count(set, &v);
-	isl_int_get_gmp(v, *result);
-	isl_int_clear(v);
+	v = isl_set_count_val(set);
+	isl_val_get_num_gmp(v, *result);
+	isl_val_free(v);
 
 	isl_set_free(set);
 	isl_ctx_free(ctx);
 
-	assert(r >= 0);
+	assert(v);
 }
 
 #include <barvinok/evalue.h>
