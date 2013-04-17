@@ -1,7 +1,6 @@
 #include <isl/aff.h>
 #include <isl_set_polylib.h>
 #include <isl/constraint.h>
-#include <isl/seq.h>
 #include <barvinok/evalue.h>
 
 static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
@@ -27,7 +26,8 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	if (!v)
 		goto error;
 
-	isl_seq_clr(v->p + 2, nparam);
+	for (i = 0; i < nparam; ++i)
+		value_set_si(v->p[2 + i], 0);
 	evalue_extract_affine(&e->x.p->arr[0], v->p + 2, &v->p[1], &v->p[0]);
 
 	ls = isl_local_space_from_space(isl_space_copy(dim));
@@ -149,7 +149,8 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	if (!vec)
 		goto error;
 
-	isl_seq_clr(vec->p + 2, nparam);
+	for (i = 0; i < nparam; ++i)
+		value_set_si(vec->p[2 + i], 0);
 	evalue_extract_affine(&fract->x.p->arr[0],
 				vec->p + 2, &vec->p[1], &vec->p[0]);
 
