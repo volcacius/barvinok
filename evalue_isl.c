@@ -12,6 +12,7 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	isl_ctx *ctx;
 	isl_local_space *ls;
 	isl_aff *aff;
+	isl_val *val;
 	isl_qpolynomial *base, *c;
 	unsigned nparam;
 
@@ -33,12 +34,16 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 
 	ls = isl_local_space_from_space(isl_space_copy(dim));
 	aff = isl_aff_zero_on_domain(ls);
-	aff = isl_aff_set_constant(aff, v->p[1]);
-	aff = isl_aff_set_denominator(aff, v->p[0]);
+	val = isl_val_int_from_gmp(ctx, v->p[1]);
+	aff = isl_aff_set_constant_val(aff, val);
 
-	for (i = 0; i < nparam; ++i)
-		aff = isl_aff_set_coefficient(aff, isl_dim_param, i,
-						v->p[2 + i]);
+	for (i = 0; i < nparam; ++i) {
+		val = isl_val_int_from_gmp(ctx, v->p[2 + i]);
+		aff = isl_aff_set_coefficient_val(aff, isl_dim_param, i, val);
+	}
+
+	val = isl_val_int_from_gmp(ctx, v->p[0]);
+	aff = isl_aff_scale_down_val(aff, val);
 
 	aff = isl_aff_floor(aff);
 	base = isl_qpolynomial_from_aff(aff);
@@ -46,13 +51,15 @@ static __isl_give isl_qpolynomial *extract_base(__isl_take isl_space *dim,
 	if (e->x.p->type == fractional) {
 		base = isl_qpolynomial_neg(base);
 
-		c = isl_qpolynomial_rat_cst_on_domain(isl_space_copy(dim), v->p[1], v->p[0]);
+		val = isl_val_from_gmp(ctx,  v->p[1], v->p[0]);
+		c = isl_qpolynomial_val_on_domain(isl_space_copy(dim), val);
 		base = isl_qpolynomial_add(base, c);
 
 		for (i = 0; i < nparam; ++i) {
 			isl_qpolynomial *t;
-			c = isl_qpolynomial_rat_cst_on_domain(isl_space_copy(dim),
-							v->p[2 + i], v->p[0]);
+			val = isl_val_from_gmp(ctx,  v->p[2 + i], v->p[0]);
+			c = isl_qpolynomial_val_on_domain(isl_space_copy(dim),
+							val);
 			t = isl_qpolynomial_var_on_domain(isl_space_copy(dim),
 						isl_dim_param, i);
 			t = isl_qpolynomial_mul(c, t);
