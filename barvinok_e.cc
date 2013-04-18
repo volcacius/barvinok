@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <gmp.h>
 #include <isl_set_polylib.h>
 #include <barvinok/barvinok.h>
 #include <barvinok/evalue.h>
