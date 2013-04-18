@@ -289,6 +289,7 @@ static evalue *div2evalue(__isl_take isl_aff *div)
 {
 	int i;
 	isl_ctx *ctx;
+	isl_val *v;
 	Vector *vec = NULL;
 	unsigned dim;
 	unsigned nparam;
@@ -309,13 +310,22 @@ static evalue *div2evalue(__isl_take isl_aff *div)
 	vec = Vector_Alloc(1 + dim + nparam + 1);
 	if (!vec)
 		goto error;
-	for (i = 0; i < dim; ++i)
-		isl_aff_get_coefficient(div, isl_dim_in, i, &vec->p[1 + i]);
-	for (i = 0; i < nparam; ++i)
-		isl_aff_get_coefficient(div, isl_dim_param, i,
-					&vec->p[1 + dim + i]);
-	isl_aff_get_denominator(div, &vec->p[0]);
-	isl_aff_get_constant(div, &vec->p[1 + dim + nparam]);
+	v = isl_aff_get_denominator_val(div);
+	isl_val_get_num_gmp(v, vec->p[0]);
+	div = isl_aff_scale_val(div, v);
+	for (i = 0; i < dim; ++i) {
+		v = isl_aff_get_coefficient_val(div, isl_dim_in, i);
+		isl_val_get_num_gmp(v, vec->p[1 + i]);
+		isl_val_free(v);
+	}
+	for (i = 0; i < nparam; ++i) {
+		v = isl_aff_get_coefficient_val(div, isl_dim_param, i);
+		isl_val_get_num_gmp(v, vec->p[1 + dim + i]);
+		isl_val_free(v);
+	}
+	v = isl_aff_get_constant_val(div);
+	isl_val_get_num_gmp(v, vec->p[1 + dim + nparam]);
+	isl_val_free(v);
 
 	e = isl_alloc_type(ctx, evalue);
 	if (!e)
