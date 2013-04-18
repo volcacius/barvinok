@@ -92,8 +92,11 @@ __isl_give isl_qpolynomial *isl_qpolynomial_from_evalue(__isl_take isl_space *di
 
 	if (EVALUE_IS_NAN(*e))
 		return isl_qpolynomial_infty_on_domain(dim);
-	if (value_notzero_p(e->d))
-		return isl_qpolynomial_rat_cst_on_domain(dim, e->x.n, e->d);
+	if (value_notzero_p(e->d)) {
+		isl_ctx *ctx = isl_space_get_ctx(dim);
+		isl_val *val = isl_val_from_gmp(ctx, e->x.n, e->d);
+		return isl_qpolynomial_val_on_domain(dim, val);
+	}
 
 	offset = type_offset(e->x.p);
 
