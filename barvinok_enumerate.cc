@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <gmp.h>
 #include <isl_set_polylib.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
