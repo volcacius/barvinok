@@ -1127,7 +1127,7 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 	for (i = 0; ; ++i) {
 		if (!bin_ops[i].op)
 			break;
-		if (bin_ops[i].op != tok->type)
+		if (bin_ops[i].op != isl_token_get_type(tok))
 			continue;
 		if (!is_subtype(lhs, bin_ops[i].lhs))
 			continue;
@@ -1139,7 +1139,7 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 	for (i = 0; ; ++i) {
 		if (!named_bin_ops[i].name)
 			break;
-		if (named_bin_ops[i].op.op != tok->type)
+		if (named_bin_ops[i].op.op != isl_token_get_type(tok))
 			continue;
 		if (!is_subtype(lhs, named_bin_ops[i].op.lhs))
 			continue;
@@ -1165,7 +1165,7 @@ static struct isc_un_op *read_prefix_un_op_if_available(struct isl_stream *s)
 	for (i = 0; ; ++i) {
 		if (!named_un_ops[i].name)
 			break;
-		if (named_un_ops[i].op.op != tok->type)
+		if (named_un_ops[i].op.op != isl_token_get_type(tok))
 			continue;
 
 		isl_token_free(tok);
@@ -1205,7 +1205,7 @@ static int is_assign(struct isl_stream *s)
 	tok = isl_stream_next_token(s);
 	if (!tok)
 		return 0;
-	if (tok->type != ISL_TOKEN_IDENT) {
+	if (isl_token_get_type(tok) != ISL_TOKEN_IDENT) {
 		isl_stream_push_token(s, tok);
 		return 0;
 	}
@@ -1215,7 +1215,7 @@ static int is_assign(struct isl_stream *s)
 		isl_stream_push_token(s, tok);
 		return 0;
 	}
-	assign = tok2->type == ISL_TOKEN_DEF;
+	assign = isl_token_get_type(tok2) == ISL_TOKEN_DEF;
 	isl_stream_push_token(s, tok2);
 	isl_stream_push_token(s, tok);
 
@@ -1292,7 +1292,7 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 	int i;
 
 	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_VALUE) {
+	if (!tok || isl_token_get_type(tok) != ISL_TOKEN_VALUE) {
 		isl_stream_error(s, tok, "expecting index");
 		if (tok)
 			isl_stream_push_token(s, tok);
@@ -1983,7 +1983,7 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 		obj = convert(s->ctx, obj, isl_obj_union_map);
 
 	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_VALUE) {
+	if (!tok || isl_token_get_type(tok) != ISL_TOKEN_VALUE) {
 		isl_stream_error(s, tok, "expecting integer exponent");
 		if (tok)
 			isl_stream_push_token(s, tok);
@@ -2037,10 +2037,11 @@ static struct isl_obj read_from_file(struct isl_stream *s)
 	struct isl_token *tok;
 	struct isl_stream *s_file;
 	struct iscc_options *options;
+	char *name;
 	FILE *file;
 
 	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_STRING) {
+	if (!tok || isl_token_get_type(tok) != ISL_TOKEN_STRING) {
 		isl_stream_error(s, tok, "expecting filename");
 		isl_token_free(tok);
 		goto error;
@@ -2053,8 +2054,10 @@ static struct isl_obj read_from_file(struct isl_stream *s)
 			"read operation not allowed", goto error);
 	}
 
-	file = fopen(tok->u.s, "r");
+	name = isl_token_get_str(s->ctx, tok);
 	isl_token_free(tok);
+	file = fopen(name, "r");
+	free(name);
 	isl_assert(s->ctx, file, goto error);
 
 	s_file = isl_stream_new_file(s->ctx, file);
@@ -2082,11 +2085,12 @@ static struct isl_obj write_to_file(struct isl_stream *s,
 	struct isl_token *tok;
 	struct isl_stream *s_file;
 	struct iscc_options *options;
+	char *name;
 	FILE *file;
 	isl_printer *p;
 
 	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_STRING) {
+	if (!tok || isl_token_get_type(tok) != ISL_TOKEN_STRING) {
 		isl_stream_error(s, tok, "expecting filename");
 		isl_token_free(tok);
 		goto error;
@@ -2101,8 +2105,10 @@ static struct isl_obj write_to_file(struct isl_stream *s,
 			"write operation not allowed", goto error);
 	}
 
-	file = fopen(tok->u.s, "w");
+	name = isl_token_get_str(s->ctx, tok);
 	isl_token_free(tok);
+	file = fopen(name, "w");
+	free(name);
 	if (!file)
 		isl_die(s->ctx, isl_error_unknown,
 			"could not open file for writing", goto error);
@@ -2129,12 +2135,12 @@ static struct isl_obj read_string_if_available(struct isl_stream *s)
 	tok = isl_stream_next_token(s);
 	if (!tok)
 		return obj;
-	if (tok->type == ISL_TOKEN_STRING) {
+	if (isl_token_get_type(tok) == ISL_TOKEN_STRING) {
 		isl_str *str;
 		str = isl_str_alloc(s->ctx);
 		if (!str)
 			goto error;
-		str->s = strdup(tok->u.s);
+		str->s = isl_token_get_str(s->ctx, tok);
 		isl_token_free(tok);
 		obj.v = str;
 		obj.type = isl_obj_str;
@@ -2150,12 +2156,14 @@ static struct isl_obj read_bool_if_available(struct isl_stream *s)
 {
 	struct isl_token *tok;
 	struct isl_obj obj = { isl_obj_none, NULL };
+	int type;
 
 	tok = isl_stream_next_token(s);
 	if (!tok)
 		return obj;
-	if (tok->type == ISL_TOKEN_FALSE || tok->type == ISL_TOKEN_TRUE) {
-		int is_true = tok->type == ISL_TOKEN_TRUE;
+	type = isl_token_get_type(tok);
+	if (type == ISL_TOKEN_FALSE || type == ISL_TOKEN_TRUE) {
+		int is_true = type == ISL_TOKEN_TRUE;
 		isl_token_free(tok);
 		obj.v = is_true ? &isl_bool_true : &isl_bool_false;
 		obj.type = isl_obj_bool;
@@ -2177,12 +2185,12 @@ static __isl_give char *read_ident(struct isl_stream *s)
 	tok = isl_stream_next_token(s);
 	if (!tok)
 		return NULL;
-	if (tok->type != '$') {
+	if (isl_token_get_type(tok) != '$') {
 		isl_stream_push_token(s, tok);
 		return NULL;
 	}
 	tok2 = isl_stream_next_token(s);
-	if (!tok2 || tok2->type != ISL_TOKEN_VALUE) {
+	if (!tok2 || isl_token_get_type(tok2) != ISL_TOKEN_VALUE) {
 		if (tok2)
 			isl_stream_push_token(s, tok2);
 		isl_stream_push_token(s, tok);
@@ -2351,7 +2359,7 @@ static int next_is_neg_int(struct isl_stream *s)
 	int ret;
 
 	tok = isl_stream_next_token(s);
-	if (tok && tok->type == ISL_TOKEN_VALUE) {
+	if (tok && isl_token_get_type(tok) == ISL_TOKEN_VALUE) {
 		isl_val *v;
 		v = isl_token_get_val(s->ctx, tok);
 		ret = isl_val_is_neg(v);
@@ -2536,17 +2544,20 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 {
 	struct isl_token *tok;
 	struct isl_stream *s_file;
+	char *name;
 	FILE *file;
 
 	tok = isl_stream_next_token(s);
-	if (!tok || tok->type != ISL_TOKEN_STRING) {
+	if (!tok || isl_token_get_type(tok) != ISL_TOKEN_STRING) {
 		isl_stream_error(s, tok, "expecting filename");
 		isl_token_free(tok);
 		return p;
 	}
 
-	file = fopen(tok->u.s, "r");
+	name = isl_token_get_str(s->ctx, tok);
 	isl_token_free(tok);
+	file = fopen(name, "r");
+	free(name);
 	isl_assert(s->ctx, file, return p);
 
 	s_file = isl_stream_new_file(s->ctx, file);
