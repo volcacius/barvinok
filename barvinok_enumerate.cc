@@ -40,7 +40,6 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	int i;
 	unsigned nparam;
 	isl_val *v, *n, *t;
-	isl_qpolynomial *cnt;
 	int pa = vpe->vpd.options->barvinok->approx->approximation;
 	int cst;
 	int ok;
@@ -57,10 +56,8 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 
 	v = isl_set_count_val(set);
 
-	cnt = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vpe->pwqp),
+	n = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vpe->pwqp),
 					isl_point_copy(pnt));
-	n = isl_qpolynomial_get_constant_val(cnt);
-	isl_qpolynomial_free(cnt);
 
 	if (pa == BV_APPROX_SIGN_LOWER)
 		n = isl_val_ceil(n);

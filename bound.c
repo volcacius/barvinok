@@ -38,8 +38,6 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	struct verify_point_bound *vpb = (struct verify_point_bound *) user;
 	isl_val *v, *b, *q, *t;
 	isl_pw_qpolynomial *pwqp;
-	isl_qpolynomial *bound;
-	isl_qpolynomial *opt;
 	const char *minmax;
 	int sign;
 	int ok;
@@ -64,17 +62,13 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		pwqp = isl_pw_qpolynomial_fix_val(pwqp, isl_dim_param, i, t);
 	}
 
-	bound = isl_pw_qpolynomial_fold_eval(isl_pw_qpolynomial_fold_copy(vpb->pwf),
+	b = isl_pw_qpolynomial_fold_eval(isl_pw_qpolynomial_fold_copy(vpb->pwf),
 						isl_point_copy(pnt));
-	b = isl_qpolynomial_get_constant_val(bound);
-	isl_qpolynomial_free(bound);
 
 	if (sign > 0)
-		opt = isl_pw_qpolynomial_max(pwqp);
+		v = isl_pw_qpolynomial_max(pwqp);
 	else
-		opt = isl_pw_qpolynomial_min(pwqp);
-	v = isl_qpolynomial_get_constant_val(opt);
-	isl_qpolynomial_free(opt);
+		v = isl_pw_qpolynomial_min(pwqp);
 
 	if (sign > 0)
 		v = isl_val_floor(v);
@@ -182,6 +176,7 @@ static __isl_give isl_pw_qpolynomial_fold *iterate(
 {
 	isl_space *dim = isl_pw_qpolynomial_get_space(pwqp);
 	isl_set *set;
+	isl_val *v;
 	isl_qpolynomial *qp;
 	isl_qpolynomial_fold *fold;
 	unsigned nvar;
@@ -190,13 +185,13 @@ static __isl_give isl_pw_qpolynomial_fold *iterate(
 	nvar = isl_space_dim(dim, isl_dim_set);
 
 	if (type == isl_fold_min)
-		qp = isl_pw_qpolynomial_min(pwqp);
+		v = isl_pw_qpolynomial_min(pwqp);
 	else
-		qp = isl_pw_qpolynomial_max(pwqp);
+		v = isl_pw_qpolynomial_max(pwqp);
 
-	qp = isl_qpolynomial_drop_dims(qp, isl_dim_set, 0, nvar);
-	fold = isl_qpolynomial_fold_alloc(type, qp);
 	dim = isl_space_drop_dims(dim, isl_dim_set, 0, nvar);
+	qp = isl_qpolynomial_val_on_domain(isl_space_copy(dim), v);
+	fold = isl_qpolynomial_fold_alloc(type, qp);
 	set = isl_set_universe(dim);
 
 	return isl_pw_qpolynomial_fold_alloc(type, set, fold);
@@ -224,13 +219,10 @@ static int split_on_size(__isl_take isl_set *set,
 	assert(bounded >= 0);
 	if (bounded) {
 		isl_pw_qpolynomial *pwqp;
-		isl_qpolynomial *cst;
 		isl_val *m;
 
 		pwqp = isl_set_card(set_np);
-		cst = isl_pw_qpolynomial_max(pwqp);
-		m = isl_qpolynomial_get_constant_val(cst);
-		isl_qpolynomial_free(cst);
+		m = isl_pw_qpolynomial_max(pwqp);
 		bounded = isl_val_cmp_si(m, data->size) <= 0;
 		isl_val_free(m);
 	} else

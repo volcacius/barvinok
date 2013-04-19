@@ -22,16 +22,16 @@ struct verify_point_sum {
 	isl_pw_qpolynomial *sum;
 
 	isl_pw_qpolynomial *fixed;
-	isl_qpolynomial *manual;
+	isl_val *manual;
 };
 
 static int manual_sum(__isl_take isl_point *pnt, void *user)
 {
 	struct verify_point_sum *vps = (struct verify_point_sum *) user;
-	isl_qpolynomial *qp;
+	isl_val *v;
 
-	qp = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vps->fixed), pnt);
-	vps->manual = isl_qpolynomial_add(vps->manual, qp);
+	v = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vps->fixed), pnt);
+	vps->manual = isl_val_add(vps->manual, v);
 
 	return 0;
 }
@@ -46,7 +46,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	isl_val *v;
 	isl_space *space;
 	isl_set *dom;
-	isl_qpolynomial *eval;
+	isl_val *eval;
 	int r;
 	FILE *out = vps->vpd.options->print_all ? stdout : stderr;
 
@@ -63,8 +63,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	eval = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vps->sum),
 					isl_point_copy(pnt));
 
-	space = isl_pw_qpolynomial_get_domain_space(vps->pwqp);
-	vps->manual = isl_qpolynomial_zero_on_domain(space);
+	vps->manual = isl_val_zero(isl_point_get_ctx(pnt));
 	dom = isl_pw_qpolynomial_domain(isl_pw_qpolynomial_copy(vps->fixed));
 	r = isl_set_foreach_point(dom, &manual_sum, user);
 	isl_set_free(dom);
@@ -72,9 +71,8 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		goto error;
 
 	nvar = isl_set_dim(dom, isl_dim_set);
-	vps->manual = isl_qpolynomial_project_domain_on_params(vps->manual);
 
-	ok = isl_qpolynomial_plain_is_equal(eval, vps->manual);
+	ok = isl_val_eq(eval, vps->manual);
 
 	if (vps->vpd.options->print_all || !ok) {
 		isl_ctx *ctx = isl_pw_qpolynomial_get_ctx(vps->pwqp);
@@ -88,9 +86,9 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 			isl_val_free(v);
 		}
 		fprintf(out, ") = ");
-		p = isl_printer_print_qpolynomial(p, eval);
+		p = isl_printer_print_val(p, eval);
 		fprintf(out, ", sum(EP) = ");
-		p = isl_printer_print_qpolynomial(p, vps->manual);
+		p = isl_printer_print_val(p, vps->manual);
 		if (ok)
 			fprintf(out, ". OK\n");
 		else
@@ -105,9 +103,9 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 error:
 		ok = 0;
 	}
-	isl_qpolynomial_free(vps->manual);
+	isl_val_free(vps->manual);
 	isl_pw_qpolynomial_free(vps->fixed);
-	isl_qpolynomial_free(eval);
+	isl_val_free(eval);
 	isl_point_free(pnt);
 
 	if (!ok)

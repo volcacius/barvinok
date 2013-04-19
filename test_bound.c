@@ -114,7 +114,6 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	int i;
 	unsigned nparam;
 	isl_val *max, *min, *exact, *approx, *t;
-	isl_qpolynomial *opt;
 	isl_pw_qpolynomial *pwqp;
 	isl_printer *p;
 
@@ -128,14 +127,10 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 		pwqp = isl_pw_qpolynomial_fix_val(pwqp, isl_dim_param, i, t);
 	}
 
-	opt = isl_pw_qpolynomial_max(isl_pw_qpolynomial_copy(pwqp));
-	max = isl_qpolynomial_get_constant_val(opt);
-	isl_qpolynomial_free(opt);
+	max = isl_pw_qpolynomial_max(isl_pw_qpolynomial_copy(pwqp));
 	max = isl_val_floor(max);
 
-	opt = isl_pw_qpolynomial_min(pwqp);
-	min = isl_qpolynomial_get_constant_val(opt);
-	isl_qpolynomial_free(opt);
+	min = isl_pw_qpolynomial_min(pwqp);
 	min = isl_val_ceil(min);
 
 	exact = isl_val_sub(isl_val_copy(max), isl_val_copy(min));
@@ -156,18 +151,14 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	for (i = 0; i < nr_methods; ++i) {
 		double error;
 
-		opt = isl_pw_qpolynomial_fold_eval(
+		max = isl_pw_qpolynomial_fold_eval(
 				isl_pw_qpolynomial_fold_copy(vpb->pwf[2 * i]),
 				isl_point_copy(pnt));
-		max = isl_qpolynomial_get_constant_val(opt);
-		isl_qpolynomial_free(opt);
 		max = isl_val_floor(max);
 	
-		opt = isl_pw_qpolynomial_fold_eval(
+		min = isl_pw_qpolynomial_fold_eval(
 				isl_pw_qpolynomial_fold_copy(vpb->pwf[2 * i + 1]),
 				isl_point_copy(pnt));
-		min = isl_qpolynomial_get_constant_val(opt);
-		isl_qpolynomial_free(opt);
 		min = isl_val_ceil(min);
 
 		approx = isl_val_sub(max, min);

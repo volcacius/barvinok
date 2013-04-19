@@ -225,12 +225,14 @@ struct iscc_at {
 static int eval_at(__isl_take isl_point *pnt, void *user)
 {
 	struct iscc_at *at = (struct iscc_at *) user;
+	isl_val *v;
 	isl_qpolynomial *qp;
 	isl_set *set;
 
 	set = isl_set_from_point(isl_point_copy(pnt));
-	qp = isl_union_pw_qpolynomial_eval(
+	v = isl_union_pw_qpolynomial_eval(
 				isl_union_pw_qpolynomial_copy(at->upwqp), pnt);
+	qp = isl_qpolynomial_val_on_domain(isl_set_get_space(set), v);
 
 	at->res = isl_union_pw_qpolynomial_add(at->res,
 			isl_union_pw_qpolynomial_from_pw_qpolynomial(
@@ -264,12 +266,14 @@ struct iscc_fold_at {
 static int eval_fold_at(__isl_take isl_point *pnt, void *user)
 {
 	struct iscc_fold_at *at = (struct iscc_fold_at *) user;
+	isl_val *v;
 	isl_qpolynomial *qp;
 	isl_set *set;
 
 	set = isl_set_from_point(isl_point_copy(pnt));
-	qp = isl_union_pw_qpolynomial_fold_eval(
+	v = isl_union_pw_qpolynomial_fold_eval(
 			    isl_union_pw_qpolynomial_fold_copy(at->upwf), pnt);
+	qp = isl_qpolynomial_val_on_domain(isl_set_get_space(set), v);
 
 	at->res = isl_union_pw_qpolynomial_add(at->res,
 			isl_union_pw_qpolynomial_from_pw_qpolynomial(
