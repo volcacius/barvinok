@@ -141,177 +141,126 @@ void result_data_print(struct result_data *result, int n)
 }
 
 struct test_approx_data {
-    struct check_poly_data   cp;
-    evalue	    	    **EP;
+    struct verify_point_data vpd;
+    isl_pw_qpolynomial	    **pwqp;
     struct result_data	    *result;
 };
 
-static void eval(const evalue *EP, Value *z, int sign, Value *v)
+static __isl_give isl_val *eval(__isl_keep isl_pw_qpolynomial *pwqp,
+	__isl_keep isl_point *pnt, int sign)
 {
-    evalue *res;
+    isl_val *res;
 
-    res = evalue_eval(EP, z);
+    pwqp = isl_pw_qpolynomial_copy(pwqp);
+    res = isl_pw_qpolynomial_eval(pwqp, isl_point_copy(pnt));
     if (sign == BV_APPROX_SIGN_LOWER)
-	mpz_cdiv_q(*v, res->x.n, res->d);
+	res = isl_val_ceil(res);
     else if (sign == BV_APPROX_SIGN_UPPER)
-	mpz_fdiv_q(*v, res->x.n, res->d);
+	res = isl_val_floor(res);
     else if (sign == BV_APPROX_SIGN_APPROX)
-	mpz_tdiv_q(*v, res->x.n, res->d);
-    else {
-	assert(value_one_p(res->d));
-	value_assign(*v, res->x.n);
-    }
-    evalue_free(res);
+	res = isl_val_trunc(res);
+    else
+	assert(isl_val_is_int(res));
+
+    return res;
 }
 
-static int test_approx(const struct check_poly_data *data, int nparam, Value *z,
-		       const struct verify_options *options)
+static int test_approx(__isl_take isl_point *pnt, void *user)
 {
-    struct test_approx_data* ta_data = (struct test_approx_data*) data;
-    Value exact, approx;
+    struct test_approx_data *ta_data = (struct test_approx_data *) user;
+    isl_val *exact, *approx;
     int i;
 
-    value_init(exact);
-    value_init(approx);
+    ta_data->vpd.n--;
 
-    eval(ta_data->EP[0], z, BV_APPROX_SIGN_NONE, &exact);
-
-    /*
-    value_print(stderr, VALUE_FMT, exact);
-    */
+    exact = eval(ta_data->pwqp[0], pnt, BV_APPROX_SIGN_NONE);
 
     value_increment(ta_data->result->n, ta_data->result->n);
     for (i = 1; i < nr_methods; ++i) {
 	double error;
-	eval(ta_data->EP[i], z, methods[i].sign, &approx);
-	/*
-	fprintf(stderr, ", ");
-	value_print(stderr, VALUE_FMT, approx);
-	*/
+	approx = eval(ta_data->pwqp[i], pnt, methods[i].sign);
 	if (methods[i].sign == BV_APPROX_SIGN_LOWER)
-	    assert(value_le(approx, exact));
+	    assert(isl_val_le(approx, exact));
 	if (methods[i].sign == BV_APPROX_SIGN_UPPER)
-	    assert(value_ge(approx, exact));
-	value_subtract(approx, approx, exact);
-	if (value_zero_p(exact))
-	    error = abs(VALUE_TO_DOUBLE(approx));
+	    assert(isl_val_ge(approx, exact));
+	approx = isl_val_sub(approx, isl_val_copy(exact));
+	if (isl_val_is_zero(exact))
+	    error = abs(isl_val_get_d(approx));
 	else
-	    error = abs(VALUE_TO_DOUBLE(approx)) / VALUE_TO_DOUBLE(exact);
+	    error = abs(isl_val_get_d(approx)) / isl_val_get_d(exact);
+	isl_val_free(approx);
 	ta_data->result->RE_sum[i] += error;
     }
 
-    /*
-    fprintf(stderr, "\n");
-    */
+    if (!ta_data->vpd.options->print_all &&
+	(ta_data->vpd.n % ta_data->vpd.s) == 0) {
+	    printf("o");
+	    fflush(stdout);
+    }
 
-    value_clear(exact);
-    value_clear(approx);
-    return 1;
+    isl_val_free(exact);
+    isl_point_free(pnt);
+
+    return (ta_data->vpd.n >= 1) ? 0 : -1;
 }
 
-static void test(Polyhedron *P, Polyhedron *C, evalue **EP,
-		 struct result_data *result,
-		 struct verify_options *options)
+static int test(__isl_keep isl_set *context,
+	__isl_keep isl_pw_qpolynomial **pwqp, struct result_data *result,
+	struct verify_options *options)
 {
-    Polyhedron *CS;
-    Vector *p;
-    unsigned nparam = C->Dimension;
-    struct test_approx_data data;
+	struct test_approx_data data = { { options } };
+	int r;
 
-    CS = check_poly_context_scan(P, &C, C->Dimension, options);
+	r = verify_point_data_init(&data.vpd, context);
 
-    p = Vector_Alloc(P->Dimension+2);
-    value_set_si(p->p[P->Dimension+1], 1);
+	data.pwqp = pwqp;
+	data.result = result;
+	if (r == 0)
+		isl_set_foreach_point(context, &test_approx, &data);
+	if (data.vpd.error)
+		r = -1;
 
-    check_poly_init(C, options);
+	verify_point_data_fini(&data.vpd);
 
-    data.cp.z = p->p;
-    data.cp.check = test_approx;
-    data.EP = EP;
-    data.result = result;
-    check_poly(CS, &data.cp, nparam, 0, p->p+P->Dimension-nparam+1,
-	       options);
-    if (!options->print_all)
-	printf("\n");
-
-    Vector_Free(p);
-    if (CS) {
-	Domain_Free(CS);
-	Domain_Free(C);
-    }
+	return r;
 }
 
-void Matrix_File_Read_Input(FILE *in, Matrix *Mat)
-{
-  Value *p;
-  int i,j,n;
-  char *c, s[1024],str[1024];
-  
-  p = Mat->p_Init;
-  for (i=0;i<Mat->NbRows;i++) {
-    do {
-      c = fgets(s, 1024, in);
-      while(isspace(*c) && *c!='\n')
-	++c;
-    } while(c && (*c =='#' || *c== '\n'));
-    
-    if (!c) {
-      errormsg1( "Matrix_Read", "baddim", "not enough rows" );
-      break;
-    }
-    for (j=0;j<Mat->NbColumns;j++) {
-      if(!c || *c=='\n' || *c=='#') {
-	errormsg1("Matrix_Read", "baddim", "not enough columns");
-	break;
-      }
-      if (sscanf(c,"%s%n",str,&n) == 0) {
-	errormsg1( "Matrix_Read", "baddim", "not enough columns" );
-	break;
-      }
-      value_read(*(p++),str);
-      c += n;
-    }
-  }
-} /* Matrix_Read_Input */
-
-/* 
- * Read the contents of the matrix 'Mat' from standard input. 
- * A '#' in the first column is a comment line 
+/* Turn the set dimensions of "context" into parameters and return
+ * the corresponding parameter domain.
  */
-Matrix *Matrix_File_Read(FILE *in)
+static __isl_give isl_set *to_parameter_domain(__isl_take isl_set *context)
 {
-  Matrix *Mat;
-  unsigned NbRows, NbColumns;
-  char s[1024];
-  
-  fgets(s, 1024, in);
-  while ((*s=='#' || *s=='\n') ||
-	 (sscanf(s, "%d %d", &NbRows, &NbColumns)<2))
-    fgets(s, 1024, in);
-  Mat = Matrix_Alloc(NbRows,NbColumns);
-  if(!Mat) {
-    errormsg1("Matrix_Read", "outofmem", "out of memory space");
-    return(NULL);
-  }
-  Matrix_File_Read_Input(in, Mat);
-  return Mat;
-} /* Matrix_Read */
+	context = isl_set_move_dims(context, isl_dim_param, 0, isl_dim_set, 0,
+				       isl_set_dim(context, isl_dim_set));
+	return isl_set_params(context);
+}
 
-void handle(FILE *in, struct result_data *result, struct verify_options *options)
+static void handle(isl_ctx *ctx, FILE *in, struct result_data *result,
+	struct verify_options *options)
 {
     int i;
-    Polyhedron *A, *C;
-    Matrix *M;
-    const char **param_name;
-    evalue *EP[nr_methods];
+    int nparam;
+    isl_space *space;
+    isl_set *set;
+    isl_set *context;
+    isl_pw_qpolynomial *pwqp[nr_methods];
 
-    M = Matrix_File_Read(in);
-    A = Constraints2Polyhedron(M, options->barvinok->MaxRays);
-    Matrix_Free(M);
-    M = Matrix_File_Read(in);
-    C = Constraints2Polyhedron(M, options->barvinok->MaxRays);
-    Matrix_Free(M);
-    param_name = Read_ParamNames(in, C->Dimension);
+    set = isl_set_read_from_file(ctx, in);
+    context = isl_set_read_from_file(ctx, in);
+
+    context = to_parameter_domain(context);
+    nparam = isl_set_dim(context, isl_dim_param);
+    if (nparam != isl_set_dim(set, isl_dim_param)) {
+	    int dim = isl_set_dim(set, isl_dim_set);
+	    set = isl_set_move_dims(set, isl_dim_param, 0,
+					isl_dim_set, dim - nparam, nparam);
+    }
+
+    set = isl_set_intersect_params(set, context);
+    context = isl_set_params(isl_set_copy(set));
+    space = isl_set_get_space(context);
+
+    context = verify_context_set_bounds(context, options);
 
     for (i = 0; i < nr_methods; ++i) {
 	struct tms st_cpu;
@@ -324,32 +273,31 @@ void handle(FILE *in, struct result_data *result, struct verify_options *options
 	    options->barvinok->approx->volume_triangulate = methods[i].flags;
 
 	times(&st_cpu);
-	EP[i] = barvinok_enumerate_with_options(A, C, options->barvinok);
+	pwqp[i] = isl_set_card(isl_set_copy(set));
 	times(&en_cpu);
 	result->ticks[i] = time_diff(&en_cpu, &st_cpu);
-	/*
-	print_evalue(stdout, EP[i], param_name);
-	*/
     }
     for (i = 0; i < nr_methods; ++i)
-	result->size[i] = evalue_size(EP[i])/4;
-    test(A, C, EP, result, options);
+	result->size[i] = 0;
+    test(context, pwqp, result, options);
     for (i = 0; i < nr_methods; ++i)
-	evalue_free(EP[i]);
+	isl_pw_qpolynomial_free(pwqp[i]);
 
-    Free_ParamNames(param_name, C->Dimension);
-    Polyhedron_Free(A);
-    Polyhedron_Free(C);
+    isl_space_free(space);
+    isl_set_free(context);
+    isl_set_free(set);
 }
 
 int main(int argc, char **argv)
 {
+    isl_ctx *ctx;
     char path[PATH_MAX+1];
     struct result_data all_result;
     int n = 0;
     struct options *options = options_new_with_defaults();
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
+    ctx = isl_ctx_alloc_with_options(&options_args, options);
 
     if (options->verify->M == INT_MIN)
 	options->verify->M = 100;
@@ -369,7 +317,7 @@ int main(int argc, char **argv)
 	*strchr(path, '\n') = '\0';
 	in = fopen(path, "r");
 	assert(in);
-	handle(in, &result, options->verify);
+	handle(ctx, in, &result, options->verify);
 	fclose(in);
 
 	if (!options->quiet)
@@ -392,7 +340,7 @@ int main(int argc, char **argv)
 
     result_data_clear(&all_result);
 
-    options_free(options);
+    isl_ctx_free(ctx);
 
     return 0;
 }
