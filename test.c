@@ -7,7 +7,6 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/sample.h>
 #include "config.h"
-#include "evalue_read.h"
 #include "lattice_width.h"
 
 #ifdef HAVE_SYS_TIMES_H
