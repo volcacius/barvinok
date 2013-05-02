@@ -135,6 +135,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	isl_val *v;
 	unsigned nparam;
 	isl_pw_qpolynomial *pwqp;
+	isl_aff *aff;
 	struct isl_constraint *c;
 	struct isl_basic_set *bset;
 	struct isl_set *guard;
@@ -157,6 +158,7 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 	fract = &e->x.p->arr[0];
 
 	nparam = isl_set_dim(set, isl_dim_param);
+	assert(isl_set_dim(set, isl_dim_set) == 0);
 	vec = Vector_Alloc(2 + nparam + 1);
 	if (!vec)
 		goto error;
@@ -167,21 +169,19 @@ static __isl_give isl_pw_qpolynomial *relation2pwqp(__isl_take isl_set *set,
 				vec->p + 2, &vec->p[1], &vec->p[0]);
 
 	dim = isl_set_get_space(set);
-	dim = isl_space_add_dims(dim, isl_dim_set, 1);
 
 	bset = isl_basic_set_universe(isl_space_copy(dim));
-	c = isl_equality_alloc(isl_local_space_from_space(dim));
-	v = isl_val_int_from_gmp(ctx, vec->p[0]);
-	v = isl_val_neg(v);
-	c = isl_constraint_set_coefficient_val(c, isl_dim_set, 0, v);
+	aff = isl_aff_zero_on_domain(isl_local_space_from_space(dim));
 	v = isl_val_int_from_gmp(ctx, vec->p[1]);
-	c = isl_constraint_set_constant_val(c, v);
+	aff = isl_aff_set_constant_val(aff, v);
 	for (i = 0; i < nparam; ++i) {
 		v = isl_val_int_from_gmp(ctx, vec->p[2 + i]);
-		c = isl_constraint_set_coefficient_val(c, isl_dim_param, i, v);
+		aff = isl_aff_set_coefficient_val(aff, isl_dim_param, i, v);
 	}
+	v = isl_val_int_from_gmp(ctx, vec->p[0]);
+	aff = isl_aff_mod_val(aff, v);
+	c = isl_equality_from_aff(aff);
 	bset = isl_basic_set_add_constraint(bset, c);
-	bset = isl_basic_set_params(bset);
 	guard = isl_set_from_basic_set(bset);
 	Vector_Free(vec);
 
