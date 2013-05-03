@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <barvinok/isl.h>
 #include <barvinok/options.h>
 #include <barvinok/util.h>
 #include "verify.h"
@@ -484,7 +485,10 @@ int verify_point_data_init(struct verify_point_data *vpd,
 	isl_val *v;
 	int i;
 
-	v = isl_set_count_val(context);
+	context = isl_set_copy(context);
+	context = isl_set_move_dims(context, isl_dim_set, 0, isl_dim_param, 0,
+					isl_set_dim(context, isl_dim_param));
+	v = isl_pw_qpolynomial_max(isl_set_card(context));
 	vpd->n = isl_val_cmp_si(v, 200) < 0 ? isl_val_get_num_si(v) : 200;
 	isl_val_free(v);
 
