@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <barvinok/barvinok.h>
 #include "verify.h"
 #include "config.h"
@@ -235,10 +236,11 @@ static __isl_give isl_set *to_parameter_domain(__isl_take isl_set *context)
 	return isl_set_params(context);
 }
 
-static void handle(isl_ctx *ctx, FILE *in, struct result_data *result,
+static int handle(isl_ctx *ctx, FILE *in, struct result_data *result,
 	struct verify_options *options)
 {
     int i;
+    int r;
     int nparam;
     isl_space *space;
     isl_set *set;
@@ -279,13 +281,15 @@ static void handle(isl_ctx *ctx, FILE *in, struct result_data *result,
     }
     for (i = 0; i < nr_methods; ++i)
 	result->size[i] = 0;
-    test(context, pwqp, result, options);
+    r = test(context, pwqp, result, options);
     for (i = 0; i < nr_methods; ++i)
 	isl_pw_qpolynomial_free(pwqp[i]);
 
     isl_space_free(space);
     isl_set_free(context);
     isl_set_free(set);
+
+    return r;
 }
 
 int main(int argc, char **argv)
@@ -294,6 +298,7 @@ int main(int argc, char **argv)
     char path[PATH_MAX+1];
     struct result_data all_result;
     int n = 0;
+    int r = EXIT_SUCCESS;
     struct options *options = options_new_with_defaults();
 
     argc = options_parse(options, argc, argv, ISL_ARG_ALL);
@@ -317,7 +322,8 @@ int main(int argc, char **argv)
 	*strchr(path, '\n') = '\0';
 	in = fopen(path, "r");
 	assert(in);
-	handle(ctx, in, &result, options->verify);
+	if (handle(ctx, in, &result, options->verify) < 0)
+	    r = EXIT_FAILURE;
 	fclose(in);
 
 	if (!options->quiet)
@@ -342,5 +348,5 @@ int main(int argc, char **argv)
 
     isl_ctx_free(ctx);
 
-    return 0;
+    return r;
 }
