@@ -178,23 +178,6 @@ esac
 AM_CONDITIONAL(BUNDLED_PET, test $with_pet = bundled)
 AM_CONDITIONAL(BUILD_PET, test $with_pet = build)
 
-AX_SUBMODULE(isl-polylib,build|bundled|system,bundled)
-
-AC_SUBST(ISL_POLYLIB_CFLAGS)
-AC_SUBST(ISL_POLYLIB_LIBS)
-case "$with_isl_polylib" in
-bundled)
-	ISL_POLYLIB_CFLAGS="-I\$(top_srcdir)/isl-polylib/include -I\$(top_builddir)/isl-polylib/include"
-	;;
-build)
-	ISL_POLYLIB_CFLAGS="-I$isl_polylib_srcdir/include -I$with_isl_polylib_builddir/include"
-	ISL_POLYLIB_LIBS="$with_isl_polylib_builddir/libisl-polylib.la"
-	;;
-system)
-	PKG_CHECK_MODULES([ISL_POLYLIB], [isl-polylib])
-esac
-AM_CONDITIONAL(BUNDLED_ISL_POLYLIB, test $with_isl_polylib = bundled)
-
 AC_MSG_CHECKING(if the fractional representation should be used)
 AC_ARG_ENABLE(fractional, [AS_HELP_STRING([--disable-fractional],
 					  [Don't use fractional representation])],
@@ -511,7 +494,7 @@ AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
 
 PACKAGE_CFLAGS="$PACKAGE_CFLAGS_ISL"
-PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lisl-polylib -lpolylibgmp -lisl"
+PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lpolylibgmp -lisl"
 AX_CREATE_PKGCONFIG_INFO
 
 AC_CONFIG_HEADERS(config.h)
@@ -525,9 +508,6 @@ if test $with_isl = bundled; then
 fi
 if test $with_pet = bundled; then
 	AC_CONFIG_SUBDIRS(pet)
-fi
-if test $with_isl_polylib = bundled; then
-	AC_CONFIG_SUBDIRS(isl-polylib)
 fi
 AC_CONFIG_COMMANDS_POST([
 	dnl pass on arguments to subdir configures, but don't

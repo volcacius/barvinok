@@ -4,9 +4,6 @@
 [submodule "isl"]
 	path = isl
 	url = git://repo.or.cz/isl.git
-[submodule "isl-polylib"]
-	path = isl-polylib
-	url = git://repo.or.cz/isl-polylib.git
 [submodule "pet"]
 	path = pet
 	url = git://repo.or.cz/pet.git
