@@ -7,25 +7,35 @@
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  */
 
+#include <isl/val_gmp.h>
 #include <isl/set.h>
 #include <isl/map.h>
 #include <isl/constraint.h>
 #include "isl_set_polylib.h"
 #include "isl_map_polylib.h"
 
-static void copy_constraint_from(__isl_keep isl_constraint *dst, Value *src)
+static __isl_give isl_constraint *copy_constraint_from(
+	__isl_take isl_constraint *dst, Value *src)
 {
 	int i, j, k;
+	isl_ctx *ctx = isl_constraint_get_ctx(dst);
+	isl_val *v;
 	enum isl_dim_type types[] = { isl_dim_in, isl_dim_out, isl_dim_param };
 
 	k = 1;
 	for (i = 0; i < 3; ++i) {
 		int n = isl_constraint_dim(dst, types[i]);
-		for (j = 0; j < n; ++j, ++k)
-			isl_constraint_set_coefficient(dst, types[i], j, src[k]);
+		for (j = 0; j < n; ++j, ++k) {
+			v = isl_val_int_from_gmp(ctx, src[k]);
+			dst = isl_constraint_set_coefficient_val(dst, types[i],
+								j, v);
+		}
 	}
 
-	isl_constraint_set_constant(dst, src[k]);
+	v = isl_val_int_from_gmp(ctx, src[k]);
+	dst = isl_constraint_set_constant_val(dst, v);
+
+	return dst;
 }
 
 static __isl_give isl_basic_map *add_equality(__isl_take isl_basic_map *bmap,
@@ -35,7 +45,7 @@ static __isl_give isl_basic_map *add_equality(__isl_take isl_basic_map *bmap,
 
 	c = isl_equality_alloc(isl_basic_map_get_local_space(bmap));
 
-	copy_constraint_from(c, constraint);
+	c = copy_constraint_from(c, constraint);
 
 	bmap = isl_basic_map_add_constraint(bmap, c);
 
@@ -186,6 +196,7 @@ static int copy_constraint_to(__isl_take isl_constraint *c, void *user)
 	enum isl_dim_type types[] = { isl_dim_in, isl_dim_out,
 					isl_dim_div, isl_dim_param };
 	struct isl_poly_copy *data = (struct isl_poly_copy *)user;
+	isl_val *v;
 
 	if (isl_constraint_is_equality(c))
 		value_set_si(data->M->p[data->n][0], 0);
@@ -194,11 +205,15 @@ static int copy_constraint_to(__isl_take isl_constraint *c, void *user)
 	k = 1;
 	for (i = 0; i < 4; ++i) {
 		int n = isl_constraint_dim(c, types[i]);
-		for (j = 0; j < n; ++j, ++k)
-			isl_constraint_get_coefficient(c, types[i], j,
-						&data->M->p[data->n][k]);
+		for (j = 0; j < n; ++j, ++k) {
+			v = isl_constraint_get_coefficient_val(c, types[i], j);
+			isl_val_get_num_gmp(v, data->M->p[data->n][k]);
+			isl_val_free(v);
+		}
 	}
-	isl_constraint_get_constant(c, &data->M->p[data->n][k]);
+	v = isl_constraint_get_constant_val(c);
+	isl_val_get_num_gmp(v, data->M->p[data->n][k]);
+	isl_val_free(v);
 	isl_constraint_free(c);
 	data->n++;
 	return 0;
