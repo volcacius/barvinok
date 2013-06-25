@@ -47,7 +47,7 @@ AC_ARG_WITH(default-prefix,
 if test "${with_default_prefix+set}" = set; then
 	if test "${with_libgmp+set}" != set -a \
 	   -f "$with_default_prefix/include/gmp.h"; then
-		with_libgmp=$with_default_prefix
+		with_gmp_prefix=$with_default_prefix
 	fi
 	if test "${with_ntl+set}" != set -a \
 	   -f "$with_default_prefix/include/NTL/ZZ.h"; then
@@ -67,37 +67,23 @@ if test "${with_default_prefix+set}" = set; then
 	fi
 fi
 
-dnl Check for GMP library
-AC_MSG_CHECKING(whether to use GMP)
-AC_ARG_WITH(libgmp, 
-        [  --with-libgmp           DIR Location of the GMP Distribution], 
-	gmp_package=$withval, gmp_package=yes)
-if test "x$gmp_package" = "xno"; then
-	AC_MSG_RESULT(no)
-	AC_MSG_ERROR(Need gmp)
+AX_SUBMODULE(gmp,system,system)
+
+if test "x$with_gmp_prefix" != "x"; then
+	bv_configure_args="$bv_configure_args --with-libgmp=$with_gmp_prefix"
+	CPPFLAGS="-I$with_gmp_prefix/include $CPPFLAGS"
+	LDFLAGS="-L$with_gmp_prefix/lib $LDFLAGS"
 else
-	AC_MSG_RESULT(yes)
-	if test "x$gmp_package" = "xyes"; then
-		bv_configure_args="$bv_configure_args --with-libgmp --with-gmp"
-	else
-	    bv_configure_args="$bv_configure_args --with-libgmp=$gmp_package"
-	    bv_configure_args="$bv_configure_args --with-gmp-prefix=$gmp_package"
-	    GMP_DIR=$gmp_package
-	    if test ! -d "$GMP_DIR"; then
-	    	AC_ERROR(Directory given for GMP Distribution is not a directory)
-	    fi
-	    CPPFLAGS="-I$GMP_DIR/include $CPPFLAGS"
-	    LDFLAGS="-L$GMP_DIR/lib $LDFLAGS"
-	fi
-	poly_cv_gmpfatal="no"
-	AC_CHECK_HEADER(gmp.h,
-		[AC_CHECK_LIB(gmp,main,
-		    [],
-		    [poly_cv_gmpfatal="yes"])],
-		[poly_cv_gmpfatal="yes"])
-	if test "$poly_cv_gmpfatal" = "yes"; then
-		AC_MSG_ERROR([GMP not found])
-	fi
+	bv_configure_args="$bv_configure_args --with-libgmp --with-gmp"
+fi
+poly_cv_gmpfatal="no"
+AC_CHECK_HEADER(gmp.h,
+	[AC_CHECK_LIB(gmp,main,
+	    [],
+	    [poly_cv_gmpfatal="yes"])],
+	[poly_cv_gmpfatal="yes"])
+if test "$poly_cv_gmpfatal" = "yes"; then
+	AC_MSG_ERROR([GMP not found])
 fi
 AC_CHECK_DECL(mpz_divisible_p,[],[AC_LIBOBJ(mpz_divisible_p)],[#include <gmp.h>])
 
