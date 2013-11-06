@@ -81,6 +81,7 @@ struct gen_fun {
 	clear_terms();
     }
 private:
+    void extend_context(const gen_fun *gf, barvinok_options *options);
     void add(const QQ& c, const gen_fun *gf);
 };
 

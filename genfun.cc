@@ -250,14 +250,22 @@ void gen_fun::add(short_rat *r)
     term.insert(r);
 }
 
-void gen_fun::add(const QQ& c, const gen_fun *gf, barvinok_options *options)
+/* Extend the context of "this" to include the one of "gf".
+ */
+void gen_fun::extend_context(const gen_fun *gf, barvinok_options *options)
 {
     Polyhedron *U = DomainUnion(context, gf->context, options->MaxRays);
     Polyhedron *C = DomainConvex(U, options->MaxRays);
     Domain_Free(U);
     Domain_Free(context);
     context = C;
+}
 
+/* Add the generating "gf" to "this" on the union of their domains.
+ */
+void gen_fun::add(const QQ& c, const gen_fun *gf, barvinok_options *options)
+{
+    extend_context(gf, options);
     add(c, gf);
 }
 
@@ -675,11 +683,19 @@ gen_fun *gen_fun::Hadamard_product(const gen_fun *gf, barvinok_options *options)
     return sum;
 }
 
+/* Assuming "this" and "gf" are generating functions for sets,
+ * replace "this" by the generating function for the union of these sets.
+ *
+ * In particular, compute
+ *
+ *	this + gf - gen_fun(intersection of sets)
+ */
 void gen_fun::add_union(gen_fun *gf, barvinok_options *options)
 {
     QQ one(1, 1), mone(-1, 1);
 
     gen_fun *hp = Hadamard_product(gf, options);
+    extend_context(gf, options);
     add(one, gf);
     add(mone, hp);
     delete hp;
