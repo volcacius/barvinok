@@ -666,7 +666,7 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 	isl_ctx *ctx;
 	struct isl_list *list;
 	struct pet_scop *scop;
-	isl_union_map *sched, *reads, *writes;
+	isl_union_map *sched, *may_reads, *must_writes, *may_writes;
 	isl_union_set *domain;
 	struct iscc_options *options;
 
@@ -681,28 +681,31 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 			"parse_file operation not allowed", return NULL);
 	}
 
-	list = isl_list_alloc(ctx, 4);
+	list = isl_list_alloc(ctx, 5);
 	if (!list)
 		goto error;
 
 	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL);
 	domain = pet_scop_collect_domains(scop);
 	sched = pet_scop_collect_schedule(scop);
-	reads = pet_scop_collect_reads(scop);
-	writes = pet_scop_collect_writes(scop);
+	may_reads = pet_scop_collect_may_reads(scop);
+	may_writes = pet_scop_collect_may_writes(scop);
+	must_writes = pet_scop_collect_must_writes(scop);
 	pet_scop_free(scop);
 
 	list->obj[0].type = isl_obj_union_set;
 	list->obj[0].v = domain;
 	list->obj[1].type = isl_obj_union_map;
-	list->obj[1].v = writes;
+	list->obj[1].v = must_writes;
 	list->obj[2].type = isl_obj_union_map;
-	list->obj[2].v = reads;
+	list->obj[2].v = may_writes;
 	list->obj[3].type = isl_obj_union_map;
-	list->obj[3].v = sched;
+	list->obj[3].v = may_reads;
+	list->obj[4].type = isl_obj_union_map;
+	list->obj[4].v = sched;
 
 	if (!list->obj[0].v || !list->obj[1].v ||
-	    !list->obj[2].v || !list->obj[3].v)
+	    !list->obj[2].v || !list->obj[3].v || !list->obj[4].v)
 		goto error;
 
 	isl_str_free(str);

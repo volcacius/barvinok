@@ -758,8 +758,9 @@ parameter domain of map $m$
 \\
 $l$ := \ai[\tt]{parse\_file} $S$ &
 parse the file names $S$ and return a list consisting of
-the iteration domains, the write access relations,
-the read access relations and the original schedule.
+the iteration domain, the must write access relation,
+the may write access relation, the read access relation and
+the original schedule.
 This operation is only available if \ai[\tt]{pet}
 support was compiled in.
 \\
