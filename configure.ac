@@ -427,34 +427,7 @@ if test "$topcom_package" != no; then
 fi
 AM_CONDITIONAL(HAVE_TOPCOM, test x$have_topcom = xtrue)
 
-AC_SUBST(GIT_HEAD_ID)
-AC_SUBST(GIT_HEAD)
-AC_SUBST(GIT_HEAD_VERSION)
-if test -f $srcdir/.git/HEAD; then
-    GIT_HEAD="$srcdir/.git/index"
-    GIT_REPO="$srcdir/.git"
-    GIT_HEAD_ID=`GIT_DIR=$GIT_REPO git describe`
-elif test -f $srcdir/GIT_HEAD_ID; then
-    GIT_HEAD_ID=`cat $srcdir/GIT_HEAD_ID`
-else
-    mysrcdir=`(cd $srcdir; pwd)`
-    head=`basename $mysrcdir | sed -e 's/.*-//'`
-    head2=`echo $head | sed -e 's/[^0-9a-f]//'`
-    head3=`echo $head2 | sed -e 's/........................................//'`
-    base=`basename $mysrcdir | sed -e 's/-.*//'`
-    if test "x$head3" = "x" -a "x$head" = "x$head2"; then
-	GIT_HEAD_ID="barvinok-$VERSION-$head
-    elif test "x$base" = "xbarvinok-$VERSION" -a "x$head" != "x"; then
-	GIT_HEAD_ID="barvinok-$VERSION-$head
-    else
-	GIT_HEAD_ID="UNKNOWN"
-    fi
-fi
-if test -z "$GIT_REPO" ; then
-    GIT_HEAD_VERSION="$GIT_HEAD_ID"
-else
-    GIT_HEAD_VERSION="\`GIT_DIR=$GIT_REPO git describe\`"
-fi
+AX_DETECT_GIT_HEAD
 echo '#define GIT_HEAD_ID "'$GIT_HEAD_ID'"' > version.h
 
 AC_LANG_PUSH(C++)
