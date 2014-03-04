@@ -504,6 +504,52 @@ static void evalue_reduce_size(evalue *e)
     }
 }
 
+#define value_two_p(val)	(mpz_cmp_si(val,2) == 0)
+
+/* This function is called after the argument of the fractional part
+ * in a polynomial expression in this fractional part has been reduced.
+ * If the polynomial expression is of degree at least two, then
+ * check if the argument happens to have been reduced to an affine
+ * expression with denominator two.  If so, then emul_fractionals
+ * assumes that the polynomial expression in this fractional part
+ * is affine so we reduce the higher degree polynomial to an affine
+ * expression here.
+ *
+ * In particular, since the denominator of the fractional part is two,
+ * then the fractional part can only take on two values, 0 and 1/2.
+ * This means that { f(x)/2 }^2 = 1/2 { f(x)/2 } so that we can repeatedly
+ * replace
+ *
+ *	a_n { f(x)/2 }^n	with n >= 2
+ *
+ * by
+ *
+ *	a_n/2 { f(x)/2 }^{n-1}
+ */
+static void reduce_fractional(evalue *e)
+{
+    int i;
+    evalue d;
+
+    if (e->x.p->size <= 3)
+	return;
+
+    value_init(d.d);
+    poly_denom(&e->x.p->arr[0], &d.d);
+    if (value_two_p(d.d)) {
+	value_init(d.x.n);
+	value_set_si(d.x.n, 1);
+	for (i = e->x.p->size - 1; i >= 3; --i) {
+	    emul(&d, &e->x.p->arr[i]);
+	    eadd(&e->x.p->arr[i], &e->x.p->arr[i - 1]);
+	    free_evalue_refs(&e->x.p->arr[i]);
+	}
+	e->x.p->size = 3;
+	value_clear(d.x.n);
+    }
+    value_clear(d.d);
+}
+
 void _reduce_evalue (evalue *e, struct subst *s, int fract) {
   
     enode *p;
@@ -525,9 +571,10 @@ void _reduce_evalue (evalue *e, struct subst *s, int fract) {
 	if (add && i == 1)
 	    add = add_modulo_substitution(s, e);
 
-        if (i == 0 && p->type==fractional)
+        if (i == 0 && p->type==fractional) {
 	    _reduce_evalue(&p->arr[i], s, 1);
-	else
+	    reduce_fractional(e);
+	} else
 	    _reduce_evalue(&p->arr[i], s, fract);
 
 	if (add && i == p->size-1) {
@@ -1673,8 +1720,22 @@ static void emul_periodics(const evalue *e1, evalue *res)
     combine_periodics(e1, res, emul);
 }
 
-#define value_two_p(val)	(mpz_cmp_si(val,2) == 0)
-
+/* Multiply two polynomial expressions in the same fractional part.
+ *
+ * If the denominator of the fractional part is two, then the fractional
+ * part can only take on two values, 0 and 1/2.
+ * This means that { f(x)/2 }^2 = 1/2 { f(x)/2 } so that
+ *
+ *	(a0 + a1 { f(x)/2 }) * (b0 + b1 { f(x)/2 })
+ *	= a0 b0 + (a0 b1 + a1 b0 + a1 b1/2) { f(x)/2 }
+ *
+ * Since we can always reduce higher degree polynomials this way
+ * we assume that the inputs are degree-1 polynomials.
+ * Note in particular that we always start out with degree-1 polynomials
+ * and that if we obtain an argument with a denominator of two
+ * as a result of a substitution, then the polynomial expression
+ * is reduced in reduce_fractional.
+ */
 static void emul_fractionals(const evalue *e1, evalue *res)
 {
     evalue d;
