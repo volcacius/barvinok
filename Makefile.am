@@ -130,6 +130,8 @@ libbarvinok_la_SOURCES = \
     ilp.c \
     ilp.h \
     isl_polylib.h \
+    isl_aff_polylib.c \
+    isl_aff_polylib.h \
     isl_map_polylib.c \
     isl_map_polylib.h \
     isl_set_polylib.h \
