@@ -1403,12 +1403,14 @@ struct add_vertex_data {
 static int add_vertex(__isl_take isl_vertex *vertex, void *user)
 {
 	struct add_vertex_data *data = (struct add_vertex_data *)user;
-	isl_basic_set *expr;
+	isl_multi_aff *ma;
+	isl_set *dom;
 
-	expr = isl_vertex_get_expr(vertex);
+	ma = isl_vertex_get_expr(vertex);
+	dom = isl_set_from_basic_set(isl_vertex_get_domain(vertex));
 
-	data->list->obj[data->i].type = isl_obj_set;
-	data->list->obj[data->i].v = isl_set_from_basic_set(expr);
+	data->list->obj[data->i].type = isl_obj_pw_multi_aff;
+	data->list->obj[data->i].v = isl_pw_multi_aff_alloc(dom, ma);
 	data->i++;
 
 	isl_vertex_free(vertex);

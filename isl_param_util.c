@@ -1,3 +1,4 @@
+#include <isl_aff_polylib.h>
 #include <isl_set_polylib.h>
 #include <isl/vertices.h>
 #include "isl_param_util.h"
@@ -28,11 +29,10 @@ static int add_vertex(__isl_take isl_vertex *vertex, void *user)
 {
 	Param_Vertices ***next_V = (Param_Vertices ***) user;
 	Param_Vertices *V;
-	Polyhedron *D, *E;
+	Polyhedron *D;
 	isl_basic_set *dom;
-	isl_basic_set *expr;
+	isl_multi_aff *expr;
 	isl_ctx *ctx;
-	unsigned nvar;
 
 	ctx = isl_vertex_get_ctx(vertex);
 
@@ -41,18 +41,15 @@ static int add_vertex(__isl_take isl_vertex *vertex, void *user)
 	isl_basic_set_free(dom);
 
 	expr = isl_vertex_get_expr(vertex);
-	nvar = isl_basic_set_dim(expr, isl_dim_set);
-	E = isl_basic_set_to_polylib(expr);
-	isl_basic_set_free(expr);
 
 	V = isl_alloc_type(ctx, Param_Vertices);
-	V->Vertex = expr2vertex(E, nvar);
+	V->Vertex = isl_multi_aff_to_polylib(expr);
 	V->Domain = Polyhedron2Constraints(D);
 	V->Facets = NULL;
 	V->next = NULL;
 
 	Polyhedron_Free(D);
-	Polyhedron_Free(E);
+	isl_multi_aff_free(expr);
 
 	**next_V = V;
 	*next_V = &V->next;
