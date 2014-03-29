@@ -3,26 +3,6 @@
 #include <isl/vertices.h>
 #include "isl_param_util.h"
 
-static Matrix *expr2vertex(Polyhedron *E, unsigned nvar)
-{
-	int i;
-	Matrix *M;
-	unsigned nparam = E->Dimension - nvar;
-	Value mone;
-
-	value_init(mone);
-	value_set_si(mone, -1);
-	M = Matrix_Alloc(nvar, nparam + 1 + 1);
-	for (i = 0; i < nvar; ++i) {
-		Vector_Scale(E->Constraint[i] + 1 + nvar, M->p[i],
-				mone, nparam + 1);
-		value_assign(M->p[i][nparam + 1], E->Constraint[i][1 + i]);
-	}
-	value_clear(mone);
-
-	return M;
-}
-
 #define INT_BITS (sizeof(unsigned) * 8)
 
 static int add_vertex(__isl_take isl_vertex *vertex, void *user)
