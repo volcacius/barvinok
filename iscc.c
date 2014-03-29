@@ -387,6 +387,9 @@ struct isc_bin_op bin_ops[] = {
 		(isc_bin_op_fn) &isl_val_sub },
 	{ '*',	isl_obj_val,	isl_obj_val, isl_obj_val,
 		(isc_bin_op_fn) &isl_val_mul },
+	{ '+',	isl_obj_pw_multi_aff,	isl_obj_pw_multi_aff,
+		isl_obj_pw_multi_aff,
+		(isc_bin_op_fn) &isl_pw_multi_aff_add },
 	{ '+',	isl_obj_union_set,	isl_obj_union_set,
 		isl_obj_union_set,
 		(isc_bin_op_fn) &isl_union_set_union },
@@ -967,6 +970,12 @@ static int is_subtype(struct isl_obj obj, isl_obj_type super)
 		return 1;
 	if (obj.type == isl_obj_set && super == isl_obj_union_set)
 		return 1;
+	if (obj.type == isl_obj_pw_multi_aff && super == isl_obj_union_set) {
+		isl_space *space = isl_pw_multi_aff_get_space(obj.v);
+		int is_set = isl_space_is_set(space);
+		isl_space_free(space);
+		return is_set;
+	}
 	if (obj.type == isl_obj_pw_qpolynomial &&
 	    super == isl_obj_union_pw_qpolynomial)
 		return 1;
@@ -1002,6 +1011,12 @@ static struct isl_obj convert(isl_ctx *ctx, struct isl_obj obj,
 {
 	if (obj.type == type)
 		return obj;
+	if (obj.type == isl_obj_pw_multi_aff && type == isl_obj_union_set) {
+		isl_set *set = isl_set_from_pw_multi_aff(obj.v);
+		obj.type = isl_obj_union_set;
+		obj.v = isl_union_set_from_set(set);
+		return obj;
+	}
 	if (obj.type == isl_obj_map && type == isl_obj_union_map) {
 		obj.type = isl_obj_union_map;
 		obj.v = isl_union_map_from_map(obj.v);
@@ -1491,6 +1506,8 @@ static struct isl_obj type_of(struct isl_stream *s,
 	if (obj.type == isl_obj_set ||
 	    obj.type == isl_obj_union_set)
 		type = "set";
+	if (obj.type == isl_obj_pw_multi_aff)
+		type = "piecewise multi-quasiaffine expression";
 	if (obj.type == isl_obj_pw_qpolynomial ||
 	    obj.type == isl_obj_union_pw_qpolynomial)
 		type = "piecewise quasipolynomial";
