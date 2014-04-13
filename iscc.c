@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <isl/aff.h>
 #include <isl/obj.h>
 #include <isl/stream.h>
 #include <isl/set.h>
