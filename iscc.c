@@ -2528,6 +2528,7 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 {
 	struct isl_token *tok;
 	struct isl_stream *s_file;
+	struct iscc_options *options;
 	char *name;
 	FILE *file;
 
@@ -2536,6 +2537,15 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 		isl_stream_error(s, tok, "expecting filename");
 		isl_token_free(tok);
 		return p;
+	}
+
+	isl_stream_eat(s, ';');
+
+	options = isl_ctx_peek_iscc_options(s->ctx);
+	if (!options || !options->io) {
+		isl_token_free(tok);
+		isl_die(s->ctx, isl_error_invalid,
+			"source operation not allowed", return p);
 	}
 
 	name = isl_token_get_str(s->ctx, tok);
@@ -2557,8 +2567,6 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 
 	isl_stream_free(s_file);
 	fclose(file);
-
-	isl_stream_eat(s, ';');
 
 	return p;
 }
