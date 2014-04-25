@@ -403,7 +403,7 @@ if test "$glpk_package" != "no"; then
     fi
     AC_CHECK_HEADERS([glpk.h],[
 	have_glpk=true
-	AC_CHECK_LIB(glpk, main,[],[have_glpk=false])
+	AC_CHECK_LIB(glpk, [glp_simplex],[],[have_glpk=false])
     ])
 fi
 AM_CONDITIONAL(HAVE_GLPK, test x$have_glpk = xtrue)
