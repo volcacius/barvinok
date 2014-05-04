@@ -33,12 +33,10 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 	isl_basic_set *bset;
 	isl_mat *basis;
 	Matrix *M;
-	int isl_gbr_only_first;
 
-	ctx = isl_ctx_alloc_with_options(&barvinok_options_args, options);
+	ctx = isl_ctx_alloc();
 	assert(ctx);
 
-	isl_gbr_only_first = isl_options_get_gbr_only_first(ctx);
 	isl_options_set_gbr_only_first(ctx, options->gbr_only_first);
 
 	dim = isl_space_set_alloc(ctx, 0, nvar);
@@ -59,8 +57,6 @@ Matrix *isl_Polyhedron_Reduced_Basis(Polyhedron *P,
 	isl_mat_free(basis);
 
 	isl_ctx_free(ctx);
-
-	isl_options_set_gbr_only_first(ctx, isl_gbr_only_first);
 
 	return M;
 }

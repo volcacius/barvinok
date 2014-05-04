@@ -3,6 +3,7 @@
 #include <barvinok/barvinok.h>
 #include <barvinok/set.h>
 #include <barvinok/options.h>
+#include <barvinok/basis_reduction.h>
 #include <barvinok/evalue.h>
 #include <barvinok/util.h>
 #include "conversion.h"
@@ -750,6 +751,35 @@ static int test_laurent(struct barvinok_options *options)
     return 0;
 }
 
+/* Check that Polyhedron_Reduced_Basis produces a result
+ * of the expected dimensions (without crashing).
+ */
+static int test_basis_reduction(struct barvinok_options *options)
+{
+    Matrix *M;
+    Polyhedron *P;
+
+    M = matrix_read_from_str(
+	"4 4\n"
+	"1    1    0    0 \n"
+	"1    0    1    0 \n"
+	"1   -1    0    1 \n"
+	"1    0   -1    1 \n");
+    P = Constraints2Polyhedron(M, options->MaxRays);
+    Matrix_Free(M);
+
+    M = Polyhedron_Reduced_Basis(P, options);
+
+    assert(M);
+    assert(M->NbRows == 2);
+    assert(M->NbColumns == 2);
+
+    Polyhedron_Free(P);
+    Matrix_Free(M);
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     struct barvinok_options *options = barvinok_options_new_with_defaults();
@@ -770,5 +800,6 @@ int main(int argc, char **argv)
     test_ilp(options);
     test_hull(options);
     test_laurent(options);
+    test_basis_reduction(options);
     barvinok_options_free(options);
 }
