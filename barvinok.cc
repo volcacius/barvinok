@@ -1311,7 +1311,7 @@ out:
 	goto constant;
 
     if (P->Dimension == nparam) {
-	CEq = P;
+	CEq = DomainIntersection(P, C, options->MaxRays);
 	P = Universe_Polyhedron(0);
 	goto constant;
     }
