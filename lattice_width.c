@@ -496,7 +496,7 @@ __isl_give isl_pw_qpolynomial *isl_set_lattice_width(__isl_take isl_set *set)
 	if (!set)
 		return NULL;
 
-	if (isl_set_fast_is_empty(set)) {
+	if (isl_set_plain_is_empty(set)) {
 		isl_space *dim;
 		dim = isl_set_get_space(set);
 		dim = isl_space_domain(isl_space_from_range(dim));
