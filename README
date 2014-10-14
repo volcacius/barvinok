@@ -84,4 +84,5 @@ be faster than the depth-first version, especially on polytopes
 of moderate dimension with a lot of "structure", but can require
 more memory.
 
-Sven Verdoolaege <skimo@kotnet.org>
+For bug reports, feature requests and questions,
+contact http://groups.google.com/group/isl-development
