@@ -977,7 +977,8 @@ static int join_compatible(__isl_keep isl_space *space1,
 	m = isl_space_match(space1, isl_dim_param, space2, isl_dim_param);
 	if (m < 0 || !m)
 		return m;
-	return isl_space_tuple_match(space1, isl_dim_out, space2, isl_dim_in);
+	return isl_space_tuple_is_equal(space1, isl_dim_out,
+					space2, isl_dim_in);
 }
 
 /* Compute the intersection of the range of the map and the domain
