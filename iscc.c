@@ -1210,6 +1210,7 @@ static struct isl_obj read_expr(struct isl_stream *s,
 static struct isl_obj read_un_op_expr(struct isl_stream *s,
 	struct isl_hash_table *table, struct isc_un_op *op)
 {
+	isl_ctx *ctx;
 	struct isl_obj obj = { isl_obj_none, NULL };
 
 	obj = read_obj(s, table);
@@ -1218,12 +1219,13 @@ static struct isl_obj read_un_op_expr(struct isl_stream *s,
 
 	op = find_matching_un_op(op, obj);
 
+	ctx = isl_stream_get_ctx(s);
 	if (!op)
-		isl_die(s->ctx, isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"no such unary operator defined on given operand",
 			goto error);
 
-	obj = convert(s->ctx, obj, op->arg);
+	obj = convert(ctx, obj, op->arg);
 	obj.v = op->fn(obj.v);
 	obj.type = op->res;
 
@@ -1268,6 +1270,7 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_list *list = obj.v;
 	struct isl_token *tok;
+	isl_ctx *ctx;
 	isl_val *v;
 	int i;
 
@@ -1278,11 +1281,12 @@ static struct isl_obj obj_at_index(struct isl_stream *s, struct isl_obj obj)
 			isl_stream_push_token(s, tok);
 		goto error;
 	}
-	v = isl_token_get_val(s->ctx, tok);
+	ctx = isl_stream_get_ctx(s);
+	v = isl_token_get_val(ctx, tok);
 	i = isl_val_get_num_si(v);
 	isl_val_free(v);
 	isl_token_free(tok);
-	isl_assert(s->ctx, i < list->n, goto error);
+	isl_assert(ctx, i < list->n, goto error);
 	if (isl_stream_eat(s, ']'))
 		goto error;
 
@@ -1297,10 +1301,12 @@ error:
 static struct isl_obj apply(struct isl_stream *s, __isl_take isl_union_map *umap,
 	struct isl_hash_table *table)
 {
+	isl_ctx *ctx;
 	struct isl_obj obj;
 
 	obj = read_expr(s, table);
-	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_set) ||
+	ctx = isl_stream_get_ctx(s);
+	isl_assert(ctx, is_subtype(obj, isl_obj_union_set) ||
 			   is_subtype(obj, isl_obj_union_map), goto error);
 
 	if (obj.type == isl_obj_list) {
@@ -1309,9 +1315,9 @@ static struct isl_obj apply(struct isl_stream *s, __isl_take isl_union_map *umap
 			obj = obj_at(obj, 0);
 	}
 	if (obj.type == isl_obj_set)
-		obj = convert(s->ctx, obj, isl_obj_union_set);
+		obj = convert(ctx, obj, isl_obj_union_set);
 	else if (obj.type == isl_obj_map)
-		obj = convert(s->ctx, obj, isl_obj_union_map);
+		obj = convert(ctx, obj, isl_obj_union_map);
 	if (obj.type == isl_obj_union_set) {
 		obj.v = isl_union_set_apply(obj.v, umap);
 	} else
@@ -1360,11 +1366,13 @@ static struct isl_obj apply_fun(struct isl_stream *s,
 	struct isl_obj obj, struct isl_hash_table *table)
 {
 	struct isl_obj arg;
+	isl_ctx *ctx;
 
 	arg = read_expr(s, table);
+	ctx = isl_stream_get_ctx(s);
 	if (!is_subtype(arg, isl_obj_union_map) &&
 	    !is_subtype(arg, isl_obj_union_set))
-		isl_die(s->ctx, isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"expecting set of map argument", goto error);
 
 	if (arg.type == isl_obj_list) {
@@ -1373,9 +1381,9 @@ static struct isl_obj apply_fun(struct isl_stream *s,
 			arg = obj_at(arg, 0);
 	}
 	if (arg.type == isl_obj_set)
-		arg = convert(s->ctx, arg, isl_obj_union_set);
+		arg = convert(ctx, arg, isl_obj_union_set);
 	else if (arg.type == isl_obj_map)
-		arg = convert(s->ctx, arg, isl_obj_union_map);
+		arg = convert(ctx, arg, isl_obj_union_map);
 	if (arg.type == isl_obj_union_set)
 		obj = apply_fun_set(obj, arg.v);
 	else
@@ -1464,12 +1472,12 @@ static struct isl_obj vertices(struct isl_stream *s,
 	struct add_vertex_data data = { NULL };
 
 	obj = read_expr(s, table);
-	obj = convert(s->ctx, obj, isl_obj_union_set);
-	isl_assert(s->ctx, obj.type == isl_obj_union_set, goto error);
+	ctx = isl_stream_get_ctx(s);
+	obj = convert(ctx, obj, isl_obj_union_set);
+	isl_assert(ctx, obj.type == isl_obj_union_set, goto error);
 	uset = obj.v;
 	obj.v = NULL;
 
-	ctx = isl_union_set_get_ctx(uset);
 	list = isl_list_alloc(ctx, 0);
 	if (!list)
 		goto error;
@@ -1528,7 +1536,7 @@ static struct isl_obj type_of(struct isl_stream *s,
 
 	free_obj(obj);
 	obj.type = isl_obj_str;
-	obj.v = isl_str_from_string(s->ctx, strdup(type));
+	obj.v = isl_str_from_string(isl_stream_get_ctx(s), strdup(type));
 
 	return obj;
 }
@@ -1537,10 +1545,12 @@ static __isl_give isl_union_set *read_set(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
 	struct isl_obj obj;
+	isl_ctx *ctx;
 
 	obj = read_obj(s, table);
-	obj = convert(s->ctx, obj, isl_obj_union_set);
-	isl_assert(s->ctx, obj.type == isl_obj_union_set, goto error);
+	ctx = isl_stream_get_ctx(s);
+	obj = convert(ctx, obj, isl_obj_union_set);
+	isl_assert(ctx, obj.type == isl_obj_union_set, goto error);
 	return obj.v;
 error:
 	free_obj(obj);
@@ -1551,10 +1561,12 @@ static __isl_give isl_union_map *read_map(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
 	struct isl_obj obj;
+	isl_ctx *ctx;
 
 	obj = read_obj(s, table);
-	obj = convert(s->ctx, obj, isl_obj_union_map);
-	isl_assert(s->ctx, obj.type == isl_obj_union_map, goto error);
+	ctx = isl_stream_get_ctx(s);
+	obj = convert(ctx, obj, isl_obj_union_map);
+	isl_assert(ctx, obj.type == isl_obj_union_map, goto error);
 	return obj.v;
 error:
 	free_obj(obj);
@@ -1682,7 +1694,7 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 		return last_any(s, table, must_source, may_source);
 	}
 
-	list = isl_list_alloc(s->ctx, 2);
+	list = isl_list_alloc(isl_stream_get_ctx(s), 2);
 	if (!list)
 		goto error;
 
@@ -1782,21 +1794,23 @@ static __isl_give isl_union_map *get_codegen_schedule(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
 	struct isl_obj obj;
+	isl_ctx *ctx;
 
 	obj = read_obj(s, table);
+	ctx = isl_stream_get_ctx(s);
 
 	if (is_subtype(obj, isl_obj_union_map)) {
-		obj = convert(s->ctx, obj, isl_obj_union_map);
+		obj = convert(ctx, obj, isl_obj_union_map);
 		return obj.v;
 	}
 
 	if (is_subtype(obj, isl_obj_union_set)) {
-		obj = convert(s->ctx, obj, isl_obj_union_set);
+		obj = convert(ctx, obj, isl_obj_union_set);
 		return isl_union_set_identity(obj.v);
 	}
 
 	free_obj(obj);
-	isl_die(s->ctx, isl_error_invalid, "expecting set or map", return NULL);
+	isl_die(ctx, isl_error_invalid, "expecting set or map", return NULL);
 }
 
 /* Generate an AST for the given schedule and options and print
@@ -1957,14 +1971,16 @@ static struct isl_obj schedule_forest(struct isl_stream *s,
 static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_token *tok;
+	isl_ctx *ctx;
 	isl_val *v;
 
+	ctx = isl_stream_get_ctx(s);
 	if (isl_stream_eat_if_available(s, '+'))
-		return transitive_closure(s->ctx, obj);
+		return transitive_closure(ctx, obj);
 
-	isl_assert(s->ctx, is_subtype(obj, isl_obj_union_map), goto error);
+	isl_assert(ctx, is_subtype(obj, isl_obj_union_map), goto error);
 	if (obj.type != isl_obj_union_map)
-		obj = convert(s->ctx, obj, isl_obj_union_map);
+		obj = convert(ctx, obj, isl_obj_union_map);
 
 	tok = isl_stream_next_token(s);
 	if (!tok || isl_token_get_type(tok) != ISL_TOKEN_VALUE) {
@@ -1974,7 +1990,7 @@ static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 		goto error;
 	}
 
-	v = isl_token_get_val(s->ctx, tok);
+	v = isl_token_get_val(ctx, tok);
 	if (isl_val_is_zero(v)) {
 		isl_stream_error(s, tok, "expecting non-zero exponent");
 		isl_val_free(v);
@@ -2000,13 +2016,15 @@ static struct isl_obj check_assert(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
 	struct isl_obj obj;
+	isl_ctx *ctx;
 
 	obj = read_expr(s, table);
+	ctx = isl_stream_get_ctx(s);
 	if (obj.type != isl_obj_bool)
-		isl_die(s->ctx, isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"expecting boolean expression", goto error);
 	if (obj.v != &isl_bool_true)
-		isl_die(s->ctx, isl_error_unknown,
+		isl_die(ctx, isl_error_unknown,
 			"assertion failed", abort());
 error:
 	free_obj(obj);
@@ -2017,6 +2035,7 @@ error:
 
 static struct isl_obj read_from_file(struct isl_stream *s)
 {
+	isl_ctx *ctx;
 	struct isl_obj obj;
 	struct isl_token *tok;
 	struct isl_stream *s_file;
@@ -2031,20 +2050,21 @@ static struct isl_obj read_from_file(struct isl_stream *s)
 		goto error;
 	}
 
-	options = isl_ctx_peek_iscc_options(s->ctx);
+	ctx = isl_stream_get_ctx(s);
+	options = isl_ctx_peek_iscc_options(ctx);
 	if (!options || !options->io) {
 		isl_token_free(tok);
-		isl_die(s->ctx, isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"read operation not allowed", goto error);
 	}
 
-	name = isl_token_get_str(s->ctx, tok);
+	name = isl_token_get_str(ctx, tok);
 	isl_token_free(tok);
 	file = fopen(name, "r");
 	free(name);
-	isl_assert(s->ctx, file, goto error);
+	isl_assert(ctx, file, goto error);
 
-	s_file = isl_stream_new_file(s->ctx, file);
+	s_file = isl_stream_new_file(ctx, file);
 	if (!s_file) {
 		fclose(file);
 		goto error;
@@ -2071,6 +2091,7 @@ static struct isl_obj write_to_file(struct isl_stream *s,
 	struct iscc_options *options;
 	char *name;
 	FILE *file;
+	isl_ctx *ctx;
 	isl_printer *p;
 
 	tok = isl_stream_next_token(s);
@@ -2082,22 +2103,23 @@ static struct isl_obj write_to_file(struct isl_stream *s,
 
 	obj = read_expr(s, table);
 
-	options = isl_ctx_peek_iscc_options(s->ctx);
+	ctx = isl_stream_get_ctx(s);
+	options = isl_ctx_peek_iscc_options(ctx);
 	if (!options || !options->io) {
 		isl_token_free(tok);
-		isl_die(s->ctx, isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"write operation not allowed", goto error);
 	}
 
-	name = isl_token_get_str(s->ctx, tok);
+	name = isl_token_get_str(ctx, tok);
 	isl_token_free(tok);
 	file = fopen(name, "w");
 	free(name);
 	if (!file)
-		isl_die(s->ctx, isl_error_unknown,
+		isl_die(ctx, isl_error_unknown,
 			"could not open file for writing", goto error);
 
-	p = isl_printer_to_file(s->ctx, file);
+	p = isl_printer_to_file(ctx, file);
 	p = isl_printer_set_output_format(p, options->format);
 	p = obj.type->print(p, obj.v);
 	p = isl_printer_end_line(p);
@@ -2121,10 +2143,10 @@ static struct isl_obj read_string_if_available(struct isl_stream *s)
 		return obj;
 	if (isl_token_get_type(tok) == ISL_TOKEN_STRING) {
 		isl_str *str;
-		str = isl_str_alloc(s->ctx);
+		str = isl_str_alloc(isl_stream_get_ctx(s));
 		if (!str)
 			goto error;
-		str->s = isl_token_get_str(s->ctx, tok);
+		str->s = isl_token_get_str(isl_stream_get_ctx(s), tok);
 		isl_token_free(tok);
 		obj.v = str;
 		obj.type = isl_obj_str;
@@ -2181,7 +2203,7 @@ static __isl_give char *read_ident(struct isl_stream *s)
 		return NULL;
 	}
 	
-	v = isl_token_get_val(s->ctx, tok2);
+	v = isl_token_get_val(isl_stream_get_ctx(s), tok2);
 	name = isl_val_to_str(v);
 	isl_val_free(v);
 	isl_token_free(tok);
@@ -2195,7 +2217,7 @@ static struct isl_obj read_list(struct isl_stream *s,
 {
 	struct isl_list *list;
 
-	list = isl_list_alloc(s->ctx, 2);
+	list = isl_list_alloc(isl_stream_get_ctx(s), 2);
 	if (!list)
 		goto error;
 	list->obj[0] = obj;
@@ -2223,6 +2245,7 @@ error:
 static struct isl_obj read_obj(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
+	isl_ctx *ctx;
 	struct isl_obj obj = { isl_obj_none, NULL };
 	char *name = NULL;
 	struct isc_un_op *op = NULL;
@@ -2233,10 +2256,11 @@ static struct isl_obj read_obj(struct isl_stream *s,
 	obj = read_bool_if_available(s);
 	if (obj.v)
 		return obj;
+	ctx = isl_stream_get_ctx(s);
 	if (isl_stream_eat_if_available(s, '(')) {
 		if (isl_stream_next_token_is(s, ')')) {
 			obj.type = isl_obj_list;
-			obj.v = isl_list_alloc(s->ctx, 0);
+			obj.v = isl_list_alloc(ctx, 0);
 		} else {
 			obj = read_expr(s, table);
 			if (obj.v && isl_stream_eat_if_available(s, ','))
@@ -2270,7 +2294,7 @@ static struct isl_obj read_obj(struct isl_stream *s,
 
 		name = read_ident(s);
 		if (name)
-			obj = stored_obj(s->ctx, table, name);
+			obj = stored_obj(ctx, table, name);
 		else
 			obj = isl_stream_read_obj(s);
 		if (!obj.v)
@@ -2283,15 +2307,15 @@ static struct isl_obj read_obj(struct isl_stream *s,
 		obj = obj_at_index(s, obj);
 	else if (is_subtype(obj, isl_obj_union_map) &&
 		 isl_stream_eat_if_available(s, '(')) {
-		obj = convert(s->ctx, obj, isl_obj_union_map);
+		obj = convert(ctx, obj, isl_obj_union_map);
 		obj = apply(s, obj.v, table);
 	} else if (is_subtype(obj, isl_obj_union_pw_qpolynomial) &&
 		   isl_stream_eat_if_available(s, '(')) {
-		obj = convert(s->ctx, obj, isl_obj_union_pw_qpolynomial);
+		obj = convert(ctx, obj, isl_obj_union_pw_qpolynomial);
 		obj = apply_fun(s, obj, table);
 	} else if (is_subtype(obj, isl_obj_union_pw_qpolynomial_fold) &&
 		   isl_stream_eat_if_available(s, '(')) {
-		obj = convert(s->ctx, obj, isl_obj_union_pw_qpolynomial_fold);
+		obj = convert(ctx, obj, isl_obj_union_pw_qpolynomial_fold);
 		obj = apply_fun(s, obj, table);
 	}
 
@@ -2345,7 +2369,7 @@ static int next_is_neg_int(struct isl_stream *s)
 	tok = isl_stream_next_token(s);
 	if (tok && isl_token_get_type(tok) == ISL_TOKEN_VALUE) {
 		isl_val *v;
-		v = isl_token_get_val(s->ctx, tok);
+		v = isl_token_get_val(isl_stream_get_ctx(s), tok);
 		ret = isl_val_is_neg(v);
 		isl_val_free(v);
 	} else
@@ -2378,10 +2402,12 @@ static struct isl_obj call_bin_op(isl_ctx *ctx, struct isc_bin_op *op,
 static struct isl_obj read_expr(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
+	isl_ctx *ctx;
 	struct isl_obj obj = { isl_obj_none, NULL };
 	struct isl_obj right_obj = { isl_obj_none, NULL };
 
 	obj = read_obj(s, table);
+	ctx = isl_stream_get_ctx(s);
 	for (; obj.v;) {
 		struct isc_bin_op *op = NULL;
 
@@ -2394,11 +2420,11 @@ static struct isl_obj read_expr(struct isl_stream *s,
 		op = find_matching_bin_op(op, obj, right_obj);
 
 		if (!op)
-			isl_die(s->ctx, isl_error_invalid,
+			isl_die(ctx, isl_error_invalid,
 			    "no such binary operator defined on given operands",
 			    goto error);
 
-		obj = call_bin_op(s->ctx, op, obj, right_obj);
+		obj = call_bin_op(ctx, op, obj, right_obj);
 	}
 
 	if (obj.type == isl_obj_val && next_is_neg_int(s)) {
@@ -2421,6 +2447,7 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 static __isl_give isl_printer *read_line(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p, int tty)
 {
+	isl_ctx *ctx;
 	struct isl_obj obj = { isl_obj_none, NULL };
 	char *lhs = NULL;
 	int assign = 0;
@@ -2449,9 +2476,10 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		only_print = 1;
 
 	obj = read_expr(s, table);
-	if (isl_ctx_last_error(s->ctx) == isl_error_abort) {
+	ctx = isl_stream_get_ctx(s);
+	if (isl_ctx_last_error(ctx) == isl_error_abort) {
 		fprintf(stderr, "Interrupted\n");
-		isl_ctx_reset_error(s->ctx);
+		isl_ctx_reset_error(ctx);
 	}
 	if (isl_stream_eat(s, ';'))
 		goto error;
@@ -2474,7 +2502,7 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 		p = obj.type->print(p, obj.v);
 		p = isl_printer_end_line(p);
 	}
-	if (lhs && do_assign(s->ctx, table, lhs, obj))
+	if (lhs && do_assign(ctx, table, lhs, obj))
 		return p;
 
 	return p;
@@ -2526,6 +2554,7 @@ static void register_named_ops(struct isl_stream *s)
 static __isl_give isl_printer *source_file(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p)
 {
+	isl_ctx *ctx;
 	struct isl_token *tok;
 	struct isl_stream *s_file;
 	struct iscc_options *options;
@@ -2541,20 +2570,21 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 
 	isl_stream_eat(s, ';');
 
-	options = isl_ctx_peek_iscc_options(s->ctx);
+	ctx = isl_stream_get_ctx(s);
+	options = isl_ctx_peek_iscc_options(ctx);
 	if (!options || !options->io) {
 		isl_token_free(tok);
-		isl_die(s->ctx, isl_error_invalid,
+		isl_die(ctx, isl_error_invalid,
 			"source operation not allowed", return p);
 	}
 
-	name = isl_token_get_str(s->ctx, tok);
+	name = isl_token_get_str(ctx, tok);
 	isl_token_free(tok);
 	file = fopen(name, "r");
 	free(name);
-	isl_assert(s->ctx, file, return p);
+	isl_assert(ctx, file, return p);
 
-	s_file = isl_stream_new_file(s->ctx, file);
+	s_file = isl_stream_new_file(ctx, file);
 	if (!s_file) {
 		fclose(file);
 		return p;
