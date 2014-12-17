@@ -2562,7 +2562,7 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 
 	register_named_ops(s_file);
 
-	while (!s_file->eof)
+	while (!isl_stream_is_empty(s_file))
 		p = read_line(s_file, table, p, 0);
 
 	isl_stream_free(s_file);
@@ -2598,7 +2598,7 @@ int main(int argc, char **argv)
 
 	install_signal_handler(ctx);
 
-	while (p && !s->eof) {
+	while (p && !isl_stream_is_empty(s)) {
 		isl_ctx_resume(ctx);
 		p = read_line(s, table, p, tty);
 	}
