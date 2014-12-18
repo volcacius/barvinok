@@ -943,9 +943,11 @@ static int pw_qpolynomial_sum(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *sum;
+	isl_union_pw_qpolynomial *upwqp;
 
 	sum = isl_pw_qpolynomial_sum(pwqp);
-	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, sum);
+	upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(sum);
+	*res = isl_union_pw_qpolynomial_add(*res, upwqp);
 
 	return 0;
 }
@@ -1060,10 +1062,12 @@ static int pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 	isl_space_free(pwqp_dim);
 
 	if (ok) {
+		isl_union_pw_qpolynomial *upwqp;
+
 		pwqp = isl_map_apply_pw_qpolynomial(isl_map_copy(data->map),
 							pwqp);
-		data->res = isl_union_pw_qpolynomial_add_pw_qpolynomial(
-							data->res, pwqp);
+		upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp);
+		data->res = isl_union_pw_qpolynomial_add(data->res, upwqp);
 	} else
 		isl_pw_qpolynomial_free(pwqp);
 
@@ -1133,10 +1137,12 @@ static int pw_qpolynomial_apply_set(__isl_take isl_pw_qpolynomial *pwqp,
 	isl_space_free(pwqp_dim);
 
 	if (ok) {
+		isl_union_pw_qpolynomial *upwqp;
+
 		pwqp = isl_set_apply_pw_qpolynomial(isl_set_copy(data->set),
 							pwqp);
-		data->res = isl_union_pw_qpolynomial_add_pw_qpolynomial(
-							data->res, pwqp);
+		upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp);
+		data->res = isl_union_pw_qpolynomial_add(data->res, upwqp);
 	} else
 		isl_pw_qpolynomial_free(pwqp);
 
