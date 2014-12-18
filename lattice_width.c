@@ -533,6 +533,9 @@ __isl_give isl_union_pw_qpolynomial *isl_union_set_lattice_width(
 
 	dim = isl_union_set_get_space(uset);
 	res = isl_union_pw_qpolynomial_zero(dim);
+	if (isl_union_set_n_set(uset) > 1)
+		isl_die(isl_union_set_get_ctx(uset), isl_error_unsupported,
+			"unions not supported (yet)", goto error);
 	if (isl_union_set_foreach_set(uset, &set_lw, &res) < 0)
 		goto error;
 	isl_union_set_free(uset);
