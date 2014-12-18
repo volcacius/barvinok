@@ -1680,9 +1680,11 @@ static int set_card(__isl_take isl_set *set, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
+	isl_union_pw_qpolynomial *upwqp;
 
 	pwqp = isl_set_card(set);
-	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, pwqp);
+	upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp);
+	*res = isl_union_pw_qpolynomial_add(*res, upwqp);
 
 	return 0;
 }
@@ -1710,9 +1712,11 @@ static int map_card(__isl_take isl_map *map, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
+	isl_union_pw_qpolynomial *upwqp;
 
 	pwqp = isl_map_card(map);
-	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, pwqp);
+	upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp);
+	*res = isl_union_pw_qpolynomial_add(*res, upwqp);
 
 	return 0;
 }
