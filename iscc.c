@@ -1616,10 +1616,11 @@ static struct isl_obj last_any(struct isl_stream *s,
 	__isl_take isl_union_map *may_source)
 {
 	struct isl_obj obj = { isl_obj_none, NULL };
+	isl_union_access_info *access;
+	isl_union_flow *flow;
 	isl_union_map *sink = NULL;
 	isl_union_map *schedule = NULL;
 	isl_union_map *may_dep;
-	isl_union_map *must_dep;
 
 	if (isl_stream_eat(s, iscc_op[ISCC_BEFORE]))
 		goto error;
@@ -1635,13 +1636,19 @@ static struct isl_obj last_any(struct isl_stream *s,
 	if (!schedule)
 		goto error;
 
-	if (isl_union_map_compute_flow(sink, must_source, may_source,
-				       schedule, &must_dep, &may_dep,
-				       NULL, NULL) < 0)
+	access = isl_union_access_info_from_sink(sink);
+	access = isl_union_access_info_set_must_source(access, must_source);
+	access = isl_union_access_info_set_may_source(access, may_source);
+	access = isl_union_access_info_set_schedule_map(access, schedule);
+	flow = isl_union_access_info_compute_flow(access);
+	may_dep = isl_union_flow_get_may_dependence(flow);
+	isl_union_flow_free(flow);
+
+	if (!may_dep)
 		return obj;
 
 	obj.type = isl_obj_union_map;
-	obj.v = isl_union_map_union(must_dep, may_dep);
+	obj.v = may_dep;
 
 	return obj;
 error:
@@ -1658,7 +1665,8 @@ error:
 static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 {
 	struct isl_obj obj = { isl_obj_none, NULL };
-	isl_union_map *must_source = NULL;
+	isl_union_access_info *access;
+	isl_union_flow *flow;
 	isl_union_map *may_source = NULL;
 	isl_union_map *sink = NULL;
 	isl_union_map *schedule = NULL;
@@ -1669,6 +1677,7 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 		goto error;
 
 	if (isl_stream_eat_if_available(s, iscc_op[ISCC_LAST])) {
+		isl_union_map *must_source;
 		must_source = read_map(s, table);
 		if (!must_source)
 			goto error;
@@ -1689,10 +1698,14 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 	if (!schedule)
 		goto error;
 
-	must_source = isl_union_map_empty(isl_union_map_get_space(sink));
-	if (isl_union_map_compute_flow(sink, must_source, may_source,
-				       schedule, NULL, &may_dep,
-				       NULL, NULL) < 0)
+	access = isl_union_access_info_from_sink(sink);
+	access = isl_union_access_info_set_may_source(access, may_source);
+	access = isl_union_access_info_set_schedule_map(access, schedule);
+	flow = isl_union_access_info_compute_flow(access);
+	may_dep = isl_union_flow_get_may_dependence(flow);
+	isl_union_flow_free(flow);
+
+	if (!may_dep)
 		return obj;
 
 	obj.type = isl_obj_union_map;
@@ -1701,7 +1714,6 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 	return obj;
 error:
 	isl_union_map_free(may_source);
-	isl_union_map_free(must_source);
 	isl_union_map_free(sink);
 	isl_union_map_free(schedule);
 	free_obj(obj);
@@ -1714,8 +1726,9 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 {
 	struct isl_obj obj = { isl_obj_none, NULL };
 	struct isl_list *list = NULL;
+	isl_union_access_info *access;
+	isl_union_flow *flow;
 	isl_union_map *must_source = NULL;
-	isl_union_map *may_source = NULL;
 	isl_union_map *sink = NULL;
 	isl_union_map *schedule = NULL;
 	isl_union_map *must_dep;
@@ -1726,6 +1739,7 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 		goto error;
 
 	if (isl_stream_eat_if_available(s, iscc_op[ISCC_ANY])) {
+		isl_union_map *may_source;
 		may_source = read_map(s, table);
 		if (!may_source)
 			goto error;
@@ -1750,18 +1764,23 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	if (!schedule)
 		goto error;
 
-	may_source = isl_union_map_empty(isl_union_map_get_space(sink));
-	if (isl_union_map_compute_flow(sink, must_source, may_source,
-				       schedule, &must_dep, NULL,
-				       &must_no_source, NULL) < 0) {
-		isl_list_free(list);
-		return obj;
-	}
+	access = isl_union_access_info_from_sink(sink);
+	access = isl_union_access_info_set_must_source(access, must_source);
+	access = isl_union_access_info_set_schedule_map(access, schedule);
+	flow = isl_union_access_info_compute_flow(access);
+	must_dep = isl_union_flow_get_must_dependence(flow);
+	must_no_source = isl_union_flow_get_must_no_source(flow);
+	isl_union_flow_free(flow);
 
 	list->obj[0].type = isl_obj_union_map;
 	list->obj[0].v = must_dep;
 	list->obj[1].type = isl_obj_union_map;
 	list->obj[1].v = must_no_source;
+
+	if (!must_dep || !must_no_source) {
+		isl_list_free(list);
+		return obj;
+	}
 
 	obj.v = list;
 	obj.type = isl_obj_list;
@@ -1769,7 +1788,6 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	return obj;
 error:
 	isl_list_free(list);
-	isl_union_map_free(may_source);
 	isl_union_map_free(must_source);
 	isl_union_map_free(sink);
 	isl_union_map_free(schedule);
