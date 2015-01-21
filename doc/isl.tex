@@ -618,6 +618,7 @@ $s$: set,
 $m$: map,
 $q$: piecewise quasipolynomial,
 $f$: piecewise quasipolynomial fold,
+$t$: schedule (tree),
 $l$: list,
 $i$: integer,
 $b$: boolean,
@@ -851,30 +852,44 @@ the cross product of domain and range of $m_1$, i.e.,
 $\{\, (\vec w \to \vec y) \to (\vec x \to \vec z)
 \mid (\vec w \to \vec x) \to (\vec y \to \vec z) \in m_1 \,\}$
 \\
-$m_4$ := \ai[\tt]{any} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $m_3$ &
+$m_3$ := \ai[\tt]{any} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $t$ &
 compute a map from any element $x$ in the domain of $m_1$
 to any element $y$ in the domain of $m_2$
 such that their images $m_1(x)$ and $m_2(y)$ overlap
-and such that $m_3(x) \llt m_3(y)$.
+and such that $x$ is scheduled before $y$ by $t$.
 \\
-$l$ := \ai[\tt]{last} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $m_3$ &
+$m_4$ := \ai[\tt]{any} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $m_3$ &
+same as the previous operation, with the schedule represented by a map.
+\\
+$l$ := \ai[\tt]{last} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $t$ &
 compute a map that contains for any element $y$ in the domain of $m_2$
-a mapping from the lexicographically last element $x$ in the domain of $m_1$
-(according to the schedule $m_3$) to $y$
-such that $m_1(x)$ and $m_2(y)$ overlap and such that $m_3(x) \llt m_3(y)$.
+a mapping from the last element $x$ in the domain of $m_1$
+(according to the schedule $t$) to $y$
+such that $m_1(x)$ and $m_2(y)$ overlap
+and such that $x$ is scheduled before $y$ by $t$.
 Return a list containing this map and the set of elements in the domain of
 $m_2$ for which there is no corresponding element in the domain of $m_1$.
 \\
+$l$ := \ai[\tt]{last} $m_1$ \ai[\tt]{before} $m_2$ \ai[\tt]{under} $m_3$ &
+same as the previous operation, with the schedule represented by a map.
+\\
+$m_4$ := \ai[\tt]{any} $m_1$ \ai[\tt]{last} $m_2$ \ai[\tt]{before} $m_3$
+\ai[\tt]{under} $t$ &
+compute a map that contains for any element $y$ in the domain of $m_3$
+a mapping from the last element $x$ in the domain of $m_2$
+(according to the schedule $t$) to $y$
+such that $m_2(x)$ and $m_3(y)$ overlap
+and such that $x$ is scheduled before $y$ by $t$
+as well as from any element $z$ in the domain of $m_1$ such that
+$m_1(z)$ and $m_3(y)$ overlap,
+$z$ is scheduled before $y$ by $t$
+and such that there is no $x$ in the domain of $m_2$ with
+$m_2(x) \cap m_3(y) \ne \emptyset$ and
+$x$ scheduled between $z$ and $y$ by $t$.
+\\
 $m_5$ := \ai[\tt]{any} $m_1$ \ai[\tt]{last} $m_2$ \ai[\tt]{before} $m_3$
 \ai[\tt]{under} $m_4$ &
-compute a map that contains for any element $y$ in the domain of $m_3$
-a mapping from the lexicographically last element $x$ in the domain of $m_2$
-(according to the schedule $m_4$) to $y$
-such that $m_2(x)$ and $m_3(y)$ overlap and such that $m_4(x) \llt m_4(y)$
-as well as from any element $z$ in the domain of $m_1$ such that
-$m_1(z)$ and $m_3(y)$ overlap, $m_4(z) \llt m_4(y)$ and such that there
-is no $x$ in the domain of $m_2$ with
-$m_2(x) \cap m_3(y) \ne \emptyset$ and $m_4(z) \llt m_4(x) \llt m_4(y)$.
+same as the previous operation, with the schedule represented by a map.
 \\
 $m_3$ := \ai[\tt]{schedule} $s$ \ai[\tt]{respecting} $m_1$ \ai[\tt]{minimizing} $m_2$ &
 compute a schedule for the domains in $s$ that respects all dependences

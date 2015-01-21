@@ -1613,20 +1613,23 @@ error:
 	return NULL;
 }
 
-/* Read a schedule in the form of a union map from "s" and
- * store the schedule in "access".
+/* Read a schedule in the form of either a schedule (tree) or a union map
+ * from "s" and store the schedule in "access".
  */
 static __isl_give isl_union_access_info *access_info_set_schedule(
 	__isl_take isl_union_access_info *access, struct isl_stream *s,
 	struct isl_hash_table *table)
 {
-	isl_union_map *schedule;
+	struct isl_obj obj;
+	isl_ctx *ctx;
 
-	schedule = read_map(s, table);
-	if (!schedule)
-		return isl_union_access_info_free(access);
+	obj = read_obj(s, table);
+	if (obj.type == isl_obj_schedule)
+		return isl_union_access_info_set_schedule(access, obj.v);
+	ctx = isl_stream_get_ctx(s);
+	obj = convert(ctx, obj, isl_obj_union_map);
 
-	return isl_union_access_info_set_schedule_map(access, schedule);
+	return isl_union_access_info_set_schedule_map(access, obj.v);
 }
 
 static struct isl_obj last_any(struct isl_stream *s,
