@@ -1613,6 +1613,22 @@ error:
 	return NULL;
 }
 
+/* Read a schedule in the form of a union map from "s" and
+ * store the schedule in "access".
+ */
+static __isl_give isl_union_access_info *access_info_set_schedule(
+	__isl_take isl_union_access_info *access, struct isl_stream *s,
+	struct isl_hash_table *table)
+{
+	isl_union_map *schedule;
+
+	schedule = read_map(s, table);
+	if (!schedule)
+		return isl_union_access_info_free(access);
+
+	return isl_union_access_info_set_schedule_map(access, schedule);
+}
+
 static struct isl_obj last_any(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_union_map *must_source,
 	__isl_take isl_union_map *may_source)
@@ -1621,7 +1637,6 @@ static struct isl_obj last_any(struct isl_stream *s,
 	isl_union_access_info *access;
 	isl_union_flow *flow;
 	isl_union_map *sink = NULL;
-	isl_union_map *schedule = NULL;
 	isl_union_map *may_dep;
 
 	if (isl_stream_eat(s, iscc_op[ISCC_BEFORE]))
@@ -1634,14 +1649,10 @@ static struct isl_obj last_any(struct isl_stream *s,
 	if (isl_stream_eat(s, iscc_op[ISCC_UNDER]))
 		goto error;
 
-	schedule = read_map(s, table);
-	if (!schedule)
-		goto error;
-
 	access = isl_union_access_info_from_sink(sink);
 	access = isl_union_access_info_set_must_source(access, must_source);
 	access = isl_union_access_info_set_may_source(access, may_source);
-	access = isl_union_access_info_set_schedule_map(access, schedule);
+	access = access_info_set_schedule(access, s, table);
 	flow = isl_union_access_info_compute_flow(access);
 	may_dep = isl_union_flow_get_may_dependence(flow);
 	isl_union_flow_free(flow);
@@ -1657,7 +1668,6 @@ error:
 	isl_union_map_free(may_source);
 	isl_union_map_free(must_source);
 	isl_union_map_free(sink);
-	isl_union_map_free(schedule);
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
@@ -1671,7 +1681,6 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 	isl_union_flow *flow;
 	isl_union_map *may_source = NULL;
 	isl_union_map *sink = NULL;
-	isl_union_map *schedule = NULL;
 	isl_union_map *may_dep;
 
 	may_source = read_map(s, table);
@@ -1696,13 +1705,9 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 	if (isl_stream_eat(s, iscc_op[ISCC_UNDER]))
 		goto error;
 
-	schedule = read_map(s, table);
-	if (!schedule)
-		goto error;
-
 	access = isl_union_access_info_from_sink(sink);
 	access = isl_union_access_info_set_may_source(access, may_source);
-	access = isl_union_access_info_set_schedule_map(access, schedule);
+	access = access_info_set_schedule(access, s, table);
 	flow = isl_union_access_info_compute_flow(access);
 	may_dep = isl_union_flow_get_may_dependence(flow);
 	isl_union_flow_free(flow);
@@ -1717,7 +1722,6 @@ static struct isl_obj any(struct isl_stream *s, struct isl_hash_table *table)
 error:
 	isl_union_map_free(may_source);
 	isl_union_map_free(sink);
-	isl_union_map_free(schedule);
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
@@ -1732,7 +1736,6 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	isl_union_flow *flow;
 	isl_union_map *must_source = NULL;
 	isl_union_map *sink = NULL;
-	isl_union_map *schedule = NULL;
 	isl_union_map *must_dep;
 	isl_union_map *must_no_source;
 
@@ -1762,13 +1765,9 @@ static struct isl_obj last(struct isl_stream *s, struct isl_hash_table *table)
 	if (isl_stream_eat(s, iscc_op[ISCC_UNDER]))
 		goto error;
 
-	schedule = read_map(s, table);
-	if (!schedule)
-		goto error;
-
 	access = isl_union_access_info_from_sink(sink);
 	access = isl_union_access_info_set_must_source(access, must_source);
-	access = isl_union_access_info_set_schedule_map(access, schedule);
+	access = access_info_set_schedule(access, s, table);
 	flow = isl_union_access_info_compute_flow(access);
 	must_dep = isl_union_flow_get_must_dependence(flow);
 	must_no_source = isl_union_flow_get_must_no_source(flow);
@@ -1792,7 +1791,6 @@ error:
 	isl_list_free(list);
 	isl_union_map_free(must_source);
 	isl_union_map_free(sink);
-	isl_union_map_free(schedule);
 	free_obj(obj);
 	obj.type = isl_obj_none;
 	obj.v = NULL;
