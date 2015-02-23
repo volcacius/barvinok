@@ -67,15 +67,29 @@ if test "${with_default_prefix+set}" = set; then
 	fi
 fi
 
-AX_SUBMODULE(gmp,system,system)
+AX_SUBMODULE(gmp,system|build,system)
 
-if test "x$with_gmp_prefix" != "x"; then
-	bv_configure_args="$bv_configure_args --with-libgmp=$with_gmp_prefix"
-	CPPFLAGS="-I$with_gmp_prefix/include $CPPFLAGS"
-	LDFLAGS="-L$with_gmp_prefix/lib $LDFLAGS"
-else
-	bv_configure_args="$bv_configure_args --with-libgmp --with-gmp"
-fi
+case "$with_gmp" in
+build)
+	with_gmp_builddir=`echo @abs_builddir@ | \
+			   $with_gmp_builddir/config.status --file=-`
+	CPPFLAGS="-I$with_gmp_builddir $CPPFLAGS"
+	LDFLAGS="-L$with_gmp_builddir/$lt_cv_objdir $LDFLAGS"
+	bv_extra="--with-gmp --with-gmp-builddir=$with_gmp_builddir"
+	bv_configure_args="$bv_configure_args $bv_extra"
+	;;
+system)
+	if test "x$with_gmp_prefix" != "x"; then
+		bv_extra="--with-libgmp=$with_gmp_prefix"
+		bv_configure_args="$bv_configure_args $bv_extra"
+		CPPFLAGS="-I$with_gmp_prefix/include $CPPFLAGS"
+		LDFLAGS="-L$with_gmp_prefix/lib $LDFLAGS"
+	else
+		bv_configure_args="$bv_configure_args --with-libgmp --with-gmp"
+	fi
+	;;
+esac
+
 poly_cv_gmpfatal="no"
 AC_CHECK_HEADER(gmp.h,
 	[AC_CHECK_LIB(gmp,main,
