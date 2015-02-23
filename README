@@ -35,7 +35,7 @@ make install
 
 Configure this library using
 
-./configure --prefix=/opt --with-gmp-prefix=/path/to/gmp  --with-ntl=/opt
+./configure --prefix=/opt --with-gmp-prefix=/path/to/gmp --with-ntl-prefix=/opt
 
 If you want shared libraries, then configure with the
 --enable-shared-barvinok option.

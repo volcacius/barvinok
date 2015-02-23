@@ -50,8 +50,9 @@ if test "${with_default_prefix+set}" = set; then
 		with_gmp_prefix=$with_default_prefix
 	fi
 	if test "${with_ntl+set}" != set -a \
+	   "${with_ntl_prefix+set}" != set -a \
 	   -f "$with_default_prefix/include/NTL/ZZ.h"; then
-		with_ntl=$with_default_prefix
+		with_ntl_prefix=$with_default_prefix
 	fi
 	if test "${with_cddlib+set}" != set -a \
 	   -f "$with_default_prefix/include/cddmp.h"; then
@@ -208,20 +209,72 @@ case $bv_cv_incremental in
 esac
 
 AC_ARG_WITH(ntl,
-            [  --with-ntl=DIR          DIR Location of NTL],
-            [ echo "Package ntl : $withval" && ntl_package=$withval],  
-            [ ntl_package=yes ])
+	    [AC_HELP_STRING([--with-ntl=system|build],
+			    [Which NTL to use [default=system]])])
 
-if test "$ntl_package" = "no"; then
-    AC_MSG_ERROR(Need ntl)
+AC_ARG_WITH(ntl-prefix,
+	    [AC_HELP_STRING([--with-ntl-prefix=DIR],
+			    [Prefix of NTL installation])])
+
+AC_ARG_WITH(ntl-builddir,
+	    [AC_HELP_STRING([--with-ntl-builddir=DIR],
+			    [Prefix of NTL root build directory
+			     containing include and src subdirectories])])
+
+if test "x$with_ntl_builddir" != "x"; then
+	if test "x$with_ntl" != "xbuild" -a "x$with_ntl" != "x"; then
+		AC_MSG_ERROR(m4_normalize([Setting --with-ntl-builddir implies
+					   use of build NTL]))
+	fi
+	with_ntl="build"
 fi
+
+if test "x$with_ntl_prefix" != "x"; then
+	if test "x$with_ntl" != "xsystem" -a "x$with_ntl" != "x"; then
+		AC_MSG_ERROR(m4_normalize([Setting --with-ntl-prefix implies
+					   use of system NTL]))
+	fi
+	with-ntl="system"
+fi
+
+case "$with_ntl" in
+build|system)
+	;;
+*)
+	with_ntl="system"
+	;;
+esac
+AC_MSG_CHECKING([which NTL to use])
+AC_MSG_RESULT($with_ntl)
 
 AC_SUBST(NTL_CPPFLAGS)
 AC_SUBST(NTL_LDFLAGS)
-if test "$ntl_package" != "yes"; then
-    NTL_CPPFLAGS="-I$ntl_package/include"
-    NTL_LDFLAGS="-L$ntl_package/lib"
-fi
+case "$with_ntl" in
+build)
+	NTL_CPPFLAGS="-I$with_ntl_builddir/include"
+	NTL_LDFLAGS="-L$with_ntl_builddir/src/$lt_cv_objdir"
+	ntl_builddir_found=false
+	AC_CHECK_FILE(["$with_ntl_builddir/src/ZZ.c"],
+		      [ntl_builddir_found=true],[])
+	if test "x$ntl_builddir_found" != "xtrue"; then
+		if test -f "$with_ntl_builddir/ZZ.c"; then
+			ntl_builddir=`dirname $with_ntl_builddir`
+			AC_MSG_ERROR(m4_normalize(
+			      [NTL source directory src/ specified as builddir.
+			       Use root directory instead as
+			       --with-ntl-builddir=$ntl_builddir]))
+		else
+			AC_MSG_ERROR([Could not find NTL in the builddir])
+		fi
+	fi
+	;;
+system)
+	if test "x$with_ntl_prefix" != "x"; then
+		NTL_CPPFLAGS="-I$with_ntl_prefix/include"
+		NTL_LDFLAGS="-L$with_ntl_prefix/lib"
+	fi
+	;;
+esac
 
 bv_no_ntl=false
 SAVE_CPPFLAGS="$CPPFLAGS"
