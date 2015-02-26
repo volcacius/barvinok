@@ -691,7 +691,7 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 
 	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL);
 	domain = pet_scop_collect_domains(scop);
-	sched = pet_scop_collect_schedule(scop);
+	sched = scop ? isl_schedule_get_map(scop->schedule) : NULL;
 	may_reads = pet_scop_collect_may_reads(scop);
 	may_writes = pet_scop_collect_may_writes(scop);
 	must_writes = pet_scop_collect_must_writes(scop);
