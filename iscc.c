@@ -1468,7 +1468,7 @@ static struct isl_obj vertices(struct isl_stream *s,
 	isl_ctx *ctx;
 	struct isl_obj obj;
 	struct isl_list *list = NULL;
-	isl_union_set *uset;
+	isl_union_set *uset = NULL;
 	struct add_vertex_data data = { NULL };
 
 	obj = read_expr(s, table);
