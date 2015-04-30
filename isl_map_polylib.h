@@ -10,7 +10,7 @@
 #ifndef ISL_MAP_POLYLIB_H
 #define ISL_MAP_POLYLIB_H
 
-#include <isl/dim.h>
+#include <isl/space.h>
 #include <isl/map.h>
 #include <isl_polylib.h>
 
