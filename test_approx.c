@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <barvinok/barvinok.h>
 #include "verify.h"
@@ -186,9 +187,9 @@ static int test_approx(__isl_take isl_point *pnt, void *user)
 	    assert(isl_val_ge(approx, exact));
 	approx = isl_val_sub(approx, isl_val_copy(exact));
 	if (isl_val_is_zero(exact))
-	    error = abs(isl_val_get_d(approx));
+	    error = fabs(isl_val_get_d(approx));
 	else
-	    error = abs(isl_val_get_d(approx)) / isl_val_get_d(exact);
+	    error = fabs(isl_val_get_d(approx)) / isl_val_get_d(exact);
 	isl_val_free(approx);
 	ta_data->result->RE_sum[i] += error;
     }
