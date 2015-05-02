@@ -10,6 +10,7 @@
 #include "hilbert.h"
 #include "normalization.h"
 #include "polysign.h"
+#include "remove_equalities.h"
 
 static ZSolveMatrix Matrix2zsolve(Matrix *M)
 {
