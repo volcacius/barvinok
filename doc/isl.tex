@@ -733,6 +733,17 @@ identity relation on $s$
 $q$ := \ai[\tt]{lattice\_width} $s$ &
 lattice width of the set $s$
 \\
+$l$ := \ai[\tt]{lb} $q$ &
+compute a
+lower bound on the piecewise quasipolynomial $q$ over
+all integer points in the domain of $q$
+and return a list containing the lower bound
+and a boolean that is true if the lower bound
+is known to be tight.
+If the domain of $q$ wraps a map, then the lower
+bound is computed over all integer points in
+the range of the wrapped map instead.
+\\
 $s_2$ := \ai[\tt]{lexmin} $s_1$ &
 lexicographically minimal element of $s_1$
 \\

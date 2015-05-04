@@ -649,8 +649,12 @@ error:
 	return NULL;
 }
 
-static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
-	__isl_take isl_union_pw_qpolynomial *upwqp)
+/* Compute a lower or upper bound on "upwqp" depending on "type" and
+ * return a list containing two elements, the bound and a boolean
+ * indicating whether the result is tight.
+ */
+static __isl_give struct isl_list *union_pw_qpolynomial_bound(
+	__isl_take isl_union_pw_qpolynomial *upwqp, enum isl_fold type)
 {
 	isl_ctx *ctx;
 	struct isl_list *list;
@@ -662,8 +666,7 @@ static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
 		goto error2;
 
 	list->obj[0].type = isl_obj_union_pw_qpolynomial_fold;
-	list->obj[0].v = isl_union_pw_qpolynomial_bound(upwqp,
-							isl_fold_max, &tight);
+	list->obj[0].v = isl_union_pw_qpolynomial_bound(upwqp, type, &tight);
 	list->obj[1].type = isl_obj_bool;
 	list->obj[1].v = tight ? &iscc_bool_true : &iscc_bool_false;
 	if (tight < 0 || !list->obj[0].v)
@@ -675,6 +678,26 @@ error2:
 error:
 	isl_list_free(list);
 	return NULL;
+}
+
+/* Compute a lower bound on "upwqp" and return a list containing
+ * two elements, the bound and a booleanindicating whether
+ * the result is tight.
+ */
+static __isl_give struct isl_list *union_pw_qpolynomial_lower_bound(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	return union_pw_qpolynomial_bound(upwqp, isl_fold_min);
+}
+
+/* Compute a upper bound on "upwqp" and return a list containing
+ * two elements, the bound and a booleanindicating whether
+ * the result is tight.
+ */
+static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
+	__isl_take isl_union_pw_qpolynomial *upwqp)
+{
+	return union_pw_qpolynomial_bound(upwqp, isl_fold_max);
 }
 
 #ifdef HAVE_PET
@@ -850,6 +873,8 @@ struct isc_named_un_op named_un_ops[] = {
 	{"lattice_width",	{ -1,	isl_obj_union_set,
 		isl_obj_union_pw_qpolynomial,
 		(isc_un_op_fn) &isl_union_set_lattice_width } },
+	{"lb",		{ -1,	isl_obj_union_pw_qpolynomial, isl_obj_list,
+		(isc_un_op_fn) &union_pw_qpolynomial_lower_bound } },
 	{"lexmin",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
 		(isc_un_op_fn) &isl_union_map_lexmin } },
 	{"lexmax",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
