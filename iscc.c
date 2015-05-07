@@ -74,9 +74,9 @@ int pet_options_set_autodetect(isl_ctx *ctx, int val)
 }
 #endif
 
-static int isl_bool_false = 0;
-static int isl_bool_true = 1;
-static int isl_bool_error = -1;
+static int iscc_bool_false = 0;
+static int iscc_bool_true = 1;
+static int iscc_bool_error = -1;
 
 enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
@@ -150,9 +150,9 @@ static void isl_obj_bool_free(void *v)
 static __isl_give isl_printer *isl_obj_bool_print(__isl_take isl_printer *p,
 	void *v)
 {
-	if (v == &isl_bool_true)
+	if (v == &iscc_bool_true)
 		return isl_printer_print_str(p, "True");
-	else if (v == &isl_bool_false)
+	else if (v == &iscc_bool_false)
 		return isl_printer_print_str(p, "False");
 	else
 		return isl_printer_print_str(p, "Error");
@@ -171,9 +171,10 @@ struct isl_obj_vtable isl_obj_bool_vtable = {
 };
 #define isl_obj_bool		(&isl_obj_bool_vtable)
 
-int *isl_bool_from_int(int res)
+int *iscc_bool_from_int(int res)
 {
-	return res < 0 ? &isl_bool_error : res ? &isl_bool_true : &isl_bool_false;
+	return res < 0 ? &iscc_bool_error :
+	       res ? &iscc_bool_true : &iscc_bool_false;
 }
 
 static int isl_union_map_is_superset(__isl_take isl_union_map *map1,
@@ -325,7 +326,7 @@ static __isl_give struct isl_list *union_map_apply_union_pw_qpolynomial_fold(
 	list->obj[0].v = isl_union_map_apply_union_pw_qpolynomial_fold(umap,
 							upwf, &tight);
 	list->obj[1].type = isl_obj_bool;
-	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
+	list->obj[1].v = tight ? &iscc_bool_true : &iscc_bool_false;
 	if (tight < 0 || !list->obj[0].v)
 		goto error;
 
@@ -355,7 +356,7 @@ static __isl_give struct isl_list *union_set_apply_union_pw_qpolynomial_fold(
 	list->obj[0].v = isl_union_set_apply_union_pw_qpolynomial_fold(uset,
 							upwf, &tight);
 	list->obj[1].type = isl_obj_bool;
-	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
+	list->obj[1].v = tight ? &iscc_bool_true : &iscc_bool_false;
 	if (tight < 0 || !list->obj[0].v)
 		goto error;
 
@@ -636,7 +637,7 @@ static __isl_give struct isl_list *union_map_power(
 	list->obj[0].type = isl_obj_union_map;
 	list->obj[0].v = isl_union_map_power(umap, &exact);
 	list->obj[1].type = isl_obj_bool;
-	list->obj[1].v = exact ? &isl_bool_true : &isl_bool_false;
+	list->obj[1].v = exact ? &iscc_bool_true : &iscc_bool_false;
 	if (exact < 0 || !list->obj[0].v)
 		goto error;
 
@@ -664,7 +665,7 @@ static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
 	list->obj[0].v = isl_union_pw_qpolynomial_bound(upwqp,
 							isl_fold_max, &tight);
 	list->obj[1].type = isl_obj_bool;
-	list->obj[1].v = tight ? &isl_bool_true : &isl_bool_false;
+	list->obj[1].v = tight ? &iscc_bool_true : &iscc_bool_false;
 	if (tight < 0 || !list->obj[0].v)
 		goto error;
 
@@ -1264,7 +1265,7 @@ static struct isl_obj transitive_closure(struct isl_ctx *ctx, struct isl_obj obj
 	list->obj[0].type = isl_obj_union_map;
 	list->obj[0].v = isl_union_map_transitive_closure(obj.v, &exact);
 	list->obj[1].type = isl_obj_bool;
-	list->obj[1].v = exact ? &isl_bool_true : &isl_bool_false;
+	list->obj[1].v = exact ? &iscc_bool_true : &iscc_bool_false;
 	obj.v = list;
 	obj.type = isl_obj_list;
 	if (exact < 0 || !list->obj[0].v)
@@ -2035,7 +2036,7 @@ static struct isl_obj check_assert(struct isl_stream *s,
 	if (obj.type != isl_obj_bool)
 		isl_die(ctx, isl_error_invalid,
 			"expecting boolean expression", goto error);
-	if (obj.v != &isl_bool_true)
+	if (obj.v != &iscc_bool_true)
 		isl_die(ctx, isl_error_unknown,
 			"assertion failed", abort());
 error:
@@ -2183,7 +2184,7 @@ static struct isl_obj read_bool_if_available(struct isl_stream *s)
 	if (type == ISL_TOKEN_FALSE || type == ISL_TOKEN_TRUE) {
 		int is_true = type == ISL_TOKEN_TRUE;
 		isl_token_free(tok);
-		obj.v = is_true ? &isl_bool_true : &isl_bool_false;
+		obj.v = is_true ? &iscc_bool_true : &iscc_bool_false;
 		obj.type = isl_obj_bool;
 	} else
 		isl_stream_push_token(s, tok);
@@ -2404,7 +2405,7 @@ static struct isl_obj call_bin_op(isl_ctx *ctx, struct isc_bin_op *op,
 		int res = op->o.test(lhs.v, rhs.v);
 		free_obj(lhs);
 		free_obj(rhs);
-		obj.v = isl_bool_from_int(res);
+		obj.v = iscc_bool_from_int(res);
 	}
 	obj.type = op->res;
 
