@@ -1,2 +1,2 @@
 r := sum { [x] -> 1 };
-assert(r == { NaN });
+assert((r + "") = "{ NaN }");
