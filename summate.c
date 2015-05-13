@@ -782,7 +782,7 @@ struct barvinok_summate_data {
 	struct barvinok_options *options;
 };
 
-static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
+static isl_stat add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 {
 	struct barvinok_summate_data *data = user;
 	Polyhedron *P;
@@ -794,7 +794,7 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	isl_space *dim;
 
 	if (!bset)
-		return -1;
+		return isl_stat_error;
 
 	bounded = isl_basic_set_is_bounded(bset);
 	if (bounded < 0)
@@ -803,7 +803,7 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 	if (!bounded) {
 		data->sum = add_unbounded_guarded_qp(data->sum, bset,
 					isl_qpolynomial_copy(data->qp));
-		return 0;
+		return isl_stat_ok;
 	}
 
 	dim = isl_basic_set_get_space(bset);
@@ -822,16 +822,16 @@ static int add_basic_guarded_qp(__isl_take isl_basic_set *bset, void *user)
 
 	isl_basic_set_free(bset);
 
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_basic_set_free(bset);
-	return -1;
+	return isl_stat_error;
 }
 
-static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *qp,
-	void *user)
+static isl_stat add_guarded_qp(__isl_take isl_set *set,
+	__isl_take isl_qpolynomial *qp, void *user)
 {
-	int r;
+	isl_stat r;
 	struct barvinok_summate_data *data = user;
 
 	if (!set || !qp)
@@ -871,7 +871,7 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 error:
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
-	return -1;
+	return isl_stat_error;
 }
 
 __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_sum(
@@ -941,7 +941,8 @@ error:
 	return NULL;
 }
 
-static int pw_qpolynomial_sum(__isl_take isl_pw_qpolynomial *pwqp, void *user)
+static isl_stat pw_qpolynomial_sum(__isl_take isl_pw_qpolynomial *pwqp,
+	void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *sum;
@@ -951,7 +952,7 @@ static int pw_qpolynomial_sum(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 	upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(sum);
 	*res = isl_union_pw_qpolynomial_add(*res, upwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_sum(
@@ -1050,7 +1051,8 @@ struct barvinok_apply_data {
 	isl_map *map;
 };
 
-static int pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp, void *user)
+static isl_stat pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp,
+	void *user)
 {
 	isl_space *map_dim;
 	isl_space *pwqp_dim;
@@ -1073,13 +1075,13 @@ static int pw_qpolynomial_apply(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 	} else
 		isl_pw_qpolynomial_free(pwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
-static int map_apply(__isl_take isl_map *map, void *user)
+static isl_stat map_apply(__isl_take isl_map *map, void *user)
 {
 	struct barvinok_apply_data *data = user;
-	int r;
+	isl_stat r;
 
 	data->map = map;
 	r = isl_union_pw_qpolynomial_foreach_pw_qpolynomial(data->upwqp,
@@ -1124,7 +1126,7 @@ struct barvinok_apply_set_data {
 	isl_set *set;
 };
 
-static int pw_qpolynomial_apply_set(__isl_take isl_pw_qpolynomial *pwqp,
+static isl_stat pw_qpolynomial_apply_set(__isl_take isl_pw_qpolynomial *pwqp,
 	void *user)
 {
 	isl_space *set_dim;
@@ -1148,13 +1150,13 @@ static int pw_qpolynomial_apply_set(__isl_take isl_pw_qpolynomial *pwqp,
 	} else
 		isl_pw_qpolynomial_free(pwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
-static int set_apply(__isl_take isl_set *set, void *user)
+static isl_stat set_apply(__isl_take isl_set *set, void *user)
 {
 	struct barvinok_apply_set_data *data = user;
-	int r;
+	isl_stat r;
 
 	data->set = set;
 	r = isl_union_pw_qpolynomial_foreach_pw_qpolynomial(data->upwqp,

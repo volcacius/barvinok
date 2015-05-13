@@ -224,7 +224,7 @@ struct iscc_at {
 	isl_union_pw_qpolynomial *res;
 };
 
-static int eval_at(__isl_take isl_point *pnt, void *user)
+static isl_stat eval_at(__isl_take isl_point *pnt, void *user)
 {
 	struct iscc_at *at = (struct iscc_at *) user;
 	isl_val *v;
@@ -240,7 +240,7 @@ static int eval_at(__isl_take isl_point *pnt, void *user)
 			isl_union_pw_qpolynomial_from_pw_qpolynomial(
 				isl_pw_qpolynomial_alloc(set, qp)));
 
-	return 0;
+	return isl_stat_ok;
 }
 
 __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_at(
@@ -265,7 +265,7 @@ struct iscc_fold_at {
 	isl_union_pw_qpolynomial *res;
 };
 
-static int eval_fold_at(__isl_take isl_point *pnt, void *user)
+static isl_stat eval_fold_at(__isl_take isl_point *pnt, void *user)
 {
 	struct iscc_fold_at *at = (struct iscc_fold_at *) user;
 	isl_val *v;
@@ -281,7 +281,7 @@ static int eval_fold_at(__isl_take isl_point *pnt, void *user)
 			isl_union_pw_qpolynomial_from_pw_qpolynomial(
 				isl_pw_qpolynomial_alloc(set, qp)));
 
-	return 0;
+	return isl_stat_ok;
 }
 
 __isl_give isl_union_pw_qpolynomial *isl_union_pw_qpolynomial_fold_at(
@@ -734,13 +734,13 @@ error:
 }
 #endif
 
-static int add_point(__isl_take isl_point *pnt, void *user)
+static isl_stat add_point(__isl_take isl_point *pnt, void *user)
 {
 	isl_union_set **scan = (isl_union_set **) user;
 
 	*scan = isl_union_set_add_set(*scan, isl_set_from_point(pnt));
 
-	return 0;
+	return isl_stat_ok;
 }
 
 static __isl_give isl_union_set *union_set_scan(__isl_take isl_union_set *uset)
@@ -1422,7 +1422,7 @@ struct add_vertex_data {
 	int i;
 };
 
-static int add_vertex(__isl_take isl_vertex *vertex, void *user)
+static isl_stat add_vertex(__isl_take isl_vertex *vertex, void *user)
 {
 	struct add_vertex_data *data = (struct add_vertex_data *)user;
 	isl_multi_aff *ma;
@@ -1437,16 +1437,16 @@ static int add_vertex(__isl_take isl_vertex *vertex, void *user)
 
 	isl_vertex_free(vertex);
 
-	return 0;
+	return isl_stat_ok;
 }
 
-static int set_vertices(__isl_take isl_set *set, void *user)
+static isl_stat set_vertices(__isl_take isl_set *set, void *user)
 {
 	isl_ctx *ctx;
 	isl_basic_set *hull;
 	isl_vertices *vertices = NULL;
 	struct isl_list *list = NULL;
-	int r;
+	isl_stat r;
 	struct add_vertex_data *data = (struct add_vertex_data *)user;
 
 	set = isl_set_remove_divs(set);
@@ -1472,7 +1472,7 @@ static int set_vertices(__isl_take isl_set *set, void *user)
 error:
 	data->list = list;
 	isl_vertices_free(vertices);
-	return -1;
+	return isl_stat_error;
 }
 
 static struct isl_obj vertices(struct isl_stream *s,
@@ -2527,7 +2527,7 @@ error:
 	return p;
 }
 
-int free_cb(void **entry, void *user)
+static isl_stat free_cb(void **entry, void *user)
 {
 	struct isl_named_obj *named = *entry;
 
@@ -2535,7 +2535,7 @@ int free_cb(void **entry, void *user)
 	free(named->name);
 	free(named);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 static void register_named_ops(struct isl_stream *s)

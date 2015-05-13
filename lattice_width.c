@@ -514,7 +514,7 @@ error:
 	return NULL;
 }
 
-static int set_lw(__isl_take isl_set *set, void *user)
+static isl_stat set_lw(__isl_take isl_set *set, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
@@ -522,7 +522,7 @@ static int set_lw(__isl_take isl_set *set, void *user)
 	pwqp = isl_set_lattice_width(set);
 	*res = isl_union_pw_qpolynomial_add_pw_qpolynomial(*res, pwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 __isl_give isl_union_pw_qpolynomial *isl_union_set_lattice_width(

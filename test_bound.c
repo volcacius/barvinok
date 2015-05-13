@@ -107,7 +107,7 @@ struct verify_point_bound {
 	isl_pw_qpolynomial_fold **pwf;
 };
 
-static int verify_point(__isl_take isl_point *pnt, void *user)
+static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 {
 	struct verify_point_bound *vpb = (struct verify_point_bound *) user;
 	const struct verify_options *options = vpb->vpd.options;
@@ -190,7 +190,7 @@ static int verify_point(__isl_take isl_point *pnt, void *user)
 	isl_val_free(exact);
 	isl_point_free(pnt);
 
-	return vpb->vpd.n >= 1 ? 0 : -1;
+	return vpb->vpd.n >= 1 ? isl_stat_ok : isl_stat_error;
 }
 
 static void test(__isl_keep isl_pw_qpolynomial *pwqp,

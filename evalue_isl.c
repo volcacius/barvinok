@@ -348,7 +348,7 @@ error:
 	return NULL;
 }
 
-static int add_term(__isl_take isl_term *term, void *user)
+static isl_stat add_term(__isl_take isl_term *term, void *user)
 {
 	int i;
 	evalue *sum = (evalue *)user;
@@ -361,7 +361,7 @@ static int add_term(__isl_take isl_term *term, void *user)
 	evalue *e;
 
 	if (!term)
-		return -1;
+		return isl_stat_error;
 
 	nparam = isl_term_dim(term, isl_dim_param);
 	dim = isl_term_dim(term, isl_dim_set);
@@ -434,14 +434,14 @@ static int add_term(__isl_take isl_term *term, void *user)
 
 	isl_term_free(term);
 
-	return 0;
+	return isl_stat_ok;
 error2:
 	evalue_free(e);
 	value_clear(n);
 	value_clear(d);
 error:
 	isl_term_free(term);
-	return -1;
+	return isl_stat_error;
 }
 
 evalue *isl_qpolynomial_to_evalue(__isl_keep isl_qpolynomial *qp)
@@ -461,8 +461,8 @@ error:
 	return NULL;
 }
 
-static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *qp,
-	void *user)
+static isl_stat add_guarded_qp(__isl_take isl_set *set,
+	__isl_take isl_qpolynomial *qp, void *user)
 {
 	Polyhedron *D;
 	evalue *e = NULL;
@@ -499,12 +499,12 @@ static int add_guarded_qp(__isl_take isl_set *set, __isl_take isl_qpolynomial *q
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
 
-	return 0;
+	return isl_stat_ok;
 error:
 	free(e);
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
-	return -1;
+	return isl_stat_error;
 }
 
 evalue *isl_pw_qpolynomial_to_evalue(__isl_keep isl_pw_qpolynomial *pwqp)

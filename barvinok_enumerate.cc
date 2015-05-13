@@ -33,7 +33,7 @@ struct verify_point_enum {
 	isl_pw_qpolynomial *pwqp;
 };
 
-static int verify_point(__isl_take isl_point *pnt, void *user)
+static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 {
 	struct verify_point_enum *vpe = (struct verify_point_enum *) user;
 	isl_set *set;
@@ -118,7 +118,7 @@ error:
 	if (vpe->vpd.options->continue_on_error)
 		ok = 1;
 
-	return (vpe->vpd.n >= 1 && ok) ? 0 : -1;
+	return (vpe->vpd.n >= 1 && ok) ? isl_stat_ok : isl_stat_error;
 }
 
 static int verify_isl(Polyhedron *P, Polyhedron *C,

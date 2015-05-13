@@ -177,12 +177,12 @@ error:
 	return NULL;
 }
 
-static int count_constraints(__isl_take isl_constraint *c, void *user)
+static isl_stat count_constraints(__isl_take isl_constraint *c, void *user)
 {
 	int *n = (int *)user;
 	(*n)++;
 	isl_constraint_free(c);
-	return 0;
+	return isl_stat_ok;
 }
 
 struct isl_poly_copy {
@@ -190,7 +190,7 @@ struct isl_poly_copy {
 	Matrix *M;
 };
 
-static int copy_constraint_to(__isl_take isl_constraint *c, void *user)
+static isl_stat copy_constraint_to(__isl_take isl_constraint *c, void *user)
 {
 	int i, j, k;
 	enum isl_dim_type types[] = { isl_dim_in, isl_dim_out,
@@ -216,7 +216,7 @@ static int copy_constraint_to(__isl_take isl_constraint *c, void *user)
 	isl_val_free(v);
 	isl_constraint_free(c);
 	data->n++;
-	return 0;
+	return isl_stat_ok;
 }
 
 Polyhedron *isl_basic_map_to_polylib(struct isl_basic_map *bmap)
@@ -259,7 +259,7 @@ Polyhedron *isl_basic_map_to_polylib(struct isl_basic_map *bmap)
 	return P;
 }
 
-static int add_basic_map(__isl_take isl_basic_map *bmap, void *user)
+static isl_stat add_basic_map(__isl_take isl_basic_map *bmap, void *user)
 {
 	Polyhedron ***next = user;
 
@@ -267,7 +267,7 @@ static int add_basic_map(__isl_take isl_basic_map *bmap, void *user)
 	*next = &(**next)->next;
 
 	isl_basic_map_free(bmap);
-	return 0;
+	return isl_stat_ok;
 }
 
 Polyhedron *isl_map_to_polylib(struct isl_map *map)

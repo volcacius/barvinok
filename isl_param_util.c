@@ -5,7 +5,7 @@
 
 #define INT_BITS (sizeof(unsigned) * 8)
 
-static int add_vertex(__isl_take isl_vertex *vertex, void *user)
+static isl_stat add_vertex(__isl_take isl_vertex *vertex, void *user)
 {
 	Param_Vertices ***next_V = (Param_Vertices ***) user;
 	Param_Vertices *V;
@@ -36,7 +36,7 @@ static int add_vertex(__isl_take isl_vertex *vertex, void *user)
 
 	isl_vertex_free(vertex);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 struct bv_add_chamber_data {
@@ -45,7 +45,7 @@ struct bv_add_chamber_data {
 	Param_Domain *dom;
 };
 
-static int add_chamber_vertex(__isl_take isl_vertex *vertex, void *user)
+static isl_stat add_chamber_vertex(__isl_take isl_vertex *vertex, void *user)
 {
 	int j;
 	struct bv_add_chamber_data *data = (struct bv_add_chamber_data *)user;
@@ -56,10 +56,10 @@ static int add_chamber_vertex(__isl_take isl_vertex *vertex, void *user)
 
 	isl_vertex_free(vertex);
 
-	return 0;
+	return isl_stat_ok;
 }
 
-static int add_chamber(__isl_take isl_cell *cell, void *user)
+static isl_stat add_chamber(__isl_take isl_cell *cell, void *user)
 {
 	struct bv_add_chamber_data *data = (struct bv_add_chamber_data *)user;
 	isl_ctx *ctx;
@@ -83,7 +83,7 @@ static int add_chamber(__isl_take isl_cell *cell, void *user)
 
 	isl_cell_free(cell);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 Param_Polyhedron *ISL_P2PP(Polyhedron *P, Polyhedron *C,

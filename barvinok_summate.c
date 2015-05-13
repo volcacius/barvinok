@@ -25,7 +25,7 @@ struct verify_point_sum {
 	isl_val *manual;
 };
 
-static int manual_sum(__isl_take isl_point *pnt, void *user)
+static isl_stat manual_sum(__isl_take isl_point *pnt, void *user)
 {
 	struct verify_point_sum *vps = (struct verify_point_sum *) user;
 	isl_val *v;
@@ -33,10 +33,10 @@ static int manual_sum(__isl_take isl_point *pnt, void *user)
 	v = isl_pw_qpolynomial_eval(isl_pw_qpolynomial_copy(vps->fixed), pnt);
 	vps->manual = isl_val_add(vps->manual, v);
 
-	return 0;
+	return isl_stat_ok;
 }
 
-static int verify_point(__isl_take isl_point *pnt, void *user)
+static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 {
 	struct verify_point_sum *vps = (struct verify_point_sum *) user;
 	int i;
@@ -114,7 +114,7 @@ error:
 	if (vps->vpd.options->continue_on_error)
 		ok = 1;
 
-	return (vps->vpd.n >= 1 && ok) ? 0 : -1;
+	return (vps->vpd.n >= 1 && ok) ? isl_stat_ok : isl_stat_error;
 }
 
 static int verify(__isl_keep isl_pw_qpolynomial *pwqp,

@@ -167,7 +167,7 @@ static __isl_give isl_val *eval(__isl_keep isl_pw_qpolynomial *pwqp,
     return res;
 }
 
-static int test_approx(__isl_take isl_point *pnt, void *user)
+static isl_stat test_approx(__isl_take isl_point *pnt, void *user)
 {
     struct test_approx_data *ta_data = (struct test_approx_data *) user;
     isl_val *exact, *approx;
@@ -203,7 +203,7 @@ static int test_approx(__isl_take isl_point *pnt, void *user)
     isl_val_free(exact);
     isl_point_free(pnt);
 
-    return (ta_data->vpd.n >= 1) ? 0 : -1;
+    return (ta_data->vpd.n >= 1) ? isl_stat_ok : isl_stat_error;
 }
 
 static int test(__isl_keep isl_set *context,

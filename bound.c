@@ -31,7 +31,7 @@ struct verify_point_bound {
 	enum isl_fold type;
 };
 
-static int verify_point(__isl_take isl_point *pnt, void *user)
+static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 {
 	int i;
 	unsigned nparam;
@@ -138,7 +138,7 @@ error:
 	if (vpb->vpd.options->continue_on_error)
 		ok = 1;
 
-	return (vpb->vpd.n >= 1 && ok) ? 0 : -1;
+	return (vpb->vpd.n >= 1 && ok) ? isl_stat_ok : isl_stat_error;
 }
 
 static int verify(__isl_keep isl_pw_qpolynomial_fold *pwf,
@@ -203,7 +203,7 @@ struct bv_split_data {
 	__isl_give isl_pw_qpolynomial *pwqp_more;
 };
 
-static int split_on_size(__isl_take isl_set *set,
+static isl_stat split_on_size(__isl_take isl_set *set,
 	__isl_take isl_qpolynomial *qp, void *user)
 {
 	struct bv_split_data *data = (struct bv_split_data *)user;
@@ -236,7 +236,7 @@ static int split_on_size(__isl_take isl_set *set,
 		data->pwqp_more = isl_pw_qpolynomial_add_disjoint(
 						data->pwqp_more, pwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /*

@@ -1563,7 +1563,7 @@ static __isl_give isl_pw_qpolynomial *basic_set_card(
 	return pwqp;
 }
 
-static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
+static isl_stat basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 {
 	isl_pw_qpolynomial **sum = (isl_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
@@ -1587,7 +1587,7 @@ static int basic_map_card(__isl_take isl_basic_map *bmap, void *user)
 	pwqp = isl_pw_qpolynomial_reset_domain_space(pwqp, target_dim);
 	*sum = isl_pw_qpolynomial_add(*sum, pwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 static __isl_give isl_pw_qpolynomial *card_as_sum(__isl_take isl_map *map,
@@ -1676,7 +1676,7 @@ __isl_give isl_pw_qpolynomial *isl_basic_set_card(__isl_take isl_basic_set *bset
 	return pwqp;
 }
 
-static int set_card(__isl_take isl_set *set, void *user)
+static isl_stat set_card(__isl_take isl_set *set, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
@@ -1686,7 +1686,7 @@ static int set_card(__isl_take isl_set *set, void *user)
 	upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp);
 	*res = isl_union_pw_qpolynomial_add(*res, upwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 __isl_give isl_union_pw_qpolynomial *isl_union_set_card(
@@ -1708,7 +1708,7 @@ error:
 	return NULL;
 }
 
-static int map_card(__isl_take isl_map *map, void *user)
+static isl_stat map_card(__isl_take isl_map *map, void *user)
 {
 	isl_union_pw_qpolynomial **res = (isl_union_pw_qpolynomial **)user;
 	isl_pw_qpolynomial *pwqp;
@@ -1718,7 +1718,7 @@ static int map_card(__isl_take isl_map *map, void *user)
 	upwqp = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp);
 	*res = isl_union_pw_qpolynomial_add(*res, upwqp);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 __isl_give isl_union_pw_qpolynomial *isl_union_map_card(
