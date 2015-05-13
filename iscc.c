@@ -381,6 +381,16 @@ int_val_mul_union_pw_qpolynomial_fold(__isl_take isl_val *v,
 	return isl_union_pw_qpolynomial_fold_scale_val(upwf, v);
 }
 
+/* Are the two strings "str1" and "str2" equal to each other?
+ */
+static int str_eq(__isl_keep isl_str *str1, __isl_keep isl_str *str2)
+{
+	if (!str1 || !str2)
+		return -1;
+
+	return !strcmp(str1->s, str2->s);
+}
+
 struct isc_bin_op bin_ops[] = {
 	{ '+',	isl_obj_val,	isl_obj_val, isl_obj_val,
 		(isc_bin_op_fn) &isl_val_add },
@@ -548,6 +558,8 @@ struct isc_bin_op bin_ops[] = {
 			    &isl_union_pw_qpolynomial_fold_plain_is_equal } },
 	{ '+',	isl_obj_str,	isl_obj_str,	isl_obj_str,
 		(isc_bin_op_fn) &isl_str_concat },
+	{ '=',	isl_obj_str,	isl_obj_str,	isl_obj_bool,
+		{ .test = (isc_bin_test_fn) &str_eq } },
 	0
 };
 
