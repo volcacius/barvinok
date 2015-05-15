@@ -1571,6 +1571,8 @@ static struct isl_obj type_of(struct isl_stream *s,
 		type = "string";
 	if (obj.type == isl_obj_val)
 		type = "value";
+	if (obj.type == isl_obj_schedule)
+		type = "schedule";
 
 	free_obj(obj);
 	obj.type = isl_obj_str;
