@@ -1872,18 +1872,15 @@ static __isl_give isl_union_map *get_codegen_schedule(struct isl_stream *s,
 	isl_die(ctx, isl_error_invalid, "expecting set or map", return NULL);
 }
 
-/* Generate an AST for the given schedule and options and print
- * the AST on the printer.
+/* Generate an AST for the given schedule and options and return the AST.
  */
-static __isl_give isl_printer *print_code(__isl_take isl_printer *p,
-	__isl_take isl_union_map *schedule,
-	__isl_take isl_union_map *options)
+static __isl_give isl_ast_node *get_ast_from_union_map(
+	__isl_take isl_union_map *schedule, __isl_take isl_union_map *options)
 {
 	isl_space *space;
 	isl_set *context;
 	isl_ast_build *build;
 	isl_ast_node *tree;
-	int format;
 
 	space = isl_union_map_get_space(schedule);
 	context = isl_set_universe(isl_space_params(space));
@@ -1893,8 +1890,15 @@ static __isl_give isl_printer *print_code(__isl_take isl_printer *p,
 	tree = isl_ast_build_ast_from_schedule(build, schedule);
 	isl_ast_build_free(build);
 
-	if (!tree)
-		return p;
+	return tree;
+}
+
+/* Print the AST "tree" on the printer "p".
+ */
+static __isl_give isl_printer *print_ast(__isl_take isl_printer *p,
+	__isl_take isl_ast_node *tree)
+{
+	int format;
 
 	format = isl_printer_get_output_format(p);
 	p = isl_printer_set_output_format(p, ISL_FORMAT_C);
@@ -1915,6 +1919,7 @@ static __isl_give isl_printer *codegen(struct isl_stream *s,
 {
 	isl_union_map *schedule;
 	isl_union_map *options;
+	isl_ast_node *tree;
 
 	schedule = get_codegen_schedule(s, table);
 	if (!schedule)
@@ -1926,7 +1931,8 @@ static __isl_give isl_printer *codegen(struct isl_stream *s,
 		options = isl_union_map_empty(
 					isl_union_map_get_space(schedule));
 
-	p = print_code(p, schedule, options);
+	tree = get_ast_from_union_map(schedule, options);
+	p = print_ast(p, tree);
 
 	isl_stream_eat(s, ';');
 
