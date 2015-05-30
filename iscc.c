@@ -1040,6 +1040,8 @@ static int is_subtype(struct isl_obj obj, isl_obj_type super)
 		return 1;
 	if (obj.type == isl_obj_set && super == isl_obj_union_set)
 		return 1;
+	if (obj.type == isl_obj_schedule && super == isl_obj_union_map)
+		return 1;
 	if (obj.type == isl_obj_pw_multi_aff && super == isl_obj_union_set) {
 		isl_space *space = isl_pw_multi_aff_get_space(obj.v);
 		int is_set = isl_space_is_set(space);
@@ -1090,6 +1092,11 @@ static struct isl_obj convert(isl_ctx *ctx, struct isl_obj obj,
 	if (obj.type == isl_obj_map && type == isl_obj_union_map) {
 		obj.type = isl_obj_union_map;
 		obj.v = isl_union_map_from_map(obj.v);
+		return obj;
+	}
+	if (obj.type == isl_obj_schedule && type == isl_obj_union_map) {
+		obj.type = isl_obj_union_map;
+		obj.v = schedule_map(obj.v);
 		return obj;
 	}
 	if (obj.type == isl_obj_set && type == isl_obj_union_set) {
