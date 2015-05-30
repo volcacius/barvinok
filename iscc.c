@@ -1845,11 +1845,12 @@ static struct isl_obj schedule(struct isl_stream *s,
 	return obj;
 }
 
-/* Read a schedule for code generation.
+/* Read a schedule for code generation in the form of either
+ * a schedule tree or a union map.
  * If the input is a set rather than a map, then we construct
- * an identity schedule on the given set.
+ * an identity union map schedule on the given set.
  */
-static __isl_give isl_union_map *get_codegen_schedule(struct isl_stream *s,
+static struct isl_obj get_codegen_schedule(struct isl_stream *s,
 	struct isl_hash_table *table)
 {
 	struct isl_obj obj;
@@ -1858,18 +1859,21 @@ static __isl_give isl_union_map *get_codegen_schedule(struct isl_stream *s,
 	obj = read_obj(s, table);
 	ctx = isl_stream_get_ctx(s);
 
-	if (is_subtype(obj, isl_obj_union_map)) {
-		obj = convert(ctx, obj, isl_obj_union_map);
-		return obj.v;
-	}
-
+	if (obj.type == isl_obj_schedule)
+		return obj;
 	if (is_subtype(obj, isl_obj_union_set)) {
 		obj = convert(ctx, obj, isl_obj_union_set);
-		return isl_union_set_identity(obj.v);
+		obj.v = isl_union_set_identity(obj.v);
+		obj.type = isl_obj_union_map;
 	}
+	if (is_subtype(obj, isl_obj_union_map))
+		return convert(ctx, obj, isl_obj_union_map);
 
 	free_obj(obj);
-	isl_die(ctx, isl_error_invalid, "expecting set or map", return NULL);
+	obj.v = NULL;
+	obj.type = isl_obj_none;
+	isl_die(ctx, isl_error_invalid, "expecting schedule, set or map",
+		return obj);
 }
 
 /* Generate an AST for the given schedule and options and return the AST.
@@ -1888,6 +1892,21 @@ static __isl_give isl_ast_node *get_ast_from_union_map(
 	build = isl_ast_build_from_context(context);
 	build = isl_ast_build_set_options(build, options);
 	tree = isl_ast_build_ast_from_schedule(build, schedule);
+	isl_ast_build_free(build);
+
+	return tree;
+}
+
+/* Generate an AST for the given schedule and return the AST.
+ */
+static __isl_give isl_ast_node *get_ast_from_schedule(
+	__isl_take isl_schedule *schedule)
+{
+	isl_ast_build *build;
+	isl_ast_node *tree;
+
+	build = isl_ast_build_alloc(isl_schedule_get_ctx(schedule));
+	tree = isl_ast_build_node_from_schedule(build, schedule);
 	isl_ast_build_free(build);
 
 	return tree;
@@ -1913,25 +1932,36 @@ static __isl_give isl_printer *print_ast(__isl_take isl_printer *p,
 /* Perform the codegen operation.
  * In particular, read a schedule, check if the user has specified any options
  * and then generate an AST from the schedule (and options) and print it.
+ * In case the schedule is specified as a schedule tree, the AST generation
+ * options are embedded in the schedule, so they are not read in separately.
  */
 static __isl_give isl_printer *codegen(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p)
 {
-	isl_union_map *schedule;
-	isl_union_map *options;
+	struct isl_obj obj;
 	isl_ast_node *tree;
 
-	schedule = get_codegen_schedule(s, table);
-	if (!schedule)
+	obj = get_codegen_schedule(s, table);
+	if (!obj.v)
 		return p;
 
-	if (isl_stream_eat_if_available(s, iscc_op[ISCC_USING]))
-		options = read_map(s, table);
-	else
-		options = isl_union_map_empty(
-					isl_union_map_get_space(schedule));
+	if (obj.type == isl_obj_schedule) {
+		isl_schedule *schedule = obj.v;
 
-	tree = get_ast_from_union_map(schedule, options);
+		tree = get_ast_from_schedule(schedule);
+	} else {
+		isl_union_map *schedule = obj.v;
+		isl_union_map *options;
+
+		if (isl_stream_eat_if_available(s, iscc_op[ISCC_USING]))
+			options = read_map(s, table);
+		else
+			options = isl_union_map_empty(
+					    isl_union_map_get_space(schedule));
+
+		tree = get_ast_from_union_map(schedule, options);
+	}
+
 	p = print_ast(p, tree);
 
 	isl_stream_eat(s, ';');
