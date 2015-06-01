@@ -1875,10 +1875,8 @@ static struct isl_obj schedule(struct isl_stream *s,
 
 	schedule = get_schedule(s, table);
 
-	obj.v = isl_schedule_get_map(schedule);
-	obj.type = isl_obj_union_map;
-
-	isl_schedule_free(schedule);
+	obj.v = schedule;
+	obj.type = isl_obj_schedule;
 
 	return obj;
 }
