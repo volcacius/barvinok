@@ -804,6 +804,19 @@ static __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial_upoly(
 	return isl_union_pw_qpolynomial_to_polynomial(upwqp, 1);
 }
 
+/* Return the domain of "schedule".
+ */
+static __isl_give isl_union_set *schedule_domain(
+	__isl_take isl_schedule *schedule)
+{
+	isl_union_set *domain;
+
+	domain = isl_schedule_get_domain(schedule);
+	isl_schedule_free(schedule);
+
+	return domain;
+}
+
 typedef void *(*isc_un_op_fn)(void *arg);
 struct isc_un_op {
 	enum isl_token_type	op;
@@ -845,6 +858,8 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_map_deltas } },
 	{"deltas_map",	{ -1,	isl_obj_union_map,	isl_obj_union_map,
 		(isc_un_op_fn) &isl_union_map_deltas_map } },
+	{"dom",	{ -1,	isl_obj_schedule,	isl_obj_union_set,
+		(isc_un_op_fn) &schedule_domain } },
 	{"dom",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_domain } },
 	{"dom",	{ -1,	isl_obj_union_pw_qpolynomial,	isl_obj_union_set,
@@ -852,6 +867,8 @@ struct isc_named_un_op named_un_ops[] = {
 	{"dom",	{ -1,	isl_obj_union_pw_qpolynomial_fold,
 		isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_pw_qpolynomial_fold_domain } },
+	{"domain",	{ -1,	isl_obj_schedule,	isl_obj_union_set,
+		(isc_un_op_fn) &schedule_domain } },
 	{"domain",	{ -1,	isl_obj_union_map,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_map_domain } },
 	{"domain",	{ -1,	isl_obj_union_pw_qpolynomial,
