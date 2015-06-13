@@ -817,6 +817,18 @@ static __isl_give isl_union_set *schedule_domain(
 	return domain;
 }
 
+/* Convert "schedule" to a union map representation.
+ */
+static __isl_give isl_union_map *schedule_map(__isl_take isl_schedule *schedule)
+{
+	isl_union_map *map;
+
+	map = isl_schedule_get_map(schedule);
+	isl_schedule_free(schedule);
+
+	return map;
+}
+
 typedef void *(*isc_un_op_fn)(void *arg);
 struct isc_un_op {
 	enum isl_token_type	op;
@@ -902,6 +914,8 @@ struct isc_named_un_op named_un_ops[] = {
 		(isc_un_op_fn) &isl_union_set_lexmax } },
 	{"lift",	{ -1,	isl_obj_union_set,	isl_obj_union_set,
 		(isc_un_op_fn) &isl_union_set_lift } },
+	{"map",	{ -1,	isl_obj_schedule,	isl_obj_union_map,
+		(isc_un_op_fn) &schedule_map } },
 	{"params",	{ -1,	isl_obj_union_map,	isl_obj_set,
 		(isc_un_op_fn) &isl_union_map_params } },
 	{"params",	{ -1,	isl_obj_union_set,	isl_obj_set,
