@@ -43,7 +43,7 @@ static __isl_give isl_basic_map *add_equality(__isl_take isl_basic_map *bmap,
 {
 	isl_constraint *c;
 
-	c = isl_equality_alloc(isl_basic_map_get_local_space(bmap));
+	c = isl_constraint_alloc_equality(isl_basic_map_get_local_space(bmap));
 
 	c = copy_constraint_from(c, constraint);
 
@@ -55,9 +55,11 @@ static __isl_give isl_basic_map *add_equality(__isl_take isl_basic_map *bmap,
 static __isl_give isl_basic_map *add_inequality(__isl_take isl_basic_map *bmap,
 			 Value *constraint)
 {
+	isl_local_space *ls;
 	isl_constraint *c;
 
-	c = isl_inequality_alloc(isl_basic_map_get_local_space(bmap));
+	ls = isl_basic_map_get_local_space(bmap);
+	c = isl_constraint_alloc_inequality(ls);
 
 	copy_constraint_from(c, constraint);
 
