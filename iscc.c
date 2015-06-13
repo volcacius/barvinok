@@ -2540,11 +2540,19 @@ static __isl_give isl_printer *source_file(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p);
 
 /* Print "obj" to the printer "p".
+ * If the object is a schedule, then print it in block format.
  */
 static __isl_give isl_printer *print_obj(__isl_take isl_printer *p,
 	struct isl_obj obj)
 {
-	return obj.type->print(p, obj.v);
+	if (obj.type != isl_obj_schedule)
+		return obj.type->print(p, obj.v);
+
+	p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_BLOCK);
+	p = obj.type->print(p, obj.v);
+	p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_FLOW);
+
+	return p;
 }
 
 static __isl_give isl_printer *read_line(struct isl_stream *s,
