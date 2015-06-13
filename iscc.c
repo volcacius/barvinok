@@ -704,7 +704,8 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 	isl_ctx *ctx;
 	struct isl_list *list;
 	struct pet_scop *scop;
-	isl_union_map *sched, *may_reads, *must_writes, *may_writes;
+	isl_schedule *sched;
+	isl_union_map *may_reads, *must_writes, *may_writes;
 	isl_union_set *domain;
 	struct iscc_options *options;
 
@@ -725,7 +726,7 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 
 	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL);
 	domain = pet_scop_collect_domains(scop);
-	sched = scop ? isl_schedule_get_map(scop->schedule) : NULL;
+	sched = scop ? isl_schedule_copy(scop->schedule) : NULL;
 	may_reads = pet_scop_collect_may_reads(scop);
 	may_writes = pet_scop_collect_may_writes(scop);
 	must_writes = pet_scop_collect_must_writes(scop);
@@ -739,7 +740,7 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 	list->obj[2].v = may_writes;
 	list->obj[3].type = isl_obj_union_map;
 	list->obj[3].v = may_reads;
-	list->obj[4].type = isl_obj_union_map;
+	list->obj[4].type = isl_obj_schedule;
 	list->obj[4].v = sched;
 
 	if (!list->obj[0].v || !list->obj[1].v ||
