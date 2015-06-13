@@ -10,7 +10,6 @@
 #include <isl/map.h>
 #include <isl/vertices.h>
 #include <isl/flow.h>
-#include <isl/band.h>
 #include <isl/schedule.h>
 #include <isl/ast_build.h>
 #include <isl_obj_list.h>
@@ -80,7 +79,7 @@ static int iscc_bool_error = -1;
 
 enum iscc_op { ISCC_READ, ISCC_WRITE, ISCC_SOURCE, ISCC_VERTICES,
 	       ISCC_LAST, ISCC_ANY, ISCC_BEFORE, ISCC_UNDER,
-	       ISCC_SCHEDULE, ISCC_SCHEDULE_FOREST,
+	       ISCC_SCHEDULE,
 	       ISCC_MINIMIZING, ISCC_RESPECTING,
 	       ISCC_CODEGEN, ISCC_USING,
 	       ISCC_TYPEOF, ISCC_PRINT, ISCC_ASSERT,
@@ -97,7 +96,6 @@ static const char *op_name[ISCC_N_OP] = {
 	[ISCC_BEFORE] = "before",
 	[ISCC_UNDER] = "under",
 	[ISCC_SCHEDULE] = "schedule",
-	[ISCC_SCHEDULE_FOREST] = "schedule_forest",
 	[ISCC_MINIMIZING] = "minimizing",
 	[ISCC_RESPECTING] = "respecting",
 	[ISCC_CODEGEN] = "codegen",
@@ -2005,100 +2003,6 @@ static __isl_give isl_printer *codegen(struct isl_stream *s,
 	return p;
 }
 
-static struct isl_obj band_list_to_obj_list(__isl_take isl_band_list *bands);
-
-static struct isl_obj band_to_obj_list(__isl_take isl_band *band)
-{
-	struct isl_obj obj = { isl_obj_none, NULL };
-	isl_ctx *ctx = isl_band_get_ctx(band);
-	struct isl_list *list;
-
-	list = isl_list_alloc(ctx, 2);
-	if (!list)
-		goto error;
-
-	obj.v = list;
-	obj.type = isl_obj_list;
-
-	list->obj[0].type = isl_obj_union_map;
-	list->obj[0].v = isl_band_get_partial_schedule(band);
-
-	if (isl_band_has_children(band)) {
-		isl_band_list *children;
-
-		children = isl_band_get_children(band);
-		list->obj[1] = band_list_to_obj_list(children);
-	} else {
-		list->obj[1].type = isl_obj_list;
-		list->obj[1].v = isl_list_alloc(ctx, 0);
-	}
-
-	if (!list->obj[0].v || !list->obj[1].v)
-		goto error;
-
-	isl_band_free(band);
-
-	return obj;
-error:
-	isl_band_free(band);
-	free_obj(obj);
-	obj.type = isl_obj_none;
-	obj.v = NULL;
-	return obj;
-}
-
-static struct isl_obj band_list_to_obj_list(__isl_take isl_band_list *bands)
-{
-	struct isl_obj obj = { isl_obj_none, NULL };
-	isl_ctx *ctx = isl_band_list_get_ctx(bands);
-	struct isl_list *list;
-	int i, n;
-
-	n = isl_band_list_n_band(bands);
-	list = isl_list_alloc(ctx, n);
-	if (!list)
-		goto error;
-
-	obj.v = list;
-	obj.type = isl_obj_list;
-
-	for (i = 0; i < n; ++i) {
-		isl_band *band;
-
-		band = isl_band_list_get_band(bands, i);
-		list->obj[i] = band_to_obj_list(band);
-		if (!list->obj[i].v)
-			goto error;
-	}
-
-	isl_band_list_free(bands);
-
-	return obj;
-error:
-	isl_band_list_free(bands);
-	free_obj(obj);
-	obj.type = isl_obj_none;
-	obj.v = NULL;
-	return obj;
-}
-
-static struct isl_obj schedule_forest(struct isl_stream *s,
-	struct isl_hash_table *table)
-{
-	struct isl_obj obj = { isl_obj_none, NULL };
-	isl_schedule *schedule;
-	isl_band_list *roots;
-
-	schedule = get_schedule(s, table);
-	if (!schedule)
-		return obj;
-
-	roots = isl_schedule_get_band_forest(schedule);
-	isl_schedule_free(schedule);
-
-	return band_list_to_obj_list(roots);
-}
-
 static struct isl_obj power(struct isl_stream *s, struct isl_obj obj)
 {
 	struct isl_token *tok;
@@ -2418,8 +2322,6 @@ static struct isl_obj read_obj(struct isl_stream *s,
 			return last(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_SCHEDULE]))
 			return schedule(s, table);
-		if (isl_stream_eat_if_available(s, iscc_op[ISCC_SCHEDULE_FOREST]))
-			return schedule_forest(s, table);
 		if (isl_stream_eat_if_available(s, iscc_op[ISCC_TYPEOF]))
 			return type_of(s, table);
 
