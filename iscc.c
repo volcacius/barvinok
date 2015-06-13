@@ -2539,6 +2539,14 @@ error:
 static __isl_give isl_printer *source_file(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p);
 
+/* Print "obj" to the printer "p".
+ */
+static __isl_give isl_printer *print_obj(__isl_take isl_printer *p,
+	struct isl_obj obj)
+{
+	return obj.type->print(p, obj.v);
+}
+
 static __isl_give isl_printer *read_line(struct isl_stream *s,
 	struct isl_hash_table *table, __isl_take isl_printer *p, int tty)
 {
@@ -2581,7 +2589,7 @@ static __isl_give isl_printer *read_line(struct isl_stream *s,
 
 	if (only_print) {
 		if (obj.type != isl_obj_none && obj.v != NULL) {
-			p = obj.type->print(p, obj.v);
+			p = print_obj(p, obj);
 			p = isl_printer_end_line(p);
 		}
 		free_obj(obj);
