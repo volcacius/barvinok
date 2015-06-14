@@ -1,3 +1,10 @@
+version: 0.38
+date: Tue Jun 16 12:36:25 CEST 2015
+changes:
+    - support more recent versions of GLPK
+    - support schedule trees in iscc
+    - minor bug fixes
+---
 version: 0.37
 date: Mon Apr 14 11:22:44 CEST 2014
 changes:
