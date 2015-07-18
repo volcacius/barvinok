@@ -7,16 +7,23 @@
 #define SIZE(p) (((long *) (p))[1])
 #define DATA(p) ((mp_limb_t *) (((long *) (p)) + 2))
 
+/* Access the internal representation of a ZZ.
+ * In newer versions of NTL (since 8.0.0), the internal representation
+ * is wrapped inside a WrappedPtr, but it has an addess-of operator
+ * that returns the address of the actual internal representation.
+ */
+#define REP(z)	(*&(z).rep)
+
 void value2zz(Value v, ZZ& z)
 {
     int sa = v[0]._mp_size;
     int abs_sa = sa < 0 ? -sa : sa;
 
     _ntl_gsetlength(&z.rep, abs_sa);
-    mp_limb_t * adata = DATA(z.rep);
+    mp_limb_t * adata = DATA(REP(z));
     for (int i = 0; i < abs_sa; ++i)
 	adata[i] = v[0]._mp_d[i];
-    SIZE(z.rep) = sa;
+    SIZE(REP(z)) = sa;
 }
 
 void zz2value(const ZZ& z, Value& v)
@@ -26,10 +33,10 @@ void zz2value(const ZZ& z, Value& v)
 	return;
     }
 
-    int sa = SIZE(z.rep);
+    int sa = SIZE(REP(z));
     int abs_sa = sa < 0 ? -sa : sa;
 
-    mp_limb_t * adata = DATA(z.rep);
+    mp_limb_t * adata = DATA(REP(z));
     _mpz_realloc(v, abs_sa);
     for (int i = 0; i < abs_sa; ++i)
 	v[0]._mp_d[i] = adata[i];
