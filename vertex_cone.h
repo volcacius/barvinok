@@ -2,9 +2,7 @@
 #include <barvinok/evalue.h>
 #include "power.h"
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 /* Represents the vertex and the rays of a vertex cone */
 struct vertex_cone {

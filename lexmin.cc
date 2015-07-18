@@ -29,9 +29,7 @@
 
 #undef CS   /* for Solaris 10 */
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 using std::vector;
 using std::map;

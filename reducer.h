@@ -8,9 +8,7 @@
 #include "decomposer.h"
 #include "dpoly.h"
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 struct gen_fun;
 

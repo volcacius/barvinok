@@ -31,9 +31,7 @@
 #include "param_util.h"
 #include "summate.h"
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 using std::cerr;
 using std::cout;
 using std::endl;

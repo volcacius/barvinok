@@ -10,9 +10,7 @@
 #include "param_util.h"
 #include "reduce_domain.h"
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 using std::vector;
 using std::cerr;
 using std::endl;

@@ -21,9 +21,7 @@ Matrix *relative_coordinates(Param_Vertices *V, Matrix *basis);
 #include <NTL/vec_ZZ.h>
 #include <NTL/mat_ZZ.h>
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 struct barvinok_options;
 

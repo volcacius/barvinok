@@ -2,9 +2,7 @@
 #include <NTL/mat_ZZ.h>
 #include <barvinok/polylib.h>
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 void value2zz(Value v, ZZ& z);
 void zz2value(const ZZ& z, Value& v);

@@ -24,6 +24,9 @@ Additionally, the following packages can optionally be used
 NTL needs to have been compiled with GMP support.
 That is, you have to specify
     NTL_GMP_LIP=on
+NTL also needs to have been compiled in ISO mode.
+For versions older than 5.4, this means you need an additional
+    NTL_STD_CXX=on
 
 Suppose you want to install everything in /opt,
 Then you configure/compile NTL using

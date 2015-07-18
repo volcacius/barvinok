@@ -3,9 +3,7 @@
 
 #include <barvinok/NTL.h>
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 struct QQ {
     ZZ	n;

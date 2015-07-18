@@ -12,6 +12,11 @@ AC_DEFUN([AX_CHECK_NTL], [
 		yes
 		#endif
 		],:,AC_MSG_ERROR(ntl not compiled with gmp support))
+
+	AC_TRY_COMPILE([
+		#include <NTL/ZZ.h>
+		using namespace NTL;
+	], [], [], [AC_MSG_ERROR(Upgrade NTL or configure with NTL_STD_CXX=on)])
 	AC_LANG_POP
 
 	AC_CHECK_LIB(ntl, main,[],[bv_no_ntl=true])

@@ -9,9 +9,7 @@
 #include <barvinok/NTL_QQ.h>
 #include <barvinok/options.h>
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 struct short_rat {
     struct __short_rat_n {

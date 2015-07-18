@@ -6,9 +6,7 @@
 #include <barvinok/polylib.h>
 #include <barvinok/options.h>
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 struct signed_cone {
     signed_cone(const mat_ZZ& rays, int sign, unsigned long det) :

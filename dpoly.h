@@ -8,9 +8,7 @@
 #include <barvinok/polylib.h>
 #include "conversion.h"
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 class dpoly {
 public:

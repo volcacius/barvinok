@@ -6,9 +6,7 @@
 #include "reducer.h"
 #include "bfcounter.h"
 
-#ifdef NTL_STD_CXX
 using namespace NTL;
-#endif
 
 /* base for generating function counting */
 struct gf_base {
