@@ -216,6 +216,18 @@ struct isc_named_bin_op {
 	char			*name;
 	struct isc_bin_op	op;
 };
+/* Compound binary operator.
+ * "full" is only used to generate a unique token number for op.op
+ * in register_named_ops.
+ * "op1" is the first part of the compound operator.
+ * "op2" is the second part of the compound operator.
+ */
+struct iscc_compound_bin_op {
+	char			*full;
+	enum isl_token_type	op1;
+	enum isl_token_type	op2;
+	struct isc_bin_op	op;
+};
 
 struct iscc_at {
 	isl_union_pw_qpolynomial *upwqp;
@@ -559,6 +571,14 @@ struct isc_bin_op bin_ops[] = {
 		(isc_bin_op_fn) &isl_str_concat },
 	{ '=',	isl_obj_str,	isl_obj_str,	isl_obj_bool,
 		{ .test = (isc_bin_test_fn) &str_eq } },
+	0
+};
+
+struct iscc_compound_bin_op compound_bin_ops[] = {
+	{ "->*",	ISL_TOKEN_TO,	'*',
+	  { -1,	isl_obj_union_map,	isl_obj_union_set,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_intersect_range } },
 	0
 };
 
@@ -1173,7 +1193,8 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 	struct isl_obj lhs)
 {
 	int i;
-	struct isl_token *tok;
+	int read_tok2 = 0;
+	struct isl_token *tok, *tok2;
 
 	tok = isl_stream_next_token(s);
 	if (!tok)
@@ -1203,6 +1224,26 @@ static struct isc_bin_op *read_bin_op_if_available(struct isl_stream *s,
 		return &named_bin_ops[i].op;
 	}
 
+	for (i = 0; ; ++i) {
+		if (!compound_bin_ops[i].full)
+			break;
+		if (compound_bin_ops[i].op1 != isl_token_get_type(tok))
+			continue;
+		if (!read_tok2)
+			tok2 = isl_stream_next_token(s);
+		read_tok2 = 1;
+		if (compound_bin_ops[i].op2 != isl_token_get_type(tok2))
+			continue;
+		if (!is_subtype(lhs, compound_bin_ops[i].op.lhs))
+			continue;
+
+		isl_token_free(tok2);
+		isl_token_free(tok);
+		return &compound_bin_ops[i].op;
+	}
+
+	if (read_tok2)
+		isl_stream_push_token(s, tok2);
 	isl_stream_push_token(s, tok);
 
 	return NULL;
@@ -2392,6 +2433,19 @@ static struct isc_bin_op *find_matching_bin_op(struct isc_bin_op *like,
 		return &named_bin_ops[i].op;
 	}
 
+	for (i = 0; ; ++i) {
+		if (!compound_bin_ops[i].full)
+			break;
+		if (compound_bin_ops[i].op.op != like->op)
+			continue;
+		if (!is_subtype(lhs, compound_bin_ops[i].op.lhs))
+			continue;
+		if (!is_subtype(rhs, compound_bin_ops[i].op.rhs))
+			continue;
+
+		return &compound_bin_ops[i].op;
+	}
+
 	return NULL;
 }
 
@@ -2598,6 +2652,14 @@ static void register_named_ops(struct isl_stream *s)
 		named_bin_ops[i].op.op = isl_stream_register_keyword(s,
 							named_bin_ops[i].name);
 		assert(named_bin_ops[i].op.op != ISL_TOKEN_ERROR);
+	}
+
+	for (i = 0; ; ++i) {
+		if (!compound_bin_ops[i].full)
+			break;
+		compound_bin_ops[i].op.op = isl_stream_register_keyword(s,
+						    compound_bin_ops[i].full);
+		assert(compound_bin_ops[i].op.op != ISL_TOKEN_ERROR);
 	}
 }
 
