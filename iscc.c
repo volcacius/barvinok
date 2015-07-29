@@ -582,6 +582,10 @@ struct iscc_compound_bin_op compound_bin_ops[] = {
 	  { -1,	isl_obj_union_map,	isl_obj_union_set,
 		isl_obj_union_map,
 		(isc_bin_op_fn) &isl_union_map_intersect_range } },
+	{ "->-",	ISL_TOKEN_TO,	'-',
+	  { -1,	isl_obj_union_map,	isl_obj_union_set,
+		isl_obj_union_map,
+		(isc_bin_op_fn) &isl_union_map_subtract_range } },
 	0
 };
 
