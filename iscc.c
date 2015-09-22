@@ -71,6 +71,10 @@ int pet_options_set_autodetect(isl_ctx *ctx, int val)
 {
 	return -1;
 }
+int pet_options_set_encapsulate_dynamic_control(isl_ctx *ctx, int val)
+{
+	return -1;
+}
 #endif
 
 static int iscc_bool_false = 0;
@@ -2760,6 +2764,7 @@ int main(int argc, char **argv)
 
 	ctx = isl_ctx_alloc_with_options(&iscc_options_args, options);
 	pet_options_set_autodetect(ctx, 1);
+	pet_options_set_encapsulate_dynamic_control(ctx, 1);
 	argc = isl_ctx_parse_options(ctx, argc, argv, ISL_ARG_ALL);
 	s = isl_stream_new_file(ctx, stdin);
 	assert(s);
