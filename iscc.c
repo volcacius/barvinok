@@ -756,6 +756,34 @@ static __isl_give struct isl_list *union_pw_qpolynomial_upper_bound(
 }
 
 #ifdef HAVE_PET
+/* Collect all statement instances, except those of kill statements.
+ */
+static __isl_give isl_union_set *collect_non_kill_instances(
+	struct pet_scop *scop)
+{
+	int i;
+	isl_set *domain_i;
+	isl_union_set *domain;
+
+	if (!scop)
+		return NULL;
+
+	domain = isl_union_set_empty(isl_set_get_space(scop->context));
+
+	for (i = 0; i < scop->n_stmt; ++i) {
+		struct pet_stmt *stmt = scop->stmts[i];
+
+		if (pet_stmt_is_kill(stmt))
+			continue;
+		domain_i = isl_set_copy(stmt->domain);
+		if (scop->stmts[i]->n_arg > 0)
+			domain_i = isl_map_domain(isl_set_unwrap(domain_i));
+		domain = isl_union_set_add_set(domain, domain_i);
+	}
+
+	return domain;
+}
+
 static __isl_give isl_list *parse(__isl_take isl_str *str)
 {
 	isl_ctx *ctx;
@@ -782,8 +810,10 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 		goto error;
 
 	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL);
-	domain = pet_scop_collect_domains(scop);
+	domain = collect_non_kill_instances(scop);
 	sched = scop ? isl_schedule_copy(scop->schedule) : NULL;
+	sched = isl_schedule_intersect_domain(sched,
+						isl_union_set_copy(domain));
 	may_reads = pet_scop_collect_may_reads(scop);
 	may_writes = pet_scop_collect_may_writes(scop);
 	must_writes = pet_scop_collect_must_writes(scop);
