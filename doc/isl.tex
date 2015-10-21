@@ -907,6 +907,8 @@ $t$ := \ai[\tt]{schedule} $s$ \ai[\tt]{respecting} $m_1$ \ai[\tt]{minimizing} $m
 compute a schedule for the domains in $s$ that respects all dependences
 in $m_1$ and tries to minimize the dependences in $m_2$.
 \\
+$b_3$ := $b_1$ \ai{$+$} $b_2$ & or
+\\
 $i_3$ := $i_1$ \ai{$+$} $i_2$ & sum
 \\
 $s_3$ := $s_1$ \ai{$+$} $s_2$ & union
@@ -938,6 +940,8 @@ $m_2$ := $m_1$ \ai{$-$} $s$ & subtract $s$ from the domain of $m_1$
 $m_2$ := $m_1$ \ai[\tt]{->-} $s$ & subtract $s$ from the range of $m_1$
 \\
 $q_3$ := $q_1$ \ai{$-$} $q_2$ & difference
+\\
+$b_3$ := $b_1$ \ai{$*$} $b_2$ & and
 \\
 $i_3$ := $i_1$ \ai{$*$} $i_2$ & product
 \\

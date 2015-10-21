@@ -175,6 +175,28 @@ int *iscc_bool_from_int(int res)
 	       res ? &iscc_bool_true : &iscc_bool_false;
 }
 
+/* Conjunction of "b1" and "b2".
+ * The result is returned as an integer because it is post-processed by
+ * iscc_bool_from_int.
+ */
+static int isl_bool_and(isl_bool *b1, __isl_take isl_bool *b2)
+{
+	if (b1 == &iscc_bool_error || b2 == &iscc_bool_error)
+		return -1;
+	return b1 == &iscc_bool_true && b2 == &iscc_bool_true;
+}
+
+/* Disjunction of "b1" and "b2".
+ * The result is returned as an integer because it is post-processed by
+ * iscc_bool_from_int.
+ */
+static int isl_bool_or(isl_bool *b1, __isl_take isl_bool *b2)
+{
+	if (b1 == &iscc_bool_error || b2 == &iscc_bool_error)
+		return -1;
+	return b1 == &iscc_bool_true || b2 == &iscc_bool_true;
+}
+
 static int isl_union_map_is_superset(__isl_take isl_union_map *map1,
 	__isl_take isl_union_map *map2)
 {
@@ -403,6 +425,10 @@ static int str_eq(__isl_keep isl_str *str1, __isl_keep isl_str *str2)
 }
 
 struct isc_bin_op bin_ops[] = {
+	{ '+',	isl_obj_bool,	isl_obj_bool, isl_obj_bool,
+		(isc_bin_op_fn) &isl_bool_or },
+	{ '*',	isl_obj_bool,	isl_obj_bool, isl_obj_bool,
+		(isc_bin_op_fn) &isl_bool_and },
 	{ '+',	isl_obj_val,	isl_obj_val, isl_obj_val,
 		(isc_bin_op_fn) &isl_val_add },
 	{ '-',	isl_obj_val,	isl_obj_val, isl_obj_val,
