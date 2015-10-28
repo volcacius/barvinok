@@ -811,7 +811,7 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 
 	scop = pet_scop_extract_from_C_source(ctx, str->s, NULL);
 	domain = collect_non_kill_instances(scop);
-	sched = scop ? isl_schedule_copy(scop->schedule) : NULL;
+	sched = pet_scop_get_schedule(scop);
 	sched = isl_schedule_intersect_domain(sched,
 						isl_union_set_copy(domain));
 	may_reads = pet_scop_get_may_reads(scop);
