@@ -137,15 +137,18 @@ AX_SUBMODULE(isl,build|bundled|system,bundled)
 
 AC_SUBST(ISL_CFLAGS)
 AC_SUBST(ISL_LIBS)
+AC_SUBST(ISL_SRCDIR)
 AC_SUBST(ISL_BUILDDIR)
 case "$with_isl" in
 bundled)
+	ISL_SRCDIR="$srcdir/isl"
 	ISL_BUILDDIR=isl
 	ISL_CFLAGS="-I\$(top_srcdir)/isl/include -I\$(top_builddir)/isl/include"
 	bv_configure_args="$bv_configure_args --with-isl-builddir=../isl"
 	PACKAGE_CFLAGS_ISL='-I${prefix}/include'
 	;;
 build)
+	ISL_SRCDIR="$isl_srcdir"
 	ISL_BUILDDIR=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`
 	bv_configure_args="$bv_configure_args --with-isl-builddir=$ISL_BUILDDIR"
 	ISL_CFLAGS="-I$isl_srcdir/include -I$ISL_BUILDDIR/include"
