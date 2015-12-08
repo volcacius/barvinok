@@ -814,9 +814,9 @@ static __isl_give isl_list *parse(__isl_take isl_str *str)
 	sched = scop ? isl_schedule_copy(scop->schedule) : NULL;
 	sched = isl_schedule_intersect_domain(sched,
 						isl_union_set_copy(domain));
-	may_reads = pet_scop_collect_may_reads(scop);
-	may_writes = pet_scop_collect_may_writes(scop);
-	must_writes = pet_scop_collect_must_writes(scop);
+	may_reads = pet_scop_get_may_reads(scop);
+	may_writes = pet_scop_get_may_writes(scop);
+	must_writes = pet_scop_get_must_writes(scop);
 	pet_scop_free(scop);
 
 	list->obj[0].type = isl_obj_union_set;
