@@ -165,6 +165,7 @@ AX_SUBMODULE(pet,bundled|build|system|no,no)
 AC_SUBST(PET_CFLAGS)
 AC_SUBST(PET_LIBS)
 AC_SUBST(PET_BUILDDIR)
+pet_suffix="top.pet"
 case "$with_pet" in
 bundled)
 	PET_CFLAGS="-I\$(top_srcdir)/pet/include"
@@ -178,6 +179,10 @@ build)
 system)
 	PKG_CHECK_MODULES([PET], [pet])
 	AC_DEFINE(HAVE_PET,[],[use Pet])
+	;;
+no)
+	pet_suffix="top.no_pet"
+	;;
 esac
 AM_CONDITIONAL(BUNDLED_PET, test $with_pet = bundled)
 AM_CONDITIONAL(BUILD_PET, test $with_pet = build)
@@ -501,6 +506,10 @@ AC_TRY_COMPILE([#include "fdstream.h"],[],
 CPPFLAGS="$SAVE_CPPFLAGS"
 AC_LANG_POP
 AM_CONDITIONAL(USE_FDSTREAM, [test "$use_fdstream" = true])
+
+AC_CONFIG_COMMANDS([interface/isl.py.top],
+		 [cp $srcdir/interface/isl.py.$pet_suffix interface/isl.py.top],
+	         [pet_suffix="$pet_suffix"])
 
 PACKAGE_CFLAGS="$PACKAGE_CFLAGS_ISL"
 PACKAGE_LIBS="-lbarvinok $EXTRA_PACKAGE_LIBS -lpolylibgmp -lisl"
