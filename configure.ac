@@ -234,7 +234,7 @@ if test "x$with_ntl_prefix" != "x"; then
 		AC_MSG_ERROR(m4_normalize([Setting --with-ntl-prefix implies
 					   use of system NTL]))
 	fi
-	with-ntl="system"
+	with_ntl="system"
 fi
 
 case "$with_ntl" in
