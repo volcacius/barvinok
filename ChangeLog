@@ -1,3 +1,9 @@
+version: 0.39
+date: Fri Jan 15 09:20:30 CET 2016
+changes:
+    - support more recent versions of NTL
+    - support more operations in iscc
+---
 version: 0.38
 date: Tue Jun 16 12:36:25 CEST 2015
 changes:
