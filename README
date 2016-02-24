@@ -12,8 +12,7 @@ This library shares some functionality with LattE
 (http://www.math.ucdavis.edu/~latte/)
 and uses PolyLib (included), NTL (http://shoup.net/ntl/).
 If you have cloned the git repository, you need to run
-	git submodule init
-	git submodule update
+	./get_submodules.sh
 	sh autogen.sh
 to get the submodules and create the configure scripts.
 
