@@ -772,6 +772,8 @@ Polyhedron* Polyhedron_Factor(Polyhedron *P, unsigned nparam, Matrix **T,
 	    }
 	}
     }
+    for (i = 1; i < nvar; ++i)
+	update_group(group, cnt, i);
 
     if (cnt[0] != nvar) {
 	/* Extract out pure context constraints separately */
