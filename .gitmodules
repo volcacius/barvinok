@@ -1,9 +1,9 @@
 [submodule "polylib"]
 	path = polylib
-	url = git://repo.or.cz/polylib.git
+	url = http://repo.or.cz/polylib.git
 [submodule "isl"]
 	path = isl
-	url = git://repo.or.cz/isl.git
+	url = http://repo.or.cz/isl.git
 [submodule "pet"]
 	path = pet
-	url = git://repo.or.cz/pet.git
+	url = http://repo.or.cz/pet.git
